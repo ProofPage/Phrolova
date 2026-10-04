@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+## [2.0.14] - 2026-10-05
+
 ## [2.0.13] - 2026-10-05
 
 ### Fixed
@@ -386,7 +388,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.13...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.14...HEAD
+[2.0.14]: https://github.com/ProofPage/Phrolova/compare/v2.0.13...v2.0.14
 [2.0.13]: https://github.com/ProofPage/Phrolova/compare/v2.0.12...v2.0.13
 [2.0.12]: https://github.com/ProofPage/Phrolova/compare/v2.0.11...v2.0.12
 [2.0.11]: https://github.com/ProofPage/Phrolova/compare/v2.0.10...v2.0.11

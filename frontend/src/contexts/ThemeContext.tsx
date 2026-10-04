@@ -21,10 +21,10 @@ export const THEMES: ThemePreset[] = [
     { id: "red", label: "레드", primary: "#EF4444", dark: "#DC2626" },
 ];
 
-const DEFAULT_TITLE = "Rookery";
+const DEFAULT_TITLE = "Phrolova";
 
-/** Rookery로 이름을 바꾸기 전의 기본 타이틀. 표기가 두 가지로 쓰였다. */
-const LEGACY_DEFAULT_TITLES = ["Signal Recorder", "Signal-Recorder"];
+/** 과거 버전에서 기본값으로 저장된 타이틀. */
+const LEGACY_DEFAULT_TITLES = ["Rookery", "Signal Recorder", "Signal-Recorder"];
 const DEFAULT_CUSTOM_COLOR = "#6366F1"; // 기본 커스텀 색 (인디고)
 const STORAGE_KEYS = {
     theme: "chzzk_theme",
