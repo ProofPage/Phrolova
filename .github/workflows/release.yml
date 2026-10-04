@@ -74,17 +74,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          치지직 VOD가 일부만 다운로드된 뒤 완료로 표시되던 문제를 수정한 릴리스입니다.
+          시스템 관리의 업데이트 체커가 사용자의 ProofPage/Rookery 저장소에서 최신 릴리스를 확인하도록 수정한 릴리스입니다.
 
-          - Akamai 글로벌 CDN 우선 사용 및 Naver CDN 폴백
-          - 다운로드 시간 제한과 세그먼트 재시도 완화
-          - 완료 전에 원본 영상 길이와 파일 길이 비교
-          - 치지직 VOD 재시도 최대 5회
-          - PyInstaller UPX 압축 비활성화
-          - 릴리스 전 Windows Defender 검사 및 SHA-256 계산
+          - 시스템 정보의 저장소 링크를 ProofPage/Rookery로 변경
+          - Linux 설치 및 업데이트 스크립트가 ProofPage/Rookery를 사용
+          - v2.0.11의 치지직 VOD 수정 및 Defender 탐지 위험 완화 포함
 
           Windows x64 실행 파일을 내려받아 기존 Rookery.exe와 교체하세요. 설정과 저장 데이터는 유지됩니다.
           '@
           $notes | Set-Content -Path release-notes.md -Encoding utf8
           $asset = "dist/Rookery-$env:GITHUB_REF_NAME-windows-x64.exe"
-          gh release create $env:GITHUB_REF_NAME $asset --title "$env:GITHUB_REF_NAME — 치지직 VOD 다운로드 수정" --notes-file release-notes.md --latest --verify-tag
+          gh release create $env:GITHUB_REF_NAME $asset --title "$env:GITHUB_REF_NAME — GitHub 업데이트 저장소 수정" --notes-file release-notes.md --latest --verify-tag

@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.12] - 2026-10-05
+
+### Fixed
+- **최신 릴리즈 확인 저장소** — 시스템 관리 화면과 업데이트 체커, Linux 관리 스크립트가 원본 저장소의 v2.0.9를 조회하던 문제를 수정해 ProofPage/Rookery를 확인하도록 변경했습니다.
+
 ## [2.0.11] - 2026-10-05
 
 ### Fixed
@@ -376,8 +381,9 @@
 
 ---
 
-[Unreleased]: https://github.com/eruminyu/Rookery/compare/v2.0.11...HEAD
-[2.0.11]: https://github.com/eruminyu/Rookery/compare/v2.0.10...v2.0.11
+[Unreleased]: https://github.com/ProofPage/Rookery/compare/v2.0.12...HEAD
+[2.0.12]: https://github.com/ProofPage/Rookery/compare/v2.0.11...v2.0.12
+[2.0.11]: https://github.com/ProofPage/Rookery/compare/v2.0.10...v2.0.11
 [2.0.10]: https://github.com/eruminyu/Rookery/compare/v2.0.9...v2.0.10
 [2.0.9]: https://github.com/eruminyu/Rookery/compare/v2.0.8...v2.0.9
 [2.0.8]: https://github.com/eruminyu/Rookery/compare/v2.0.7...v2.0.8

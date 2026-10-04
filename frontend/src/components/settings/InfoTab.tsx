@@ -5,7 +5,7 @@ import { Card, CardHeader } from "../ui/primitives";
 
 /** 저작자 표기. LICENSE·README·exe 파일 속성과 같은 문구를 쓴다. */
 const AUTHOR = "Serian";
-const REPOSITORY_URL = "https://github.com/eruminyu/Rookery";
+const REPOSITORY_URL = "https://github.com/ProofPage/Rookery";
 
 interface Props {
     settings: SettingsType | null;
@@ -66,7 +66,7 @@ export function InfoTab({ settings, onDirtyChange }: Props) {
                             rel="noopener noreferrer"
                             className="text-[var(--primary)] hover:underline truncate max-w-[220px]"
                         >
-                            github.com/eruminyu/Rookery
+                            github.com/ProofPage/Rookery
                         </a>
                     </InfoRow>
                     <InfoRow label="라이선스" last>

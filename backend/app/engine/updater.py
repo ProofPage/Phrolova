@@ -14,7 +14,7 @@ from app.version import __version__
 from app.services.notifications import NotificationKind, NotificationService
 
 # GitHub 리포지토리 정보
-GITHUB_REPO = "eruminyu/Rookery"
+GITHUB_REPO = "ProofPage/Rookery"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 class UpdaterService:
@@ -178,4 +178,3 @@ class UpdaterService:
             except asyncio.CancelledError:
                 pass
         logger.info("자동 업데이트 체커 종료됨.")
-

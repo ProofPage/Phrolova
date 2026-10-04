@@ -14,7 +14,7 @@ interface UpdateModalProps {
  * "원라이너를 실행하라"고 말만 하고 정작 그 명령을 보여주지 않아 README를 뒤져야 했다.
  */
 const INSTALL_ONE_LINER =
-    "curl -fsSL https://raw.githubusercontent.com/eruminyu/Rookery/main/scripts/manage.sh | bash";
+    "curl -fsSL https://raw.githubusercontent.com/ProofPage/Rookery/main/scripts/manage.sh | bash";
 
 /**
  * 복사 버튼이 달린 명령 블록.

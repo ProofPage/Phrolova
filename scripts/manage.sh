@@ -3,7 +3,7 @@
 #  Rookery — 통합 관리 스크립트 (Linux / macOS)
 #
 #  원라이너 (설치 · 업데이트 겸용):
-#    curl -fsSL https://raw.githubusercontent.com/eruminyu/Rookery/main/scripts/manage.sh | bash
+#    curl -fsSL https://raw.githubusercontent.com/ProofPage/Rookery/main/scripts/manage.sh | bash
 #
 #  설치 후에는 어디서나 한 단어로 쓴다:
 #    rookery update | start | stop | status | logs
@@ -17,7 +17,7 @@
 # ═══════════════════════════════════════════════════════════════
 set -euo pipefail
 
-REPO_SLUG="eruminyu/Rookery"
+REPO_SLUG="ProofPage/Rookery"
 REPO_URL="https://github.com/${REPO_SLUG}.git"
 RAW_URL="https://raw.githubusercontent.com/${REPO_SLUG}/main/scripts/manage.sh"
 APP_NAME="rookery"
