@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shutil
+import subprocess
 import threading
 import uuid
 from dataclasses import dataclass, field
@@ -15,6 +17,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Optional
+from urllib.parse import urlsplit, urlunsplit
 
 from app.core.config import get_settings
 from app.core.logger import logger
@@ -99,7 +102,7 @@ class VodDownloadTask:
 
     # 재시도 관련
     retry_count: int = 0  # 현재까지 재시도 횟수
-    max_retries: int = 3  # 최대 재시도 횟수
+    max_retries: int = 5  # 첫 시도 포함 최대 시도 횟수
 
     # 제어 플래그 (각 작업별 독립)
     cancel_flag: bool = False
@@ -208,6 +211,12 @@ class VodEngine:
             "no_warnings": True,
             "quiet": True,
             "no_color": True,
+            # 긴 VOD와 느린 CDN 회선에서 기본값으로 너무 빨리 포기하지 않도록 한다.
+            "socket_timeout": 60,
+            "retries": 10,
+            "fragment_retries": 10,
+            "extractor_retries": 5,
+            "file_access_retries": 5,
         }
 
         # 치지직 URL인 경우에만 인증 쿠키 주입
@@ -764,14 +773,41 @@ class VodEngine:
             cookie_file=cookie_file,
         )
 
+        # 치지직 ABR_HLS 매니페스트는 세그먼트마다 CDN URL을 담는다. yt-dlp가
+        # 포맷 정보를 만든 뒤 URL 필드만 바꿔 Akamai를 우선 사용하고, 작업 재시도
+        # 때마다 원래 Naver CDN과 번갈아 시도한다. 서명 경로/쿼리 문자열은 보존한다.
+        if self._is_chzzk_url(task.url) and task.retry_count % 2 == 0:
+            info = self._rewrite_chzzk_cdn(info, "light-slit.akamaized.net")
+
         def _download() -> str | None:
             with yt_dlp.YoutubeDL(opts) as ydl:
-                ydl.extract_info(task.url, download=True)
+                # 위에서 수정한 동일한 포맷/세그먼트 정보를 사용한다. 두 번째
+                # extract_info 호출로 새로운 매니페스트를 받아 URL 변경이 사라지는
+                # 문제도 피한다.
+                ydl.process_ie_result(info, download=True)
                 return expected_file
 
         filepath: str | None = await asyncio.to_thread(lambda: _download())  # type: ignore[arg-type]
 
         if filepath:
+            if not Path(filepath).is_file():
+                raise RuntimeError("yt-dlp가 완료했지만 출력 파일이 없습니다.")
+
+            # yt-dlp의 성공 응답만으로는 일부 CDN이 반환한 불완전한 VOD를
+            # 완료로 처리할 수 있다. 기대 길이와 실제 컨테이너 길이를 대조한다.
+            expected_duration = float(info.get("duration") or 0)
+            if self._is_chzzk_url(task.url) and expected_duration > 0:
+                actual_duration = await asyncio.to_thread(
+                    self._probe_media_duration, filepath
+                )
+                tolerance = max(10.0, expected_duration * 0.02)
+                if actual_duration + tolerance < expected_duration:
+                    Path(filepath).unlink(missing_ok=True)
+                    raise RuntimeError(
+                        f"불완전한 VOD 다운로드: {actual_duration:.0f}초 / "
+                        f"기대 {expected_duration:.0f}초. 다른 CDN으로 재시도합니다."
+                    )
+
             task.state = VodDownloadState.COMPLETED
             task.completed_at = datetime.now()
             task.output_path = filepath
@@ -816,6 +852,57 @@ class VodEngine:
                 color="red",
                 fields={"오류": task.error_message},
             )
+
+    @staticmethod
+    def _rewrite_chzzk_cdn(info: dict[str, Any], target_host: str) -> dict[str, Any]:
+        """yt-dlp 포맷/프래그먼트의 치지직 스트림 호스트를 바꾼다."""
+        old_host = "ex-nlive-slitvod-streaming.navercdn.com"
+
+        def rewrite(value: Any) -> Any:
+            if isinstance(value, dict):
+                return {key: rewrite(item) for key, item in value.items()}
+            if isinstance(value, list):
+                return [rewrite(item) for item in value]
+            if not isinstance(value, str) or not value.startswith(("http://", "https://")):
+                return value
+            try:
+                parts = urlsplit(value)
+            except ValueError:
+                return value
+            if (parts.hostname or "").lower() != old_host:
+                return value
+            netloc = target_host
+            if parts.port:
+                netloc = f"{target_host}:{parts.port}"
+            return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+
+        return rewrite(info)
+
+    @staticmethod
+    def _probe_media_duration(filepath: str) -> float:
+        """ffprobe로 컨테이너 길이를 읽고, 검증할 수 없으면 재시도 가능한 오류를 낸다."""
+        settings = get_settings()
+        ffmpeg = Path(settings.resolve_ffmpeg_path())
+        candidates = [
+            ffmpeg.with_name("ffprobe.exe" if ffmpeg.suffix.lower() == ".exe" else "ffprobe"),
+            Path(shutil.which("ffprobe") or ""),
+        ]
+        ffprobe = next((path for path in candidates if path.is_file()), None)
+        if ffprobe is None:
+            raise RuntimeError("VOD 길이 검증에 필요한 ffprobe를 찾을 수 없습니다.")
+        result = subprocess.run(
+            [str(ffprobe), "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", filepath],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=True,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        try:
+            return float(result.stdout.strip())
+        except ValueError as exc:
+            raise RuntimeError("ffprobe가 유효한 VOD 길이를 반환하지 않았습니다.") from exc
 
     def _clean_filename(self, name: str) -> str:
         """파일명에서 사용할 수 없는 특수문자를 제거한다."""
