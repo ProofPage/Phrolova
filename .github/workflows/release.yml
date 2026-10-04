@@ -84,4 +84,5 @@ jobs:
           '@
           $notes | Set-Content -Path release-notes.md -Encoding utf8
           $asset = "dist/Rookery-$env:GITHUB_REF_NAME-windows-x64.exe"
-          gh release create $env:GITHUB_REF_NAME $asset --title "$env:GITHUB_REF_NAME — Phrolova 저장소 이름 변경" --notes-file release-notes.md --latest --verify-tag
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          gh release create $env:GITHUB_REF_NAME $asset --title "Version $version" --notes-file release-notes.md --latest --verify-tag
