@@ -1,0 +1,97 @@
+name: 버그 신고
+description: 동작하지 않거나 예상과 다르게 동작하는 것을 알려주세요.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        재현에 필요한 정보가 없으면 원인을 찾기 어렵습니다.
+        아래 항목을 채워주시면 훨씬 빨리 해결할 수 있습니다.
+
+        **로그와 설정을 붙여넣기 전에 쿠키, 토큰, Discord Webhook URL 같은
+        인증 정보가 포함되어 있지 않은지 꼭 확인해주세요.**
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 무슨 일이 있었나요
+      description: 기대한 동작과 실제 동작을 함께 적어주세요.
+      placeholder: |
+        기대: 방송이 시작되면 자동으로 녹화가 시작된다
+        실제: 라이브로 표시는 되는데 녹화가 시작되지 않는다
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 재현 방법
+      description: 어떤 순서로 하면 다시 일어나는지 적어주세요.
+      placeholder: |
+        1. 채널을 추가한다
+        2. 감시를 켠다
+        3. 방송이 시작된다
+        4. ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 어느 플랫폼인가요
+      multiple: true
+      options:
+        - 치지직
+        - TwitCasting
+        - X Spaces
+        - YouTube
+        - 플랫폼과 무관 (UI, 설정, 알림 등)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: 어떻게 설치했나요
+      options:
+        - Windows 실행 파일 (.exe)
+        - 소스에서 실행 (Windows)
+        - 소스에서 실행 (Linux / macOS)
+        - Docker
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 버전
+      description: 사이드바 하단 또는 Settings → System에 표시됩니다.
+      placeholder: "v2.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: 운영체제
+      placeholder: "Windows 11 / Ubuntu 24.04 / macOS 15"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 로그
+      description: |
+        System Logs 화면이나 `backend/data/logs/`의 내용 중 관련된 부분을 붙여주세요.
+        **인증 정보가 섞여 있지 않은지 다시 한 번 확인해주세요.**
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 확인
+      options:
+        - label: 최신 버전에서도 같은 문제가 발생합니다.
+        - label: 붙여넣은 로그와 설정에 쿠키·토큰·Webhook URL 같은 인증 정보가 없습니다.
+          required: true

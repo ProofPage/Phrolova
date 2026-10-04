@@ -1,0 +1,74 @@
+"""
+Rookery: Chzzk 라이브 엔진
+치지직 채널의 라이브 상태를 확인하고 라이브 URL을 반환한다.
+스트림 다운로드는 YtdlpLivePipeline에서 yt-dlp subprocess로 처리한다.
+"""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from app.core.http import get_http_client
+from app.core.logger import logger
+from app.engine.auth import AuthManager
+from app.engine.base import LiveStatus
+
+# ── 치지직 API ──────────────────────────────────────────
+CHZZK_API_BASE = "https://api.chzzk.naver.com"
+CHZZK_LIVE_DETAIL = f"{CHZZK_API_BASE}/service/v3/channels/{{channel_id}}/live-detail"
+CHZZK_LIVE_URL = "https://chzzk.naver.com/live/{channel_id}"
+
+
+class ChzzkLiveEngine:
+    """치지직 라이브 엔진.
+
+    라이브 상태 확인(API) + 라이브 URL 반환.
+    실제 스트림 다운로드는 YtdlpLivePipeline이 담당한다.
+    """
+
+    def __init__(self, auth: Optional[AuthManager] = None) -> None:
+        self._auth = auth or AuthManager()
+
+    async def check_live_status(self, channel_id: str) -> LiveStatus:
+        """치지직 API를 통해 채널의 라이브 상태를 확인한다.
+
+        Returns:
+            라이브 상태 정보 딕셔너리 (status, title, thumbnail 등).
+        """
+        url = CHZZK_LIVE_DETAIL.format(channel_id=channel_id)
+        headers = self._auth.get_http_headers()
+
+        # 공용 클라이언트를 써서 폴링마다 TLS 핸드셰이크를 반복하지 않는다.
+        resp = await get_http_client().get(url, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+
+        content = data.get("content") or {}
+        status = content.get("status", "CLOSE")
+        channel = content.get("channel") or {}
+
+        raw_thumbnail = content.get("liveImageUrl", "")
+        thumbnail_url = raw_thumbnail.replace("{type}", "480") if raw_thumbnail else ""
+
+        return {
+            "channel_id": channel_id,
+            "status": status,
+            "is_live": status == "OPEN",
+            "channel_name": channel.get("channelName", "Unknown"),
+            "title": content.get("liveTitle", "No Title"),
+            "category": content.get("liveCategoryValue", ""),
+            "viewer_count": content.get("concurrentUserCount", 0),
+            "thumbnail_url": thumbnail_url,
+            "profile_image_url": channel.get("channelImageUrl", ""),
+        }
+
+    def get_stream_url(self, channel_id: str) -> str:
+        """치지직 라이브 URL을 반환한다.
+
+        실제 스트림 추출은 yt-dlp가 처리한다.
+        """
+        return CHZZK_LIVE_URL.format(channel_id=channel_id)
+
+
+# 하위 호환 별칭 (기존 import가 있다면 에러 방지)
+StreamLinkEngine = ChzzkLiveEngine

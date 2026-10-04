@@ -1,0 +1,144 @@
+"""다운로드·VOD·채팅 설정."""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException
+
+from pydantic import BaseModel, Field
+
+from app.core.config import get_settings
+from app.core.utils import update_env_file as _update_env_file
+
+from app.api.settings._shared import SETTINGS_PREFIX, SETTINGS_TAGS, VALID_FORMATS, VALID_QUALITIES
+
+
+# ── 요청 스키마 ──────────────────────────────────────────
+
+router = APIRouter(prefix=SETTINGS_PREFIX, tags=SETTINGS_TAGS)
+
+
+class DownloadSettingsUpdateRequest(BaseModel):
+    """다운로드 설정 업데이트 요청."""
+
+    keep_download_parts: bool = Field(..., description="VOD 다운로드 중단 시 .part 파일 유지 여부")
+    max_record_retries: int = Field(..., ge=0, le=100, description="라이브 녹화 자동 재시도 횟수")
+
+
+class VodSettingsUpdateRequest(BaseModel):
+    """VOD 다운로드 설정 업데이트 요청."""
+
+    vod_max_concurrent: Optional[int] = Field(None, ge=1, le=10, description="동시 다운로드 최대 개수")
+    vod_default_quality: Optional[str] = Field(None, description="기본 화질 (best, 1080p, 720p, 480p)")
+    vod_max_speed: Optional[int] = Field(None, ge=0, le=1000, description="최대 다운로드 속도 (MB/s, 0=무제한)")
+    vod_format: Optional[str] = Field(None, description="VOD 다운로드 포맷 (mp4, mkv, ts)")
+
+
+class ChatSettingsUpdateRequest(BaseModel):
+    """채팅 아카이빙 설정 업데이트 요청."""
+
+    chat_archive_enabled: bool = Field(..., description="녹화 시 채팅 자동 아카이빙 여부")
+
+
+@router.put("/download", summary="다운로드/녹화 설정 업데이트")
+async def update_download_settings(req: DownloadSettingsUpdateRequest):
+    """다운로드 및 녹화 관련 설정을 업데이트합니다."""
+    settings = get_settings()
+    settings.keep_download_parts = req.keep_download_parts
+    settings.max_record_retries = req.max_record_retries
+
+    try:
+        _update_env_file({
+            "KEEP_DOWNLOAD_PARTS": str(req.keep_download_parts).lower(),
+            "MAX_RECORD_RETRIES": str(req.max_record_retries),
+        })
+    except Exception as e:
+        print(f"설정 파일 저장 실패: {e}")
+
+    return {
+        "message": "다운로드 설정이 업데이트되었습니다.",
+        "settings": {
+            "keep_download_parts": settings.keep_download_parts,
+            "max_record_retries": settings.max_record_retries,
+        },
+    }
+
+
+@router.put("/vod", summary="VOD 다운로드 설정 업데이트")
+async def update_vod_settings(req: VodSettingsUpdateRequest):
+    """VOD 다운로드 설정을 업데이트합니다."""
+    settings = get_settings()
+    env_updates: dict[str, str] = {}
+
+    # ── vod_max_concurrent ──
+    if req.vod_max_concurrent is not None:
+        settings.vod_max_concurrent = req.vod_max_concurrent
+        env_updates["VOD_MAX_CONCURRENT"] = str(req.vod_max_concurrent)
+
+    # ── vod_default_quality ──
+    if req.vod_default_quality is not None:
+        quality = req.vod_default_quality.lower()
+        if quality not in VALID_QUALITIES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"지원하지 않는 품질입니다. 사용 가능: {', '.join(VALID_QUALITIES)}",
+            )
+        settings.vod_default_quality = quality
+        env_updates["VOD_DEFAULT_QUALITY"] = quality
+
+    # ── vod_max_speed ──
+    if req.vod_max_speed is not None:
+        settings.vod_max_speed = req.vod_max_speed
+        env_updates["VOD_MAX_SPEED"] = str(req.vod_max_speed)
+
+    # ── vod_format ──
+    if req.vod_format is not None:
+        fmt = req.vod_format.lower()
+        if fmt not in VALID_FORMATS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"지원하지 않는 포맷입니다. 사용 가능: {', '.join(VALID_FORMATS)}",
+            )
+        settings.vod_format = fmt
+        env_updates["VOD_FORMAT"] = fmt
+
+    # .env 영구 저장
+    if env_updates:
+        try:
+            _update_env_file(env_updates)
+        except Exception as e:
+            print(f"설정 파일 저장 실패: {e}")
+
+    # VodEngine의 세마포어를 업데이트하려면 재시작이 필요
+    # 현재는 런타임 중 반영 불가 (재시작 필요 안내)
+    return {
+        "message": "VOD 설정이 업데이트되었습니다. 일부 설정은 서버 재시작 후 적용됩니다.",
+        "settings": {
+            "vod_max_concurrent": settings.vod_max_concurrent,
+            "vod_default_quality": settings.vod_default_quality,
+            "vod_max_speed": settings.vod_max_speed,
+            "vod_format": settings.vod_format,
+        },
+    }
+
+
+@router.put("/chat", summary="채팅 아카이빙 설정 업데이트")
+async def update_chat_settings(req: ChatSettingsUpdateRequest):
+    """채팅 아카이빙 설정을 업데이트합니다."""
+    settings = get_settings()
+    settings.chat_archive_enabled = req.chat_archive_enabled
+
+    try:
+        _update_env_file({
+            "CHAT_ARCHIVE_ENABLED": str(req.chat_archive_enabled).lower(),
+        })
+    except Exception as e:
+        print(f"설정 파일 저장 실패: {e}")
+
+    return {
+        "message": "채팅 아카이빙 설정이 업데이트되었습니다.",
+        "settings": {
+            "chat_archive_enabled": settings.chat_archive_enabled,
+        },
+    }

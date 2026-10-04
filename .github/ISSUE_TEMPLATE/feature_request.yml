@@ -1,0 +1,45 @@
+name: 기능 제안
+description: 있었으면 하는 기능이나 개선점을 알려주세요.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 어떤 불편이 있나요
+      description: |
+        해결책보다 **겪고 있는 문제**를 먼저 알려주세요.
+        상황을 알면 더 나은 방법이 보이는 경우가 많습니다.
+      placeholder: |
+        채널이 많아지니 어떤 방송을 놓쳤는지 한눈에 알기 어렵습니다.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 어떻게 되면 좋을까요
+      description: 떠오르는 방법이 있다면 적어주세요. 없어도 괜찮습니다.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 어느 영역인가요
+      multiple: true
+      options:
+        - 라이브 감시와 녹화
+        - VOD 다운로드
+        - X Spaces와 아카이브
+        - 채팅 아카이브
+        - 통계
+        - Discord 알림
+        - 설정과 화면
+        - 설치와 배포
+        - 기타
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 그 밖에
+      description: 참고할 화면이나 다른 도구의 사례가 있다면 알려주세요.

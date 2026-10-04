@@ -1,0 +1,245 @@
+"""
+Rookery: 설정 관리 모듈
+pydantic-settings 기반으로 환경변수 및 .env 파일에서 설정을 로드한다.
+"""
+
+from __future__ import annotations
+
+import sys
+import shutil
+from functools import lru_cache
+from pathlib import Path
+from typing import Optional
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _download_ytdlp_exe(dest: Path) -> None:
+    """yt-dlp.exe를 GitHub Releases에서 자동 다운로드한다."""
+    import urllib.request
+
+    url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(".tmp")
+    try:
+        urllib.request.urlretrieve(url, tmp)
+        tmp.replace(dest)
+    except Exception:
+        if tmp.exists():
+            tmp.unlink()
+        raise
+
+
+def resolve_env_path() -> Path:
+    """실행 환경에 맞는 .env 파일의 절대 경로를 반환한다.
+
+    탐색 순서:
+        1. PyInstaller exe 빌드: exe 파일 옆
+        2. 개발 환경: 프로젝트 루트
+
+    읽기(설정 로드)와 쓰기(설정 저장)가 같은 파일을 봐야 하므로
+    이 규칙은 한 곳에만 둔다. 예전에는 core/utils.py에 같은 함수가 한 벌 더
+    있어서 한쪽만 고치면 조용히 어긋날 수 있었다.
+    """
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent / ".env"
+
+    project_root = Path(__file__).resolve().parents[3]
+    candidate = project_root / ".env"
+    if candidate.exists():
+        return candidate
+    backend_env = project_root / "backend" / ".env"
+    if backend_env.exists():
+        return backend_env
+    return candidate  # 없으면 프로젝트 루트에 만든다
+
+
+def _resolve_env_file() -> str:
+    """pydantic-settings의 env_file 인자용 문자열 경로."""
+    return str(resolve_env_path())
+
+
+def resolve_data_dir() -> Path:
+    """영속 데이터(채널 목록, 이력, 대기 알림)를 둘 디렉터리를 반환한다.
+
+    PyInstaller onefile은 임시 압축 해제 경로에서 실행되므로 그곳에 쓰면
+    재시작 때 사라진다. exe 옆 data/ 폴더를 사용한다.
+    """
+    if getattr(sys, "frozen", False):
+        data_dir = Path(sys.executable).parent / "data"
+    else:
+        data_dir = Path(__file__).resolve().parents[2] / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    return data_dir
+
+
+class Settings(BaseSettings):
+    """애플리케이션 전역 설정."""
+
+    model_config = SettingsConfigDict(
+        env_file=_resolve_env_file(),
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    # ── 앱 메타 ──────────────────────────────────────────
+    app_name: str = "Rookery"
+    debug: bool = False
+
+    # ── FFmpeg ───────────────────────────────────────────
+    ffmpeg_path: str = "ffmpeg"
+
+    # ── 저장 경로 ────────────────────────────────────────
+    download_dir: str = "./recordings"
+    split_download_dirs: bool = False   # 분할 저장 경로 사용 여부
+    vod_chzzk_dir: str = ""             # 치지직 VOD/클립 저장 경로 (빈 문자열 = download_dir 사용)
+    vod_external_dir: str = ""          # 외부 URL(유튜브 등) 저장 경로 (빈 문자열 = download_dir 사용)
+
+    # ── 치지직 인증 쿠키 (Optional) ──────────────────────
+    nid_aut: Optional[str] = None
+    nid_ses: Optional[str] = None
+
+    # ── 서버 ─────────────────────────────────────────────
+    host: str = "0.0.0.0"
+    port: int = 8000
+
+    # ── Discord Bot ──────────────────────────────────────
+    discord_bot_token: Optional[str] = None
+    discord_notification_channel_id: Optional[str] = None  # 알림을 보낼 채널 ID
+    discord_command_user_ids: Optional[str] = None    # 명령어 허용 사용자 ID (쉼표 구분)
+    discord_command_channel_id: Optional[str] = None  # 명령어 허용 채널 ID (미설정 시 알림 채널 사용)
+
+    # ── Discord 알림 ─────────────────────────────────────
+    # Bot 연결이 끊겨도 알림이 도착하도록 하는 폴백 경로.
+    discord_webhook_url: Optional[str] = None
+    # 전송할 알림 종류: "all" | "none" | 콤마 구분 목록 (NotificationKind 값)
+    discord_notify_events: str = "all"
+    # 멘션을 붙일 알림 종류. 기본은 멘션 없음.
+    discord_mention_events: str = ""
+    # 멘션 대상: "@here", "@everyone", "<@&역할ID>"
+    discord_mention_target: str = "@here"
+    # 큐에서 대기하는 알림의 최대 수명 (초). 초과 시 폐기해 뒷북 알림을 막는다.
+    discord_notify_ttl: int = 3600
+
+    # ── 감시 주기 (초) ───────────────────────────────────
+    monitor_interval: int = 30
+
+    # ── 다운로드 설정 ─────────────────────────────────────
+    keep_download_parts: bool = False  # VOD 다운로드 중단 시 .part 파일 유지 여부
+    max_record_retries: int = 3        # 라이브 녹화 자동 재시도 최대 횟수
+
+    # ── 녹화 포맷/품질 ─────────────────────────────────────
+    live_format: str = "ts"            # 라이브 녹화 포맷: ts(권장), mkv, mp4
+    vod_format: str = "mp4"            # VOD 다운로드 포맷: mp4(권장), mkv, ts
+    recording_quality: str = "best"    # 녹화 품질: best, 1080p, 720p, 480p
+
+    # ── VOD 다운로드 설정 ──────────────────────────────────
+    vod_max_concurrent: int = 3        # 동시 다운로드 최대 개수
+    vod_default_quality: str = "best"  # 기본 화질: best, 1080p, 720p, 480p
+    vod_max_speed: int = 0             # 최대 다운로드 속도 (MB/s, 0 = 무제한)
+
+    # ── 채팅 아카이빙 ────────────────────────────────────
+    chat_archive_enabled: bool = True   # 녹화 시 채팅 자동 아카이빙 여부
+
+    # ── TwitCasting 인증 ──────────────────────────────────
+    twitcasting_client_id: Optional[str] = None
+    twitcasting_client_secret: Optional[str] = None
+    # 로그인한 사용자만 볼 수 있는 아카이브·라이브용 Netscape 쿠키 파일 경로.
+    # 계정 세션 그 자체라 .env로만 지정하고 설정 API·UI로는 내보내지 않는다.
+    twitcasting_cookie_file: Optional[str] = None
+
+    # ── X Spaces 인증 ────────────────────────────────────
+    x_cookie_file: Optional[str] = None  # Netscape 형식 쿠키 파일 경로
+
+    def resolve_ytdlp_path(self, auto_download: bool = False) -> str:
+        """yt-dlp 실행 파일 경로를 탐색 순서에 따라 결정한다.
+
+        탐색 순서:
+            1. 시스템 PATH
+            2. exe/스크립트 옆 bin/ 폴더 (배포 번들 및 개발 환경)
+            3. venv bin/ (개발 환경)
+            4. Windows exe 환경에서 자동 다운로드 (auto_download=True 시)
+        """
+        import sys as _sys
+
+        # 1) 시스템 PATH
+        for name in ("yt-dlp", "yt-dlp.exe"):
+            found = shutil.which(name)
+            if found:
+                return found
+
+        # 2) exe/프로젝트 옆 bin/ 폴더
+        if getattr(_sys, "frozen", False):
+            base_dir = Path(_sys.executable).parent
+        else:
+            base_dir = Path(__file__).resolve().parents[3]
+
+        for fname in ("yt-dlp.exe", "yt-dlp"):
+            candidate = base_dir / "bin" / fname
+            if candidate.is_file():
+                return str(candidate)
+
+        # 3) venv bin/ (개발 환경)
+        venv_bin = Path(_sys.executable).parent
+        for name in ("yt-dlp", "yt-dlp.exe"):
+            candidate = venv_bin / name
+            if candidate.is_file():
+                return str(candidate)
+
+        # 4) Windows exe 환경에서 자동 다운로드
+        if auto_download and getattr(_sys, "frozen", False) and _sys.platform == "win32":
+            dest = base_dir / "bin" / "yt-dlp.exe"
+            _download_ytdlp_exe(dest)
+            return str(dest)
+
+        raise FileNotFoundError(
+            "yt-dlp를 찾을 수 없습니다. "
+            "pip install yt-dlp 또는 프로그램 옆 bin/yt-dlp.exe를 배치하세요."
+        )
+
+    def resolve_ffmpeg_path(self) -> str:
+        """FFmpeg 실행 파일 경로를 탐색 순서에 따라 결정한다.
+
+        탐색 순서:
+            1. 설정값 (FFMPEG_PATH)
+            2. exe/스크립트 옆 bin/ 폴더 (배포 번들 및 개발 환경)
+            3. 시스템 PATH
+        """
+        import sys as _sys
+
+        # 1) 설정값이 유효한 경우
+        configured = Path(self.ffmpeg_path)
+        if configured.is_file():
+            return str(configured)
+
+        # 2) exe 옆 bin/ 폴더 (PyInstaller 빌드 환경 포함)
+        if getattr(_sys, "frozen", False):
+            # 빌드된 .exe 기준
+            base_dir = Path(_sys.executable).parent
+        else:
+            # 개발 환경: 프로젝트 루트 기준
+            base_dir = Path(__file__).resolve().parents[3]
+
+        for fname in ("ffmpeg.exe", "ffmpeg"):
+            candidate = base_dir / "bin" / fname
+            if candidate.is_file():
+                return str(candidate)
+
+        # 3) 시스템 PATH
+        system_ffmpeg = shutil.which("ffmpeg")
+        if system_ffmpeg:
+            return system_ffmpeg
+
+        raise FileNotFoundError(
+            "FFmpeg를 찾을 수 없습니다. "
+            "FFMPEG_PATH 환경변수를 설정하거나 "
+            "프로그램 옆 bin/ffmpeg.exe를 배치하거나 "
+            "시스템 PATH에 ffmpeg를 추가하세요."
+        )
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """싱글턴 Settings 인스턴스를 반환한다."""
+    return Settings()

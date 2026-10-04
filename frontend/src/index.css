@@ -1,0 +1,406 @@
+@import "tailwindcss";
+
+/* ════════════════════════════════════════════════════════
+   디자인 토큰
+
+   화면마다 zinc-900/50, zinc-800, zinc-700을 직접 쓰던 것을
+   의미 단위 토큰으로 정리했다. 표면 단계(surface)와 텍스트 단계를
+   나눠서 컴포넌트가 "몇 번 회색"이 아니라 "어떤 역할"인지로 고른다.
+   ════════════════════════════════════════════════════════ */
+
+@theme {
+  /* 표면 — 낮은 번호일수록 배경에 가깝다 */
+  --color-surface-0: #090B10;   /* 앱 배경 */
+  --color-surface-1: #0E1118;   /* 사이드바, 헤더 */
+  --color-surface-2: #141923;   /* 카드 */
+  --color-surface-3: #1B212D;   /* 카드 위 요소, 입력창 */
+  --color-surface-4: #252C3A;   /* hover 상태 */
+
+  /* 테두리 — hairline은 거의 보이지 않는 구분선 */
+  --color-line: #202633;
+  --color-line-strong: #30394A;
+
+  /* 텍스트 */
+  --color-ink: #F5F7FB;         /* 제목 */
+  --color-ink-muted: #A6ADBC;   /* 본문 */
+  --color-ink-faint: #697386;   /* 보조 설명 */
+
+  /* 상태 색 */
+  --color-live: #FF4D4D;
+  --color-ok: #22C55E;
+  --color-warn: #F59E0B;
+  --color-danger: #EF4444;
+  --color-info: #3B82F6;
+
+  /* 플랫폼 색 */
+  --color-chzzk: #00FFA3;
+  --color-twitcasting: #F97316;
+  --color-xspaces: #22D3EE;
+  --color-youtube: #FF0033;
+
+  /* 레거시 별칭 — 기존 클래스가 깨지지 않도록 유지 */
+  --color-chzzk-dark: #00D689;
+  --color-chzzk-bg: #0A0B0D;
+  --color-chzzk-card: #16181D;
+  --color-chzzk-hover: #262A32;
+
+  /* 타이포 */
+  --font-sans: "Pretendard Variable", Pretendard, Inter, system-ui,
+    -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+
+  /* 라운딩 — 과하지 않게, 카드는 14px */
+  --radius-card: 14px;
+  --radius-control: 10px;
+
+  /* 그림자 — 어두운 UI에서는 빛보다 깊이로 층을 만든다 */
+  --shadow-raise: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-pop: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* ── 강조색 (테마별로 교체) ───────────────────────── */
+:root {
+  --primary: #00FFA3;
+  --primary-dark: #00D689;
+  --primary-dim: rgba(0, 255, 163, 0.14);
+  --primary-ring: rgba(0, 255, 163, 0.45);
+  /* 강조색 위에 올릴 글자색. 밝은 강조색에는 검은 글자가 읽힌다. */
+  --primary-ink: #04140D;
+}
+
+[data-theme="green"] {
+  --primary: #00FFA3;
+  --primary-dark: #00D689;
+  --primary-dim: rgba(0, 255, 163, 0.14);
+  --primary-ring: rgba(0, 255, 163, 0.45);
+  --primary-ink: #04140D;
+}
+
+[data-theme="blue"] {
+  --primary: #3B82F6;
+  --primary-dark: #2563EB;
+  --primary-dim: rgba(59, 130, 246, 0.16);
+  --primary-ring: rgba(59, 130, 246, 0.45);
+  --primary-ink: #FFFFFF;
+}
+
+[data-theme="purple"] {
+  --primary: #A855F7;
+  --primary-dark: #9333EA;
+  --primary-dim: rgba(168, 85, 247, 0.16);
+  --primary-ring: rgba(168, 85, 247, 0.45);
+  --primary-ink: #FFFFFF;
+}
+
+[data-theme="orange"] {
+  --primary: #F97316;
+  --primary-dark: #EA6C0A;
+  --primary-dim: rgba(249, 115, 22, 0.16);
+  --primary-ring: rgba(249, 115, 22, 0.45);
+  --primary-ink: #1A0A00;
+}
+
+[data-theme="red"] {
+  --primary: #EF4444;
+  --primary-dark: #DC2626;
+  --primary-dim: rgba(239, 68, 68, 0.16);
+  --primary-ring: rgba(239, 68, 68, 0.45);
+  --primary-ink: #FFFFFF;
+}
+
+/* ════════════════════════════════════════════════════════
+   기본 스타일
+   ════════════════════════════════════════════════════════ */
+
+body {
+  background-color: var(--color-surface-0);
+  color: var(--color-ink-muted);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* 숫자 폭을 고정해 진행률·용량이 바뀔 때 레이아웃이 떨리지 않게 한다. */
+  font-variant-numeric: tabular-nums;
+  min-width: 320px;
+}
+
+code,
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* 포커스 링을 전역에서 일관되게 — 키보드 사용자에게만 보인다. */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background-color: var(--primary);
+  color: var(--primary-ink);
+}
+
+/* ── 스크롤바 ─────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+  /* 트랙과 간격을 줘서 얇아 보이게 한다. */
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #454B58;
+  background-clip: content-box;
+}
+
+/* ════════════════════════════════════════════════════════
+   유틸리티
+   ════════════════════════════════════════════════════════ */
+
+/* 네비게이션 활성 상태 */
+.nav-active {
+  background-color: var(--primary-dim);
+  color: var(--primary);
+  box-shadow: inset 3px 0 0 var(--primary), inset 0 0 0 1px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.nav-active:hover {
+  background-color: var(--primary-dim);
+}
+
+/* 카드 위에 얹는 미세한 상단 하이라이트 — 평평한 어두운 면에 입체감을 준다. */
+.surface-raise {
+  box-shadow: var(--shadow-raise), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* ── 레이어 순서 ─────────────────────────────────────
+   z-index는 "가장 가까운 스택 컨텍스트" 안에서만 비교된다.
+   사이드바는 backdrop-blur 때문에 스스로 스택 컨텍스트를 만들어서,
+   그 안의 z-50(알림 팝오버)은 바깥 본문과 겨루지 못한다.
+   그래서 사이드바 자체를 본문 위 층에 올려둔다.
+
+     10~20  페이지 내부 (sticky 헤더, 카드 드롭다운·툴팁)
+     30     사이드바 — 본문보다 위여야 알림 팝오버가 안 가린다
+     99~100 모바일 드로어 · 커맨드 팔레트
+     9998   모달 (확인창 · 폴더 선택 · 업데이트 안내)
+     9999   토스트 · 설치 마법사
+
+   본문 래퍼(.page-content)에는 z-index를 주지 않는다. 주는 순간
+   스택 컨텍스트가 생겨서, 그 안에서 열린 모달이 아무리 높은 값을
+   써도 사이드바 아래로 깔린다.
+   ──────────────────────────────────────────────────── */
+
+/* 앱 전체 캔버스 — 데이터 화면의 빈 공간에도 깊이가 남도록 한다. */
+.app-canvas {
+  background:
+    radial-gradient(circle at 18% -8%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 30rem),
+    radial-gradient(circle at 92% 12%, rgba(59, 130, 246, 0.055), transparent 28rem),
+    var(--color-surface-0);
+}
+
+.app-canvas::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+
+.page-content {
+  animation: fade-in 0.28s ease-out;
+}
+
+.page-hero {
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--primary) 7%, var(--color-surface-2)), var(--color-surface-1) 58%, var(--color-surface-2));
+  box-shadow: var(--shadow-raise), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.page-hero-decoration::after {
+  content: "";
+  position: absolute;
+  width: 18rem;
+  height: 18rem;
+  right: -7rem;
+  top: -10rem;
+  border-radius: 999px;
+  background: var(--primary);
+  opacity: 0.07;
+  filter: blur(10px);
+}
+
+.page-hero-icon,
+.brand-mark {
+  color: var(--primary);
+  background: var(--primary-dim);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 24%, transparent);
+}
+
+.icon-button {
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-control);
+  color: var(--color-ink-faint);
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.icon-button:hover {
+  color: var(--color-ink);
+  background: var(--color-surface-3);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-control);
+  font-size: 0.8rem;
+  font-weight: 550;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.nav-icon {
+  display: grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 8px;
+  background: var(--color-surface-2);
+  color: var(--color-ink-faint);
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.nav-item:hover .nav-icon {
+  color: var(--color-ink-muted);
+  background: var(--color-surface-4);
+}
+
+.nav-icon-active {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+/* 강조색 배경 버튼 */
+.btn-primary {
+  background-color: var(--primary);
+  color: var(--primary-ink);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--primary-dark);
+}
+
+/* 강조색 테두리/글자만 쓰는 버튼 */
+.btn-ghost-primary {
+  color: var(--primary);
+  background-color: var(--primary-dim);
+}
+
+.btn-ghost-primary:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+/* 입력창 포커스 시 강조색 테두리 */
+.input-focus:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-dim);
+  outline: none;
+}
+
+/* ════════════════════════════════════════════════════════
+   애니메이션
+   prefers-reduced-motion을 존중한다.
+   ════════════════════════════════════════════════════════ */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-from-top {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes backdrop-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.97) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+/* 녹화 중 표시용 — 테두리가 은은하게 번진다. */
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.5); }
+  50%      { box-shadow: 0 0 0 5px rgba(255, 77, 77, 0); }
+}
+
+/* 로딩 스켈레톤 */
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
+.animate-fade-in        { animation: fade-in 0.35s ease-out; }
+.animate-slide-in-top   { animation: slide-in-from-top 0.25s ease-out; }
+.animate-slide-in       { animation: slide-in-right 0.25s ease-out; }
+.animate-backdrop       { animation: backdrop-fade 0.15s ease-out; }
+.animate-modal-in       { animation: modal-in 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-slide-in-sidebar { animation: slide-in-left 0.2s ease-out; }
+.animate-pulse-border   { animation: pulse-ring 2s ease-in-out infinite; }
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-2) 25%,
+    var(--color-surface-3) 50%,
+    var(--color-surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-multipart
+httpx
+aiofiles
+yt-dlp
+ffmpeg-python
+python-dotenv
+pydantic-settings
+chzzkpy
+discord.py

@@ -1,0 +1,95 @@
+# Python
+venv/
+.venv/
+.venv*/
+backend/.venv/
+backend/.venv*/
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# FFmpeg
+bin/
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code
+.claude/
+
+# PyInstaller 빌드 산출물
+dist/
+build/
+# PyInstaller 스펙은 빌드 산출물이 아니라 빌드 설정이다.
+# 무시해 뒀더니 기기를 바꿀 때 통째로 사라졌다. 저장소에 둔다.
+# (스펙 안의 경로는 절대 경로가 아니라 상대 경로여야 한다)
+
+# 프론트엔드 빌드 결과 (backend에 복사되는 static)
+backend/app/static/
+
+# Runtime data & logs
+backend/data/
+backend/logs/
+data/
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Recordings & test recordings
+recordings/
+backend/recordings/
+backend/test_recordings/
+*.ts
+*.mp4
+*.mkv
+
+# Exceptions: Do not ignore TypeScript files in frontend
+!frontend/**/*.ts
+!frontend/*.ts
+
+# Test cache
+.pytest_cache/
+backend/.pytest_cache/
+
+# 개발용 임시 스크립트 (디버그/수동 테스트)
+scripts/debug_*.py
+scripts/test_*.py
+scripts/verify_*.py
+scripts/generate_icon.py
+
+# 쿠키 파일 (민감 정보)
+*.cookies.txt
+*_cookies.txt
+cookies.txt
+
+# 개발용 임시 실행 스크립트
+*_test.bat
+
+# Pyre 설정
+.pyre_configuration
+
+# Python 버전 파일 (로컬 pyenv 설정은 무시)
+.python-version
+# 단, backend/.python-version은 배포 기준 버전을 고정하는 파일이므로 추적한다.
+!backend/.python-version
+
+# TypeScript 증분 빌드 캐시
+frontend/tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# AI 코딩 도구용 로컬 작업 지침 (공개 규칙은 CONTRIBUTING.md 참고)
+CLAUDE.md
