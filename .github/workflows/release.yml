@@ -39,6 +39,31 @@ jobs:
       - name: Windows 실행 파일 빌드
         run: python -m PyInstaller --clean --noconfirm rookery.spec
 
+      - name: Windows Defender 검사 및 SHA-256 출력
+        shell: pwsh
+        run: |
+          $asset = Join-Path (Get-Location) 'dist/Rookery.exe'
+          if (-not (Test-Path -LiteralPath $asset -PathType Leaf)) {
+            throw '빌드된 실행 파일을 찾을 수 없습니다.'
+          }
+          $status = Get-MpComputerStatus -ErrorAction Stop
+          if (-not $status.AntivirusEnabled) {
+            throw 'Windows Defender Antivirus가 활성화되어 있지 않아 검증할 수 없습니다.'
+          }
+          Start-MpScan -ScanType CustomScan -ScanPath $asset -ErrorAction Stop
+          Start-Sleep -Seconds 10
+          $detections = Get-MpThreatDetection -ErrorAction SilentlyContinue | Where-Object {
+            (($_.Resources | Out-String) -like "*$asset*")
+          }
+          if ($detections) {
+            $names = ($detections | ForEach-Object ThreatName | Sort-Object -Unique) -join ', '
+            throw "Windows Defender가 릴리스 파일을 탐지했습니다: $names"
+          }
+          if (-not (Test-Path -LiteralPath $asset -PathType Leaf)) {
+            throw 'Windows Defender 검사 후 실행 파일이 격리되거나 삭제되었습니다.'
+          }
+          Get-FileHash -LiteralPath $asset -Algorithm SHA256 | Format-List
+
       - name: 릴리스 파일 이름 설정
         shell: pwsh
         run: Move-Item dist/Rookery.exe "dist/Rookery-$env:GITHUB_REF_NAME-windows-x64.exe"
@@ -55,6 +80,8 @@ jobs:
           - 다운로드 시간 제한과 세그먼트 재시도 완화
           - 완료 전에 원본 영상 길이와 파일 길이 비교
           - 치지직 VOD 재시도 최대 5회
+          - PyInstaller UPX 압축 비활성화
+          - 릴리스 전 Windows Defender 검사 및 SHA-256 계산
 
           Windows x64 실행 파일을 내려받아 기존 Rookery.exe와 교체하세요. 설정과 저장 데이터는 유지됩니다.
           '@

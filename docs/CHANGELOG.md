@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.11] - 2026-10-05
+
+### Fixed
+- **Windows 배포 파일의 Defender 탐지 위험 완화** — PyInstaller 빌드에서 UPX 압축을
+  비활성화하고, 릴리스 게시 전에 Windows Defender 검사 단계를 추가했습니다.
+
 ## [2.0.10] - 2026-10-05
 
 ### Fixed
@@ -370,7 +376,8 @@
 
 ---
 
-[Unreleased]: https://github.com/eruminyu/Rookery/compare/v2.0.10...HEAD
+[Unreleased]: https://github.com/eruminyu/Rookery/compare/v2.0.11...HEAD
+[2.0.11]: https://github.com/eruminyu/Rookery/compare/v2.0.10...v2.0.11
 [2.0.10]: https://github.com/eruminyu/Rookery/compare/v2.0.9...v2.0.10
 [2.0.9]: https://github.com/eruminyu/Rookery/compare/v2.0.8...v2.0.9
 [2.0.8]: https://github.com/eruminyu/Rookery/compare/v2.0.7...v2.0.8

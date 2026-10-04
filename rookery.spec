@@ -142,7 +142,8 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    # UPX packing increases heuristic antivirus detections on unsigned one-file builds.
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,           # 의존성 감지 안내 때 CMD 창이 필요하므로 True
