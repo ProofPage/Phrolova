@@ -8,6 +8,16 @@
 
 ## [Unreleased]
 
+## [2.0.10] - 2026-10-05
+
+### Fixed
+- **치지직 VOD 일부만 다운로드되고 완료되는 문제** — 전송 제한 시간을 늘리고
+  세그먼트 재시도를 완화했습니다. Akamai CDN을 우선 사용하고 실패하면 Naver CDN으로
+  전환하며, Chzzk VOD는 최대 5회 시도합니다. 완료 처리 전에 ffprobe로 길이를 확인해
+  원본보다 크게 짧은 파일은 다시 받습니다.
+
+[2.0.10]: https://github.com/eruminyu/Rookery/compare/v2.0.9...v2.0.10
+
 ---
 
 ## [2.0.9] - 2026-09-26
@@ -360,7 +370,8 @@
 
 ---
 
-[Unreleased]: https://github.com/eruminyu/Rookery/compare/v2.0.9...HEAD
+[Unreleased]: https://github.com/eruminyu/Rookery/compare/v2.0.10...HEAD
+[2.0.10]: https://github.com/eruminyu/Rookery/compare/v2.0.9...v2.0.10
 [2.0.9]: https://github.com/eruminyu/Rookery/compare/v2.0.8...v2.0.9
 [2.0.8]: https://github.com/eruminyu/Rookery/compare/v2.0.7...v2.0.8
 [2.0.7]: https://github.com/eruminyu/Rookery/compare/v2.0.6...v2.0.7
