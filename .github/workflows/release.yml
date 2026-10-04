@@ -33,14 +33,6 @@ jobs:
         run: npm run build
         working-directory: frontend
 
-      - name: 정적 파일을 Python 패키지에 복사
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force backend/app/static | Out-Null
-          Get-ChildItem frontend/dist -Force | ForEach-Object {
-            Copy-Item -LiteralPath $_.FullName -Destination backend/app/static -Recurse -Force
-          }
-
       - name: Python 의존성과 PyInstaller 설치
         run: python -m pip install -r backend/requirements.txt pyinstaller pillow pystray
 
