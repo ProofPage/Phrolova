@@ -30,11 +30,11 @@ def test_changelog_has_current_release_and_comparison_links() -> None:
 
     assert release_versions[0] == __version__
     assert (
-        f"[Unreleased]: https://github.com/ProofPage/Rookery/compare/v{__version__}...HEAD"
+        f"[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v{__version__}...HEAD"
         in changelog
     )
     assert (
-        f"[{__version__}]: https://github.com/ProofPage/Rookery/compare/"
+        f"[{__version__}]: https://github.com/ProofPage/Phrolova/compare/"
         f"v{release_versions[1]}...v{__version__}"
         in changelog
     )

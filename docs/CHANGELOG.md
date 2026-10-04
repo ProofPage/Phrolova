@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.13] - 2026-10-05
+
+### Fixed
+- **저장소 이름 변경 반영** — 저장소를 `ProofPage/Phrolova`로 변경하고 시스템 업데이트 확인, 시스템 정보 링크, Linux 설치·업데이트 주소를 새 이름에 맞췄습니다.
+
 ## [2.0.12] - 2026-10-05
 
 ### Fixed
@@ -381,9 +386,10 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Rookery/compare/v2.0.12...HEAD
-[2.0.12]: https://github.com/ProofPage/Rookery/compare/v2.0.11...v2.0.12
-[2.0.11]: https://github.com/ProofPage/Rookery/compare/v2.0.10...v2.0.11
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.13...HEAD
+[2.0.13]: https://github.com/ProofPage/Phrolova/compare/v2.0.12...v2.0.13
+[2.0.12]: https://github.com/ProofPage/Phrolova/compare/v2.0.11...v2.0.12
+[2.0.11]: https://github.com/ProofPage/Phrolova/compare/v2.0.10...v2.0.11
 [2.0.10]: https://github.com/eruminyu/Rookery/compare/v2.0.9...v2.0.10
 [2.0.9]: https://github.com/eruminyu/Rookery/compare/v2.0.8...v2.0.9
 [2.0.8]: https://github.com/eruminyu/Rookery/compare/v2.0.7...v2.0.8

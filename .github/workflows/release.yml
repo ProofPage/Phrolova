@@ -74,14 +74,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          시스템 관리의 업데이트 체커가 사용자의 ProofPage/Rookery 저장소에서 최신 릴리스를 확인하도록 수정한 릴리스입니다.
+          시스템 관리의 업데이트 체커가 사용자의 ProofPage/Phrolova 저장소에서 최신 릴리스를 확인하도록 수정한 릴리스입니다.
 
-          - 시스템 정보의 저장소 링크를 ProofPage/Rookery로 변경
-          - Linux 설치 및 업데이트 스크립트가 ProofPage/Rookery를 사용
+          - 시스템 정보의 저장소 링크를 ProofPage/Phrolova로 변경
+          - Linux 설치 및 업데이트 스크립트가 ProofPage/Phrolova를 사용
           - v2.0.11의 치지직 VOD 수정 및 Defender 탐지 위험 완화 포함
 
           Windows x64 실행 파일을 내려받아 기존 Rookery.exe와 교체하세요. 설정과 저장 데이터는 유지됩니다.
           '@
           $notes | Set-Content -Path release-notes.md -Encoding utf8
           $asset = "dist/Rookery-$env:GITHUB_REF_NAME-windows-x64.exe"
-          gh release create $env:GITHUB_REF_NAME $asset --title "$env:GITHUB_REF_NAME — GitHub 업데이트 저장소 수정" --notes-file release-notes.md --latest --verify-tag
+          gh release create $env:GITHUB_REF_NAME $asset --title "$env:GITHUB_REF_NAME — Phrolova 저장소 이름 변경" --notes-file release-notes.md --latest --verify-tag

@@ -14,7 +14,7 @@ from app.version import __version__
 from app.services.notifications import NotificationKind, NotificationService
 
 # GitHub 리포지토리 정보
-GITHUB_REPO = "ProofPage/Rookery"
+GITHUB_REPO = "ProofPage/Phrolova"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 class UpdaterService:
@@ -48,7 +48,7 @@ class UpdaterService:
         """GitHub API를 즉시 호출하여 업데이트 상태를 반환한다."""
         logger.info("GitHub에서 최신 릴리즈를 확인합니다...")
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
                 response = await client.get(
                     GITHUB_API_URL, 
                     headers={"Accept": "application/vnd.github.v3+json"}
