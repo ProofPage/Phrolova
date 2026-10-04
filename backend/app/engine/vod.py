@@ -102,7 +102,7 @@ class VodDownloadTask:
 
     # 재시도 관련
     retry_count: int = 0  # 현재까지 재시도 횟수
-    max_retries: int = 5  # 첫 시도 포함 최대 시도 횟수
+    max_retries: int = 3  # 첫 시도 포함 최대 시도 횟수
 
     # 제어 플래그 (각 작업별 독립)
     cancel_flag: bool = False
@@ -384,6 +384,8 @@ class VodEngine:
             quality=quality,
             output_dir=save_dir,
             state=VodDownloadState.IDLE,
+            # 치지직은 두 CDN을 교대로 시도하므로 추가 재시도 여유를 둔다.
+            max_retries=5 if self._is_chzzk_url(url) else 3,
         )
 
         # 새 작업을 맨 앞에 추가 (최신 항목이 위로)
