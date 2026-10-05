@@ -388,7 +388,7 @@ class VodEngine:
         # 백그라운드에서 다운로드 시작
         task.download_task = asyncio.create_task(self._run_download(task.task_id))
 
-        logger.info(f"[{task.task_id}] VOD 다운로드 작업 추가: {url} (화질: {quality})")
+        logger.info(f"[{task.task_id}] 다시보기 다운로드 작업 추가: {url} (화질: {quality})")
         return task.task_id
 
     async def _run_download(self, task_id: str) -> None:
@@ -862,7 +862,7 @@ class VodEngine:
             if not Path(filepath).is_file():
                 raise RuntimeError("yt-dlp가 완료했지만 출력 파일이 없습니다.")
 
-            # yt-dlp의 성공 응답만으로는 일부 CDN이 반환한 불완전한 VOD를
+            # yt-dlp의 성공 응답만으로는 일부 CDN이 반환한 불완전한 다시보기를
             # 완료로 처리할 수 있다. 기대 길이와 실제 컨테이너 길이를 대조한다.
             expected_duration = float(info.get("duration") or 0)
             if self._is_chzzk_url(task.url) and expected_duration > 0:
@@ -873,7 +873,7 @@ class VodEngine:
                 if actual_duration + tolerance < expected_duration:
                     Path(filepath).unlink(missing_ok=True)
                     raise RuntimeError(
-                        f"불완전한 VOD 다운로드: {actual_duration:.0f}초 / "
+                        f"불완전한 다시보기 다운로드: {actual_duration:.0f}초 / "
                         f"기대 {expected_duration:.0f}초. 다른 CDN으로 재시도합니다."
                     )
 
@@ -881,7 +881,7 @@ class VodEngine:
             task.completed_at = datetime.now()
             task.output_path = filepath
             task.progress = 100.0
-            logger.info(f"[{task_id}] 외부 VOD 다운로드 완료: {filepath}")
+            logger.info(f"[{task_id}] 외부 다시보기 다운로드 완료: {filepath}")
             self._save_history()
 
             try:
@@ -895,7 +895,7 @@ class VodEngine:
             )
             self._notify(
                 NotificationKind.VOD_COMPLETED,
-                title="📥 VOD 다운로드 완료",
+                title="📥 다시보기 다운로드 완료",
                 description=f"제목: **{task.title}**",
                 color="green",
                 fields={
@@ -916,7 +916,7 @@ class VodEngine:
             self._save_history()
             self._notify(
                 NotificationKind.VOD_FAILED,
-                title="❌ VOD 다운로드 실패",
+                title="❌ 다시보기 다운로드 실패",
                 description=f"제목: **{task.title or task.url}**",
                 color="red",
                 fields={"오류": task.error_message},
@@ -968,7 +968,7 @@ class VodEngine:
                     or candidate.name.startswith(expected_part.name + ".")
                 )
         except OSError as exc:
-            logger.warning(f"[{task.task_id}] 임시 VOD 조각 파일 정리 실패: {exc}")
+            logger.warning(f"[{task.task_id}] 임시 다시보기 조각 파일 정리 실패: {exc}")
             return False
 
         cleanup_succeeded = True
@@ -983,14 +983,14 @@ class VodEngine:
                     if attempt == 9:
                         cleanup_succeeded = False
                         logger.warning(
-                            f"[{task.task_id}] 임시 VOD 조각 파일 정리 실패 "
+                            f"[{task.task_id}] 임시 다시보기 조각 파일 정리 실패 "
                             f"(파일 잠금이 해제되지 않음): {exc}"
                         )
                     else:
                         await asyncio.sleep(min(0.25 * (2 ** attempt), 1.5))
                 except OSError as exc:
                     cleanup_succeeded = False
-                    logger.warning(f"[{task.task_id}] 임시 VOD 조각 파일 정리 실패: {exc}")
+                    logger.warning(f"[{task.task_id}] 임시 다시보기 조각 파일 정리 실패: {exc}")
                     break
         return cleanup_succeeded
 
@@ -1005,7 +1005,7 @@ class VodEngine:
         ]
         ffprobe = next((path for path in candidates if path.is_file()), None)
         if ffprobe is None:
-            raise RuntimeError("VOD 길이 검증에 필요한 ffprobe를 찾을 수 없습니다.")
+            raise RuntimeError("다시보기 길이 검증에 필요한 ffprobe를 찾을 수 없습니다.")
         result = subprocess.run(
             [str(ffprobe), "-v", "error", "-show_entries", "format=duration",
              "-of", "default=noprint_wrappers=1:nokey=1", filepath],
@@ -1018,9 +1018,9 @@ class VodEngine:
         try:
             duration = float(result.stdout.strip())
         except ValueError as exc:
-            raise RuntimeError("ffprobe가 유효한 VOD 길이를 반환하지 않았습니다.") from exc
+            raise RuntimeError("ffprobe가 유효한 다시보기 길이를 반환하지 않았습니다.") from exc
         if not math.isfinite(duration) or duration < 0:
-            raise RuntimeError("ffprobe가 유효하지 않은 VOD 길이를 반환했습니다.")
+            raise RuntimeError("ffprobe가 유효하지 않은 다시보기 길이를 반환했습니다.")
         return duration
 
     def _clean_filename(self, name: str) -> str:
@@ -1211,7 +1211,7 @@ class VodEngine:
         # Persist the removal as well as updating the UI's in-memory task list.
         self._save_history()
 
-        logger.info(f"VOD 작업 정리: {deleted_count}개 삭제됨")
+        logger.info(f"다시보기 작업 정리: {deleted_count}개 삭제됨")
 
         return {
             "message": f"{deleted_count}개의 대기/완료/오류 작업이 삭제되었습니다.",

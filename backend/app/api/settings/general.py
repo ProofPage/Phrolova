@@ -187,7 +187,7 @@ async def update_general_settings(req: GeneralSettingsUpdateRequest):
             except OSError as e:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"치지직 VOD 저장 경로를 생성할 수 없습니다: {e}",
+                    detail=f"치지직 다시보기 저장 경로를 생성할 수 없습니다: {e}",
                 )
         settings.vod_chzzk_dir = req.vod_chzzk_dir
         env_updates["VOD_CHZZK_DIR"] = req.vod_chzzk_dir

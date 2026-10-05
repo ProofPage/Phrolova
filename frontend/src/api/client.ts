@@ -560,4 +560,8 @@ export const api = {
         });
         return res.data;
     },
+    clearSystemLogs: async (): Promise<{ message: string; cleared_files: number }> => {
+        const res = await client.delete<{ message: string; cleared_files: number }>("/system/logs");
+        return res.data;
+    },
 };

@@ -38,7 +38,7 @@ export const NAV_GROUPS: NavGroup[] = [
     {
         title: "미디어 허브",
         items: [
-            { name: "VOD 다운로드", to: "/vod", icon: Download },
+            { name: "다시보기 다운로드", to: "/vod", icon: Download },
             { name: "X Spaces 보관함", to: "/archive", icon: Radio },
             { name: "채팅 기록", to: "/chat", icon: MessageSquare },
         ],

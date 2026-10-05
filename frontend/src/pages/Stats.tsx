@@ -90,7 +90,7 @@ export default function Stats() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                             <MetricCard icon={Clock} label="총 라이브 녹화 시간" value={formatDuration(live.total_duration_seconds)} detail={`${live.total_sessions}개 세션`} tone="ok" />
                             <MetricCard icon={Video} label="총 녹화 용량" value={formatBytes(live.total_size_bytes)} detail="라이브 녹화 파일 합계" tone="live" />
-                            <MetricCard icon={Download} label="VOD 다운로드" value={`${vod.total_completed}개`} detail={`치지직 ${vod.by_type.chzzk} · 외부 ${vod.by_type.external}`} tone="primary" />
+                            <MetricCard icon={Download} label="다시보기 다운로드" value={`${vod.total_completed}개`} detail={`치지직 ${vod.by_type.chzzk} · 외부 ${vod.by_type.external}`} tone="primary" />
                             <StorageCard used={storage.used_bytes} total={storage.total_bytes} free={storage.free_bytes} dir={storage.download_dir} />
                         </div>
 

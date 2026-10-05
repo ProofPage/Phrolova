@@ -67,7 +67,7 @@ export function GeneralTab({ settings, onSaved, onDirtyChange }: Props) {
                 label="다시보기 저장 경로"
                 hint="치지직 다시보기·클립과 외부 영상 다운로드가 저장됩니다."
             >
-                <DirInput value={vodDownloadDir} onChange={setVodDownloadDir} placeholder="예: E:\\recordings\\VOD" />
+                <DirInput value={vodDownloadDir} onChange={setVodDownloadDir} placeholder="예: E:\\recordings\\Video" />
             </Field>
 
             <Field label="감시 주기 (초)" hint="채널 라이브 상태를 확인하는 간격 (5~300초).">

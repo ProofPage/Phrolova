@@ -127,8 +127,8 @@ export default function VodDownload() {
             <PageHeader
                 icon={Download}
                 eyebrow="다운로드 대기열"
-                title="VOD 다운로드"
-                description="치지직 VOD와 클립, 외부 영상 주소를 대기열에 추가하고 진행 상황을 관리합니다."
+                title="다시보기 다운로드"
+                description="치지직 다시보기와 클립, 외부 영상 주소를 대기열에 추가하고 진행 상황을 관리합니다."
                 meta={(
                     <>
                         <Badge tone={activeCount > 0 ? "ok" : "neutral"}>{activeCount}개 진행 중</Badge>
@@ -142,7 +142,7 @@ export default function VodDownload() {
                 className="relative overflow-hidden bg-surface-2 p-5 sm:p-6 rounded-[var(--radius-card)] border border-line surface-raise space-y-4"
             >
                 <span className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[var(--primary)] to-transparent opacity-70" />
-                <Field label="영상 URL" htmlFor="vod-url" hint="치지직 VOD·클립 및 yt-dlp가 지원하는 외부 영상 링크를 사용할 수 있습니다.">
+                <Field label="영상 URL" htmlFor="vod-url" hint="치지직 다시보기·클립 및 yt-dlp가 지원하는 외부 영상 링크를 사용할 수 있습니다.">
                     <div className="flex flex-col sm:flex-row gap-2">
                         <Input
                             id="vod-url"

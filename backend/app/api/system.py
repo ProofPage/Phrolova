@@ -3,9 +3,11 @@ Rookery: System API (시스템 및 업데이트 관리)
 """
 
 import sys
+import logging
 from datetime import datetime
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
+from logging.handlers import TimedRotatingFileHandler
 
 router = APIRouter(prefix="/api/system", tags=["System"])
 
@@ -71,6 +73,61 @@ async def list_system_logs():
     # 수정 시간 내림차순 정렬 (최신 파일이 위로)
     log_files.sort(key=lambda x: x["modified_at"], reverse=True)
     return log_files
+
+
+@router.delete("/logs")
+async def clear_system_logs():
+    """Clear the active service log and remove its rotated backups."""
+    log_dir = _get_log_dir()
+    if not log_dir.exists():
+        return {"message": "시스템 로그가 이미 비어 있습니다.", "cleared_files": 0}
+
+    active_path = (log_dir / "service.log").resolve()
+    file_handlers = [
+        handler
+        for handler in logging.getLogger("chzzk").handlers
+        if isinstance(handler, TimedRotatingFileHandler)
+        and Path(handler.baseFilename).resolve() == active_path
+    ]
+    log_files = [
+        path
+        for path in log_dir.glob("service.log*")
+        if path.is_file() and path.resolve().parent == log_dir.resolve()
+    ]
+
+    cleared_files = 0
+    for handler in file_handlers:
+        handler.acquire()
+    try:
+        for path in log_files:
+            if file_handlers and path.resolve() == active_path:
+                continue
+            path.unlink(missing_ok=True)
+            cleared_files += 1
+
+        if file_handlers:
+            handler = file_handlers[0]
+            if handler.stream is not None:
+                handler.flush()
+                handler.stream.seek(0)
+                handler.stream.truncate(0)
+            else:
+                active_path.write_text("", encoding="utf-8")
+            if active_path.exists():
+                cleared_files += 1
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"시스템 로그 초기화에 실패했습니다: {exc}",
+        ) from exc
+    finally:
+        for handler in reversed(file_handlers):
+            handler.release()
+
+    return {
+        "message": "현재 로그와 날짜별 백업 로그를 초기화했습니다.",
+        "cleared_files": cleared_files,
+    }
 
 
 @router.get("/logs/{filename:path}")

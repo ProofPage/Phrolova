@@ -80,7 +80,7 @@ export default function ArchivePage() {
                             <div><p className="text-sm font-medium text-ink">비공개 Space</p><p className="text-xs text-ink-faint mt-0.5">설정에서 X 쿠키 파일을 먼저 지정해 주세요.</p></div>
                         </div>
                     </div>
-                    <p className="mt-5 pt-4 border-t border-line text-xs text-ink-faint">진행 상황과 완료 파일은 VOD 다운로드 화면에서 확인할 수 있습니다.</p>
+                    <p className="mt-5 pt-4 border-t border-line text-xs text-ink-faint">진행 상황과 완료 파일은 다시보기 다운로드 화면에서 확인할 수 있습니다.</p>
                 </Card>
             </div>
         </div>

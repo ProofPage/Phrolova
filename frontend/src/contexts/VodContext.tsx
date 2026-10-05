@@ -33,7 +33,7 @@ export function VodProvider({ children }: { children: ReactNode }) {
             const data = await api.getAllVodStatus();
             applyStatus(data);
         } catch (e) {
-            console.error("VOD 상태 갱신 실패:", e);
+            console.error("다시보기 상태 갱신 실패:", e);
         }
     }, [applyStatus]);
 

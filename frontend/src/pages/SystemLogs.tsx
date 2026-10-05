@@ -8,11 +8,13 @@ import {
     ArrowDown,
     Play,
     Pause,
+    Trash2,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { api, SystemLogFile } from "../api/client";
 import { useToast } from "../components/ui/Toast";
-import { Input, PageHeader } from "../components/ui/primitives";
+import { useConfirm } from "../components/ui/ConfirmModal";
+import { Button, Input, PageHeader } from "../components/ui/primitives";
 import { formatBytes, formatDate as _formatDate } from "../utils/format";
 
 function formatDate(iso: string): string {
@@ -21,7 +23,32 @@ function formatDate(iso: string): string {
 
 export default function SystemLogs() {
     const [selectedFile, setSelectedFile] = useState<SystemLogFile | null>(null);
+    const [listRefreshKey, setListRefreshKey] = useState(0);
+    const [clearing, setClearing] = useState(false);
     const toast = useToast();
+    const confirm = useConfirm();
+
+    const handleClearLogs = async () => {
+        const ok = await confirm({
+            title: "시스템 로그 초기화",
+            message: "현재 로그와 날짜별 백업 로그를 모두 비웁니다. 초기화 후 발생하는 새 로그는 계속 저장됩니다.",
+            confirmText: "로그 초기화",
+            variant: "danger",
+        });
+        if (!ok) return;
+
+        setClearing(true);
+        try {
+            const result = await api.clearSystemLogs();
+            setSelectedFile(null);
+            setListRefreshKey((value) => value + 1);
+            toast.success(result.message);
+        } catch {
+            toast.error("시스템 로그 초기화에 실패했습니다.");
+        } finally {
+            setClearing(false);
+        }
+    };
 
     return (
         <div className="flex flex-col gap-6 xl:h-[calc(100vh-4rem)]">
@@ -30,6 +57,16 @@ export default function SystemLogs() {
                 eyebrow="서비스 상태 확인"
                 title="시스템 로그"
                 description="실시간 서비스 로그와 일자별 백업을 검색하고 서버 상태를 추적합니다."
+                actions={(
+                    <Button
+                        icon={Trash2}
+                        variant="danger"
+                        loading={clearing}
+                        onClick={handleClearLogs}
+                    >
+                        로그 초기화
+                    </Button>
+                )}
             />
 
             <div className="flex flex-col lg:flex-row flex-1 gap-4 min-h-[680px] xl:min-h-0">
@@ -38,6 +75,7 @@ export default function SystemLogs() {
                         selectedFile={selectedFile} 
                         onSelect={setSelectedFile} 
                         toast={toast} 
+                        refreshKey={listRefreshKey}
                     />
                 </div>
 
@@ -65,9 +103,10 @@ interface LogFileListViewProps {
     selectedFile: SystemLogFile | null;
     onSelect: (file: SystemLogFile) => void;
     toast: ReturnType<typeof useToast>;
+    refreshKey: number;
 }
 
-function LogFileListView({ selectedFile, onSelect, toast }: LogFileListViewProps) {
+function LogFileListView({ selectedFile, onSelect, toast, refreshKey }: LogFileListViewProps) {
     const [files, setFiles] = useState<SystemLogFile[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -89,7 +128,7 @@ function LogFileListView({ selectedFile, onSelect, toast }: LogFileListViewProps
 
     useEffect(() => {
         loadFiles();
-    }, []);
+    }, [refreshKey]);
 
     if (loading) {
         return (

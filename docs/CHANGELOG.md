@@ -8,6 +8,15 @@
 
 ## [Unreleased]
 
+## [2.0.28] - 2026-10-05
+
+### Changed
+- **Replay terminology** — Replace user-facing VOD labels with the Korean term “다시보기” across navigation, download and settings screens, statistics, and notifications.
+- **Live dashboard channel form** — Expand the channel ID field to use available width and align the platform selector, input, and add button.
+
+### Added
+- **System log reset** — Add a confirmation-protected action that clears the active service log and rotated daily logs while keeping logging active.
+
 ## [2.0.27] - 2026-10-05
 
 ### Fixed
@@ -473,7 +482,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.27...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.28...HEAD
+[2.0.28]: https://github.com/ProofPage/Phrolova/compare/v2.0.27...v2.0.28
 [2.0.27]: https://github.com/ProofPage/Phrolova/compare/v2.0.26...v2.0.27
 [2.0.26]: https://github.com/ProofPage/Phrolova/compare/v2.0.25...v2.0.26
 [2.0.25]: https://github.com/ProofPage/Phrolova/compare/v2.0.24...v2.0.25

@@ -58,12 +58,12 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
         : "채널 ID...";
 
     return (
-        <form onSubmit={handleSubmit} className="flex gap-2 min-w-0">
+        <form onSubmit={handleSubmit} aria-label="감시 채널 추가" className="flex w-full min-w-0 items-stretch gap-2">
             <div className="relative shrink-0">
                 <button
                     type="button"
                     onClick={() => setDropdownOpen((open) => !open)}
-                    className="h-full bg-surface-2 border border-line rounded-[var(--radius-control)] px-3 py-2 text-ink text-sm flex items-center gap-1.5 hover:bg-surface-3 transition-colors"
+                    className="h-11 bg-surface-2 border border-line rounded-[var(--radius-control)] px-3 text-ink text-sm flex items-center gap-1.5 hover:bg-surface-3 transition-colors whitespace-nowrap"
                     aria-expanded={dropdownOpen}
                     aria-haspopup="listbox"
                 >
@@ -99,8 +99,8 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
                 )}
             </div>
 
-            <Input value={channelId} onChange={(event) => setChannelId(event.target.value)} placeholder={placeholder} className="w-full sm:w-52 min-w-0" />
-            <Button type="submit" variant="primary" icon={Plus} loading={loading} className="shrink-0 px-3 sm:px-4">
+            <Input value={channelId} onChange={(event) => setChannelId(event.target.value)} placeholder={placeholder} className="h-11 min-w-0 flex-1" />
+            <Button type="submit" variant="primary" icon={Plus} loading={loading} className="h-11 shrink-0 px-3 sm:px-4">
                 <span className="hidden sm:inline">추가</span>
             </Button>
         </form>

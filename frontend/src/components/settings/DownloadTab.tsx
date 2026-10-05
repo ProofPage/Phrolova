@@ -72,8 +72,8 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
             vod_format: vodFormat,
             keep_download_parts: keepParts,
         }),
-        success: "VOD 설정이 저장되었습니다.",
-        failure: "VOD 설정 저장에 실패했습니다.",
+        success: "다시보기 설정이 저장되었습니다.",
+        failure: "다시보기 설정 저장에 실패했습니다.",
     });
 
     const handleSaveLive = () => saveLive({
@@ -94,7 +94,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     return (
         <div className="space-y-6">
             <Card className="space-y-5">
-                <CardHeader icon={Film} title="VOD 다운로드 설정" />
+                <CardHeader icon={Film} title="다시보기 다운로드 설정" />
                 <Field label="동시 다운로드 개수" hint="한 번에 다운로드할 수 있는 최대 영상 개수 (1~10개)">
                     <Input type="number" value={vodMaxConcurrent} onChange={(event) => setVodMaxConcurrent(Number(event.target.value))} min={1} max={10} />
                 </Field>
@@ -113,7 +113,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                 <Field label="최대 다운로드 속도 (MB/s)" hint="0 = 무제한, 네트워크 대역폭 제한 시 사용">
                     <Input type="number" value={vodMaxSpeed} onChange={(event) => setVodMaxSpeed(Number(event.target.value))} min={0} max={1000} />
                 </Field>
-                <Field label="VOD 다운로드 포맷" hint="VOD/클립은 MP4가 가장 호환성이 좋습니다. 오디오·비디오 병합이 필요한 경우 ffmpeg를 사용합니다.">
+                <Field label="다시보기 다운로드 포맷" hint="다시보기와 클립은 MP4가 가장 호환성이 좋습니다. 오디오·비디오 병합이 필요한 경우 ffmpeg를 사용합니다.">
                     <Select
                         value={vodFormat}
                         onChange={(event) => setVodFormat(event.target.value)}
@@ -125,12 +125,12 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                     />
                 </Field>
                 <SettingRow
-                    label="미완료 VOD 파일 보관 (.part)"
+                    label="미완료 다시보기 파일 보관 (.part)"
                     hint={keepParts ? "취소 또는 오류가 발생해도 미완료 파일을 보관합니다." : "취소하거나 오류가 발생하면 미완료 파일을 삭제합니다."}
-                    control={<Switch checked={keepParts} onChange={setKeepParts} label="미완료 VOD 파일 보관" />}
+                    control={<Switch checked={keepParts} onChange={setKeepParts} label="미완료 다시보기 파일 보관" />}
                 />
                 <Button variant="primary" icon={Save} loading={vodSaving} onClick={handleSaveVod} className="w-full">
-                    {vodSaving ? "저장 중..." : "VOD 설정 저장"}
+                    {vodSaving ? "저장 중..." : "다시보기 설정 저장"}
                 </Button>
             </Card>
 

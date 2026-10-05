@@ -112,7 +112,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                 <DirInput
                     value={data.vod_download_dir}
                     onChange={(val) => onChange("vod_download_dir", val)}
-                    placeholder="예: C:\\Recordings\\VOD 또는 /home/user/recordings/vod"
+                    placeholder="예: C:\\Recordings\\Video 또는 /home/user/recordings/video"
                 />
                 <p className="text-xs text-ink-faint mt-1.5 flex items-start gap-1">
                     치지직 다시보기·클립과 외부 영상 다운로드를 저장합니다.

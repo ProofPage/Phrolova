@@ -74,15 +74,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## VOD downloads
+          ## Replay downloads
 
-          - Show useful error details when yt-dlp returns an empty failure message.
-          - Retry cleanup of Windows-locked partial files before switching CDN, and stop safely if old fragments cannot be removed.
+          - Replace user-facing VOD labels with the Korean term “다시보기” throughout the app, settings, statistics, and notifications.
 
-          ## Live recording
+          ## Interface improvements
 
-          - Capture FFmpeg diagnostics while it runs, including when the process exits unexpectedly.
-          - Mark an unexpected end of Streamlink input as a recording error so automatic reconnection can run.
+          - Make the live dashboard channel ID field fill available width and align its controls.
+          - Add a confirmation-protected system log reset for current and rotated service logs.
 
           Download the Windows x64 executable and replace the existing application executable. Settings and saved data are preserved.
           '@
