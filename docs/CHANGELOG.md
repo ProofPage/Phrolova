@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.21] - 2026-10-05
+
+### Changed
+- **초기 설정 경로 분리** — 첫 실행 마법사에서 라이브 저장 경로와 다시보기 저장 경로를 각각 지정하고 완료 전에 둘 다 확인하도록 했습니다. 구버전 초기 설정 API는 기존 단일 경로 요청과 계속 호환됩니다.
+- **다운로드 진행률 카드 정렬** — 다운로드 중 퍼센트 표시 영역 높이를 상세 정보 영역과 맞춰 카드 아래쪽의 빈 공간을 정리했습니다.
+
 ## [2.0.20] - 2026-10-05
 
 ### Changed
@@ -430,7 +436,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.20...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.21...HEAD
+[2.0.21]: https://github.com/ProofPage/Phrolova/compare/v2.0.20...v2.0.21
 [2.0.20]: https://github.com/ProofPage/Phrolova/compare/v2.0.19...v2.0.20
 [2.0.19]: https://github.com/ProofPage/Phrolova/compare/v2.0.18...v2.0.19
 [2.0.18]: https://github.com/ProofPage/Phrolova/compare/v2.0.17...v2.0.18

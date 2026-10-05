@@ -40,7 +40,9 @@ class SetupCompleteRequest(BaseModel):
     """초기 설정 완료 요청."""
 
     # Step 1: 기본 설정
-    download_dir: str = Field(..., description="녹화 저장 경로")
+    download_dir: Optional[str] = Field(None, description="구버전 호환용 기본 저장 경로")
+    live_download_dir: Optional[str] = Field(None, description="라이브 녹화 저장 경로")
+    vod_download_dir: Optional[str] = Field(None, description="다시보기/VOD 저장 경로")
     live_format: str = Field("ts", description="라이브 녹화 포맷 (ts, mp4, mkv)")
     recording_quality: str = Field("best", description="녹화 품질 (best, 1080p, 720p, 480p)")
 
@@ -79,15 +81,24 @@ async def complete_setup(req: SetupCompleteRequest):
     if quality not in VALID_QUALITIES:
         raise HTTPException(status_code=400, detail=f"지원하지 않는 품질: {quality}")
 
-    download_dir = req.download_dir
+    # 신규 클라이언트는 두 경로를 보내고, 구버전은 DOWNLOAD_DIR 하나를 보낸다.
+    live_download_dir = (req.live_download_dir or req.download_dir or "").strip()
+    vod_download_dir = (req.vod_download_dir or req.download_dir or live_download_dir or "").strip()
+    if not live_download_dir or not vod_download_dir:
+        raise HTTPException(status_code=400, detail="라이브와 다시보기 저장 경로를 모두 입력해 주세요.")
 
     # 저장 경로 생성
-    save_dir = Path(download_dir)
-    save_dir.mkdir(parents=True, exist_ok=True)
+    for label, directory in (("라이브", live_download_dir), ("다시보기", vod_download_dir)):
+        try:
+            Path(directory).mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            raise HTTPException(status_code=400, detail=f"{label} 저장 경로를 생성할 수 없습니다: {e}")
 
     # .env 파일에 설정 저장 (이 파일이 생성되면 곧 초기설정 완료를 의미)
     env_updates: dict[str, str] = {
-        "DOWNLOAD_DIR": download_dir,
+        "DOWNLOAD_DIR": live_download_dir,
+        "LIVE_DOWNLOAD_DIR": live_download_dir,
+        "VOD_DOWNLOAD_DIR": vod_download_dir,
         "LIVE_FORMAT": fmt,
         "RECORDING_QUALITY": quality,
     }
@@ -99,7 +110,9 @@ async def complete_setup(req: SetupCompleteRequest):
 
     # in-memory 설정 즉시 반영
     settings = get_settings()
-    settings.download_dir = download_dir
+    settings.download_dir = live_download_dir
+    settings.live_download_dir = live_download_dir
+    settings.vod_download_dir = vod_download_dir
     settings.live_format = fmt
     settings.recording_quality = quality
     if req.nid_aut and req.nid_ses:

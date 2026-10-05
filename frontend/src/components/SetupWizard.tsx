@@ -15,7 +15,8 @@ interface SetupWizardProps {
 type Step = 1 | 2 | 3;
 
 interface FormData {
-    download_dir: string;
+    live_download_dir: string;
+    vod_download_dir: string;
     output_format: string;
     recording_quality: string;
     nid_aut: string;
@@ -29,7 +30,10 @@ async function completeSetup(data: FormData): Promise<void> {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            download_dir: data.download_dir,
+            // 구버전 초기 설정 API를 위해 download_dir에 라이브 경로도 전달한다.
+            download_dir: data.live_download_dir,
+            live_download_dir: data.live_download_dir,
+            vod_download_dir: data.vod_download_dir,
             output_format: data.output_format,
             recording_quality: data.recording_quality,
             nid_aut: data.nid_aut || null,
@@ -79,19 +83,35 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
 
     return (
         <div className="space-y-6">
-            {/* 저장 경로 */}
+            {/* 라이브 저장 경로 */}
             <div>
                 <label className="block text-sm font-medium text-ink-muted mb-2">
                     <FolderOpen className="inline w-4 h-4 mr-1 text-[var(--primary)]" />
-                    녹화 저장 경로 <span className="text-danger">*</span>
+                    라이브 저장 경로 <span className="text-danger">*</span>
                 </label>
                 <DirInput
-                    value={data.download_dir}
-                    onChange={(val) => onChange("download_dir", val)}
-                    placeholder="예: C:\Recordings 또는 /home/user/recordings"
+                    value={data.live_download_dir}
+                    onChange={(val) => onChange("live_download_dir", val)}
+                    placeholder="예: C:\\Recordings\\Live 또는 /home/user/recordings/live"
                 />
                 <p className="text-xs text-ink-faint mt-1.5 flex items-start gap-1">
-                    경로가 없으면 자동으로 생성됩니다.
+                    라이브 녹화와 채팅 로그를 저장합니다. 경로가 없으면 자동 생성됩니다.
+                </p>
+            </div>
+
+            {/* 다시보기 저장 경로 */}
+            <div>
+                <label className="block text-sm font-medium text-ink-muted mb-2">
+                    <FolderOpen className="inline w-4 h-4 mr-1 text-[var(--primary)]" />
+                    다시보기 저장 경로 <span className="text-danger">*</span>
+                </label>
+                <DirInput
+                    value={data.vod_download_dir}
+                    onChange={(val) => onChange("vod_download_dir", val)}
+                    placeholder="예: C:\\Recordings\\VOD 또는 /home/user/recordings/vod"
+                />
+                <p className="text-xs text-ink-faint mt-1.5 flex items-start gap-1">
+                    치지직 다시보기·클립과 외부 영상 다운로드를 저장합니다.
                 </p>
             </div>
 
@@ -209,7 +229,8 @@ function Step2({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
 
 function Step3({ data }: { data: FormData }) {
     const rows: { label: string; value: string }[] = [
-        { label: "저장 경로", value: data.download_dir || "(미설정)" },
+        { label: "라이브 저장 경로", value: data.live_download_dir || "(미설정)" },
+        { label: "다시보기 저장 경로", value: data.vod_download_dir || "(미설정)" },
         { label: "녹화 품질", value: data.recording_quality },
         { label: "출력 포맷", value: `.${data.output_format.toUpperCase()}` },
         { label: "치지직 인증", value: data.nid_aut && data.nid_ses ? "✅ 설정됨" : "⏭️ 건너뜀 (나중에 설정 가능)" },
@@ -243,7 +264,8 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<FormData>({
-        download_dir: "",
+        live_download_dir: "",
+        vod_download_dir: "",
         output_format: "ts",
         recording_quality: "best",
         nid_aut: "",
@@ -253,7 +275,9 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
     const onChange = (k: keyof FormData, v: string) =>
         setData((prev) => ({ ...prev, [k]: v }));
 
-    const canNext = step === 1 ? data.download_dir.trim().length > 0 : true;
+    const canNext = step === 1
+        ? data.live_download_dir.trim().length > 0 && data.vod_download_dir.trim().length > 0
+        : true;
 
     const handleNext = () => {
         if (step < 3) setStep((s) => (s + 1) as Step);
@@ -277,7 +301,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
     };
 
     const stepTitles: Record<Step, { title: string; subtitle: string }> = {
-        1: { title: "기본 설정", subtitle: "녹화 파일이 저장될 경로와 기본 품질을 설정하세요." },
+        1: { title: "기본 설정", subtitle: "라이브와 다시보기 저장 경로 및 기본 품질을 설정하세요." },
         2: { title: "치지직 인증 쿠키 (선택)", subtitle: "성인 방송 및 1080p 녹화를 위한 로그인 쿠키를 입력하세요." },
         3: { title: "설정 확인", subtitle: "아래 내용을 확인하고 완료 버튼을 누르세요." },
     };
@@ -288,7 +312,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
             <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
 
             {/* 카드 */}
-            <div className="relative bg-surface-2 border border-line-strong rounded-[calc(var(--radius-card)+4px)] shadow-2xl surface-raise w-full max-w-lg mx-4 animate-modal-in overflow-hidden">
+            <div className="relative bg-surface-2 border border-line-strong rounded-[calc(var(--radius-card)+4px)] shadow-2xl surface-raise w-full max-w-lg mx-4 max-h-[calc(100vh-2rem)] animate-modal-in overflow-y-auto">
                 <div className="h-1 w-full bg-linear-to-r from-transparent via-[var(--primary)] to-transparent" />
 
                 <div className="p-8">
