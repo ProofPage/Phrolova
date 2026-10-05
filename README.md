@@ -1,6 +1,6 @@
 # Phrolova
 
-![Version](https://img.shields.io/badge/version-2.0.28-13d9a3)
+![Version](https://img.shields.io/badge/version-2.0.29-13d9a3)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827)
@@ -63,7 +63,7 @@ TS와 MKV는 녹화가 예기치 않게 중단되어도 이미 받은 구간을 
 
 ### Windows
 
-1. [최신 릴리즈](https://github.com/ProofPage/Phrolova/releases/latest)에서 `Rookery-v*-windows-x64.exe`를 다운로드합니다.
+1. [최신 릴리즈](https://github.com/ProofPage/Phrolova/releases/latest)에서 `Phrolova-v*-windows-x64.exe`를 다운로드합니다.
 2. 실행 파일을 열고 첫 실행 설정을 진행합니다.
 3. 브라우저에서 `http://localhost:8000`에 접속합니다. 앱이 기본 브라우저를 자동으로 열 수도 있습니다.
 

@@ -31,6 +31,7 @@ export function PageHeader({
     description,
     meta,
     actions,
+    actionsPlacement = "inline",
 }: {
     icon: LucideIcon;
     eyebrow?: string;
@@ -38,11 +39,12 @@ export function PageHeader({
     description: ReactNode;
     meta?: ReactNode;
     actions?: ReactNode;
+    actionsPlacement?: "inline" | "below";
 }) {
     return (
         <header className="page-hero relative border border-line rounded-[calc(var(--radius-card)+4px)] p-5 sm:p-6">
             <div aria-hidden="true" className="page-hero-decoration pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" />
-            <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
+            <div className={`relative z-10 flex ${actionsPlacement === "below" ? "flex-col" : "flex-col md:flex-row md:items-center"} justify-between gap-5`}>
                 <div className="flex items-center gap-4 min-w-0">
                     <span className="page-hero-icon grid place-items-center w-11 h-11 rounded-[var(--radius-card)] shrink-0">
                         {createElement(icon, { className: "w-5 h-5" })}
@@ -54,7 +56,7 @@ export function PageHeader({
                         {meta && <div className="flex flex-wrap items-center gap-2 mt-3">{meta}</div>}
                     </div>
                 </div>
-                {actions && <div className="shrink-0 xl:max-w-[52%]">{actions}</div>}
+                {actions && <div className={actionsPlacement === "below" ? "w-full" : "shrink-0 md:max-w-[44%]"}>{actions}</div>}
             </div>
         </header>
     );
@@ -524,17 +526,19 @@ export function EmptyState({
     title,
     description,
     action,
+    compact = false,
 }: {
     icon?: LucideIcon;
     title: string;
     description?: ReactNode;
     action?: ReactNode;
+    compact?: boolean;
 }) {
     return (
-        <div className="py-12 px-6 text-center">
+        <div className={clsx(compact ? "py-8" : "py-12", "px-6 text-center")}>
             {icon && (
-                <span className="inline-grid place-items-center w-12 h-12 rounded-full bg-surface-3 text-ink-faint mb-4">
-                    {createElement(icon, { className: "w-5 h-5" })}
+                <span className={clsx("inline-grid place-items-center rounded-full bg-surface-3 text-ink-faint", compact ? "w-10 h-10 mb-3" : "w-12 h-12 mb-4")}>
+                    {createElement(icon, { className: compact ? "w-4 h-4" : "w-5 h-5" })}
                 </span>
             )}
             <p className="text-[14px] font-medium text-ink-muted">{title}</p>

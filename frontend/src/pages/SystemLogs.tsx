@@ -120,15 +120,19 @@ function LogFileListView({ selectedFile, onSelect, toast, refreshKey }: LogFileL
                 onSelect(data[0]);
             }
         } catch {
-            toast.error("로그 파일 목록을 불러오는 데 실패했습니다.");
+            if (!silent) toast.error("로그 파일 목록을 불러오는 데 실패했습니다.");
         } finally {
             if (!silent) setLoading(false);
         }
     }, [selectedFile, onSelect, toast]);
 
     useEffect(() => {
-        loadFiles();
-    }, [refreshKey]);
+        void loadFiles();
+        const timer = window.setInterval(() => {
+            void loadFiles(true);
+        }, 5000);
+        return () => window.clearInterval(timer);
+    }, [refreshKey, loadFiles]);
 
     if (loading) {
         return (
@@ -220,29 +224,39 @@ interface LogContentViewerProps {
 function LogContentViewer({ file, toast }: LogContentViewerProps) {
     const [content, setContent] = useState("");
     const [totalLines, setTotalLines] = useState(0);
+    const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
     const [linesLimit, setLinesLimit] = useState(1000); // 기본 1000줄
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
     
     // 자동 스크롤 및 자동 갱신 상태
     const [autoScroll, setAutoScroll] = useState(true);
-    const [autoRefresh, setAutoRefresh] = useState(false);
-    
+    const [autoRefresh, setAutoRefresh] = useState(file.filename === "service.log");
+
     const terminalRef = useRef<HTMLDivElement>(null);
     const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const requestInFlightRef = useRef(false);
 
     const loadContent = useCallback(async (silent = false) => {
+        if (requestInFlightRef.current) return;
+        requestInFlightRef.current = true;
         if (!silent) setLoading(true);
         try {
             const data = await api.getSystemLogContent(file.filename, linesLimit);
             setContent(data.content);
             setTotalLines(data.total_lines);
+            setLastUpdatedAt(new Date());
         } catch {
-            toast.error(`로그 내용을 불러오는 데 실패했습니다.`);
+            if (!silent) toast.error("로그 내용을 불러오는 데 실패했습니다.");
         } finally {
+            requestInFlightRef.current = false;
             if (!silent) setLoading(false);
         }
     }, [file.filename, linesLimit, toast]);
+
+    useEffect(() => {
+        setAutoRefresh(file.filename === "service.log");
+    }, [file.filename]);
 
     // 파일이나 가져올 줄 수가 바뀌면 로그 다시 로드
     useEffect(() => {
@@ -254,7 +268,7 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
         if (autoRefresh) {
             refreshTimerRef.current = setInterval(() => {
                 loadContent(true);
-            }, 5000); // 5초 주기
+            }, 2000); // live log polling interval
         } else {
             if (refreshTimerRef.current) {
                 clearInterval(refreshTimerRef.current);
@@ -303,7 +317,8 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
             );
         }
 
-        const parts = line.split(new RegExp(`(${searchTerm})`, "gi"));
+        const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const parts = line.split(new RegExp(`(${escapedSearchTerm})`, "gi"));
         return (
             <div key={idx} className={clsx("py-0.5 whitespace-pre-wrap breakdown-all", colorClass)}>
                 {parts.map((part, i) => 
@@ -324,14 +339,22 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
     if (lines.length > 0 && lines[lines.length - 1] === "") {
         lines.pop();
     }
+    const visibleLines = searchTerm
+        ? lines.filter((line) => line.toLowerCase().includes(searchTerm.toLowerCase()))
+        : lines;
 
     return (
         <div className="flex-1 flex flex-col min-h-0 bg-surface-0">
             <div className="p-3 border-b border-line bg-surface-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
                 <div className="flex items-center gap-3">
                     <span className="text-xs font-mono font-semibold text-ink-muted">
-                        {file.filename} ({lines.length}/{totalLines} 줄)
+                        {file.filename} ({visibleLines.length}/{totalLines} 줄)
                     </span>
+                    {lastUpdatedAt && (
+                        <span className="text-[10px] text-ink-faint" aria-live="polite">
+                            갱신 {lastUpdatedAt.toLocaleTimeString()}
+                        </span>
+                    )}
                     
                     {/* 불러올 줄 수 버튼그룹 */}
                     <div className="flex bg-surface-3 rounded p-0.5 border border-line">
@@ -374,17 +397,19 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
                                 ? "bg-ok/10 text-ok border-ok/30"
                                 : "bg-surface-3 text-ink-muted border-line hover:bg-surface-4"
                         )}
-                        title={autoRefresh ? "5초마다 자동 새로고침 중" : "자동 새로고침 켜기"}
+                        title={autoRefresh ? "2초마다 실시간 갱신 중" : "실시간 갱신 켜기"}
+                        aria-label={autoRefresh ? "실시간 갱신 끄기" : "실시간 갱신 켜기"}
                     >
                         {autoRefresh ? (
                             <>
                                 <Loader2 className="w-3 h-3 animate-spin text-ok" />
                                 <Pause className="w-3 h-3" />
+                                <span className="text-[10px]">실시간</span>
                             </>
                         ) : (
                             <>
                                 <Play className="w-3 h-3 text-ink-faint" />
-                                <span className="text-[10px]">자동 갱신</span>
+                                <span className="text-[10px]">실시간 갱신</span>
                             </>
                         )}
                     </button>
@@ -427,10 +452,14 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
                     </div>
                 ) : lines.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-ink-faint">
-                        <span>로그 기록이 없습니다.</span>
+                        <span>{autoRefresh ? "로그 기록이 없습니다. 새 로그를 기다리는 중입니다." : "로그 기록이 없습니다."}</span>
+                    </div>
+                ) : visibleLines.length === 0 ? (
+                    <div className="h-full flex items-center justify-center text-ink-faint">
+                        <span>검색 결과가 없습니다.</span>
                     </div>
                 ) : (
-                    lines.map((line, idx) => {
+                    visibleLines.map((line, idx) => {
                         const colorClass = parseLogLine(line);
                         return renderLineWithHighlight(line, colorClass, idx);
                     })

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     BarChart2,
     Calendar,
@@ -28,9 +28,9 @@ function StorageCard({ used, total, free, dir }: { used: number; total: number; 
             <span className="absolute inset-x-0 top-0 h-px opacity-70" style={{ background: `linear-gradient(90deg, transparent, ${tone}, transparent)` }} />
             <div className="flex items-start justify-between gap-4">
                 <div>
-                    <p className="text-[11px] font-medium text-ink-faint uppercase tracking-[0.08em]">저장소 사용률</p>
+                    <p className="text-[11px] font-medium text-ink-faint uppercase tracking-[0.08em]">디스크 사용률</p>
                     <p className="text-2xl font-bold tracking-tight text-ink mt-2">{percentage}%</p>
-                    <p className="text-xs text-ink-faint mt-1.5">{formatBytes(free)} 사용 가능</p>
+                    <p className="text-xs text-ink-faint mt-1.5">{formatBytes(free)} 여유 공간</p>
                 </div>
                 <span className="w-9 h-9 rounded-[var(--radius-control)] grid place-items-center bg-info/10 text-info">
                     <HardDrive className="w-[18px] h-[18px]" />
@@ -41,7 +41,7 @@ function StorageCard({ used, total, free, dir }: { used: number; total: number; 
             </div>
             <div className="mt-2 flex items-center justify-between gap-3 text-[11px] text-ink-faint font-mono">
                 <span>{formatBytes(used)} / {formatBytes(total)}</span>
-                <span className="truncate" title={dir}>{dir}</span>
+                <span className="max-w-[55%] truncate text-right" title={`용량 확인 기준 경로: ${dir}`}>{dir}</span>
             </div>
         </Card>
     );
@@ -50,22 +50,30 @@ function StorageCard({ used, total, free, dir }: { used: number; total: number; 
 export default function Stats() {
     const [data, setData] = useState<StatsResponse | null>(null);
     const [loading, setLoading] = useState(true);
+    const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
     const toast = useToast();
+    const requestInFlightRef = useRef(false);
 
-    const loadStats = async () => {
-        setLoading(true);
+    const loadStats = useCallback(async (silent = false) => {
+        if (requestInFlightRef.current) return;
+        requestInFlightRef.current = true;
+        if (!silent) setLoading(true);
         try {
             setData(await api.getStats());
+            setUpdatedAt(new Date());
         } catch {
-            toast.error("통계 데이터를 불러오는 데 실패했습니다.");
+            if (!silent) toast.error("통계 데이터를 불러오는 데 실패했습니다.");
         } finally {
-            setLoading(false);
+            requestInFlightRef.current = false;
+            if (!silent) setLoading(false);
         }
-    };
+    }, [toast]);
 
     useEffect(() => {
-        loadStats();
-    }, []);
+        void loadStats();
+        const timer = window.setInterval(() => void loadStats(true), 30000);
+        return () => window.clearInterval(timer);
+    }, [loadStats]);
 
     return (
         <div className="space-y-6">
@@ -74,7 +82,12 @@ export default function Stats() {
                 eyebrow="녹화 현황 분석"
                 title="통계"
                 description="녹화 시간, 파일 용량, 채널 활동과 저장소 상태를 한눈에 파악합니다."
-                actions={<Button icon={RefreshCw} onClick={loadStats} loading={loading}>새로고침</Button>}
+                actions={(
+                    <div className="flex items-center gap-3">
+                        {updatedAt && <span className="hidden sm:block text-[11px] text-ink-faint">30초마다 갱신 · {updatedAt.toLocaleTimeString()}</span>}
+                        <Button icon={RefreshCw} onClick={() => void loadStats()} loading={loading}>새로고침</Button>
+                    </div>
+                )}
             />
 
             {loading && !data && (
@@ -88,8 +101,8 @@ export default function Stats() {
                 return (
                     <>
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                            <MetricCard icon={Clock} label="총 라이브 녹화 시간" value={formatDuration(live.total_duration_seconds)} detail={`${live.total_sessions}개 세션`} tone="ok" />
-                            <MetricCard icon={Video} label="총 녹화 용량" value={formatBytes(live.total_size_bytes)} detail="라이브 녹화 파일 합계" tone="live" />
+                            <MetricCard icon={Clock} label="완료된 라이브 녹화 시간" value={formatDuration(live.total_duration_seconds)} detail={`${live.total_sessions}개 완료 · ${live.active_recordings}개 진행 중`} tone="ok" />
+                            <MetricCard icon={Video} label="완료된 녹화 용량" value={formatBytes(live.total_size_bytes)} detail="완료된 라이브 파일 합계" tone="live" />
                             <MetricCard icon={Download} label="다시보기 다운로드" value={`${vod.total_completed}개`} detail={`치지직 ${vod.by_type.chzzk} · 외부 ${vod.by_type.external}`} tone="primary" />
                             <StorageCard used={storage.used_bytes} total={storage.total_bytes} free={storage.free_bytes} dir={storage.download_dir} />
                         </div>
@@ -108,7 +121,7 @@ export default function Stats() {
                                 </div>
 
                                 {live.by_channel.length === 0 ? (
-                                    <EmptyState icon={Database} title="아직 집계할 녹화가 없습니다" description="첫 녹화가 완료되면 채널별 통계가 이곳에 표시됩니다." />
+                                    <EmptyState compact icon={Database} title="아직 집계할 녹화가 없습니다" description="첫 녹화가 완료되면 채널별 통계가 표시됩니다." />
                                 ) : (
                                     <div className="overflow-x-auto">
                                         <table className="w-full min-w-[680px] text-sm">
@@ -152,7 +165,7 @@ export default function Stats() {
                                 </div>
 
                                 {recentSessions.length === 0 ? (
-                                    <EmptyState icon={History} title="녹화 이력이 없습니다" description="완료된 세션이 여기에 쌓입니다." />
+                                    <EmptyState compact icon={History} title="녹화 이력이 없습니다" description="완료된 세션이 여기에 쌓입니다." />
                                 ) : (
                                     <div className="divide-y divide-line/70">
                                         {recentSessions.map((session: LiveSession, index: number) => (

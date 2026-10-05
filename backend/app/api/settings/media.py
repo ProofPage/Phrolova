@@ -41,6 +41,7 @@ class DownloadSettingsUpdateRequest(BaseModel):
         pattern=r"^[^\r\n]*$",
         description="라이브 녹화 파일명 형식",
     )
+    recording_quality: Optional[str] = Field(None, description="라이브 녹화 품질 (best, 1080p, 720p, 480p)")
 
 
 class VodSettingsUpdateRequest(BaseModel):
@@ -83,6 +84,14 @@ async def update_download_settings(req: DownloadSettingsUpdateRequest):
         settings.save_live_preview = req.save_live_preview
     if req.live_filename_template is not None:
         settings.live_filename_template = req.live_filename_template
+    if req.recording_quality is not None:
+        quality = req.recording_quality.lower()
+        if quality not in VALID_QUALITIES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"지원하지 않는 품질입니다. 사용 가능: {', '.join(VALID_QUALITIES)}",
+            )
+        settings.recording_quality = quality
 
     env_updates = {"MAX_RECORD_RETRIES": str(req.max_record_retries)}
     if req.keep_download_parts is not None:
@@ -95,6 +104,8 @@ async def update_download_settings(req: DownloadSettingsUpdateRequest):
         env_updates["SAVE_LIVE_PREVIEW"] = str(req.save_live_preview).lower()
     if req.live_filename_template is not None:
         env_updates["LIVE_FILENAME_TEMPLATE"] = req.live_filename_template
+    if req.recording_quality is not None:
+        env_updates["RECORDING_QUALITY"] = settings.recording_quality
 
     try:
         _update_env_file(env_updates)
@@ -112,6 +123,7 @@ async def update_download_settings(req: DownloadSettingsUpdateRequest):
             "chzzk_time_machine_shift": settings.effective_chzzk_time_machine_offset,
             "save_live_preview": settings.save_live_preview,
             "live_filename_template": settings.live_filename_template,
+            "recording_quality": settings.recording_quality,
         },
     }
 

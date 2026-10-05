@@ -8,6 +8,18 @@
 
 ## [Unreleased]
 
+## [2.0.29] - 2026-10-05
+
+### Changed
+- **System information** — Show the detected FFmpeg version and identify ProofPage as the author; rename the section to “프로그램 정보” and the server field to “Server”.
+- **Live quality setting** — Move live quality from General Settings into the Live Recording Settings card and save it with the other live options.
+- **Page headers** — Align compact page actions beside their titles while keeping the live channel form full width below the dashboard summary.
+- **Statistics dashboard** — Refresh automatically, distinguish completed recording totals from active recordings, clarify disk usage, and reduce empty-state spacing.
+
+### Fixed
+- **System log recording and live refresh** — Store Windows one-file logs beside the executable instead of its temporary extraction folder, ensure the file handler is attached, refresh log contents without browser caching, and keep the live log view and file sizes current.
+- **Log search** — Filter matching lines and safely highlight literal search text, including regular-expression characters.
+
 ## [2.0.28] - 2026-10-05
 
 ### Changed
@@ -482,7 +494,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.28...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.29...HEAD
+[2.0.29]: https://github.com/ProofPage/Phrolova/compare/v2.0.28...v2.0.29
 [2.0.28]: https://github.com/ProofPage/Phrolova/compare/v2.0.27...v2.0.28
 [2.0.27]: https://github.com/ProofPage/Phrolova/compare/v2.0.26...v2.0.27
 [2.0.26]: https://github.com/ProofPage/Phrolova/compare/v2.0.25...v2.0.26

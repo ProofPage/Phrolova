@@ -125,6 +125,23 @@ def _make_console_handler() -> logging.StreamHandler:
     return logging.StreamHandler(stream)
 
 
+def get_log_dir(log_dir: str = "logs") -> Path:
+    """Return a persistent log directory shared by the writer and log API.
+
+    PyInstaller one-file applications extract Python modules to a temporary
+    ``_MEIPASS`` directory. Logs written relative to ``__file__`` disappear
+    when the process exits, so frozen builds keep them beside the executable.
+    """
+    if getattr(sys, "frozen", False):
+        return (Path(sys.executable).resolve().parent / log_dir).resolve()
+
+    project_root = Path(__file__).resolve().parents[3]
+    candidate = Path(log_dir)
+    if not candidate.is_absolute():
+        candidate = project_root / candidate
+    return candidate.resolve()
+
+
 def setup_logger(
     name: str = "chzzk",
     *,
@@ -140,11 +157,8 @@ def setup_logger(
     """
     logger = logging.getLogger(name)
 
-    # 이미 핸들러가 있으면 중복 추가 방지
-    if logger.handlers:
-        return logger
-
     logger.setLevel(level)
+    logger.propagate = False
 
     # 핸들러 내부 오류를 stderr로 뱉지 않게 한다 — 위 재진입 문제의 근원이다.
     logging.raiseExceptions = False
@@ -153,33 +167,40 @@ def setup_logger(
     fmt = _make_formatter()
 
     # ── 콘솔 핸들러 ─────────────────────────────────────
-    console_handler = _make_console_handler()
-    console_handler.setFormatter(fmt)
-    logger.addHandler(console_handler)
+    has_console_handler = any(
+        isinstance(handler, logging.StreamHandler)
+        and not isinstance(handler, logging.FileHandler)
+        for handler in logger.handlers
+    )
+    if not has_console_handler:
+        console_handler = _make_console_handler()
+        console_handler.setFormatter(fmt)
+        logger.addHandler(console_handler)
 
     # ── 파일 핸들러 (선택) ───────────────────────────────
     if log_dir:
         from logging.handlers import TimedRotatingFileHandler
 
-        log_path = Path(log_dir)
-        if not log_path.is_absolute():
-            # 상대 경로인 경우 프로젝트 루트 기준으로 해석
-            # backend/app/core/logger.py 기준 상위 3단계가 프로젝트 루트
-            project_root = Path(__file__).resolve().parents[3]
-            log_path = project_root / log_path
-
+        log_path = get_log_dir(log_dir)
         log_path.mkdir(parents=True, exist_ok=True)
 
         # service.log 로 통일하고 TimedRotatingFileHandler 적용 (매일 자정 롤링, 7일간 보존)
-        file_handler = TimedRotatingFileHandler(
-            log_path / "service.log",
-            when="midnight",
-            interval=1,
-            backupCount=7,
-            encoding="utf-8",
+        active_log_path = (log_path / "service.log").resolve()
+        has_file_handler = any(
+            isinstance(handler, TimedRotatingFileHandler)
+            and Path(handler.baseFilename).resolve() == active_log_path
+            for handler in logger.handlers
         )
-        file_handler.setFormatter(fmt)
-        logger.addHandler(file_handler)
+        if not has_file_handler:
+            file_handler = TimedRotatingFileHandler(
+                active_log_path,
+                when="midnight",
+                interval=1,
+                backupCount=7,
+                encoding="utf-8",
+            )
+            file_handler.setFormatter(fmt)
+            logger.addHandler(file_handler)
 
     return logger
 

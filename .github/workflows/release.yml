@@ -66,7 +66,7 @@ jobs:
 
       - name: 릴리스 파일 이름 설정
         shell: pwsh
-        run: Move-Item dist/Rookery.exe "dist/Rookery-$env:GITHUB_REF_NAME-windows-x64.exe"
+        run: Move-Item dist/Rookery.exe "dist/Phrolova-$env:GITHUB_REF_NAME-windows-x64.exe"
 
       - name: GitHub Release 생성 및 Latest 갱신
         shell: pwsh
@@ -74,18 +74,27 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## Replay downloads
+          ## System logs
 
-          - Replace user-facing VOD labels with the Korean term “다시보기” throughout the app, settings, statistics, and notifications.
+          - Keep Windows one-file logs in a persistent folder beside the executable.
+          - Enable automatic live-log updates, refresh file sizes, and bypass browser caching.
+          - Make log search filter matching lines and safely highlight literal search terms.
+          - Record a fresh entry after log reset while keeping the file handler attached.
 
-          ## Interface improvements
+          ## Statistics and settings
 
-          - Make the live dashboard channel ID field fill available width and align its controls.
-          - Add a confirmation-protected system log reset for current and rotated service logs.
+          - Refresh statistics automatically and show active recording counts separately from completed totals.
+          - Move live quality into Live Recording Settings and save it with the other live options.
+          - Show the detected FFmpeg version and identify ProofPage in program information.
+
+          ## Interface polish
+
+          - Align compact page actions beside their headings and keep the live channel form full width.
+          - Clarify disk usage and reduce oversized empty states on the statistics page.
 
           Download the Windows x64 executable and replace the existing application executable. Settings and saved data are preserved.
           '@
           $notes | Set-Content -Path release-notes.md -Encoding utf8
-          $asset = "dist/Rookery-$env:GITHUB_REF_NAME-windows-x64.exe"
+          $asset = "dist/Phrolova-$env:GITHUB_REF_NAME-windows-x64.exe"
           $version = $env:GITHUB_REF_NAME.TrimStart('v')
           gh release create $env:GITHUB_REF_NAME $asset --title "Version $version" --notes-file release-notes.md --latest --verify-tag

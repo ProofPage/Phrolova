@@ -220,6 +220,7 @@ export default function Dashboard() {
                     </>
                 )}
                 actions={<AddChannelForm platformStatus={platformStatus} onAdded={fetchChannels} />}
+                actionsPlacement="below"
             />
 
             {connectionError && !initialLoading && (

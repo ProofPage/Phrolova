@@ -3,8 +3,7 @@ import { Info } from "lucide-react";
 import { api, type Settings as SettingsType } from "../../api/client";
 import { Card, CardHeader } from "../ui/primitives";
 
-/** 저작자 표기. LICENSE·README·exe 파일 속성과 같은 문구를 쓴다. */
-const AUTHOR = "Serian";
+const AUTHOR = "ProofPage";
 const REPOSITORY_URL = "https://github.com/ProofPage/Phrolova";
 
 interface Props {
@@ -42,9 +41,9 @@ export function InfoTab({ settings, onDirtyChange }: Props) {
                 <CardHeader icon={Info} title="시스템 정보" />
                 <div className="space-y-1 text-sm">
                     <InfoRow label="앱 이름"><span className="text-ink-muted">{settings?.app_name || "불러오는 중…"}</span></InfoRow>
-                    <InfoRow label="FFmpeg 경로"><span className="text-ink-muted truncate max-w-[220px]" title={settings?.ffmpeg_path}>{settings?.ffmpeg_path || "불러오는 중…"}</span></InfoRow>
+                    <InfoRow label="FFmpeg 버전"><span className={settings?.ffmpeg_version ? "text-ok" : "text-ink-faint"}>{settings?.ffmpeg_version ? `설치됨 · v${settings.ffmpeg_version}` : "버전을 확인할 수 없음"}</span></InfoRow>
                     <InfoRow label="Streamlink"><span className={settings?.streamlink_version ? "text-ok" : "text-ink-faint"}>{settings?.streamlink_version ? `설치됨 · v${settings.streamlink_version}` : "설치되지 않음"}</span></InfoRow>
-                    <InfoRow label="서버"><span className="text-ink-muted">{settings ? `${settings.host}:${settings.port}` : "불러오는 중…"}</span></InfoRow>
+                    <InfoRow label="Server"><span className="text-ink-muted">{settings ? `${settings.host}:${settings.port}` : "불러오는 중…"}</span></InfoRow>
                     <InfoRow label="Discord Bot"><span className={settings?.discord_bot_configured ? "text-ok" : "text-ink-faint"}>{settings?.discord_bot_configured ? "연결됨" : "미설정"}</span></InfoRow>
                     <InfoRow label="TwitCasting 설정"><span className={settings?.twitcasting_client_id ? "text-twitcasting" : "text-ink-faint"}>{settings?.twitcasting_client_id ? "설정됨" : "미설정"}</span></InfoRow>
                     <InfoRow label="X Spaces 쿠키" last><span className={settings?.x_cookie_file ? "text-xspaces" : "text-ink-faint"}>{settings?.x_cookie_file ? "설정됨" : "미설정"}</span></InfoRow>
@@ -52,7 +51,7 @@ export function InfoTab({ settings, onDirtyChange }: Props) {
             </Card>
 
             <Card>
-                <CardHeader icon={Info} title="이 프로그램에 대하여" />
+                <CardHeader icon={Info} title="프로그램 정보" />
                 <div className="space-y-1 text-sm">
                     <InfoRow label="버전">
                         <span className="text-ink-muted font-mono">{version ? `v${version}` : "확인 중..."}</span>

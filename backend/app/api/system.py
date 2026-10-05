@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from logging.handlers import TimedRotatingFileHandler
+from app.core.logger import get_log_dir
 
 router = APIRouter(prefix="/api/system", tags=["System"])
 
@@ -47,8 +48,7 @@ async def check_update_now():
 
 def _get_log_dir() -> Path:
     """로그 저장 디렉토리의 절대 경로를 반환한다."""
-    project_root = Path(__file__).resolve().parents[3]
-    return (project_root / "logs").resolve()
+    return get_log_dir()
 
 
 @router.get("/logs", response_model=list[dict])
@@ -123,6 +123,8 @@ async def clear_system_logs():
     finally:
         for handler in reversed(file_handlers):
             handler.release()
+
+    logging.getLogger("chzzk").info("시스템 로그 초기화 완료. 새 로그 기록을 시작합니다.")
 
     return {
         "message": "현재 로그와 날짜별 백업 로그를 초기화했습니다.",

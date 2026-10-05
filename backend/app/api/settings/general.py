@@ -7,6 +7,10 @@ from typing import Optional
 import os
 import platform
 import string
+import asyncio
+import re
+import subprocess
+from functools import lru_cache
 from importlib.metadata import PackageNotFoundError, version as package_version
 
 from fastapi import APIRouter, HTTPException, Query
@@ -39,6 +43,36 @@ def _streamlink_version() -> str | None:
             return None
 
 
+@lru_cache(maxsize=8)
+def _read_ffmpeg_version(ffmpeg_path: str) -> str | None:
+    """Read the FFmpeg version without blocking the async settings route."""
+    try:
+        result = subprocess.run(
+            [ffmpeg_path, "-version"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=3,
+            check=False,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+    output = result.stdout or result.stderr
+    match = re.search(r"ffmpeg version\s+([^\s]+)", output, re.IGNORECASE)
+    return match.group(1) if result.returncode == 0 and match else None
+
+
+async def _get_ffmpeg_version(settings) -> str | None:
+    try:
+        path = settings.resolve_ffmpeg_path()
+    except (OSError, FileNotFoundError):
+        return None
+    return await asyncio.to_thread(_read_ffmpeg_version, path)
+
+
 class GeneralSettingsUpdateRequest(BaseModel):
     """일반 설정 업데이트 요청."""
 
@@ -58,12 +92,14 @@ class GeneralSettingsUpdateRequest(BaseModel):
 async def get_current_settings():
     """현재 애플리케이션 설정을 조회합니다 (민감정보 마스킹)."""
     settings = get_settings()
+    ffmpeg_version = await _get_ffmpeg_version(settings)
     return {
         "app_name": settings.app_name,
         "download_dir": settings.download_dir,
         "live_download_dir": settings.effective_live_download_dir,
         "vod_download_dir": settings.vod_download_dir or settings.download_dir,
         "ffmpeg_path": settings.ffmpeg_path,
+        "ffmpeg_version": ffmpeg_version,
         "streamlink_version": _streamlink_version(),
         "monitor_interval": settings.monitor_interval,
         "host": settings.host,

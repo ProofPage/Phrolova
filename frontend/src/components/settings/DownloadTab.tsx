@@ -15,6 +15,7 @@ interface Props {
 export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [keepParts, setKeepParts] = useState(false);
     const [maxRetries, setMaxRetries] = useState(3);
+    const [recordingQuality, setRecordingQuality] = useState("best");
     const [streamMode, setStreamMode] = useState<"standard" | "request-timemachine" | "force-timemachine">("request-timemachine");
     const [timeMachineOffset, setTimeMachineOffset] = useState(0);
     const [saveLivePreview, setSaveLivePreview] = useState(false);
@@ -37,6 +38,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         initialized.current = true;
         setKeepParts(settings.keep_download_parts);
         setMaxRetries(settings.max_record_retries);
+        setRecordingQuality(settings.recording_quality || "best");
         setStreamMode(settings.chzzk_stream_mode ?? (settings.chzzk_time_machine_enabled ? "force-timemachine" : "standard"));
         setTimeMachineOffset(settings.chzzk_time_machine_offset ?? settings.chzzk_time_machine_shift ?? 0);
         setSaveLivePreview(settings.save_live_preview ?? false);
@@ -51,6 +53,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const dirty = !!settings && (
         keepParts !== settings.keep_download_parts ||
         maxRetries !== settings.max_record_retries ||
+        recordingQuality !== (settings.recording_quality || "best") ||
         streamMode !== (settings.chzzk_stream_mode ?? (settings.chzzk_time_machine_enabled ? "force-timemachine" : "standard")) ||
         timeMachineOffset !== (settings.chzzk_time_machine_offset ?? settings.chzzk_time_machine_shift ?? 0) ||
         saveLivePreview !== (settings.save_live_preview ?? false) ||
@@ -79,7 +82,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const handleSaveLive = () => saveLive({
         request: () => api.updateDownloadSettings(
             maxRetries, streamMode, timeMachineOffset,
-            saveLivePreview, liveFilenameTemplate,
+            saveLivePreview, liveFilenameTemplate, recordingQuality,
         ),
         success: "라이브 설정이 저장되었습니다.",
         failure: "라이브 설정 저장에 실패했습니다.",
@@ -136,6 +139,18 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
 
             <Card className="space-y-5">
                 <CardHeader icon={Radio} title="라이브 녹화 설정" />
+                <Field label="라이브 품질" hint="라이브 녹화에 사용할 yt-dlp 화질입니다.">
+                    <Select
+                        value={recordingQuality}
+                        onChange={(event) => setRecordingQuality(event.target.value)}
+                        options={[
+                            { value: "best", label: "최고 (Best)" },
+                            { value: "1080p", label: "1080p" },
+                            { value: "720p", label: "720p" },
+                            { value: "480p", label: "480p" },
+                        ]}
+                    />
+                </Field>
                 <Field label="자동 재시도 횟수" hint="라이브 녹화 중단 시 자동 재시도 횟수.">
                     <Input type="number" min={0} max={100} value={maxRetries} onChange={(event) => setMaxRetries(parseInt(event.target.value) || 0)} />
                 </Field>

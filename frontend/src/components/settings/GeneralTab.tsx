@@ -18,7 +18,6 @@ export function GeneralTab({ settings, onSaved, onDirtyChange }: Props) {
     const [vodDownloadDir, setVodDownloadDir] = useState("");
     const [monitorInterval, setMonitorInterval] = useState(30);
     const [liveFormat, setLiveFormat] = useState("ts");
-    const [recordingQuality, setRecordingQuality] = useState("best");
     const { saving, save } = useSettingsSave(onSaved);
 
     useEffect(() => {
@@ -27,15 +26,13 @@ export function GeneralTab({ settings, onSaved, onDirtyChange }: Props) {
         setVodDownloadDir(settings.vod_download_dir || settings.download_dir);
         setMonitorInterval(settings.monitor_interval);
         setLiveFormat(settings.live_format || "ts");
-        setRecordingQuality(settings.recording_quality || "best");
     }, [settings]);
 
     const dirty = !!settings && (
         liveDownloadDir !== (settings.live_download_dir || settings.download_dir) ||
         vodDownloadDir !== (settings.vod_download_dir || settings.download_dir) ||
         monitorInterval !== settings.monitor_interval ||
-        liveFormat !== (settings.live_format || "ts") ||
-        recordingQuality !== (settings.recording_quality || "best")
+        liveFormat !== (settings.live_format || "ts")
     );
 
     useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
@@ -46,7 +43,6 @@ export function GeneralTab({ settings, onSaved, onDirtyChange }: Props) {
             vod_download_dir: vodDownloadDir,
             monitor_interval: monitorInterval,
             live_format: liveFormat,
-            recording_quality: recordingQuality,
         }),
         success: "일반 설정이 저장되었습니다.",
         failure: "일반 설정 저장에 실패했습니다.",
@@ -82,19 +78,6 @@ export function GeneralTab({ settings, onSaved, onDirtyChange }: Props) {
                         { value: "ts", label: "TS — MPEG Transport Stream (권장)" },
                         { value: "mkv", label: "MKV — Matroska" },
                         { value: "mp4", label: "MP4 (권장하지 않음 — 라이브 중단 시 파일 손상 가능)" },
-                    ]}
-                />
-            </Field>
-
-            <Field label="라이브 품질">
-                <Select
-                    value={recordingQuality}
-                    onChange={(event) => setRecordingQuality(event.target.value)}
-                    options={[
-                        { value: "best", label: "최고 (Best)" },
-                        { value: "1080p", label: "1080p" },
-                        { value: "720p", label: "720p" },
-                        { value: "480p", label: "480p" },
                     ]}
                 />
             </Field>

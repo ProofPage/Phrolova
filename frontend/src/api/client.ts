@@ -88,6 +88,7 @@ export interface Settings {
     monitor_interval: number;
     host: string;
     port: number;
+    ffmpeg_version: string | null;
     authenticated: boolean;
     discord_bot_configured: boolean;
 
@@ -276,6 +277,7 @@ export interface StatsResponse {
         total_duration_seconds: number;
         total_size_bytes: number;
         total_sessions: number;
+        active_recordings: number;
         by_channel: ChannelLiveStat[];
     };
     vod: {
@@ -413,6 +415,7 @@ export const api = {
         chzzk_time_machine_offset: number,
         save_live_preview: boolean,
         live_filename_template: string,
+        recording_quality: string,
     ) => {
         const res = await client.put("/settings/live", {
             max_record_retries,
@@ -420,6 +423,7 @@ export const api = {
             chzzk_time_machine_offset,
             save_live_preview,
             live_filename_template,
+            recording_quality,
         });
         return res.data;
     },
@@ -556,7 +560,8 @@ export const api = {
     },
     getSystemLogContent: async (filename: string, lines?: number): Promise<SystemLogResponse> => {
         const res = await client.get<SystemLogResponse>(`/system/logs/${filename}`, {
-            params: lines !== undefined ? { lines } : {},
+            params: { ...(lines !== undefined ? { lines } : {}), _refresh: Date.now() },
+            headers: { "Cache-Control": "no-cache" },
         });
         return res.data;
     },

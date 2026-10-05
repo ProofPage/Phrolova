@@ -90,6 +90,13 @@ async def get_stats():
 
     live_total_duration = sum(e.get("duration_seconds", 0) for e in live_history)
     live_total_size = sum(e.get("file_size_bytes", 0) for e in live_history)
+    active_recordings = 0
+    if conductor is not None:
+        active_recordings = sum(
+            1
+            for status in conductor.get_all_status()
+            if (status.get("recording") or {}).get("is_recording")
+        )
 
     # 최근 10개 세션 (ended_at 기준 내림차순)
     recent_sessions = sorted(
@@ -136,6 +143,7 @@ async def get_stats():
             "total_duration_seconds": live_total_duration,
             "total_size_bytes": live_total_size,
             "total_sessions": len(live_history),
+            "active_recordings": active_recordings,
             "by_channel": by_channel,
         },
         "vod": {
