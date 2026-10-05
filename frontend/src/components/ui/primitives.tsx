@@ -45,18 +45,18 @@ export function PageHeader({
         <header className="page-hero relative border border-line rounded-[calc(var(--radius-card)+4px)] p-5 sm:p-6">
             <div aria-hidden="true" className="page-hero-decoration pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" />
             <div className={`relative z-10 flex ${actionsPlacement === "below" ? "flex-col" : "flex-col md:flex-row md:items-center"} justify-between gap-5`}>
-                <div className="flex items-center gap-4 min-w-0">
-                    <span className="page-hero-icon grid place-items-center w-11 h-11 rounded-[var(--radius-card)] shrink-0">
+                <div className={clsx("flex gap-4 min-w-0", actionsPlacement === "below" ? "items-start" : "items-center")}>
+                    <span className={clsx("page-hero-icon grid place-items-center w-11 h-11 rounded-[var(--radius-card)] shrink-0", actionsPlacement === "below" && "mt-1")}>
                         {createElement(icon, { className: "w-5 h-5" })}
                     </span>
                     <div className="min-w-0">
                         {eyebrow && <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-faint mb-1.5">{eyebrow}</p>}
-                        <h1 className="text-[24px] sm:text-[28px] font-bold tracking-[-0.035em] text-ink leading-none">{title}</h1>
+                        <h1 className={clsx("text-[24px] sm:text-[28px] font-bold tracking-[-0.035em] text-ink", actionsPlacement === "below" ? "leading-tight" : "leading-none")}>{title}</h1>
                         <p className="text-[13px] sm:text-[14px] text-ink-faint mt-2 max-w-2xl leading-relaxed">{description}</p>
                         {meta && <div className="flex flex-wrap items-center gap-2 mt-3">{meta}</div>}
                     </div>
                 </div>
-                {actions && <div className={actionsPlacement === "below" ? "w-full" : "shrink-0 md:max-w-[44%]"}>{actions}</div>}
+                {actions && <div className={actionsPlacement === "below" ? "w-full border-t border-line/80 pt-4" : "shrink-0 md:max-w-[44%]"}>{actions}</div>}
             </div>
         </header>
     );

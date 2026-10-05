@@ -49,15 +49,22 @@ class RecorderService:
         channel_id: str,
         platform: Platform = Platform.CHZZK,
         auto_record: bool = True,
+        download_condition: Optional[str] = None,
+        watchalong_tags: Optional[str] = None,
     ) -> dict:
         """멀티 플랫폼 감시 채널을 추가한다."""
-        self._conductor.add_channel(channel_id, auto_record=auto_record, platform=platform)
+        self._conductor.add_channel(
+            channel_id, auto_record=auto_record, platform=platform,
+            download_condition=download_condition, watchalong_tags=watchalong_tags,
+        )
         composite_key = self._conductor.make_composite_key(platform, channel_id)
         return {
             "composite_key": composite_key,
             "platform": platform.value,
             "channel_id": channel_id,
             "auto_record": auto_record,
+            "download_condition": download_condition,
+            "watchalong_tags": watchalong_tags,
             "message": f"채널 '{composite_key}' 등록 완료.",
         }
 
@@ -91,6 +98,9 @@ class RecorderService:
     def scan_now(self, composite_key: Optional[str] = None) -> None:
         """채널 폴링 주기를 무시하고 즉시 스캔을 트리거한다."""
         self._conductor.trigger_scan_now(composite_key)
+
+    def set_download_options(self, composite_key: str, auto_record: bool, condition: Optional[str], tags: Optional[str]) -> None:
+        self._conductor.set_download_options(composite_key, auto_record, condition, tags)
 
     def set_channel_tags(self, composite_key: str, tags: list[str]) -> None:
         """특정 채널의 태그를 변경한다."""

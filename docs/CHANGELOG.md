@@ -8,6 +8,15 @@
 
 ## [Unreleased]
 
+## [2.0.31] - 2026-10-05
+
+### Added
+- **라이브 다운로드 조건** — 대시보드 기본 조건과 스트리머별 조건을 설정합니다. 치지직 방송 태그로 같이보기 여부를 판단하고, 등록 전 설정 창과 기존 채널 수정 기능을 제공합니다.
+
+### Changed
+- **다운로드 설정 UX** — 기존 대시보드 배치를 유지하며 설명을 간결하게 정리하고, 변경 여부와 저장 상태를 표시합니다.
+- **대시보드 상단** — 제목과 아이콘을 정렬하고 채널 추가 영역을 구분했습니다. 입력과 보기 전환 버튼의 안내를 보완하고, 같이보기 태그 예시에서 동시시청을 제거했습니다.
+
 ## [2.0.30] - 2026-10-05
 
 ### Changed
@@ -501,7 +510,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.30...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.31...HEAD
+[2.0.31]: https://github.com/ProofPage/Phrolova/compare/v2.0.30...v2.0.31
 [2.0.30]: https://github.com/ProofPage/Phrolova/compare/v2.0.29...v2.0.30
 [2.0.29]: https://github.com/ProofPage/Phrolova/compare/v2.0.28...v2.0.29
 [2.0.28]: https://github.com/ProofPage/Phrolova/compare/v2.0.27...v2.0.28

@@ -1,0 +1,40 @@
+"""대시보드 자동 다운로드 조건 요청."""
+
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from app.engine.download_condition import DownloadCondition, parse_watchalong_tags
+
+
+class ChannelDownloadOptions(BaseModel):
+    auto_record: bool = True
+    download_condition: DownloadCondition | None = None
+    watchalong_tags: str | None = Field(None, max_length=500)
+
+    @field_validator("watchalong_tags")
+    @classmethod
+    def clean_tags(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        tags = parse_watchalong_tags(value)
+        if not tags:
+            raise ValueError("같이보기 태그를 하나 이상 입력하세요.")
+        return ", ".join(tags)
+
+    @model_validator(mode="after")
+    def inherit_tags(self):
+        if self.download_condition is None:
+            self.watchalong_tags = None
+        return self
+
+
+class DefaultDownloadOptions(BaseModel):
+    live_download_condition: DownloadCondition = "all"
+    watchalong_tags: str = Field("같이보기", max_length=500)
+
+    @field_validator("watchalong_tags")
+    @classmethod
+    def clean_tags(cls, value: str) -> str:
+        tags = parse_watchalong_tags(value)
+        if not tags:
+            raise ValueError("같이보기 태그를 하나 이상 입력하세요.")
+        return ", ".join(tags)

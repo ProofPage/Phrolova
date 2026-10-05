@@ -116,6 +116,13 @@ MIGRATIONS: list[tuple[int, str]] = [
         );
         """,
     ),
+    (
+        3,
+        """
+        ALTER TABLE channels ADD COLUMN download_condition TEXT;
+        ALTER TABLE channels ADD COLUMN watchalong_tags TEXT;
+        """,
+    ),
 ]
 
 #: 코드가 기대하는 최신 스키마 버전.

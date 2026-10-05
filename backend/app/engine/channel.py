@@ -36,6 +36,9 @@ class ChannelTask:
     thumbnail_url: Optional[str] = None
     profile_image_url: Optional[str] = None
     tags: list[str] = field(default_factory=list)
+    broadcast_tags: Optional[list[str]] = None
+    download_condition: Optional[str] = None
+    watchalong_tags: Optional[str] = None
     last_error: Optional[str] = None
     # X Spaces 전용
     spaces_process: Optional[asyncio.subprocess.Process] = field(default=None, repr=False)

@@ -27,6 +27,7 @@ class LiveStatus(TypedDict, total=False):
     channel_name: str
     title: str
     category: str
+    broadcast_tags: Optional[list[str]]
     viewer_count: int
     thumbnail_url: str
     profile_image_url: str

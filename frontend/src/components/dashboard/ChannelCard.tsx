@@ -21,6 +21,7 @@ export interface ChannelItemProps extends ReorderProps {
     onStopRecord: (channel: Channel) => void;
     onRemove: (channel: Channel) => void;
     onToggleAutoRecord: (channel: Channel) => void;
+    onEditDownloadSettings: (channel: Channel) => void;
     isActionLoading: boolean;
     globalTags: string[];
     onAddTag: (channel: Channel, tag: string) => void;
@@ -171,6 +172,8 @@ export function ChannelCard(props: ChannelItemProps) {
                 <div className="flex flex-col gap-3 mb-3">
                     <div className="flex items-center justify-between text-xs"><span className="text-ink-faint">상태</span><span className={channel.is_live ? "text-live" : "text-ink-faint"}>{channel.is_live ? "LIVE" : "OFFLINE"}</span></div>
                     <div className="flex items-center justify-between text-xs"><span className="text-ink-faint">자동 녹화</span><Switch checked={channel.auto_record} onChange={() => onToggleAutoRecord(channel)} label={`${displayName} 자동 녹화`} /></div>
+                    <Button onClick={() => props.onEditDownloadSettings(channel)} className="w-full text-xs">다운로드 설정</Button>
+                    {channel.is_live && channel.auto_record && !channel.recording?.is_recording && channel.auto_record_eligible === false && <p className="text-xs text-ink-faint">{channel.broadcast_tags == null ? "방송 태그 확인 대기" : "다운로드 조건에 맞는 방송 대기"}</p>}
                 </div>
 
                 <div className="mt-auto space-y-2">

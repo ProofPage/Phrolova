@@ -1,4 +1,5 @@
 import { LayoutGrid, List, RefreshCw, Square } from "lucide-react";
+import type { ReactNode } from "react";
 import { TagManager } from "../ui/TagManager";
 import { Button } from "../ui/primitives";
 
@@ -13,6 +14,7 @@ const FILTERS: { value: StatusFilter; label: string; selectedClass: string }[] =
 ];
 
 interface Props {
+    children?: ReactNode;
     filter: StatusFilter;
     onFilterChange: (filter: StatusFilter) => void;
     globalTags: string[];
@@ -28,6 +30,7 @@ interface Props {
 }
 
 export function DashboardFilters({
+    children,
     filter,
     onFilterChange,
     globalTags,
@@ -44,10 +47,12 @@ export function DashboardFilters({
     return (
         <div className="flex flex-col gap-3 p-3 sm:p-4 bg-surface-2 border border-line rounded-[var(--radius-card)] surface-raise">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                <div className="flex gap-1 p-1 bg-surface-3 rounded-[var(--radius-control)] overflow-x-auto">
+                <div role="group" aria-label="채널 상태 필터" className="flex gap-1 p-1 bg-surface-3 rounded-[var(--radius-control)] overflow-x-auto">
                     {FILTERS.map((option) => (
                         <button
                             key={option.value}
+                            type="button"
+                            aria-pressed={filter === option.value}
                             onClick={() => onFilterChange(option.value)}
                             className={`px-3 py-1.5 rounded-md text-[13px] font-medium transition-all whitespace-nowrap ${filter === option.value ? `bg-surface-1 shadow-sm ${option.selectedClass}` : "text-ink-faint hover:text-ink-muted"}`}
                         >
@@ -56,15 +61,17 @@ export function DashboardFilters({
                     ))}
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0 overflow-x-auto">
-                    <Button icon={RefreshCw} onClick={onScanNow} className="px-3 py-2">즉시 스캔</Button>
-                    <Button variant="danger" icon={Square} onClick={onStopAll} disabled={recordingCount === 0} className="px-3 py-2">전체 중지</Button>
-                    <div className="flex bg-surface-3 border border-line rounded-[var(--radius-control)] p-1 ml-auto">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <Button icon={RefreshCw} onClick={onScanNow} className="px-3 py-2 whitespace-nowrap shrink-0">즉시 스캔</Button>
+                    <Button variant="danger" icon={Square} onClick={onStopAll} disabled={recordingCount === 0} className="px-3 py-2 whitespace-nowrap shrink-0">전체 중지</Button>
+                    <div role="group" aria-label="채널 보기 방식" className="flex bg-surface-3 border border-line rounded-[var(--radius-control)] p-1 ml-auto">
                         <button
                             type="button"
                             onClick={() => onViewModeChange("grid")}
                             className={`p-1.5 rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-4 text-ink" : "text-ink-faint hover:text-ink"}`}
-                            title="그리드 뷰"
+                            title="카드로 보기"
+                            aria-label="카드로 보기"
+                            aria-pressed={viewMode === "grid"}
                         >
                             <LayoutGrid className="w-4 h-4" />
                         </button>
@@ -72,7 +79,9 @@ export function DashboardFilters({
                             type="button"
                             onClick={() => onViewModeChange("list")}
                             className={`p-1.5 rounded-md transition-colors ${viewMode === "list" ? "bg-surface-4 text-ink" : "text-ink-faint hover:text-ink"}`}
-                            title="리스트 뷰"
+                            title="목록으로 보기"
+                            aria-label="목록으로 보기"
+                            aria-pressed={viewMode === "list"}
                         >
                             <List className="w-4 h-4" />
                         </button>
@@ -81,7 +90,7 @@ export function DashboardFilters({
             </div>
 
             <div className="flex flex-wrap items-center gap-y-2 pt-3 border-t border-line/80">
-                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-faint mr-3 shrink-0">Tag filter</span>
+                <span className="text-[10px] font-bold tracking-[0.14em] text-ink-faint mr-3 shrink-0">채널 태그</span>
                 <TagManager
                     availableTags={globalTags}
                     selectedTags={selectedTags}
@@ -91,6 +100,7 @@ export function DashboardFilters({
                     onDeleteTag={onDeleteTag}
                 />
             </div>
+            {children}
         </div>
     );
 }

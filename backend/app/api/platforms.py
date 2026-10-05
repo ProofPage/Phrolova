@@ -23,13 +23,14 @@ from app.core.utils import (
     update_env_file as _update_env_file,
 )
 from app.engine.base import Platform
+from app.api.download_options import ChannelDownloadOptions
 
 router = APIRouter(prefix="/api/platforms", tags=["Platforms"])
 
 
 # ── 요청 스키마 ──────────────────────────────────────────
 
-class AddPlatformChannelRequest(BaseModel):
+class AddPlatformChannelRequest(ChannelDownloadOptions):
     """멀티 플랫폼 채널 추가 요청."""
 
     platform: str = Field(..., description="플랫폼 (chzzk, twitcasting, x_spaces, youtube)")
@@ -77,10 +78,14 @@ async def add_platform_channel(req: AddPlatformChannelRequest):
         channel_id = extract_youtube_id(channel_id)
 
     service = get_recorder_service()
+    if platform != Platform.CHZZK and req.download_condition is not None:
+        raise HTTPException(status_code=400, detail="같이보기 조건은 치지직에서 지원합니다.")
     return service.add_platform_channel(
         channel_id=channel_id,
         platform=platform,
         auto_record=req.auto_record,
+        download_condition=req.download_condition,
+        watchalong_tags=req.watchalong_tags,
     )
 
 
@@ -106,6 +111,25 @@ async def list_platform_channels():
 
     service = get_recorder_service()
     return service.get_channels()
+
+
+@router.put("/channels/{platform}/{channel_id:path}/download-options", summary="채널 다운로드 설정 수정")
+async def update_download_options(platform: str, channel_id: str, req: ChannelDownloadOptions):
+    from app.main import get_recorder_service
+    try:
+        platform_enum = Platform(platform)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="지원하지 않는 플랫폼입니다.") from exc
+    if platform_enum != Platform.CHZZK and req.download_condition is not None:
+        raise HTTPException(status_code=400, detail="같이보기 조건은 치지직에서 지원합니다.")
+    try:
+        get_recorder_service().set_download_options(
+            f"{platform_enum.value}:{channel_id}", req.auto_record,
+            req.download_condition, req.watchalong_tags,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"message": "채널 다운로드 설정이 저장되었습니다.", **req.model_dump()}
 
 
 @router.patch("/channels/{platform}/{channel_id:path}/auto-record", summary="자동 녹화 토글")

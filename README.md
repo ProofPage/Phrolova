@@ -1,6 +1,6 @@
 # Phrolova
 
-![Version](https://img.shields.io/badge/version-2.0.30-13d9a3)
+![Version](https://img.shields.io/badge/version-2.0.31-13d9a3)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827)
@@ -16,12 +16,16 @@
 
 - 치지직, TwitCasting, YouTube 채널 상태를 감시하고 방송이 시작되면 자동 녹화
 - 채널별 자동 녹화 설정, 수동 시작·중지, 실패 후 자동 재시도
+- 대시보드에서 치지직 자동 다운로드 조건 설정: 모든 라이브, 같이보기만, 같이보기 제외
+- 채널 추가 전 설정 창과 기존 스트리머별 다운로드 설정 수정
 - Streamlink로 라이브 스트림을 받고 FFmpeg로 파일에 기록
 - 치지직 타임머신 스트림 선택, 시작 오프셋 및 화질 설정
 - TS, MKV, MP4 포맷 선택과 라이브 파일명 템플릿
 - 라이브 녹화와 채팅 로그 저장 경로 분리
 
 TS와 MKV는 녹화가 예기치 않게 중단되어도 이미 받은 구간을 보존하기 쉽습니다. MP4는 호환성이 좋지만 라이브 녹화가 비정상 종료되면 파일이 재생되지 않을 수 있습니다.
+
+같이보기 여부는 치지직 방송 태그로 판단합니다. 같이보기 태그는 쉼표로 구분해 입력하며, 하나라도 일치하면 같이보기로 분류합니다. 스트리머별 설정에서 기본 조건을 따르거나 개별 조건을 지정할 수 있습니다. 태그 정보를 읽을 수 없으면 조건 확인을 기다리고, 변경한 조건은 다음 자동 시작부터 적용됩니다. 진행 중인 녹화와 수동 시작은 계속 사용할 수 있습니다.
 
 ### 다시보기와 클립 다운로드
 

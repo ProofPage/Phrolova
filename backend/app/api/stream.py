@@ -6,11 +6,12 @@ Rookery: Stream API Router
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from app.core.utils import extract_channel_id
 from app.engine.base import Platform
 from app.engine.conductor import Conductor
+from app.api.download_options import ChannelDownloadOptions
 
 router = APIRouter(prefix="/api/stream", tags=["Stream"])
 
@@ -33,7 +34,7 @@ def _to_composite_key(raw: str) -> str:
 
 # ── 요청 스키마 ──────────────────────────────────────────
 
-class AddChannelRequest(BaseModel):
+class AddChannelRequest(ChannelDownloadOptions):
     """채널 추가 요청."""
 
     channel_id: str = Field(..., description="치지직 채널 ID")
@@ -50,7 +51,23 @@ async def add_channel(req: AddChannelRequest):
     service = get_recorder_service()
 
     channel_id = extract_channel_id(req.channel_id)
-    return service.add_channel(channel_id, req.auto_record)
+    return service.add_platform_channel(
+        channel_id, platform=Platform.CHZZK, auto_record=req.auto_record,
+        download_condition=req.download_condition, watchalong_tags=req.watchalong_tags,
+    )
+
+
+@router.put("/channels/{channel_id}/download-options", summary="채널 다운로드 설정 수정")
+async def update_channel_download_options(channel_id: str, req: ChannelDownloadOptions):
+    from app.main import get_recorder_service
+
+    service = get_recorder_service()
+    key = Conductor.make_composite_key(Platform.CHZZK, extract_channel_id(channel_id))
+    try:
+        service.set_download_options(key, req.auto_record, req.download_condition, req.watchalong_tags)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"message": "채널 다운로드 설정이 저장되었습니다.", **req.model_dump()}
 
 
 @router.delete("/channels/{channel_id:path}", summary="채널 제거")

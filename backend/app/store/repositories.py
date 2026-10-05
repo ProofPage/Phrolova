@@ -91,6 +91,8 @@ class ChannelRepository:
         channel_id: str,
         auto_record: bool,
         tags: Optional[list[str]] = None,
+        download_condition: Optional[str] = None,
+        watchalong_tags: Optional[str] = None,
     ) -> None:
         """채널을 등록하거나 기본 정보를 갱신한다.
 
@@ -99,8 +101,8 @@ class ChannelRepository:
         """
         self._db.execute(
             """
-            INSERT INTO channels (composite_key, platform, channel_id, auto_record, tags)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO channels (composite_key, platform, channel_id, auto_record, tags, download_condition, watchalong_tags)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(composite_key) DO UPDATE SET
                 platform    = excluded.platform,
                 channel_id  = excluded.channel_id,
@@ -113,6 +115,8 @@ class ChannelRepository:
                 channel_id,
                 1 if auto_record else 0,
                 json.dumps(tags or [], ensure_ascii=False),
+                download_condition,
+                watchalong_tags,
             ),
         )
 
@@ -129,6 +133,12 @@ class ChannelRepository:
         self._db.execute(
             "UPDATE channels SET tags = ? WHERE composite_key = ?",
             (json.dumps(tags, ensure_ascii=False), composite_key),
+        )
+
+    def set_download_options(self, composite_key: str, auto_record: bool, condition: Optional[str], tags: Optional[str]) -> None:
+        self._db.execute(
+            "UPDATE channels SET auto_record = ?, download_condition = ?, watchalong_tags = ? WHERE composite_key = ?",
+            (int(auto_record), condition, tags, composite_key),
         )
 
     def remove_tag_everywhere(self, tag_name: str) -> int:
@@ -185,6 +195,8 @@ class ChannelRepository:
             "platform": row["platform"],
             "channel_id": row["channel_id"],
             "auto_record": bool(row["auto_record"]),
+            "download_condition": row["download_condition"],
+            "watchalong_tags": row["watchalong_tags"],
             "tags": _loads(row["tags"], []),
             "captured_m3u8_url": row["captured_m3u8_url"],
             "captured_m3u8_at": row["captured_m3u8_at"],

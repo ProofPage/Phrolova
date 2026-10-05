@@ -9,7 +9,7 @@ import sys
 import shutil
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -151,6 +151,8 @@ class Settings(BaseSettings):
     chzzk_time_machine_offset: Optional[int] = None  # 스트림 시작 기준 건너뛸 초 수
     chzzk_time_machine_shift: Optional[int] = None  # 구버전 설정 호환용
     save_live_preview: bool = False           # 치지직 녹화 시작 시 미리보기 이미지 저장
+    live_download_condition: Literal["all", "watchalong", "exclude_watchalong"] = "all"
+    watchalong_tags: str = "같이보기"
     live_filename_template: str = "[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}"
 
     @field_validator("live_filename_template", mode="before")

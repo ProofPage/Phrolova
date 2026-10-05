@@ -12,6 +12,12 @@ export const client = axios.create({
 // ── Types ───────────────────────────────────────────────
 
 export type Platform = "chzzk" | "twitcasting" | "x_spaces" | "youtube";
+export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
+export interface ChannelDownloadOptions {
+    auto_record: boolean;
+    download_condition: DownloadCondition | null;
+    watchalong_tags: string | null;
+}
 
 export const PLATFORM_LABELS: Record<Platform, string> = {
     chzzk: "치지직",
@@ -25,6 +31,10 @@ export interface Channel {
     platform?: Platform;
     channel_id: string;
     auto_record: boolean;
+    download_condition?: DownloadCondition | null;
+    watchalong_tags?: string | null;
+    broadcast_tags?: string[] | null;
+    auto_record_eligible?: boolean;
     is_live: boolean;
     channel_name?: string;
     title?: string;
@@ -100,6 +110,8 @@ export interface Settings {
     chzzk_time_machine_offset: number;
     save_live_preview: boolean;
     live_filename_template: string;
+    live_download_condition: DownloadCondition;
+    watchalong_tags: string;
 
     live_format: string;
     vod_format: string;
@@ -326,10 +338,11 @@ export interface SystemLogResponse {
 
 export const api = {
     // Channels
-    addChannel: async (channel_id: string, auto_record: boolean = true) => {
+    addChannel: async (channel_id: string, auto_record: boolean = true, options?: ChannelDownloadOptions) => {
         const res = await client.post("/stream/channels", {
             channel_id,
             auto_record,
+            ...options,
         });
         return res.data;
     },
@@ -401,6 +414,17 @@ export const api = {
     },
 
     // Settings
+    updateLiveCondition: async (live_download_condition: DownloadCondition, watchalong_tags: string) => {
+        const res = await client.put("/settings/live-condition", { live_download_condition, watchalong_tags });
+        return res.data;
+    },
+    updateChannelDownloadOptions: async (channel: Channel, options: ChannelDownloadOptions) => {
+        const path = (channel.platform || "chzzk") === "chzzk"
+            ? `/stream/channels/${encodeURIComponent(channel.channel_id)}/download-options`
+            : `/platforms/channels/${channel.platform}/${encodeURIComponent(channel.channel_id)}/download-options`;
+        const res = await client.put(path, options);
+        return res.data;
+    },
     getSettings: async () => {
         const res = await client.get<Settings>("/settings");
         return res.data;

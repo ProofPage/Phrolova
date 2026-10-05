@@ -118,7 +118,7 @@ def clean_filename(name: str, max_length: int = 150) -> str:
     return cleaned[:max_length]
 
 
-def update_env_file(updates: dict[str, str]) -> None:
+def update_env_file(updates: dict[str, str], *, raise_on_error: bool = False) -> None:
     """updates 딕셔너리의 키-값을 .env 파일에 반영한다.
 
     기존 키는 덮어쓰고, 없는 키는 끝에 추가한다.
@@ -152,4 +152,6 @@ def update_env_file(updates: dict[str, str]) -> None:
         env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
     except Exception as e:
         logger.error(f".env 파일 업데이트 실패: {e}")
+        if raise_on_error:
+            raise
 

@@ -18,6 +18,7 @@ from app.engine.base import Platform
 from app.engine.channel import ChannelTask
 from app.engine.chat import ChatArchiver
 from app.engine.downloader import ChzzkLiveEngine
+from app.engine.download_condition import matches_download_condition
 from app.engine.events import EventBus
 from app.engine.pipeline import YtdlpLivePipeline, RecordingState
 from app.engine.spaces_recorder import SpacesRecorder
@@ -160,6 +161,8 @@ class Conductor:
         channel_id: str,
         auto_record: bool = True,
         platform: Platform = Platform.CHZZK,
+        download_condition: Optional[str] = None,
+        watchalong_tags: Optional[str] = None,
     ) -> None:
         """감시할 채널을 등록한다."""
         composite_key = self.make_composite_key(platform, channel_id)
@@ -172,18 +175,21 @@ class Conductor:
             channel_id=channel_id,
             platform=platform,
             auto_record=auto_record,
+            download_condition=download_condition,
+            watchalong_tags=watchalong_tags,
         )
-        self._channels[composite_key] = task
-        self._scan_events[composite_key] = asyncio.Event()
-        logger.info(f"채널 등록: {composite_key} (auto_record={auto_record})")
-
         self._channel_repo.upsert(
             composite_key=composite_key,
             platform=platform.value,
             channel_id=channel_id,
             auto_record=auto_record,
             tags=task.tags,
+            download_condition=download_condition,
+            watchalong_tags=watchalong_tags,
         )
+        self._channels[composite_key] = task
+        self._scan_events[composite_key] = asyncio.Event()
+        logger.info(f"채널 등록: {composite_key} (auto_record={auto_record})")
         self._broadcast_status()
 
         # 이미 실행 중이면 즉시 감시 시작
@@ -191,6 +197,30 @@ class Conductor:
             task.monitor_task = asyncio.create_task(
                 self._monitor_channel(composite_key)
             )
+
+    def set_download_options(self, composite_key: str, auto_record: bool, condition: Optional[str], tags: Optional[str]) -> None:
+        task = self._channels.get(composite_key)
+        if task is None:
+            raise ValueError("등록된 채널을 찾을 수 없습니다.")
+        self._channel_repo.set_download_options(composite_key, auto_record, condition, tags)
+        task.auto_record = auto_record
+        task.download_condition = condition
+        task.watchalong_tags = tags
+        self._broadcast_status()
+        self.trigger_scan_now(composite_key)
+
+    @staticmethod
+    def _can_auto_record(task: ChannelTask) -> bool:
+        if not task.auto_record:
+            return False
+        if task.platform != Platform.CHZZK:
+            return True
+        settings = get_settings()
+        return matches_download_condition(
+            task.download_condition or settings.live_download_condition,
+            task.broadcast_tags,
+            task.watchalong_tags if task.watchalong_tags is not None else settings.watchalong_tags,
+        )
 
     def set_auto_record(self, composite_key: str, value: bool) -> None:
         """채널의 자동 녹화 설정을 직접 지정한다."""
@@ -245,12 +275,13 @@ class Conductor:
         # 이미 라이브 중인데 auto_record를 ON으로 켰고 녹화가 안 되고 있으면 즉시 시작
         if (
             task.auto_record
+            and self._can_auto_record(task)
             and task.is_live
             and task.platform != Platform.X_SPACES
             and (task.pipeline is None or task.pipeline.state != RecordingState.RECORDING)
         ):
             logger.info(f"[{composite_key}] 라이브 중 자동 녹화 ON → 즉시 녹화 시작")
-            await self._start_recording(composite_key, channel_name=task.channel_name, title=task.title)
+            await self._start_recording(composite_key, channel_name=task.channel_name, title=task.title, automatic=True)
 
         return task.auto_record
 
@@ -564,6 +595,8 @@ class Conductor:
                 platform=platform,
                 auto_record=record["auto_record"],
                 tags=list(record["tags"]),
+                download_condition=record.get("download_condition"),
+                watchalong_tags=record.get("watchalong_tags"),
             )
             # X Spaces 캡처 URL 복원
             if platform == Platform.X_SPACES:
@@ -596,6 +629,7 @@ class Conductor:
         task.channel_name = status.get("channel_name")
         task.title = status.get("title")
         task.category = status.get("category")
+        task.broadcast_tags = status.get("broadcast_tags")
         task.live_started_at = status.get("live_started_at")
         task.viewer_count = status.get("viewer_count", 0)
         task.thumbnail_url = status.get("thumbnail_url")
@@ -699,11 +733,12 @@ class Conductor:
                 },
             )
 
-        if task.auto_record:
+        if self._can_auto_record(task):
             await self._start_recording(
                 composite_key,
                 channel_name=task.channel_name,
                 title=task.title,
+                automatic=True,
             )
             return 0
         return retry_count
@@ -819,10 +854,17 @@ class Conductor:
                     await self._start_chat_archiver(composite_key, task, reason="동적 시작")
 
                 # ── 녹화 오류 시 자동 재시작 (Chzzk/TwitCasting 전용) ──
-                elif status["is_live"] and task.auto_record and task.platform != Platform.X_SPACES:
-                    retry_count = await self._retry_stalled_recording(
-                        composite_key, task, retry_count, max_retries
-                    )
+                elif status["is_live"] and self._can_auto_record(task) and task.platform != Platform.X_SPACES:
+                    if task.pipeline is None:
+                        await self._start_recording(
+                            composite_key, channel_name=task.channel_name,
+                            title=task.title, automatic=True,
+                        )
+                        retry_count = 0
+                    else:
+                        retry_count = await self._retry_stalled_recording(
+                            composite_key, task, retry_count, max_retries
+                        )
                     if not self._running:
                         break
 
@@ -934,10 +976,13 @@ class Conductor:
         channel_name: Optional[str] = None,
         title: Optional[str] = None,
         is_retry: bool = False,
+        automatic: bool = False,
     ) -> None:
         """채널의 녹화를 시작한다."""
         task = self._channels.get(composite_key)
         if task is None:
+            return
+        if (automatic or is_retry) and not self._can_auto_record(task):
             return
 
         # X Spaces는 별도 경로
@@ -957,6 +1002,8 @@ class Conductor:
                 logger.debug(f"[{composite_key}] 스트림 CDN 준비 대기 (5초)...")
                 await asyncio.sleep(5)
                 if not self._running:
+                    return
+                if automatic and not self._can_auto_record(task):
                     return
 
             pipeline = YtdlpLivePipeline(channel_id=task.channel_id)
@@ -1139,6 +1186,10 @@ class Conductor:
                 "thumbnail_url": task.thumbnail_url,
                 "profile_image_url": task.profile_image_url,
                 "tags": getattr(task, "tags", []),
+                "broadcast_tags": task.broadcast_tags,
+                "download_condition": task.download_condition,
+                "watchalong_tags": task.watchalong_tags,
+                "auto_record_eligible": self._can_auto_record(task),
                 "last_error": getattr(task, "last_error", None),
             }
             pipe = task.pipeline

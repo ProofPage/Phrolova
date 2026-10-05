@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { ChevronDown, Lock, Plus } from "lucide-react";
-import { api, PLATFORM_LABELS, type Platform, type PlatformStatus } from "../../api/client";
-import { getErrorMessage } from "../../utils/error";
+import { api, PLATFORM_LABELS, type ChannelDownloadOptions, type Platform, type PlatformStatus } from "../../api/client";
+import { ChannelDownloadModal } from "./ChannelDownloadModal";
 import { useToast } from "../ui/Toast";
 import { Button, Input } from "../ui/primitives";
 
@@ -23,6 +23,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
     const [selectedPlatform, setSelectedPlatform] = useState<Platform>("chzzk");
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
 
     const isPlatformEnabled = (platform: Platform): boolean => {
         if (platform === "chzzk" || platform === "youtube") return true;
@@ -31,34 +32,39 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
         return platformStatus.x_spaces.authenticated;
     };
 
-    const handleSubmit = async (event: FormEvent) => {
+    const handleSubmit = (event: FormEvent) => {
         event.preventDefault();
-        if (!channelId) return;
-        setLoading(true);
+        if (!channelId.trim()) return;
         setDropdownOpen(false);
+        setSettingsOpen(true);
+    };
+
+    const handleAdd = async (options: ChannelDownloadOptions) => {
+        setLoading(true);
         try {
             if (selectedPlatform === "chzzk") {
-                await api.addChannel(channelId);
+                await api.addChannel(channelId.trim(), options.auto_record, options);
             } else {
-                await api.addPlatformChannel(selectedPlatform, channelId);
+                await api.addPlatformChannel(selectedPlatform, channelId.trim(), options.auto_record);
             }
             setChannelId("");
             toast.success("채널이 추가되었습니다.");
             onAdded();
-        } catch (error) {
-            toast.error(getErrorMessage(error, "채널 추가에 실패했습니다."));
         } finally {
             setLoading(false);
         }
     };
 
-    const placeholder = selectedPlatform === "chzzk" ? "치지직 채널 ID..."
-        : selectedPlatform === "youtube" ? "핸들(@username) 또는 채널 ID..."
-        : selectedPlatform === "x_spaces" ? "X 유저네임..."
-        : "채널 ID...";
+    const placeholder = selectedPlatform === "chzzk" ? "치지직 채널 ID 입력"
+        : selectedPlatform === "youtube" ? "핸들(@username) 또는 채널 ID 입력"
+        : selectedPlatform === "x_spaces" ? "X 유저네임 입력"
+        : "채널 ID 입력";
 
     return (
-        <form onSubmit={handleSubmit} aria-label="감시 채널 추가" className="flex w-full min-w-0 items-stretch gap-2">
+        <>
+        <form onSubmit={handleSubmit} aria-label="감시 채널 추가" className="space-y-2.5">
+            <p className="text-xs font-medium text-ink-muted">채널 추가</p>
+            <div className="flex w-full min-w-0 items-stretch gap-2">
             <div className="relative shrink-0">
                 <button
                     type="button"
@@ -66,6 +72,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
                     className="h-11 bg-surface-2 border border-line rounded-[var(--radius-control)] px-3 text-ink text-sm flex items-center gap-1.5 hover:bg-surface-3 transition-colors whitespace-nowrap"
                     aria-expanded={dropdownOpen}
                     aria-haspopup="listbox"
+                    aria-label={`플랫폼 선택: ${PLATFORM_LABELS[selectedPlatform]}`}
                 >
                     <span className={`inline-block w-2 h-2 rounded-full ${PLATFORM_DOT_STYLES[selectedPlatform]}`} />
                     <span className="hidden sm:inline-block">{PLATFORM_LABELS[selectedPlatform]}</span>
@@ -99,10 +106,14 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
                 )}
             </div>
 
-            <Input value={channelId} onChange={(event) => setChannelId(event.target.value)} placeholder={placeholder} className="h-11 min-w-0 flex-1" />
-            <Button type="submit" variant="primary" icon={Plus} loading={loading} className="h-11 shrink-0 px-3 sm:px-4">
+            <Input value={channelId} onChange={(event) => setChannelId(event.target.value)} aria-label={`${PLATFORM_LABELS[selectedPlatform]} 채널 ID`} placeholder={placeholder} className="h-11 min-w-0 flex-1" />
+            <Button type="submit" variant="primary" icon={Plus} loading={loading} disabled={!channelId.trim()} aria-label="채널 추가 설정 열기" title="채널 추가 설정 열기" className="h-11 shrink-0 px-3 sm:px-4">
                 <span className="hidden sm:inline">추가</span>
             </Button>
+            </div>
+            <p className="text-[11px] text-ink-faint leading-relaxed">추가를 누르면 자동 다운로드 설정을 선택할 수 있습니다.</p>
         </form>
+        {settingsOpen && <ChannelDownloadModal platform={selectedPlatform} name={channelId.trim()} onClose={() => setSettingsOpen(false)} onSave={handleAdd} />}
+        </>
     );
 }

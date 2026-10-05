@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from typing import Optional
+import json
 
 from fastapi import APIRouter, HTTPException
 
 from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
+from app.api.download_options import DefaultDownloadOptions
 from app.core.utils import update_env_file as _update_env_file
 
 from app.api.settings._shared import SETTINGS_PREFIX, SETTINGS_TAGS, VALID_FORMATS, VALID_QUALITIES
@@ -58,6 +60,21 @@ class ChatSettingsUpdateRequest(BaseModel):
     """채팅 아카이빙 설정 업데이트 요청."""
 
     chat_archive_enabled: bool = Field(..., description="녹화 시 채팅 자동 아카이빙 여부")
+
+
+@router.put("/live-condition", summary="자동 라이브 다운로드 기본 조건")
+async def update_live_condition(req: DefaultDownloadOptions):
+    from app.main import get_recorder_service
+
+    settings = get_settings()
+    _update_env_file({
+        "LIVE_DOWNLOAD_CONDITION": req.live_download_condition,
+        "WATCHALONG_TAGS": json.dumps(req.watchalong_tags, ensure_ascii=False),
+    }, raise_on_error=True)
+    settings.live_download_condition = req.live_download_condition
+    settings.watchalong_tags = req.watchalong_tags
+    get_recorder_service().scan_now()
+    return {"message": "기본 다운로드 조건이 저장되었습니다.", **req.model_dump()}
 
 
 @router.put("/live", summary="라이브 녹화 설정 업데이트")

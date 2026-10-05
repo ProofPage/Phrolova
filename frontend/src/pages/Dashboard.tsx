@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { GripVertical, Radio, WifiOff } from "lucide-react";
 import { api, type Channel, type PlatformStatus } from "../api/client";
 import { AddChannelForm } from "../components/dashboard/AddChannelForm";
+import { ChannelDownloadModal } from "../components/dashboard/ChannelDownloadModal";
+import { LiveDownloadCondition } from "../components/dashboard/LiveDownloadCondition";
 import { ChannelCard } from "../components/dashboard/ChannelCard";
 import { ChannelRow } from "../components/dashboard/ChannelRow";
 import { DashboardFilters, type StatusFilter, type ViewMode } from "../components/dashboard/DashboardFilters";
@@ -22,6 +24,7 @@ export default function Dashboard() {
     const [globalTags, setGlobalTags] = useState<string[]>([]);
     const [selectedFilterTags, setSelectedFilterTags] = useState<string[]>([]);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
     const toast = useToast();
     const confirm = useConfirm();
 
@@ -199,6 +202,7 @@ export default function Dashboard() {
         onStopRecord: handleStopRecord,
         onRemove: handleRemoveChannel,
         onToggleAutoRecord: handleToggleAutoRecord,
+        onEditDownloadSettings: setEditingChannel,
         globalTags,
         onAddTag: handleChannelAddTag,
         onRemoveTag: handleChannelRemoveTag,
@@ -211,10 +215,10 @@ export default function Dashboard() {
                 icon={Radio}
                 eyebrow="실시간 방송 관리"
                 title="라이브 대시보드"
-                description="방송 상태를 한눈에 확인하고, 녹화와 채널 우선순위를 한 화면에서 제어합니다."
+                description="방송 상태를 확인하고 채널별 자동 다운로드와 녹화를 관리합니다."
                 meta={(
                     <>
-                        <Badge tone="primary">{channels.length}개 채널 감시 중</Badge>
+                        <Badge tone="primary">감시 채널 {channels.length}개</Badge>
                         <Badge tone={liveCount > 0 ? "danger" : "neutral"}>방송 중 {liveCount}개</Badge>
                         <Badge tone={recordingCount > 0 ? "ok" : "neutral"}>녹화 중 {recordingCount}개</Badge>
                     </>
@@ -244,7 +248,7 @@ export default function Dashboard() {
                     recordingCount={recordingCount}
                     onScanNow={handleScanNow}
                     onStopAll={handleStopAll}
-                />
+                ><LiveDownloadCondition /></DashboardFilters>
                 {channels.length > 1 && (
                     <p className="flex items-center gap-1.5 px-1 text-[11px] text-ink-faint">
                         <GripVertical className="w-3.5 h-3.5" /> 그립을 끌거나 포커스 후 방향키로 표시 순서를 바꿀 수 있습니다. 순서는 이 브라우저에 저장됩니다.
@@ -277,6 +281,17 @@ export default function Dashboard() {
                     </div>
                 )}
             </div>
+            {editingChannel && <ChannelDownloadModal
+                platform={editingChannel.platform || "chzzk"}
+                name={editingChannel.channel_name || editingChannel.channel_id}
+                channel={editingChannel}
+                onClose={() => setEditingChannel(null)}
+                onSave={async (options) => {
+                    await api.updateChannelDownloadOptions(editingChannel, options);
+                    toast.success("채널 다운로드 설정이 저장되었습니다.");
+                    fetchChannels();
+                }}
+            />}
         </div>
     );
 }

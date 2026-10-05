@@ -49,6 +49,11 @@ class ChzzkLiveEngine:
 
         raw_thumbnail = content.get("liveImageUrl", "")
         thumbnail_url = raw_thumbnail.replace("{type}", "480") if raw_thumbnail else ""
+        raw_tags = content.get("tags")
+        broadcast_tags = (
+            raw_tags if isinstance(raw_tags, list) and all(isinstance(tag, str) for tag in raw_tags)
+            else None
+        )
 
         return {
             "channel_id": channel_id,
@@ -57,6 +62,7 @@ class ChzzkLiveEngine:
             "channel_name": channel.get("channelName", "Unknown"),
             "title": content.get("liveTitle", "No Title"),
             "category": content.get("liveCategoryValue", ""),
+            "broadcast_tags": broadcast_tags,
             "live_started_at": content.get("openDate"),
             "viewer_count": content.get("concurrentUserCount", 0),
             "thumbnail_url": thumbnail_url,
