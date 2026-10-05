@@ -114,6 +114,7 @@ async def get_current_settings():
         "chzzk_time_machine_shift": settings.effective_chzzk_time_machine_offset,
         "save_live_preview": settings.save_live_preview,
         "live_filename_template": settings.live_filename_template,
+        "vod_filename_template": settings.vod_filename_template,
         "live_download_condition": settings.live_download_condition,
         "watchalong_tags": settings.watchalong_tags,
         "live_format": settings.live_format,

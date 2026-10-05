@@ -7,7 +7,7 @@ import json
 
 from fastapi import APIRouter, HTTPException
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.core.config import get_settings
 from app.api.download_options import DefaultDownloadOptions
@@ -48,6 +48,14 @@ class DownloadSettingsUpdateRequest(BaseModel):
 
 class VodSettingsUpdateRequest(BaseModel):
     """VOD 다운로드 설정 업데이트 요청."""
+
+    vod_filename_template: Optional[str] = Field(None, max_length=240)
+
+    @field_validator("vod_filename_template")
+    @classmethod
+    def validate_filename_template(cls, value: Optional[str]) -> Optional[str]:
+        from app.core.vod_filename import validate_vod_template
+        return validate_vod_template(value) if value is not None else None
 
     vod_max_concurrent: Optional[int] = Field(None, ge=1, le=10, description="동시 다운로드 최대 개수")
     vod_default_quality: Optional[str] = Field(None, description="기본 화질 (best, 1080p, 720p, 480p)")
@@ -155,6 +163,10 @@ async def update_vod_settings(req: VodSettingsUpdateRequest):
         settings.keep_download_parts = req.keep_download_parts
         env_updates["KEEP_DOWNLOAD_PARTS"] = str(req.keep_download_parts).lower()
 
+    if req.vod_filename_template is not None:
+        _update_env_file({"VOD_FILENAME_TEMPLATE": json.dumps(req.vod_filename_template, ensure_ascii=False)}, raise_on_error=True)
+        settings.vod_filename_template = req.vod_filename_template
+
     # ── vod_max_concurrent ──
     if req.vod_max_concurrent is not None:
         settings.vod_max_concurrent = req.vod_max_concurrent
@@ -203,6 +215,7 @@ async def update_vod_settings(req: VodSettingsUpdateRequest):
             "vod_default_quality": settings.vod_default_quality,
             "vod_max_speed": settings.vod_max_speed,
             "vod_format": settings.vod_format,
+            "vod_filename_template": settings.vod_filename_template,
             "keep_download_parts": settings.keep_download_parts,
         },
     }

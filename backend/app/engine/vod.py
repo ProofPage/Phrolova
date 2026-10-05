@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Optional
 from urllib.parse import urlsplit, urlunsplit
 
+from app.core.vod_filename import build_vod_outtmpl
 from app.core.config import get_settings
 from app.core.logger import logger
 from app.engine.auth import AuthManager
@@ -93,6 +94,8 @@ class VodDownloadTask:
     output_dir: str = ""
     output_path: Optional[str] = None
     expected_part_file: Optional[str] = None
+    filename_template: Optional[str] = None
+    filename_started_at: Optional[datetime] = None
     error_message: Optional[str] = None
     created_at: datetime = field(default_factory=datetime.now)
     started_at: Optional[datetime] = None
@@ -200,6 +203,9 @@ class VodEngine:
         cookie_file은 빌려받은 임시 사본이어야 한다. yt-dlp가 끝날 때 이 파일을 다시 쓴다.
         """
         settings = get_settings()
+        if not getattr(task, "filename_template", None):
+            task.filename_template = settings.vod_filename_template
+            task.filename_started_at = task.started_at or datetime.now()
         ffmpeg_path = settings.resolve_ffmpeg_path()
         ffmpeg_dir = str(Path(ffmpeg_path).parent)
 
@@ -212,7 +218,7 @@ class VodEngine:
             # 제목이 같아도 다른 영상이면 기존 파일로 오인해 건너뛰지 않도록 구분한다.
             "outtmpl": str(
                 Path(task.output_dir)
-                / "[%(uploader,channel)s] %(title)s [%(extractor_key)s-%(id)s].%(ext)s"
+                / build_vod_outtmpl(task.filename_template, task.quality, task.filename_started_at)
             ),
             "merge_output_format": settings.vod_format,
             "ffmpeg_location": ffmpeg_dir,
@@ -636,7 +642,17 @@ class VodEngine:
         src = Path(task.output_path)
         if not src.exists():
             return
-        dst = src.parent / f"{proper_title}{src.suffix}"
+        import yt_dlp
+        template = str(src.parent / build_vod_outtmpl(task.filename_template or get_settings().vod_filename_template, task.quality, task.filename_started_at or task.started_at))
+        with yt_dlp.YoutubeDL({"outtmpl": template, "quiet": True}) as ydl:
+            dst = Path(ydl.prepare_filename({"title": title, "uploader": channel, "channel": channel,
+                "id": task.url.rstrip("/").split("/")[-1].split("?")[0],
+                "extractor_key": "CHZZKClip", "ext": src.suffix.lstrip(".")}))
+        if dst == src:
+            return
+        if dst.exists():
+            logger.warning(f"[{task_id}] 같은 이름의 클립 파일이 있어 기존 파일명을 유지합니다.")
+            return
         try:
             src.rename(dst)
             task.output_path = str(dst)

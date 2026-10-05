@@ -8,6 +8,16 @@
 
 ## [Unreleased]
 
+## [2.0.35] - 2026-10-05
+
+### Added
+- **알림 모두 지우기** — 알림 센터 상단에서 알림 내역과 표시 중인 토스트를 한 번에 지웁니다. 알림이 없으면 버튼이 비활성화됩니다.
+- **다시보기 파일명 형식** — 다시보기 설정에서 채널명, 제목, 영상 ID, 업로드 날짜, 다운로드 날짜와 품질을 조합합니다. 새 다운로드와 치지직 클립의 최종 파일명에 적용합니다.
+
+### Changed
+- **다시보기 기본 파일명** — `[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}`를 사용합니다. 날짜와 시각은 다운로드 시작 시점입니다.
+- **메뉴와 채팅 화면** — 메뉴 이름을 ‘X Spaces’, ‘Chat Logs’로 정리하고 채팅 화면에 로그 파일·채팅 내용 제목, 새로고침과 빈 상태 안내를 추가했습니다.
+
 ## [2.0.34] - 2026-10-05
 
 ### Changed
@@ -530,7 +540,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.34...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.35...HEAD
+[2.0.35]: https://github.com/ProofPage/Phrolova/compare/v2.0.34...v2.0.35
 [2.0.34]: https://github.com/ProofPage/Phrolova/compare/v2.0.33...v2.0.34
 [2.0.33]: https://github.com/ProofPage/Phrolova/compare/v2.0.32...v2.0.33
 [2.0.32]: https://github.com/ProofPage/Phrolova/compare/v2.0.31...v2.0.32

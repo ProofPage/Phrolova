@@ -8,6 +8,7 @@ import {
     Gift,
     Menu,
     Search,
+    Trash2,
     Tv,
     X,
 } from "lucide-react";
@@ -25,7 +26,7 @@ export function Sidebar() {
     const notificationRef = useRef<HTMLDivElement>(null);
     const { pageTitle, iconUrl } = useTheme();
     const { activeCount, tasks } = useVod();
-    const { history, markAllRead } = useToastHistory();
+    const { history, markAllRead, clearHistory } = useToastHistory();
     const unreadCount = history.filter((item) => !item.read).length;
     const primaryTask = tasks.find((task) => task.state === "downloading");
 
@@ -73,7 +74,14 @@ export function Sidebar() {
                                 <div className="absolute top-full -left-24 sm:left-0 mt-2 w-80 bg-surface-2/95 backdrop-blur-xl border border-line-strong rounded-[var(--radius-card)] shadow-[var(--shadow-pop)] overflow-hidden animate-slide-in-top">
                                     <div className="px-4 py-3 border-b border-line flex items-center justify-between">
                                         <div><p className="text-sm font-semibold text-ink">알림 센터</p><p className="text-[10px] text-ink-faint mt-0.5">최근 앱 이벤트</p></div>
-                                        <span className="text-[10px] text-ink-faint font-mono">{history.length}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] text-ink-faint font-mono" aria-label={`알림 ${history.length}개`}>{history.length}</span>
+                                            <button type="button" onClick={clearHistory} disabled={history.length === 0}
+                                                aria-label="알림 모두 지우기" title="알림 모두 지우기"
+                                                className="inline-flex items-center gap-1.5 rounded-md border border-line px-2 py-1.5 text-[11px] text-ink-muted hover:bg-surface-3 hover:text-danger transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                                                <Trash2 className="w-3 h-3" />모두 지우기
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="max-h-80 overflow-y-auto">
                                         {history.length === 0 ? (

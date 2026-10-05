@@ -23,6 +23,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [vodMaxConcurrent, setVodMaxConcurrent] = useState(3);
     const [vodDefaultQuality, setVodDefaultQuality] = useState("best");
     const [vodMaxSpeed, setVodMaxSpeed] = useState(0);
+    const [vodFilenameTemplate, setVodFilenameTemplate] = useState("[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}");
     const [vodFormat, setVodFormat] = useState("mp4");
     const [chatArchiveEnabled, setChatArchiveEnabled] = useState(false);
     const initialized = useRef(false);
@@ -47,6 +48,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         setVodDefaultQuality(settings.vod_default_quality);
         setVodMaxSpeed(settings.vod_max_speed);
         setVodFormat(settings.vod_format || "mp4");
+        setVodFilenameTemplate(settings.vod_filename_template || "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}");
         setChatArchiveEnabled(settings.chat_archive_enabled);
     }, [settings]);
 
@@ -62,6 +64,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         vodDefaultQuality !== settings.vod_default_quality ||
         vodMaxSpeed !== settings.vod_max_speed ||
         vodFormat !== (settings.vod_format || "mp4") ||
+        vodFilenameTemplate !== (settings.vod_filename_template || "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}") ||
         chatArchiveEnabled !== settings.chat_archive_enabled
     );
 
@@ -73,6 +76,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
             vod_default_quality: vodDefaultQuality,
             vod_max_speed: vodMaxSpeed,
             vod_format: vodFormat,
+            vod_filename_template: vodFilenameTemplate,
             keep_download_parts: keepParts,
         }),
         success: "다시보기 설정이 저장되었습니다.",
@@ -132,7 +136,10 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                     hint={keepParts ? "취소 또는 오류가 발생해도 미완료 파일을 보관합니다." : "취소하거나 오류가 발생하면 미완료 파일을 삭제합니다."}
                     control={<Switch checked={keepParts} onChange={setKeepParts} label="미완료 다시보기 파일 보관" />}
                 />
-                <Button variant="primary" icon={Save} loading={vodSaving} onClick={handleSaveVod} className="w-full">
+                <Field label="다시보기 파일명 형식" htmlFor="vod-filename-template" hint="{name}, {title}, {date_year}, {date_month}, {date_day}, {date_hour}, {date_minute}, {date_second}, {id}, {extractor}, {upload_date}, {download_date}, {quality} 사용 가능. 날짜·시각은 다운로드 시작 기준이며 확장자는 자동 추가됩니다.">
+                    <Input id="vod-filename-template" value={vodFilenameTemplate} maxLength={240} onChange={(event) => setVodFilenameTemplate(event.target.value)} />
+                </Field>
+                <Button variant="primary" icon={Save} loading={vodSaving} disabled={!vodFilenameTemplate.trim()} onClick={handleSaveVod} className="w-full">
                     {vodSaving ? "저장 중..." : "다시보기 설정 저장"}
                 </Button>
             </Card>

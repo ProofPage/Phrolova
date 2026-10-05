@@ -9,6 +9,7 @@ import {
     ChevronLeft,
     ChevronRight,
     FolderOpen,
+    RefreshCw,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { api, ChatLogFile, ChatMessageItem, MessagesResponse } from "../api/client";
@@ -25,30 +26,35 @@ function formatDate(iso: string): string {
 export default function ChatLogs() {
     const [selectedFile, setSelectedFile] = useState<ChatLogFile | null>(null);
     const toast = useToast();
+    const [refreshKey, setRefreshKey] = useState(0);
 
     return (
         <div className="flex flex-col gap-6 xl:h-[calc(100vh-4rem)]">
             <PageHeader
                 icon={MessageSquare}
-                eyebrow="채팅 보관함"
-                title="채팅 기록"
-                description="녹화 중 수집한 채팅을 채널과 세션별로 찾아보고 원본 로그를 내려받습니다."
+                eyebrow="라이브 채팅 아카이브"
+                title="Chat Logs"
+                description="채널별 채팅 기록을 검색하고, 녹화 세션의 원본 로그를 다운로드하세요."
+                actions={<Button icon={RefreshCw} onClick={() => setRefreshKey((value) => value + 1)}>새로고침</Button>}
             />
 
-            <div className="flex flex-col lg:flex-row flex-1 gap-4 min-h-[680px] xl:min-h-0">
+            <div className="flex flex-col lg:flex-row flex-1 gap-4 min-h-[480px] xl:min-h-0">
                 <div className="lg:w-[340px] xl:w-[30%] flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[260px]">
+                    <div className="px-4 py-3 border-b border-line text-xs font-semibold text-ink-muted">로그 파일</div>
                     <FileListView 
+                        refreshKey={refreshKey}
                         selectedFile={selectedFile} 
                         onSelect={setSelectedFile} 
                         toast={toast} 
                     />
                 </div>
 
-                <div className="flex-1 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[420px]">
+                <div className="flex-1 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[320px]">
+                    <div className="px-4 py-3 border-b border-line text-xs font-semibold text-ink-muted">채팅 내용</div>
                     {selectedFile === null ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-ink-faint p-8 text-center">
                             <span className="w-14 h-14 rounded-2xl bg-surface-3 border border-line grid place-items-center mb-4"><MessageSquare className="w-6 h-6 opacity-60" /></span>
-                            <p className="text-sm">왼쪽 목록에서 채팅 로그 파일을 선택하세요.</p>
+                            <p className="text-sm">채팅 로그를 선택해 내용을 확인하세요.</p>
                         </div>
                     ) : (
                         <MessageViewer
@@ -65,18 +71,19 @@ export default function ChatLogs() {
 // ── 파일 목록 뷰 ────────────────────────────────────────
 
 interface FileListViewProps {
+    refreshKey: number;
     selectedFile: ChatLogFile | null;
     onSelect: (file: ChatLogFile) => void;
     toast: ReturnType<typeof useToast>;
 }
 
-function FileListView({ selectedFile, onSelect, toast }: FileListViewProps) {
+function FileListView({ selectedFile, onSelect, toast, refreshKey }: FileListViewProps) {
     const [files, setFiles] = useState<ChatLogFile[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         loadFiles();
-    }, []);
+    }, [refreshKey]);
 
     const loadFiles = async () => {
         setLoading(true);
@@ -109,7 +116,8 @@ function FileListView({ selectedFile, onSelect, toast }: FileListViewProps) {
         return (
             <div className="flex flex-col flex-1 items-center justify-center p-8 text-center">
                 <MessageSquare className="w-8 h-8 text-ink-faint mb-3" />
-                <p className="text-ink-muted font-medium text-sm mb-1">채팅 로그가 없습니다.</p>
+                <p className="text-ink-muted font-medium text-sm mb-1">저장된 채팅 로그가 없습니다.</p>
+                <p className="text-xs text-ink-faint leading-relaxed">설정에서 채팅 보관을 켜면 라이브 녹화 중 수집한 기록이 여기에 표시됩니다.</p>
             </div>
         );
     }

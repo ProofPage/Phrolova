@@ -187,6 +187,14 @@ class Settings(BaseSettings):
 
     # ── 녹화 포맷/품질 ─────────────────────────────────────
     live_format: str = "ts"            # 라이브 녹화 포맷: ts(권장), mkv, mp4
+    vod_filename_template: str = "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}"
+
+    @field_validator("vod_filename_template")
+    @classmethod
+    def validate_vod_filename_template(cls, value: str) -> str:
+        from app.core.vod_filename import validate_vod_template
+        return validate_vod_template(value)
+
     vod_format: str = "mp4"            # VOD 다운로드 포맷: mp4(권장), mkv, ts
     recording_quality: str = "best"    # 녹화 품질: best, 1080p, 720p, 480p
 

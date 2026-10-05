@@ -113,6 +113,7 @@ export interface Settings {
     chzzk_time_machine_offset: number;
     save_live_preview: boolean;
     live_filename_template: string;
+    vod_filename_template: string;
     live_download_condition: DownloadCondition;
     watchalong_tags: string;
 
@@ -191,6 +192,7 @@ export interface BrowseDirsResponse {
 }
 
 export interface VodSettingsUpdate {
+    vod_filename_template?: string;
     vod_max_concurrent?: number;
     vod_default_quality?: string;
     vod_max_speed?: number;

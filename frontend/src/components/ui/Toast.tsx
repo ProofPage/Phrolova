@@ -93,6 +93,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
     const clearHistory = useCallback(() => {
         setHistory([]);
+        setToasts([]);
     }, []);
 
     // addToast가 고정이므로 이 객체도 마운트 이후 바뀌지 않는다.
