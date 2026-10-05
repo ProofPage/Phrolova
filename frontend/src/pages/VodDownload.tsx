@@ -31,6 +31,7 @@ export default function VodDownload() {
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const toast = useToast();
     const confirm = useConfirm();
+    const hasClearableTasks = tasks.some((task) => task.state === "completed" || task.state === "error");
 
     useEffect(() => {
         const timer = setTimeout(() => setIsInitialLoad(false), 500);
@@ -164,8 +165,15 @@ export default function VodDownload() {
                         다운로드 목록
                         <Badge tone="neutral">{tasks.length}</Badge>
                     </h3>
-                    {tasks.some(t => t.state === "completed" || t.state === "error") && (
-                        <Button icon={Trash2} onClick={handleClearCompleted}>완료된 작업 정리</Button>
+                    {tasks.length > 0 && (
+                        <Button
+                            icon={Trash2}
+                            onClick={handleClearCompleted}
+                            disabled={!hasClearableTasks}
+                            title={hasClearableTasks ? "완료 및 오류 작업을 정리합니다." : "완료 또는 오류 작업이 생기면 정리할 수 있습니다."}
+                        >
+                            완료된 작업 정리
+                        </Button>
                     )}
                 </div>
 

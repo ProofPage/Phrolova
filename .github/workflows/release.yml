@@ -74,14 +74,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## Setup wizard
+          ## Live recording diagnostics
 
-          - Added separate folder selectors for live recordings and VOD downloads during first-run setup.
-          - The confirmation step now lists both locations, and the setup API remains compatible with older clients that send one folder.
+          - Streamlink pipe errors no longer hide the FFmpeg exit code and diagnostic output.
+          - Failed recordings stay marked as errors during process cleanup.
 
           ## Download queue
 
-          - Matched the active download percentage panel height to the task details, removing the empty area below it.
+          - Keep the cleanup button visible while tasks exist; it becomes available when completed or failed tasks can be removed.
 
           Download the Windows x64 executable and replace the existing application executable. Settings and saved data are preserved.
           '@

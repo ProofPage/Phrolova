@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.22] - 2026-10-05
+
+### Fixed
+- **Live recording failure diagnostics** — Streamlink pipe errors no longer hide FFmpeg's exit code and stderr, and failed recordings remain marked as errors during cleanup.
+- **Download queue cleanup button** — keep the cleanup button visible while tasks exist and disable it until completed or failed tasks can be removed.
+
 ## [2.0.21] - 2026-10-05
 
 ### Changed
@@ -436,7 +442,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.21...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.22...HEAD
+[2.0.22]: https://github.com/ProofPage/Phrolova/compare/v2.0.21...v2.0.22
 [2.0.21]: https://github.com/ProofPage/Phrolova/compare/v2.0.20...v2.0.21
 [2.0.20]: https://github.com/ProofPage/Phrolova/compare/v2.0.19...v2.0.20
 [2.0.19]: https://github.com/ProofPage/Phrolova/compare/v2.0.18...v2.0.19

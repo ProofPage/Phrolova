@@ -414,10 +414,16 @@ class YtdlpLivePipeline:
             raise
         except Exception as exc:
             if self._state == RecordingState.RECORDING:
-                logger.error(
-                    f"[{self._channel_id}] Streamlink 수신 오류: {type(exc).__name__}: "
-                    f"{self._redact_streamlink_error(str(exc))}"
-                )
+                if isinstance(exc, (BrokenPipeError, ConnectionResetError)):
+                    logger.warning(
+                        f"[{self._channel_id}] FFmpeg 입력 파이프가 닫혔습니다. "
+                        "FFmpeg 종료 로그에서 원인을 확인합니다."
+                    )
+                else:
+                    logger.error(
+                        f"[{self._channel_id}] Streamlink 수신 오류: {type(exc).__name__}: "
+                        f"{self._redact_streamlink_error(str(exc))}"
+                    )
                 self._state = RecordingState.ERROR
         finally:
             stream_fd = self._streamlink_fd
@@ -678,9 +684,15 @@ class YtdlpLivePipeline:
             logger.warning(f"[{self._channel_id}] 녹화 중이 아닙니다.")
             return
 
-        self._intentional_stop = True
-        self._state = RecordingState.STOPPING
-        logger.info(f"[{self._channel_id}] Streamlink/FFmpeg 녹화 종료 요청...")
+        had_error = self._state == RecordingState.ERROR
+        self._intentional_stop = not had_error
+        if not had_error:
+            self._state = RecordingState.STOPPING
+        logger.info(
+            f"[{self._channel_id}] Streamlink/FFmpeg 녹화 종료 요청..."
+            if not had_error
+            else f"[{self._channel_id}] 실패한 Streamlink/FFmpeg 프로세스 정리 중..."
+        )
 
         stream_fd = self._streamlink_fd
         if stream_fd is not None:
@@ -704,17 +716,22 @@ class YtdlpLivePipeline:
                     stdin.close()
 
                 await asyncio.wait_for(proc.wait(), timeout=10.0)
-                logger.info(
-                    f"[{self._channel_id}] 녹화 완료. "
-                    f"경과 시간: {self.duration_seconds:.0f}초, "
-                    f"파일: {self._output_path}"
-                )
+                if not had_error and proc.returncode == 0:
+                    logger.info(
+                        f"[{self._channel_id}] 녹화 완료. "
+                        f"경과 시간: {self.duration_seconds:.0f}초, "
+                        f"파일: {self._output_path}"
+                    )
             except asyncio.TimeoutError:
                 logger.warning(f"[{self._channel_id}] ffmpeg 종료 타임아웃. 강제 종료합니다.")
                 proc.kill()
                 await proc.wait()
 
-        self._state = RecordingState.COMPLETED
+        self._state = (
+            RecordingState.ERROR
+            if had_error or (proc.returncode is not None and proc.returncode != 0)
+            else RecordingState.COMPLETED
+        )
         self._process = None
         self._streamlink_fd = None
         self._streamlink_session = None
@@ -728,20 +745,19 @@ class YtdlpLivePipeline:
 
         return_code = await proc.wait()
 
-        if self._state == RecordingState.RECORDING:
-            if return_code != 0 and not self._intentional_stop:
-                stderr_data = b""
-                if proc.stderr:
-                    stderr_data = await proc.stderr.read()
-                err_text = stderr_data.decode(errors="replace")
-                logger.error(
-                    f"[{self._channel_id}] ffmpeg 비정상 종료 (code={return_code}): "
-                    f"{err_text[-2000:]}"
-                )
-                self._state = RecordingState.ERROR
-            else:
-                self._state = RecordingState.COMPLETED
-                logger.info(f"[{self._channel_id}] ffmpeg 프로세스 정상 종료.")
+        if return_code != 0 and not self._intentional_stop:
+            stderr_data = b""
+            if proc.stderr:
+                stderr_data = await proc.stderr.read()
+            err_text = stderr_data.decode(errors="replace")
+            logger.error(
+                f"[{self._channel_id}] ffmpeg 비정상 종료 (code={return_code}): "
+                f"{err_text[-2000:]}"
+            )
+            self._state = RecordingState.ERROR
+        elif self._state == RecordingState.RECORDING:
+            self._state = RecordingState.COMPLETED
+            logger.info(f"[{self._channel_id}] ffmpeg 프로세스 정상 종료.")
 
     def _update_statistics(self) -> None:
         """파일 크기 기반 통계를 업데이트한다."""
