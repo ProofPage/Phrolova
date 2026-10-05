@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.26] - 2026-10-05
+
+### Changed
+- **Quality labels** — Name the VOD and live quality settings separately and remove the misleading yt-dlp hint from live quality. Use the live-specific label in first-run setup.
+- **Project documentation** — Rewrite the README around Phrolova's current features, installation, settings, and troubleshooting.
+
 ## [2.0.25] - 2026-10-05
 
 ### Changed
@@ -461,7 +467,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.25...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.26...HEAD
+[2.0.26]: https://github.com/ProofPage/Phrolova/compare/v2.0.25...v2.0.26
 [2.0.25]: https://github.com/ProofPage/Phrolova/compare/v2.0.24...v2.0.25
 [2.0.24]: https://github.com/ProofPage/Phrolova/compare/v2.0.23...v2.0.24
 [2.0.23]: https://github.com/ProofPage/Phrolova/compare/v2.0.22...v2.0.23

@@ -98,7 +98,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                 <Field label="동시 다운로드 개수" hint="한 번에 다운로드할 수 있는 최대 영상 개수 (1~10개)">
                     <Input type="number" value={vodMaxConcurrent} onChange={(event) => setVodMaxConcurrent(Number(event.target.value))} min={1} max={10} />
                 </Field>
-                <Field label="기본 화질" hint="VOD 다운로드 시 기본으로 사용할 화질">
+                <Field label="다시보기 품질" hint="다시보기 다운로드 시 기본으로 사용할 화질">
                     <Select
                         value={vodDefaultQuality}
                         onChange={(event) => setVodDefaultQuality(event.target.value)}

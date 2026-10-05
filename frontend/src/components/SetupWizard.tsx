@@ -119,9 +119,9 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                 </p>
             </div>
 
-            {/* 녹화 품질 */}
+            {/* 라이브 품질 */}
             <div>
-                <label className="block text-sm font-medium text-ink-muted mb-2">녹화 품질</label>
+                <label className="block text-sm font-medium text-ink-muted mb-2">라이브 품질</label>
                 <div className="grid grid-cols-4 gap-2">
                     {qualities.map((q) => (
                         <button
@@ -235,7 +235,7 @@ function Step3({ data }: { data: FormData }) {
     const rows: { label: string; value: string }[] = [
         { label: "라이브 저장 경로", value: data.live_download_dir || "(미설정)" },
         { label: "다시보기 저장 경로", value: data.vod_download_dir || "(미설정)" },
-        { label: "녹화 품질", value: data.recording_quality },
+        { label: "라이브 품질", value: data.recording_quality },
         { label: "출력 포맷", value: `.${data.output_format.toUpperCase()}` },
         { label: "치지직 인증", value: data.nid_aut && data.nid_ses ? "✅ 설정됨" : "⏭️ 건너뜀 (나중에 설정 가능)" },
     ];

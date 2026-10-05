@@ -1,6 +1,6 @@
 # Phrolova
 
-![Version](https://img.shields.io/badge/version-2.0.25-13d9a3)
+![Version](https://img.shields.io/badge/version-2.0.26-13d9a3)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827)

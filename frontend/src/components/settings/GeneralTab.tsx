@@ -86,7 +86,7 @@ export function GeneralTab({ settings, onSaved, onDirtyChange }: Props) {
                 />
             </Field>
 
-            <Field label="녹화 품질" hint="yt-dlp가 지원하는 화질 중 선택됩니다.">
+            <Field label="라이브 품질">
                 <Select
                     value={recordingQuality}
                     onChange={(event) => setRecordingQuality(event.target.value)}

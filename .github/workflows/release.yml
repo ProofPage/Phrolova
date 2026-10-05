@@ -74,14 +74,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## Startup dependency check
+          ## Settings
 
-          - Rename the dependency-check console heading to Phrolova.
-          - Display the Streamlink version and prevent startup when the required Streamlink package is unavailable.
+          - Separate the VOD quality and live quality labels.
+          - Remove the misleading yt-dlp quality hint from the live settings screen and label first-run quality as live quality.
 
-          ## VOD task cards
+          ## Documentation
 
-          - Stretch status tiles to the task content height to remove the extra blank area below the paused icon.
+          - Rewrite the README to document Phrolova's current features, installation, settings, and troubleshooting.
 
           Download the Windows x64 executable and replace the existing application executable. Settings and saved data are preserved.
           '@
