@@ -69,8 +69,8 @@ export default function SystemLogs() {
                 )}
             />
 
-            <div className="flex flex-col lg:flex-row flex-1 gap-4 min-h-[680px] xl:min-h-0">
-                <div className="lg:w-[340px] xl:w-[30%] flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[260px]">
+            <div className="flex flex-col flex-1 gap-4 min-h-[680px] xl:min-h-0">
+                <div className="shrink-0 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[178px] max-h-[290px]">
                     <LogFileListView 
                         selectedFile={selectedFile} 
                         onSelect={setSelectedFile} 
@@ -165,7 +165,7 @@ function LogFileListView({ selectedFile, onSelect, toast, refreshKey }: LogFileL
                 </button>
             </div>
             
-            <div className="flex-1 overflow-y-auto divide-y divide-line/50 scrollbar-thin">
+            <div className="flex-1 overflow-y-auto divide-y divide-line/50 scrollbar-thin lg:flex lg:overflow-x-auto lg:overflow-y-hidden lg:divide-x lg:divide-y-0">
                 {files.map((file) => {
                     const isSelected = selectedFile?.filename === file.filename;
                     const isLive = file.filename === "service.log";
@@ -175,7 +175,7 @@ function LogFileListView({ selectedFile, onSelect, toast, refreshKey }: LogFileL
                             key={file.filename}
                             onClick={() => onSelect(file)}
                             className={clsx(
-                                "flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-colors group",
+                                "flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-colors group lg:min-w-[260px] lg:flex-1",
                                 isSelected ? "btn-ghost-primary" : "hover:bg-surface-3/70"
                             )}
                         >
@@ -346,7 +346,7 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
     return (
         <div className="flex-1 flex flex-col min-h-0 bg-surface-0">
             <div className="p-3 border-b border-line bg-surface-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
-                <div className="flex items-center gap-3">
+                <div className="flex w-full items-center justify-between gap-3">
                     <span className="text-xs font-mono font-semibold text-ink-muted">
                         {file.filename} ({visibleLines.length}/{totalLines} 줄)
                     </span>
@@ -355,9 +355,9 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
                             갱신 {lastUpdatedAt.toLocaleTimeString()}
                         </span>
                     )}
-                    
-                    {/* 불러올 줄 수 버튼그룹 */}
-                    <div className="flex bg-surface-3 rounded p-0.5 border border-line">
+
+                    {/* 불러올 줄 수 버튼그룹: 파일명 줄의 오른쪽 */}
+                    <div className="ml-auto flex shrink-0 bg-surface-3 rounded p-0.5 border border-line">
                         {[100, 500, 1000, 0].map((val) => (
                             <button
                                 key={val}
@@ -375,7 +375,7 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex w-full items-center justify-between gap-3">
                     {/* 검색 바 */}
                     <div className="relative">
                         <Search className="w-3.5 h-3.5 text-ink-faint absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -388,8 +388,9 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
                         />
                     </div>
 
-                    {/* 실시간 갱신 */}
-                    <button
+                    <div className="flex shrink-0 items-center gap-3">
+                        {/* 실시간 갱신 */}
+                        <button
                         onClick={() => setAutoRefresh(!autoRefresh)}
                         className={clsx(
                             "flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg border transition-all",
@@ -399,7 +400,7 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
                         )}
                         title={autoRefresh ? "2초마다 실시간 갱신 중" : "실시간 갱신 켜기"}
                         aria-label={autoRefresh ? "실시간 갱신 끄기" : "실시간 갱신 켜기"}
-                    >
+                        >
                         {autoRefresh ? (
                             <>
                                 <Loader2 className="w-3 h-3 animate-spin text-ok" />
@@ -412,10 +413,10 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
                                 <span className="text-[10px]">실시간 갱신</span>
                             </>
                         )}
-                    </button>
+                        </button>
 
-                    {/* 자동 스크롤 */}
-                    <button
+                        {/* 자동 스크롤 */}
+                        <button
                         onClick={() => setAutoScroll(!autoScroll)}
                         className={clsx(
                             "p-1.5 rounded-lg border transition-colors",
@@ -424,19 +425,20 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
                                 : "bg-surface-3 text-ink-muted border-line hover:bg-surface-4 hover:text-ink"
                         )}
                         title="자동 최하단 스크롤"
-                    >
+                        >
                         <ArrowDown className={clsx("w-3.5 h-3.5", autoScroll && "animate-bounce")} />
-                    </button>
+                        </button>
 
-                    {/* 수동 새로고침 */}
-                    <button
+                        {/* 수동 새로고침 */}
+                        <button
                         onClick={() => loadContent(false)}
                         disabled={loading}
                         className="p-1.5 bg-surface-3 border border-line hover:bg-surface-4 text-ink-muted hover:text-ink rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="새로고침"
-                    >
+                        >
                         <RefreshCw className={clsx("w-3.5 h-3.5", loading && "animate-spin")} />
-                    </button>
+                        </button>
+                    </div>
                 </div>
             </div>
 

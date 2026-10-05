@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.36] - 2026-10-06
+
+### Changed
+- **시스템 로그 레이아웃** — 로그 파일 목록을 위쪽 가로 영역으로 옮기고, 로그 뷰어를 아래 전체 폭으로 확장했습니다.
+- **로그 뷰어 도구 정렬** — 파일명 줄 오른쪽에 표시 줄 수 선택을 배치하고, 검색창 아래 오른쪽에 실시간 갱신·자동 스크롤·새로고침을 모았습니다.
+
 ## [2.0.35] - 2026-10-05
 
 ### Added
@@ -543,7 +549,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.35...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.36...HEAD
+[2.0.36]: https://github.com/ProofPage/Phrolova/compare/v2.0.35...v2.0.36
 [2.0.35]: https://github.com/ProofPage/Phrolova/compare/v2.0.34...v2.0.35
 [2.0.34]: https://github.com/ProofPage/Phrolova/compare/v2.0.33...v2.0.34
 [2.0.33]: https://github.com/ProofPage/Phrolova/compare/v2.0.32...v2.0.33
