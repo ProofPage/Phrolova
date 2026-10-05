@@ -74,16 +74,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## CHZZK live recording and Time Machine
+          ## Phrolova branding and Korean interface
 
-          - Added standard, request-Time-Machine, and force-Time-Machine recording modes with configurable offsets and fallback behavior.
-          - Improved live output naming, thumbnail handling, and TS/MKV/fragmented MP4 recording.
-
-          ## CHZZK VOD downloads
-
-          - Relaxed network and fragment timeouts and retries for long VODs.
-          - Added Akamai/Naver CDN fallback, including rewriting Naver segment hosts to `light-slit.akamaized.net` while preserving signed URLs.
-          - Validate downloaded duration and retry incomplete results; use scoped temporary cookie files with yt-dlp.
+          - Replaced remaining Rookery labels with Phrolova in the app name, startup screen, and sidebar.
+          - Localized page headings, navigation, settings labels, loading text, and status badges into Korean.
 
           Download the Windows x64 executable and replace the existing Rookery.exe. Settings and saved data are preserved.
           '@

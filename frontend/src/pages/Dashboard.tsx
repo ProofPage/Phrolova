@@ -209,14 +209,14 @@ export default function Dashboard() {
         <div className="space-y-6">
             <PageHeader
                 icon={Radio}
-                eyebrow="Live control"
-                title="Live Dashboard"
+                eyebrow="실시간 방송 관리"
+                title="라이브 대시보드"
                 description="방송 상태를 한눈에 확인하고, 녹화와 채널 우선순위를 한 화면에서 제어합니다."
                 meta={(
                     <>
-                        <Badge tone="primary">{channels.length} monitored</Badge>
-                        <Badge tone={liveCount > 0 ? "danger" : "neutral"}>{liveCount} live</Badge>
-                        <Badge tone={recordingCount > 0 ? "ok" : "neutral"}>{recordingCount} recording</Badge>
+                        <Badge tone="primary">{channels.length}개 채널 감시 중</Badge>
+                        <Badge tone={liveCount > 0 ? "danger" : "neutral"}>방송 중 {liveCount}개</Badge>
+                        <Badge tone={recordingCount > 0 ? "ok" : "neutral"}>녹화 중 {recordingCount}개</Badge>
                     </>
                 )}
                 actions={<AddChannelForm platformStatus={platformStatus} onAdded={fetchChannels} />}

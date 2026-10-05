@@ -37,7 +37,7 @@ export function AppearanceTab({ onDirtyChange }: Props) {
 
     return (
         <Card className="space-y-5">
-            <CardHeader icon={Palette} title="외관 (Appearance)" />
+            <CardHeader icon={Palette} title="외관 설정" />
 
             <Field
                 label="컬러 테마"

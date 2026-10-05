@@ -71,8 +71,8 @@ export default function Stats() {
         <div className="space-y-6">
             <PageHeader
                 icon={BarChart2}
-                eyebrow="Recording insights"
-                title="Statistics"
+                eyebrow="녹화 현황 분석"
+                title="통계"
                 description="녹화 시간, 파일 용량, 채널 활동과 저장소 상태를 한눈에 파악합니다."
                 actions={<Button icon={RefreshCw} onClick={loadStats} loading={loading}>새로고침</Button>}
             />
@@ -104,7 +104,7 @@ export default function Stats() {
                                             <p className="text-[11px] text-ink-faint">라이브 감지는 최근 30일 기준</p>
                                         </div>
                                     </div>
-                                    <span className="text-xs text-ink-faint font-mono">{live.by_channel.length} channels</span>
+                                    <span className="text-xs text-ink-faint font-mono">채널 {live.by_channel.length}개</span>
                                 </div>
 
                                 {live.by_channel.length === 0 ? (

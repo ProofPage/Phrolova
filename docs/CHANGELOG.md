@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.16] - 2026-10-05
+
+### Changed
+- **Phrolova branding and Korean interface text** — updated the app name, settings labels, navigation, page headings, and status badges for a consistent Korean UI.
+
 ## [2.0.15] - 2026-10-05
 
 ### Fixed
@@ -396,7 +401,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.15...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.16...HEAD
+[2.0.16]: https://github.com/ProofPage/Phrolova/compare/v2.0.15...v2.0.16
 [2.0.15]: https://github.com/ProofPage/Phrolova/compare/v2.0.14...v2.0.15
 [2.0.14]: https://github.com/ProofPage/Phrolova/compare/v2.0.13...v2.0.14
 [2.0.13]: https://github.com/ProofPage/Phrolova/compare/v2.0.12...v2.0.13

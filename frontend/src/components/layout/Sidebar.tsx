@@ -136,8 +136,8 @@ export function Sidebar() {
             )}
 
             <footer className="px-4 py-3 border-t border-line flex items-center justify-between">
-                <div><p className="text-[10px] text-ink-faint">Rookery</p><p className="text-[10px] font-mono text-ink-muted mt-0.5">v{updateInfo?.current_version || "..."}</p></div>
-                {updateInfo?.has_update && <NavLink to="/settings" className="inline-flex items-center gap-1.5 px-2 py-1 btn-ghost-primary rounded-full text-[10px] font-bold"><Gift className="w-3 h-3" /> Update</NavLink>}
+                <div><p className="text-[10px] text-ink-faint">Phrolova</p><p className="text-[10px] font-mono text-ink-muted mt-0.5">v{updateInfo?.current_version || "..."}</p></div>
+                {updateInfo?.has_update && <NavLink to="/settings" className="inline-flex items-center gap-1.5 px-2 py-1 btn-ghost-primary rounded-full text-[10px] font-bold"><Gift className="w-3 h-3" /> 업데이트</NavLink>}
             </footer>
         </>
     );

@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     )
 
     # ── 앱 메타 ──────────────────────────────────────────
-    app_name: str = "Rookery"
+    app_name: str = "Phrolova"
     debug: bool = False
 
     # ── FFmpeg ───────────────────────────────────────────

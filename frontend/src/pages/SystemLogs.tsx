@@ -27,8 +27,8 @@ export default function SystemLogs() {
         <div className="flex flex-col gap-6 xl:h-[calc(100vh-4rem)]">
             <PageHeader
                 icon={Terminal}
-                eyebrow="Runtime observability"
-                title="System Logs"
+                eyebrow="서비스 상태 확인"
+                title="시스템 로그"
                 description="실시간 서비스 로그와 일자별 백업을 검색하고 서버 상태를 추적합니다."
             />
 

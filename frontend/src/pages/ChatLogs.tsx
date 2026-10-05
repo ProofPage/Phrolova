@@ -30,8 +30,8 @@ export default function ChatLogs() {
         <div className="flex flex-col gap-6 xl:h-[calc(100vh-4rem)]">
             <PageHeader
                 icon={MessageSquare}
-                eyebrow="Conversation archive"
-                title="Chat Logs"
+                eyebrow="채팅 보관함"
+                title="채팅 기록"
                 description="녹화 중 수집한 채팅을 채널과 세션별로 찾아보고 원본 로그를 내려받습니다."
             />
 

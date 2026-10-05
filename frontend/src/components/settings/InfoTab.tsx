@@ -41,9 +41,9 @@ export function InfoTab({ settings, onDirtyChange }: Props) {
             <Card>
                 <CardHeader icon={Info} title="시스템 정보" />
                 <div className="space-y-1 text-sm">
-                    <InfoRow label="앱 이름"><span className="text-ink-muted">{settings?.app_name || "Loading..."}</span></InfoRow>
-                    <InfoRow label="FFmpeg 경로"><span className="text-ink-muted truncate max-w-[220px]" title={settings?.ffmpeg_path}>{settings?.ffmpeg_path || "Loading..."}</span></InfoRow>
-                    <InfoRow label="서버"><span className="text-ink-muted">{settings ? `${settings.host}:${settings.port}` : "Loading..."}</span></InfoRow>
+                    <InfoRow label="앱 이름"><span className="text-ink-muted">{settings?.app_name || "불러오는 중…"}</span></InfoRow>
+                    <InfoRow label="FFmpeg 경로"><span className="text-ink-muted truncate max-w-[220px]" title={settings?.ffmpeg_path}>{settings?.ffmpeg_path || "불러오는 중…"}</span></InfoRow>
+                    <InfoRow label="서버"><span className="text-ink-muted">{settings ? `${settings.host}:${settings.port}` : "불러오는 중…"}</span></InfoRow>
                     <InfoRow label="Discord Bot"><span className={settings?.discord_bot_configured ? "text-ok" : "text-ink-faint"}>{settings?.discord_bot_configured ? "연결됨" : "미설정"}</span></InfoRow>
                     <InfoRow label="TwitCasting 설정"><span className={settings?.twitcasting_client_id ? "text-twitcasting" : "text-ink-faint"}>{settings?.twitcasting_client_id ? "설정됨" : "미설정"}</span></InfoRow>
                     <InfoRow label="X Spaces 쿠키" last><span className={settings?.x_cookie_file ? "text-xspaces" : "text-ink-faint"}>{settings?.x_cookie_file ? "설정됨" : "미설정"}</span></InfoRow>

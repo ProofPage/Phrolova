@@ -30,8 +30,8 @@ export default function ArchivePage() {
         <div className="space-y-6">
             <PageHeader
                 icon={Radio}
-                eyebrow="Audio archive"
-                title="X Spaces Downloader"
+                eyebrow="오디오 보관함"
+                title="X Spaces 다운로드"
                 description="캡처한 X Spaces 스트림을 오래 보관할 수 있는 오디오 파일로 변환합니다."
             />
 
@@ -77,10 +77,10 @@ export default function ArchivePage() {
                         </div>
                         <div className="flex gap-3">
                             <span className="w-8 h-8 rounded-[var(--radius-control)] bg-surface-4 text-ink-muted grid place-items-center shrink-0"><Cookie className="w-4 h-4" /></span>
-                            <div><p className="text-sm font-medium text-ink">비공개 Space</p><p className="text-xs text-ink-faint mt-0.5">Settings에서 X 쿠키 파일을 먼저 지정해 주세요.</p></div>
+                            <div><p className="text-sm font-medium text-ink">비공개 Space</p><p className="text-xs text-ink-faint mt-0.5">설정에서 X 쿠키 파일을 먼저 지정해 주세요.</p></div>
                         </div>
                     </div>
-                    <p className="mt-5 pt-4 border-t border-line text-xs text-ink-faint">진행 상황과 완료 파일은 VOD Downloader에서 확인할 수 있습니다.</p>
+                    <p className="mt-5 pt-4 border-t border-line text-xs text-ink-faint">진행 상황과 완료 파일은 VOD 다운로드 화면에서 확인할 수 있습니다.</p>
                 </Card>
             </div>
         </div>

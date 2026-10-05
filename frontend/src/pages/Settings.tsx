@@ -120,12 +120,12 @@ export default function Settings() {
         <div className="space-y-6">
             <PageHeader
                 icon={SettingsIcon}
-                eyebrow="Application control"
-                title="Settings"
+                eyebrow="프로그램 설정"
+                title="설정"
                 description="녹화 방식과 인증, 알림, 화면 테마 및 시스템 동작을 구성합니다."
                 meta={(
                     <>
-                        <Badge tone="neutral">7 sections</Badge>
+                        <Badge tone="neutral">7개 항목</Badge>
                         {hasDirtyTab && <Badge tone="warn">저장하지 않은 변경사항</Badge>}
                         {updateAvailable && <Badge tone="ok">업데이트 가능</Badge>}
                     </>

@@ -116,13 +116,13 @@ export default function VodDownload() {
         <div className="space-y-6">
             <PageHeader
                 icon={Download}
-                eyebrow="Download queue"
-                title="VOD Downloader"
+                eyebrow="다운로드 대기열"
+                title="VOD 다운로드"
                 description="치지직 VOD와 클립, 외부 영상 주소를 대기열에 추가하고 진행 상황을 관리합니다."
                 meta={(
                     <>
-                        <Badge tone={activeCount > 0 ? "ok" : "neutral"}>{activeCount} active</Badge>
-                        <Badge tone="neutral">{tasks.length} total</Badge>
+                        <Badge tone={activeCount > 0 ? "ok" : "neutral"}>{activeCount}개 진행 중</Badge>
+                        <Badge tone="neutral">전체 {tasks.length}개</Badge>
                     </>
                 )}
             />

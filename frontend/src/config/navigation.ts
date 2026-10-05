@@ -33,22 +33,22 @@ export interface NavGroup {
 export const NAV_GROUPS: NavGroup[] = [
     {
         title: "모니터링",
-        items: [{ name: "Live Dashboard", to: "/", icon: LayoutDashboard }],
+        items: [{ name: "라이브 대시보드", to: "/", icon: LayoutDashboard }],
     },
     {
         title: "미디어 허브",
         items: [
-            { name: "VOD Downloader", to: "/vod", icon: Download },
-            { name: "X Spaces", to: "/archive", icon: Radio },
-            { name: "Chat Logs", to: "/chat", icon: MessageSquare },
+            { name: "VOD 다운로드", to: "/vod", icon: Download },
+            { name: "X Spaces 보관함", to: "/archive", icon: Radio },
+            { name: "채팅 기록", to: "/chat", icon: MessageSquare },
         ],
     },
     {
         title: "워크스페이스",
         items: [
-            { name: "Statistics", to: "/stats", icon: BarChart3 },
-            { name: "System Logs", to: "/system-logs", icon: Terminal },
-            { name: "Settings", to: "/settings", icon: Settings },
+            { name: "통계", to: "/stats", icon: BarChart3 },
+            { name: "시스템 로그", to: "/system-logs", icon: Terminal },
+            { name: "설정", to: "/settings", icon: Settings },
         ],
     },
 ];
