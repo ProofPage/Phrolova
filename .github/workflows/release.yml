@@ -74,23 +74,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## System logs
+          ## 라이브 다운로드 설정
 
-          - Keep Windows one-file logs in a persistent folder beside the executable.
-          - Enable automatic live-log updates, refresh file sizes, and bypass browser caching.
-          - Make log search filter matching lines and safely highlight literal search terms.
-          - Record a fresh entry after log reset while keeping the file handler attached.
+          - 라이브 설정의 제목을 “라이브 다운로드 설정”으로 바꿨습니다.
+          - 기본 파일명에 방송 시작 날짜와 시각을 초 단위까지 포함합니다.
+          - 이전 기본 파일명 형식은 자동 전환하고, 직접 지정한 형식은 유지합니다.
 
-          ## Statistics and settings
+          ## 화면 문구
 
-          - Refresh statistics automatically and show active recording counts separately from completed totals.
-          - Move live quality into Live Recording Settings and save it with the other live options.
-          - Show the detected FFmpeg version and identify ProofPage in program information.
-
-          ## Interface polish
-
-          - Align compact page actions beside their headings and keep the live channel form full width.
-          - Clarify disk usage and reduce oversized empty states on the statistics page.
+          - 사이드바와 페이지 제목의 “시스템 로그”를 “로그”로 정리했습니다.
+          - 업데이트 전용 설정 제목을 “프로그램 업데이트”로 바꿨습니다.
 
           Download the Windows x64 executable and replace the existing application executable. Settings and saved data are preserved.
           '@

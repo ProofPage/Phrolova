@@ -47,7 +47,7 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "워크스페이스",
         items: [
             { name: "통계", to: "/stats", icon: BarChart3 },
-            { name: "시스템 로그", to: "/system-logs", icon: Terminal },
+            { name: "로그", to: "/system-logs", icon: Terminal },
             { name: "설정", to: "/settings", icon: Settings },
         ],
     },

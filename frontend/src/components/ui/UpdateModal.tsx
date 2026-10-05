@@ -53,8 +53,8 @@ export function UpdateModal({ info, onClose }: UpdateModalProps) {
     const renderContent = () => {
         switch (info.environment) {
             case "windows-exe": {
-                // 릴리즈 asset 이름에 버전이 들어간다: Rookery-v2.0.0-windows-x64.exe
-                const assetName = `Rookery-v${info.latest_version}-windows-x64.exe`;
+                // 릴리즈 asset 이름에 버전이 들어간다: Phrolova-v2.0.0-windows-x64.exe
+                const assetName = `Phrolova-v${info.latest_version}-windows-x64.exe`;
                 return (
                     <div className="space-y-4">
                         <p className="text-sm text-ink-muted">

@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+## [2.0.30] - 2026-10-05
+
+### Changed
+- **라이브 다운로드 설정** — 설정 제목을 명확히 하고, 기본 라이브 파일명에 방송 시작 날짜와 시각을 초 단위까지 포함합니다. 기존 기본 템플릿은 자동으로 새 형식으로 옮기며 사용자 지정 형식은 유지합니다.
+- **로그 메뉴** — 사이드바와 페이지 제목을 “로그”로 간결하게 통일했습니다.
+- **업데이트 설정** — 업데이트 전용 화면에 맞춰 카드 제목을 “프로그램 업데이트”로 정리했습니다.
+
 ## [2.0.29] - 2026-10-05
 
 ### Changed
@@ -494,7 +501,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.29...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.30...HEAD
+[2.0.30]: https://github.com/ProofPage/Phrolova/compare/v2.0.29...v2.0.30
 [2.0.29]: https://github.com/ProofPage/Phrolova/compare/v2.0.28...v2.0.29
 [2.0.28]: https://github.com/ProofPage/Phrolova/compare/v2.0.27...v2.0.28
 [2.0.27]: https://github.com/ProofPage/Phrolova/compare/v2.0.26...v2.0.27

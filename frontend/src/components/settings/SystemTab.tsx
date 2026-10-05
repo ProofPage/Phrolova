@@ -49,7 +49,7 @@ export function SystemTab({ onDirtyChange, onUpdateAvailabilityChange }: Props) 
     return (
         <>
             <Card className="space-y-5">
-                <CardHeader icon={Terminal} title="시스템 관리 및 업데이트" />
+                <CardHeader icon={Terminal} title="프로그램 업데이트" />
                 <div className="bg-surface-3 p-4 rounded-[var(--radius-control)] border border-line flex items-center justify-between">
                     <div>
                         <h4 className="text-sm font-medium text-ink mb-1">현재 버전</h4>

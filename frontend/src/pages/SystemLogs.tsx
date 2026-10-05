@@ -30,7 +30,7 @@ export default function SystemLogs() {
 
     const handleClearLogs = async () => {
         const ok = await confirm({
-            title: "시스템 로그 초기화",
+            title: "로그 초기화",
             message: "현재 로그와 날짜별 백업 로그를 모두 비웁니다. 초기화 후 발생하는 새 로그는 계속 저장됩니다.",
             confirmText: "로그 초기화",
             variant: "danger",
@@ -44,7 +44,7 @@ export default function SystemLogs() {
             setListRefreshKey((value) => value + 1);
             toast.success(result.message);
         } catch {
-            toast.error("시스템 로그 초기화에 실패했습니다.");
+            toast.error("로그 초기화에 실패했습니다.");
         } finally {
             setClearing(false);
         }
@@ -55,7 +55,7 @@ export default function SystemLogs() {
             <PageHeader
                 icon={Terminal}
                 eyebrow="서비스 상태 확인"
-                title="시스템 로그"
+                title="로그"
                 description="실시간 서비스 로그와 일자별 백업을 검색하고 서버 상태를 추적합니다."
                 actions={(
                     <Button
@@ -83,7 +83,7 @@ export default function SystemLogs() {
                     {selectedFile === null ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-ink-faint p-8 text-center">
                             <span className="w-14 h-14 rounded-2xl bg-surface-3 border border-line grid place-items-center mb-4"><Terminal className="w-6 h-6 opacity-60" /></span>
-                            <p className="text-sm">왼쪽 목록에서 조회할 시스템 로그 파일을 선택하세요.</p>
+                            <p className="text-sm">왼쪽 목록에서 조회할 로그 파일을 선택하세요.</p>
                         </div>
                     ) : (
                         <LogContentViewer
@@ -147,7 +147,7 @@ function LogFileListView({ selectedFile, onSelect, toast, refreshKey }: LogFileL
         return (
             <div className="flex flex-col flex-1 items-center justify-center p-8 text-center">
                 <Terminal className="w-8 h-8 text-ink-faint mb-3" />
-                <p className="text-ink-muted font-medium text-sm mb-1">시스템 로그 파일이 없습니다.</p>
+                <p className="text-ink-muted font-medium text-sm mb-1">로그 파일이 없습니다.</p>
             </div>
         );
     }

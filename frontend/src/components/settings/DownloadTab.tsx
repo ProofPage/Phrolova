@@ -19,7 +19,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [streamMode, setStreamMode] = useState<"standard" | "request-timemachine" | "force-timemachine">("request-timemachine");
     const [timeMachineOffset, setTimeMachineOffset] = useState(0);
     const [saveLivePreview, setSaveLivePreview] = useState(false);
-    const [liveFilenameTemplate, setLiveFilenameTemplate] = useState("[{download_date}][{name}] {title}");
+    const [liveFilenameTemplate, setLiveFilenameTemplate] = useState("[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}");
     const [vodMaxConcurrent, setVodMaxConcurrent] = useState(3);
     const [vodDefaultQuality, setVodDefaultQuality] = useState("best");
     const [vodMaxSpeed, setVodMaxSpeed] = useState(0);
@@ -42,7 +42,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         setStreamMode(settings.chzzk_stream_mode ?? (settings.chzzk_time_machine_enabled ? "force-timemachine" : "standard"));
         setTimeMachineOffset(settings.chzzk_time_machine_offset ?? settings.chzzk_time_machine_shift ?? 0);
         setSaveLivePreview(settings.save_live_preview ?? false);
-        setLiveFilenameTemplate(settings.live_filename_template || "[{download_date}][{name}] {title}");
+        setLiveFilenameTemplate(settings.live_filename_template || "[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}");
         setVodMaxConcurrent(settings.vod_max_concurrent);
         setVodDefaultQuality(settings.vod_default_quality);
         setVodMaxSpeed(settings.vod_max_speed);
@@ -57,7 +57,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         streamMode !== (settings.chzzk_stream_mode ?? (settings.chzzk_time_machine_enabled ? "force-timemachine" : "standard")) ||
         timeMachineOffset !== (settings.chzzk_time_machine_offset ?? settings.chzzk_time_machine_shift ?? 0) ||
         saveLivePreview !== (settings.save_live_preview ?? false) ||
-        liveFilenameTemplate !== (settings.live_filename_template || "[{download_date}][{name}] {title}") ||
+        liveFilenameTemplate !== (settings.live_filename_template || "[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}") ||
         vodMaxConcurrent !== settings.vod_max_concurrent ||
         vodDefaultQuality !== settings.vod_default_quality ||
         vodMaxSpeed !== settings.vod_max_speed ||
@@ -138,7 +138,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
             </Card>
 
             <Card className="space-y-5">
-                <CardHeader icon={Radio} title="라이브 녹화 설정" />
+                <CardHeader icon={Radio} title="라이브 다운로드 설정" />
                 <Field label="라이브 품질" hint="라이브 녹화에 사용할 yt-dlp 화질입니다.">
                     <Select
                         value={recordingQuality}

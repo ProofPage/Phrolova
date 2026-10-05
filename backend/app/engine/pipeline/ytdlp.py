@@ -188,12 +188,13 @@ class YtdlpLivePipeline:
             values.update(date_values("", now))
             values.update(date_values("live_", live_date))
             values.update(date_values("download_", now))
-            template = settings.live_filename_template or "[{download_date}][{name}] {title}"
+            default_template = "[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}"
+            template = settings.live_filename_template or default_template
             try:
                 filename = template.format(**values)
             except (KeyError, ValueError, IndexError) as exc:
                 logger.warning(f"[{self._channel_id}] 파일명 형식이 잘못되어 기본 형식을 사용합니다: {exc}")
-                filename = "[{download_date}][{name}] {title}".format(**values)
+                filename = default_template.format(**values)
             filename = self._clean_filename(filename) or self._channel_id
             if not filename.lower().endswith(f".{ext}".lower()):
                 filename += f".{ext}"

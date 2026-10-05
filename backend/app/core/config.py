@@ -11,6 +11,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -150,7 +151,15 @@ class Settings(BaseSettings):
     chzzk_time_machine_offset: Optional[int] = None  # 스트림 시작 기준 건너뛸 초 수
     chzzk_time_machine_shift: Optional[int] = None  # 구버전 설정 호환용
     save_live_preview: bool = False           # 치지직 녹화 시작 시 미리보기 이미지 저장
-    live_filename_template: str = "[{download_date}][{name}] {title}"
+    live_filename_template: str = "[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}"
+
+    @field_validator("live_filename_template", mode="before")
+    @classmethod
+    def migrate_default_live_filename_template(cls, value: object) -> object:
+        """기존 기본 템플릿만 새 날짜·시간 파일명 형식으로 옮긴다."""
+        if value == "[{download_date}][{name}] {title}":
+            return "[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}"
+        return value
 
     @property
     def effective_chzzk_stream_mode(self) -> str:
