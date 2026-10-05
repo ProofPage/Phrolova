@@ -74,14 +74,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## First-run setup
+          ## Startup dependency check
 
-          - Default live recordings to `Downloads/Phrolova/Live` and VOD downloads to `Downloads/Phrolova/Video` for new installations.
+          - Rename the dependency-check console heading to Phrolova.
+          - Display the Streamlink version and prevent startup when the required Streamlink package is unavailable.
 
-          ## VOD downloads
+          ## VOD task cards
 
-          - Center the task drag handle for consistent alignment across download cards.
-          - Clarify feature labels as high-quality support and automatic remuxing.
+          - Stretch status tiles to the task content height to remove the extra blank area below the paused icon.
 
           Download the Windows x64 executable and replace the existing application executable. Settings and saved data are preserved.
           '@

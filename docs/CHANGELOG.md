@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.25] - 2026-10-05
+
+### Changed
+- **Startup dependency check** — Rename the console heading to Phrolova and report the installed Streamlink version; stop startup with guidance when Streamlink is unavailable.
+- **VOD task cards** — Stretch status tiles to the task content height to remove empty space below the paused-state icon.
+
 ## [2.0.24] - 2026-10-05
 
 ### Changed
@@ -455,7 +461,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.24...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.25...HEAD
+[2.0.25]: https://github.com/ProofPage/Phrolova/compare/v2.0.24...v2.0.25
 [2.0.24]: https://github.com/ProofPage/Phrolova/compare/v2.0.23...v2.0.24
 [2.0.23]: https://github.com/ProofPage/Phrolova/compare/v2.0.22...v2.0.23
 [2.0.22]: https://github.com/ProofPage/Phrolova/compare/v2.0.21...v2.0.22

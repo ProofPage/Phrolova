@@ -284,8 +284,7 @@ function TaskCard({ task, onCancel, onPause, onResume, onRetry, onOpenLocation }
 
             {/* 상태 아이콘 영역 */}
             <div className={clsx(
-                "col-start-2 row-start-1 w-12 h-12 bg-surface-1 border border-line rounded-[var(--radius-control)] flex items-center justify-center shrink-0 sm:w-24",
-                task.state === "downloading" ? "sm:h-auto sm:self-stretch" : "sm:h-20",
+                "col-start-2 row-start-1 w-12 h-12 bg-surface-1 border border-line rounded-[var(--radius-control)] flex items-center justify-center shrink-0 sm:w-24 sm:h-auto sm:self-stretch",
             )}>
                 {task.state === "completed" && <CheckCircle className="text-ok w-6 h-6 sm:w-8 sm:h-8" />}
                 {task.state === "downloading" && (

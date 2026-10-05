@@ -120,6 +120,22 @@ def _find_ffmpeg() -> str | None:
     return shutil.which("ffmpeg")
 
 
+def _get_streamlink_version() -> str | None:
+    """Streamlink 설치 버전을 읽는다. 라이브 녹화에 필요한 패키지다."""
+    try:
+        from importlib.metadata import PackageNotFoundError, version
+
+        try:
+            return version("streamlink")
+        except PackageNotFoundError:
+            # 개발 환경이나 일부 패키징 환경에서는 배포 메타데이터가 없을 수 있다.
+            import streamlink
+
+            return getattr(streamlink, "__version__", "설치됨")
+    except Exception:
+        return None
+
+
 def _run_dependency_check() -> bool:
     """의존성을 검사하고, 없으면 대화형으로 설치 안내한다.
 
@@ -128,7 +144,7 @@ def _run_dependency_check() -> bool:
         False: 의존성 미충족 (종료)
     """
     print("=" * 60)
-    print("  Rookery 의존성 검사")
+    print("  Phrolova 의존성 검사")
     print("=" * 60)
 
     all_ok = True
@@ -147,6 +163,14 @@ def _run_dependency_check() -> bool:
         print(f"  [OK]  FFmpeg: {ffmpeg_path}")
     else:
         print("  [!!]  FFmpeg를 찾을 수 없습니다.")
+        all_ok = False
+
+    # ── Streamlink 확인 (라이브 녹화 필수) ──────────────────
+    streamlink_version = _get_streamlink_version()
+    if streamlink_version:
+        print(f"  [OK]  Streamlink: v{streamlink_version}")
+    else:
+        print("  [!!]  Streamlink를 찾을 수 없습니다. 라이브 녹화에 필요합니다.")
         all_ok = False
 
     # ── yt-dlp 확인 (없으면 자동 다운로드) ──────────────────
@@ -192,6 +216,14 @@ def _run_dependency_check() -> bool:
         print("     1. https://ffmpeg.org/download.html 에서 Windows 빌드 다운로드")
         print("     2. 압축 해제 후 bin/ffmpeg.exe를 이 프로그램 옆 'bin' 폴더에 복사")
         print("        또는 시스템 PATH에 추가")
+        print()
+
+    if not streamlink_version:
+        print("  📌 Streamlink를 사용할 수 없습니다:")
+        if IS_FROZEN:
+            print("     최신 Phrolova 실행 파일로 교체한 뒤 다시 시작하세요.")
+        else:
+            print("     backend/requirements.txt의 의존성을 설치한 뒤 다시 시작하세요.")
         print()
 
     # FFmpeg 자동 설치 제안 (PowerShell 다운로드 및 압축 해제)
