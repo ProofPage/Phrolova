@@ -94,6 +94,7 @@ class VodDownloadTask:
     output_dir: str = ""
     output_path: Optional[str] = None
     expected_part_file: Optional[str] = None
+    resolved_filename: Optional[str] = None
     filename_template: Optional[str] = None
     filename_started_at: Optional[datetime] = None
     error_message: Optional[str] = None
@@ -848,12 +849,36 @@ class VodEngine:
             expected_file = ydl.prepare_filename(info)
             task.expected_part_file = expected_file + ".part"
 
+        # Reserve the final path on the event loop before downloading so concurrent
+        # tasks cannot reuse a filename, even when their start times share a second.
+        if task.resolved_filename:
+            expected_file = task.resolved_filename
+        else:
+            candidate = Path(expected_file)
+            reserved = {
+                other.resolved_filename.casefold()
+                for other in self._tasks.values()
+                if other is not task and other.resolved_filename
+            }
+            index = 1
+            while (candidate.exists() or Path(str(candidate) + ".part").exists()
+                   or str(candidate).casefold() in reserved):
+                candidate = Path(expected_file).with_name(
+                    f"{Path(expected_file).stem} ({index}){Path(expected_file).suffix}"
+                )
+                index += 1
+            expected_file = str(candidate)
+            task.resolved_filename = expected_file
+        task.expected_part_file = expected_file + ".part"
+
         # 2. 실제 다운로드
         opts = self._build_ytdlp_options(
             task,
             progress_callback=self._make_progress_callback(task),
             cookie_file=cookie_file,
         )
+
+        opts["outtmpl"] = expected_file.replace("%", "%%")
 
         # 치지직 ABR_HLS 매니페스트는 세그먼트마다 CDN URL을 담는다. yt-dlp가
         # 포맷 정보를 만든 뒤 URL 필드만 바꿔 Akamai를 우선 사용하고, 작업 재시도

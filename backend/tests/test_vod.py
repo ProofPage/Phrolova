@@ -83,7 +83,10 @@ class TestVodDownloadIdentity:
         import yt_dlp
 
         engine = VodEngine()
-        task = VodDownloadTask(output_dir=str(tmp_path))
+        task = VodDownloadTask(
+            output_dir=str(tmp_path),
+            filename_template="[{name}] {title} [{extractor}-{id}]",
+        )
         info = {
             "id": "12345", "title": "Same title", "uploader": "Channel",
             "extractor_key": "CHZZKVideo", "ext": "mp4",
