@@ -11,7 +11,7 @@ export interface VodContextType {
     pauseTask: (taskId: string) => Promise<void>;
     resumeTask: (taskId: string) => Promise<void>;
     retryTask: (taskId: string) => Promise<string>;
-    clearCompleted: () => Promise<void>;
+    clearCompleted: () => Promise<{ deleted_count: number; remaining_count: number }>;
     openFileLocation: (taskId: string) => Promise<void>;
     refreshTasks: () => Promise<void>;
 }
@@ -72,8 +72,9 @@ export function VodProvider({ children }: { children: ReactNode }) {
     };
 
     const clearCompleted = async () => {
-        await api.clearCompletedVodTasks();
+        const result = await api.clearCompletedVodTasks();
         await refreshTasks();
+        return result;
     };
 
     const openFileLocation = async (taskId: string) => {

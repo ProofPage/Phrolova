@@ -31,7 +31,9 @@ export default function VodDownload() {
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const toast = useToast();
     const confirm = useConfirm();
-    const hasClearableTasks = tasks.some((task) => task.state === "completed" || task.state === "error");
+    const clearableTaskCount = tasks.filter((task) =>
+        task.state === "idle" || task.state === "completed" || task.state === "error"
+    ).length;
 
     useEffect(() => {
         const timer = setTimeout(() => setIsInitialLoad(false), 500);
@@ -76,12 +78,19 @@ export default function VodDownload() {
 
     const handleClearCompleted = async () => {
         const ok = await confirm({
-            title: "완료된 작업 정리",
-            message: "완료 및 오류 상태의 작업을 모두 삭제할까요?",
+            title: "작업 정리",
+            message: "대기, 완료, 오류 상태의 작업을 삭제할까요? 다운로드 중이거나 일시정지한 작업은 유지됩니다.",
             confirmText: "정리",
             variant: "danger",
         });
-        if (ok) clearCompleted();
+        if (!ok) return;
+
+        try {
+            const result = await clearCompleted();
+            toast.success(`${result.deleted_count}개 작업을 정리했습니다.`);
+        } catch (err: unknown) {
+            toast.error(getErrorMessage(err, "작업 정리에 실패했습니다."));
+        }
     };
 
     const handleDragStart = (index: number) => {
@@ -169,10 +178,12 @@ export default function VodDownload() {
                         <Button
                             icon={Trash2}
                             onClick={handleClearCompleted}
-                            disabled={!hasClearableTasks}
-                            title={hasClearableTasks ? "완료 및 오류 작업을 정리합니다." : "완료 또는 오류 작업이 생기면 정리할 수 있습니다."}
+                            disabled={clearableTaskCount === 0}
+                            title={clearableTaskCount > 0
+                                ? "대기, 완료, 오류 작업을 정리합니다."
+                                : "다운로드 중이거나 일시정지한 작업만 정리할 수 없습니다."}
                         >
-                            완료된 작업 정리
+                            작업 정리
                         </Button>
                     )}
                 </div>

@@ -182,9 +182,9 @@ async def reorder_vod_tasks(req: ReorderTasksRequest):
     return result
 
 
-@router.post("/clear-completed", summary="완료된 작업 일괄 삭제")
+@router.post("/clear-completed", summary="대기 및 완료 작업 정리")
 async def clear_completed_vod_tasks():
-    """완료 및 에러 상태의 작업들을 일괄 삭제합니다."""
+    """대기, 완료, 오류 작업을 삭제하고 진행/일시정지 작업은 유지합니다."""
     from app.main import get_recorder_service
 
     service = get_recorder_service()

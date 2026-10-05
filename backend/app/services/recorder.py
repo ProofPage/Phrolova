@@ -210,8 +210,8 @@ class RecorderService:
         return self._vod_engine.reorder_tasks(task_ids)
 
     def clear_completed_vod_tasks(self) -> dict:
-        """완료된 VOD 작업들을 일괄 삭제한다."""
-        logger.info(f"[Service] 완료된 VOD 작업 일괄 삭제 요청")
+        """대기 및 종료된 VOD 작업들을 일괄 삭제한다."""
+        logger.info("[Service] VOD 작업 정리 요청")
         return self._vod_engine.clear_completed_tasks()
 
     def open_vod_file_location(self, task_id: str) -> dict:

@@ -14,7 +14,6 @@ from urllib.parse import urlsplit, urlunsplit
 
 from app.core.config import get_settings
 from app.core.logger import logger
-from app.core.utils import ffmpeg_supports_extension_picky
 from app.engine.chzzk_time_machine import resolve_time_machine_stream
 
 from app.engine.pipeline.state import RecordingState
@@ -279,15 +278,10 @@ class YtdlpLivePipeline:
         cmd = [ffmpeg_path, "-hide_banner", "-loglevel", "error"]
 
         # HLS URL에 Akamai 인증 토큰이 이미 포함됨 (hdntl=...~hmac=...)
-        # extension_picky(기본 true)가 세그먼트 포맷 vs URL 확장자 일치를 강제함.
-        # Chzzk CDN은 .m4v 확장자를 사용하지만 MOV 디먹서의 확장자 목록에 없어 거부됨.
-        # → ffmpeg 7.1.1+ 에서 엄격해진 보안 패치: 해당 버전 이상에서만 비활성화.
-        # → ffmpeg 6.x (apt 기본) 등 구버전에서는 옵션 자체가 없거나 불필요하므로 생략.
-        if ffmpeg_supports_extension_picky(ffmpeg_path):
-            cmd += ["-extension_picky", "0"]
-            logger.debug(f"[{self._channel_id}] extension_picky 비활성화 적용 (ffmpeg 7.1.1+)")
-        # FFmpeg no longer downloads HLS itself. Streamlink handles playlist
-        # reloads, segment retries, request headers and the time-machine offset.
+        # Streamlink consumes HLS and sends media bytes through pipe:0. FFmpeg sees
+        # a byte stream here, not an HLS playlist, so HLS-only options such as
+        # extension_picky are unsupported and must not be passed to this input.
+        # Streamlink handles playlist reloads, segment retries, headers and offsets.
         time_machine_offset = (
             settings.effective_chzzk_time_machine_offset if time_machine_resolved else 0
         )

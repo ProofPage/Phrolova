@@ -180,10 +180,8 @@ class TestYtdlpLiveCookieFallback:
     def pipeline(self, monkeypatch):
         from unittest.mock import AsyncMock
         from app.engine.pipeline import YtdlpLivePipeline
-        from app.engine.pipeline import ytdlp as ytdlp_module
 
         monkeypatch.setattr("app.core.config.Settings.resolve_ffmpeg_path", lambda self: "ffmpeg")
-        monkeypatch.setattr(ytdlp_module, "ffmpeg_supports_extension_picky", lambda path: False)
         pipeline = YtdlpLivePipeline(channel_id="someone")
         monkeypatch.setattr(pipeline, "_run_streamlink_feeder", AsyncMock())
         monkeypatch.setattr(pipeline, "_watch_process", AsyncMock())

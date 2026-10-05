@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+## [2.0.23] - 2026-10-05
+
+### Fixed
+- **Streamlink live recording** — Removed the unsupported HLS-only FFmpeg option from the Streamlink media pipe so FFmpeg can record the incoming stream.
+- **VOD task cleanup** — Allow queued, completed, and failed tasks to be cleared, persist removals, and keep downloading or paused tasks intact.
+- **Cancelled VOD partial files** — Retry deletion asynchronously while yt-dlp or FFmpeg releases Windows file locks.
+
 ## [2.0.22] - 2026-10-05
 
 ### Fixed
@@ -442,7 +449,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.22...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.23...HEAD
+[2.0.23]: https://github.com/ProofPage/Phrolova/compare/v2.0.22...v2.0.23
 [2.0.22]: https://github.com/ProofPage/Phrolova/compare/v2.0.21...v2.0.22
 [2.0.21]: https://github.com/ProofPage/Phrolova/compare/v2.0.20...v2.0.21
 [2.0.20]: https://github.com/ProofPage/Phrolova/compare/v2.0.19...v2.0.20

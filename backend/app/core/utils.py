@@ -6,10 +6,7 @@ Rookery: 공통 유틸리티
 from __future__ import annotations
 
 import re
-import subprocess
-from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
 from app.core.config import resolve_env_path
 from app.core.logger import logger
@@ -155,60 +152,4 @@ def update_env_file(updates: dict[str, str]) -> None:
         env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
     except Exception as e:
         logger.error(f".env 파일 업데이트 실패: {e}")
-
-
-@lru_cache(maxsize=1)
-def get_ffmpeg_version(ffmpeg_path: Optional[str] = None) -> tuple[int, int, int]:
-    """FFmpeg 버전을 (major, minor, patch) 튜플로 반환한다.
-
-    ffmpeg -version 출력에서 버전 숫자를 파싱한다.
-    파싱 실패 시 (0, 0, 0)을 반환하여 옵션이 안전하게 생략되도록 한다.
-
-    Args:
-        ffmpeg_path: ffmpeg 실행 파일 경로. None이면 PATH에서 탐색.
-
-    Returns:
-        (major, minor, patch) 정수 튜플. 예: (7, 1, 1) 또는 (8, 0, 0)
-    """
-    cmd = ffmpeg_path or "ffmpeg"
-    try:
-        result = subprocess.run(
-            [cmd, "-version"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        # 첫 번째 줄: "ffmpeg version 7.1.1 Copyright ..."
-        first_line = result.stdout.splitlines()[0] if result.stdout else ""
-        match = re.search(r"version\s+(\d+)\.(\d+)(?:\.(\d+))?", first_line)
-        if match:
-            major = int(match.group(1))
-            minor = int(match.group(2))
-            patch = int(match.group(3)) if match.group(3) else 0
-            logger.debug(f"FFmpeg 버전 감지: {major}.{minor}.{patch}")
-            return (major, minor, patch)
-    except Exception as e:
-        logger.warning(f"FFmpeg 버전 감지 실패: {e}")
-    return (0, 0, 0)
-
-
-def ffmpeg_supports_extension_picky(ffmpeg_path: Optional[str] = None) -> bool:
-    """`-extension_picky` 옵션이 필요한 버전인지 판단한다.
-
-    extension_picky는 ffmpeg 7.1.1에서 엄격해진 보안 패치로,
-    Chzzk CDN의 .m4v 확장자 세그먼트를 거부하는 문제를 일으킨다.
-    7.1.1 이상 버전에서만 `-extension_picky 0` 옵션이 필요하다.
-
-    Returns:
-        True이면 `--extension_picky 0` 옵션 추가가 필요함.
-    """
-    major, minor, patch = get_ffmpeg_version(ffmpeg_path)
-    # 7.1.1+ 또는 8.0+ 이상
-    if major >= 8:
-        return True
-    if major == 7 and minor >= 2:
-        return True
-    if major == 7 and minor == 1 and patch >= 1:
-        return True
-    return False
 

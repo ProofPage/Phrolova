@@ -409,7 +409,7 @@ class VodEngine:
             # CDN을 바꾸는 재시도는 이전 CDN에서 받은 조각을 이어받지 않는다.
             # 서명·세그먼트 체계가 다른 CDN의 조각이 한 파일에 섞이는 것을 막는다.
             if self._is_chzzk_url(task.url):
-                self._cleanup_partial_files(task)
+                await self._cleanup_partial_files(task)
             # 일시적 오류일 가능성이 있으므로 잠시 대기 후 재시도.
             # 슬롯은 이미 반납했으니 기다리는 동안 대기 중인 다른 다운로드가 쓸 수 있다.
             await asyncio.sleep(3 * task.retry_count)  # 백오프: 3초, 6초, 9초...
@@ -444,7 +444,7 @@ class VodEngine:
             task.state = VodDownloadState.IDLE
             task.progress = 0.0
             if not get_settings().keep_download_parts:
-                self._cleanup_partial_files(task)
+                await self._cleanup_partial_files(task)
             logger.info(f"[{task_id}] 다운로드 취소됨: {task.url}")
 
         except asyncio.CancelledError:
@@ -460,7 +460,7 @@ class VodEngine:
                 task.state = VodDownloadState.IDLE
                 task.progress = 0.0
                 if not get_settings().keep_download_parts:
-                    self._cleanup_partial_files(task)
+                    await self._cleanup_partial_files(task)
                 logger.info(f"[{task_id}] 다운로드 취소됨 (예외 처리): {task.url}")
             else:
                 import traceback
@@ -480,7 +480,7 @@ class VodEngine:
                     task.error_message = error_msg
                     task.state = VodDownloadState.ERROR
                     if not get_settings().keep_download_parts:
-                        self._cleanup_partial_files(task)
+                        await self._cleanup_partial_files(task)
                     self._save_history()
                     return False
 
@@ -501,7 +501,7 @@ class VodEngine:
                     task.error_message = f"재시도 {task.max_retries}회 실패: {str(e)}"
                     task.state = VodDownloadState.ERROR
                     if not get_settings().keep_download_parts:
-                        self._cleanup_partial_files(task)
+                        await self._cleanup_partial_files(task)
                     # 에러 발생 시 이력 저장
                     self._save_history()
 
@@ -937,8 +937,8 @@ class VodEngine:
         return rewrite(info)
 
     @staticmethod
-    def _cleanup_partial_files(task: VodDownloadTask) -> None:
-        """Remove yt-dlp's incomplete file and fragment artifacts for this task only."""
+    async def _cleanup_partial_files(task: VodDownloadTask) -> None:
+        """Remove this task's partial files, retrying transient Windows file locks."""
         if not task.expected_part_file:
             return
         expected_part = Path(task.expected_part_file)
@@ -951,11 +951,28 @@ class VodEngine:
                     if candidate.name.startswith(expected_part.name + "-Frag")
                     or candidate.name.startswith(expected_part.name + ".")
                 )
-            for candidate in set(candidates):
-                if candidate.is_file():
-                    candidate.unlink(missing_ok=True)
         except OSError as exc:
             logger.warning(f"[{task.task_id}] 임시 VOD 조각 파일 정리 실패: {exc}")
+            return
+
+        for candidate in set(candidates):
+            if not candidate.is_file():
+                continue
+            for attempt in range(6):
+                try:
+                    await asyncio.to_thread(candidate.unlink, missing_ok=True)
+                    break
+                except PermissionError as exc:
+                    if attempt == 5:
+                        logger.warning(
+                            f"[{task.task_id}] 임시 VOD 조각 파일 정리 실패 "
+                            f"(파일 잠금이 해제되지 않음): {exc}"
+                        )
+                    else:
+                        await asyncio.sleep(min(0.25 * (2 ** attempt), 1.0))
+                except OSError as exc:
+                    logger.warning(f"[{task.task_id}] 임시 VOD 조각 파일 정리 실패: {exc}")
+                    break
 
     @staticmethod
     def _probe_media_duration(filepath: str) -> float:
@@ -1141,29 +1158,45 @@ class VodEngine:
         return {"message": "작업 순서가 변경되었습니다.", "count": len(task_ids)}
 
     def clear_completed_tasks(self) -> dict[str, Any]:
-        """완료 및 에러 상태의 작업들을 일괄 삭제한다.
+        """대기, 완료, 에러 상태의 작업을 삭제하고 다운로드 중 작업은 보존한다.
 
         Returns:
             삭제된 작업 개수 및 메시지
         """
-        before_count = len(self._tasks)
+        clearable_states = {
+            VodDownloadState.IDLE,
+            VodDownloadState.COMPLETED,
+            VodDownloadState.ERROR,
+        }
+        removed_tasks = [
+            task for task in self._tasks.values() if task.state in clearable_states
+        ]
 
-        # 완료/에러 상태가 아닌 작업만 남김
-        active_tasks = {
+        for task in removed_tasks:
+            if task.state == VodDownloadState.IDLE and task.started_at is None:
+                # IDLE tasks are queued behind the concurrency semaphore. Cancel
+                # their waiter so removing them also removes their queued coroutine.
+                task.cancel_flag = True
+                task.pause_event.set()
+                if task.download_task is not None and not task.download_task.done():
+                    task.download_task.cancel()
+
+        self._tasks = {
             tid: task
             for tid, task in self._tasks.items()
-            if task.state not in (VodDownloadState.COMPLETED, VodDownloadState.ERROR)
+            if task.state not in clearable_states
         }
 
-        deleted_count = before_count - len(active_tasks)
-        self._tasks = active_tasks
+        deleted_count = len(removed_tasks)
+        # Persist the removal as well as updating the UI's in-memory task list.
+        self._save_history()
 
-        logger.info(f"완료된 작업 정리: {deleted_count}개 삭제됨")
+        logger.info(f"VOD 작업 정리: {deleted_count}개 삭제됨")
 
         return {
-            "message": f"{deleted_count}개의 완료된 작업이 삭제되었습니다.",
+            "message": f"{deleted_count}개의 대기/완료/오류 작업이 삭제되었습니다.",
             "deleted_count": deleted_count,
-            "remaining_count": len(active_tasks),
+            "remaining_count": len(self._tasks),
         }
 
     def open_file_location(self, task_id: str) -> dict[str, Any]:
