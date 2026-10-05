@@ -37,6 +37,8 @@ class ChannelTask:
     profile_image_url: Optional[str] = None
     tags: list[str] = field(default_factory=list)
     broadcast_tags: Optional[list[str]] = None
+    is_watchalong: Optional[bool] = None
+    watchalong_tag: Optional[str] = None
     download_condition: Optional[str] = None
     watchalong_tags: Optional[str] = None
     last_error: Optional[str] = None

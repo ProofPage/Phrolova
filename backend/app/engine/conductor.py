@@ -220,6 +220,8 @@ class Conductor:
             task.download_condition or settings.live_download_condition,
             task.broadcast_tags,
             task.watchalong_tags if task.watchalong_tags is not None else settings.watchalong_tags,
+            is_watchalong=task.is_watchalong,
+            watchalong_tag=task.watchalong_tag,
         )
 
     def set_auto_record(self, composite_key: str, value: bool) -> None:
@@ -630,6 +632,8 @@ class Conductor:
         task.title = status.get("title")
         task.category = status.get("category")
         task.broadcast_tags = status.get("broadcast_tags")
+        task.is_watchalong = status.get("is_watchalong")
+        task.watchalong_tag = status.get("watchalong_tag")
         task.live_started_at = status.get("live_started_at")
         task.viewer_count = status.get("viewer_count", 0)
         task.thumbnail_url = status.get("thumbnail_url")
@@ -741,6 +745,14 @@ class Conductor:
                 automatic=True,
             )
             return 0
+        if task.auto_record and task.platform == Platform.CHZZK:
+            settings = get_settings()
+            logger.info(
+                f"[{composite_key}] 자동 다운로드 조건으로 시작 보류 "
+                f"(조건={task.download_condition or settings.live_download_condition}, "
+                f"공식 같이보기={task.is_watchalong}, 같이보기 태그={task.watchalong_tag}, "
+                f"방송 태그={task.broadcast_tags})."
+            )
         return retry_count
 
     async def _handle_live_ended(self, composite_key: str, task: ChannelTask) -> None:
@@ -1187,6 +1199,8 @@ class Conductor:
                 "profile_image_url": task.profile_image_url,
                 "tags": getattr(task, "tags", []),
                 "broadcast_tags": task.broadcast_tags,
+                "is_watchalong": task.is_watchalong,
+                "watchalong_tag": task.watchalong_tag,
                 "download_condition": task.download_condition,
                 "watchalong_tags": task.watchalong_tags,
                 "auto_record_eligible": self._can_auto_record(task),

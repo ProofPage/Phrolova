@@ -54,6 +54,17 @@ class ChzzkLiveEngine:
             raw_tags if isinstance(raw_tags, list) and all(isinstance(tag, str) for tag in raw_tags)
             else None
         )
+        # 공식 같이보기는 일반 tags에 '같이보기'가 없어도 watchPartyNo로 구분된다.
+        party_no = content.get("watchPartyNo")
+        is_watchalong = None
+        if isinstance(party_no, int) and not isinstance(party_no, bool):
+            is_watchalong = party_no > 0 if party_no >= 0 else None
+        elif isinstance(party_no, str) and party_no.isdecimal():
+            is_watchalong = int(party_no) > 0
+        elif "watchPartyNo" in content and party_no is None:
+            is_watchalong = False
+        party_tag = content.get("watchPartyTag")
+        watchalong_tag = party_tag.strip() if isinstance(party_tag, str) and party_tag.strip() else None
 
         return {
             "channel_id": channel_id,
@@ -63,6 +74,8 @@ class ChzzkLiveEngine:
             "title": content.get("liveTitle", "No Title"),
             "category": content.get("liveCategoryValue", ""),
             "broadcast_tags": broadcast_tags,
+            "is_watchalong": is_watchalong,
+            "watchalong_tag": watchalong_tag,
             "live_started_at": content.get("openDate"),
             "viewer_count": content.get("concurrentUserCount", 0),
             "thumbnail_url": thumbnail_url,

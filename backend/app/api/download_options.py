@@ -16,14 +16,16 @@ class ChannelDownloadOptions(BaseModel):
         if value is None:
             return None
         tags = parse_watchalong_tags(value)
-        if not tags:
-            raise ValueError("같이보기 태그를 하나 이상 입력하세요.")
         return ", ".join(tags)
 
     @model_validator(mode="after")
     def inherit_tags(self):
-        if self.download_condition is None:
+        if self.download_condition != "watchalong":
             self.watchalong_tags = None
+        elif self.watchalong_tags is None:
+            self.watchalong_tags = "같이보기"
+        elif not self.watchalong_tags:
+            raise ValueError("같이보기 태그를 하나 이상 입력하세요.")
         return self
 
 
@@ -35,6 +37,10 @@ class DefaultDownloadOptions(BaseModel):
     @classmethod
     def clean_tags(cls, value: str) -> str:
         tags = parse_watchalong_tags(value)
-        if not tags:
-            raise ValueError("같이보기 태그를 하나 이상 입력하세요.")
         return ", ".join(tags)
+
+    @model_validator(mode="after")
+    def require_watchalong_tags(self):
+        if self.live_download_condition == "watchalong" and not self.watchalong_tags:
+            raise ValueError("같이보기 태그를 하나 이상 입력하세요.")
+        return self

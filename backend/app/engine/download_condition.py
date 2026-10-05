@@ -15,21 +15,33 @@ def parse_watchalong_tags(value: str) -> list[str]:
 
 
 def matches_download_condition(
-    condition: DownloadCondition, broadcast_tags: list[str] | None, watchalong_tags: str
+    condition: DownloadCondition, broadcast_tags: list[str] | None, watchalong_tags: str,
+    is_watchalong: bool | None = None,
+    watchalong_tag: str | None = None,
 ) -> bool:
     if condition == "all":
         return True
     if condition not in {"watchalong", "exclude_watchalong"}:
         return False
-    # 태그 정보가 없는 응답을 '같이보기 아님'으로 잘못 판단하지 않는다.
-    if broadcast_tags is None:
-        return False
-
     def normalize(tag: str) -> str:
         return "".join(unicodedata.normalize("NFKC", tag).casefold().split()).lstrip("#")
 
+    # 제외 모드는 콘텐츠 선택 태그와 관계없이 모든 같이보기를 제외한다.
+    if condition == "exclude_watchalong":
+        if is_watchalong is True:
+            return False
+        if broadcast_tags is None:
+            return is_watchalong is False
+        return not any(normalize(tag) == "같이보기" for tag in broadcast_tags)
+
+    if broadcast_tags is None and is_watchalong is not True:
+        return False
+    candidates = list(broadcast_tags or [])
+    if is_watchalong is True:
+        candidates.append("같이보기")
+        if watchalong_tag:
+            candidates.append(watchalong_tag)
     markers = {normalize(tag) for tag in parse_watchalong_tags(watchalong_tags)}
     if not markers:
         return False
-    watchalong = any(normalize(tag) in markers for tag in broadcast_tags)
-    return watchalong if condition == "watchalong" else not watchalong
+    return any(normalize(tag) in markers for tag in candidates)

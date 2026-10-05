@@ -28,6 +28,8 @@ class LiveStatus(TypedDict, total=False):
     title: str
     category: str
     broadcast_tags: Optional[list[str]]
+    is_watchalong: Optional[bool]
+    watchalong_tag: Optional[str]
     viewer_count: int
     thumbnail_url: str
     profile_image_url: str

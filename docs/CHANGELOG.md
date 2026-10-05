@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+## [2.0.32] - 2026-10-05
+
+### Changed
+- **조건별 태그 입력** — 같이보기 태그 입력은 ‘같이보기만 다운로드’에서만 표시합니다. 모든 라이브와 같이보기 제외 조건은 태그 없이 저장하며, 제외 조건은 지정 태그와 무관하게 모든 같이보기를 제외합니다.
+
+### Fixed
+- **공식 같이보기 감지** — 일반 방송 태그에 ‘같이보기’가 없어도 치지직의 `watchPartyNo`로 공식 같이보기 방송을 감지합니다. ‘같이보기 제외’ 조건에서 해당 방송의 자동 다운로드를 차단하고, 설정 창에 같이보기 정보를 표시합니다.
+
 ## [2.0.31] - 2026-10-05
 
 ### Added
@@ -417,7 +425,8 @@
   - **기존 사용자 영향**: 원라이너 URL이 `scripts/install.sh` → `scripts/manage.sh` 로 바뀌었다.
     네이티브 설치에는 그동안 업데이트 스크립트가 없었으나 이제 `signal-recorder update` 로 갱신한다.
 - **`.gitattributes` 추가**: `*.sh` 는 LF, `*.bat` 은 CRLF로 고정.
-  셸 스크립트가 CRLF로 체크아웃되면 셔뱅이 `bash` 로 읽혀 원라이너 설치가 실패한다.
+  셸 스크립트가 CRLF로 체크아웃되면 셔뱅이 `bash
+` 로 읽혀 원라이너 설치가 실패한다.
 - **Discord 봇 명령을 슬래시 커맨드 전용으로 전환** (기존 `!` 프리픽스 명령 제거)
   - 프리픽스와 슬래시로 중복 구현되어 있던 핸들러 10개 제거 — 공통 로직은 이미 헬퍼로 분리되어 있어 기능 손실 없음
   - `message_content` privileged intent 요구 제거 → Discord 개발자 포털에서 별도 활성화 불필요
@@ -510,7 +519,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.31...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.32...HEAD
+[2.0.32]: https://github.com/ProofPage/Phrolova/compare/v2.0.31...v2.0.32
 [2.0.31]: https://github.com/ProofPage/Phrolova/compare/v2.0.30...v2.0.31
 [2.0.30]: https://github.com/ProofPage/Phrolova/compare/v2.0.29...v2.0.30
 [2.0.29]: https://github.com/ProofPage/Phrolova/compare/v2.0.28...v2.0.29

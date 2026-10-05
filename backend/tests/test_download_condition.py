@@ -27,7 +27,7 @@ from app.store.schema import MIGRATIONS
     ("watchalong", ["같이보기아님"], "같이보기", False),
     ("watchalong", ["동시시청"], "같이보기, 동시시청", True),
     ("watchalong", ["ＷＡＴＣＨ", "같이 보기"], "#watch, 같이보기", True),
-    ("exclude_watchalong", [], ", ,", False),
+    ("exclude_watchalong", [], ", ,", True),
 ])
 def test_condition_matching(condition, tags, markers, expected):
     assert matches_download_condition(condition, tags, markers) is expected
@@ -61,7 +61,7 @@ def test_per_channel_overrides_and_reload():
     conductor.add_channel("test", download_condition="exclude_watchalong", watchalong_tags="동시시청")
     task = conductor._channels["chzzk:test"]
     task.broadcast_tags = ["같이보기"]
-    assert conductor._can_auto_record(task)
+    assert not conductor._can_auto_record(task)
     restored = Conductor()._channels["chzzk:test"]
     assert restored.download_condition == "exclude_watchalong"
     assert restored.watchalong_tags == "동시시청"
