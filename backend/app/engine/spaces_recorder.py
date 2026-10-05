@@ -57,7 +57,7 @@ class SpacesRecorder:
         settings = get_settings()
         process, output_path = await self._engine.start_ytdlp_recording(
             space_id=task._current_space_id,
-            output_dir=settings.download_dir,
+            output_dir=settings.effective_live_download_dir,
             channel_name=channel_name or task.channel_name or task.channel_id,
             title=title or task.title,
             cookie_file=settings.x_cookie_file,
@@ -122,7 +122,7 @@ class SpacesRecorder:
             safe_name = "".join(c for c in channel_name if c.isalnum() or c in "-_@")
             sid = (space_id or "unknown")[:20]
 
-            url_dir = Path(settings.download_dir) / "x_spaces_urls"
+            url_dir = Path(settings.effective_live_download_dir) / "x_spaces_urls"
             url_dir.mkdir(parents=True, exist_ok=True)
             file_path = url_dir / f"{safe_name}_{sid}_{now_str}.txt"
 

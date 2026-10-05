@@ -365,15 +365,8 @@ class VodEngine:
         if output_dir is not None:
             # 명시적으로 경로가 주어진 경우 → 그대로 사용
             save_dir = output_dir
-        elif not settings.split_download_dirs:
-            # 분할 경로 비활성화 → 기본 download_dir 사용
-            save_dir = settings.download_dir
-        elif self._is_chzzk_url(url):
-            # 분할 경로 활성화 + 치지직 URL → vod_chzzk_dir (미설정 시 download_dir 폴백)
-            save_dir = settings.vod_chzzk_dir or settings.download_dir
         else:
-            # 분할 경로 활성화 + 외부 URL → vod_external_dir (미설정 시 download_dir 폴백)
-            save_dir = settings.vod_external_dir or settings.download_dir
+            save_dir = settings.effective_vod_download_dir(self._is_chzzk_url(url))
 
         Path(save_dir).mkdir(parents=True, exist_ok=True)
 

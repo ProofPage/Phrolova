@@ -8,6 +8,15 @@
 
 ## [Unreleased]
 
+## [2.0.20] - 2026-10-05
+
+### Changed
+- **라이브와 다시보기 저장 경로 분리** — 일반 설정에 라이브 저장 경로와 다시보기 저장 경로를 각각 추가하고, 라이브 녹화·채팅 로그·X Spaces와 VOD 다운로드가 선택한 경로를 사용하도록 연결했습니다.
+- **Streamlink 상태 표시** — 시작 콘솔과 시스템 정보 설정 화면에서 Streamlink 설치 버전을 확인할 수 있게 했습니다.
+
+### Fixed
+- **저장 경로 변경 후 채팅 로그 조회** — 새 라이브 경로와 기존 경로를 함께 검색하고, 부모·하위 경로가 겹칠 때 같은 로그가 두 번 표시되지 않도록 했습니다.
+
 ## [2.0.19] - 2026-10-05
 
 ### Fixed
@@ -421,7 +430,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.19...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.20...HEAD
+[2.0.20]: https://github.com/ProofPage/Phrolova/compare/v2.0.19...v2.0.20
 [2.0.19]: https://github.com/ProofPage/Phrolova/compare/v2.0.18...v2.0.19
 [2.0.18]: https://github.com/ProofPage/Phrolova/compare/v2.0.17...v2.0.18
 [2.0.17]: https://github.com/ProofPage/Phrolova/compare/v2.0.16...v2.0.17

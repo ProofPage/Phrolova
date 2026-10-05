@@ -126,7 +126,7 @@ class YtdlpLivePipeline:
         settings = get_settings()
         live_start_index: Optional[int] = None
 
-        save_dir = Path(output_dir or settings.download_dir)
+        save_dir = Path(output_dir or settings.effective_live_download_dir)
         save_dir.mkdir(parents=True, exist_ok=True)
 
         now = datetime.now()

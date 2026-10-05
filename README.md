@@ -1,6 +1,6 @@
 # Rookery
 
-![Version](https://img.shields.io/badge/version-2.0.19-13d9a3)
+![Version](https://img.shields.io/badge/version-2.0.20-13d9a3)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827)
@@ -279,6 +279,8 @@ Bot 토큰과 알림 채널 ID 또는 Webhook URL 중 하나를 입력합니다.
 PORT=8000
 FFMPEG_PATH=ffmpeg
 DOWNLOAD_DIR=./recordings
+LIVE_DOWNLOAD_DIR=./recordings/live
+VOD_DOWNLOAD_DIR=./recordings/vod
 LIVE_FORMAT=ts
 RECORDING_QUALITY=best
 MONITOR_INTERVAL=30
@@ -289,7 +291,8 @@ MONITOR_INTERVAL=30
 | 경로 | 내용 |
 |---|---|
 | `backend/data/rookery.db` | 채널, 녹화·VOD 이력, 태그, 알림 큐 |
-| `backend/recordings/` | 기본 녹화·다운로드 파일 |
+| `LIVE_DOWNLOAD_DIR` | 라이브 녹화와 채팅 로그 경로 (미설정 시 `DOWNLOAD_DIR`) |
+| `VOD_DOWNLOAD_DIR` | 다시보기·클립·외부 영상 경로 (미설정 시 구버전 경로 설정) |
 | `logs/` | 서비스 로그 (프로젝트 루트 기준) |
 | `{DOWNLOAD_DIR}/x_spaces_urls/` | 캡처된 X Spaces master URL 백업 |
 

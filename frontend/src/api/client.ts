@@ -81,7 +81,10 @@ export interface VodStatusResponse {
 export interface Settings {
     app_name: string;
     download_dir: string;
+    live_download_dir: string;
+    vod_download_dir: string;
     ffmpeg_path: string;
+    streamlink_version: string | null;
     monitor_interval: number;
     host: string;
     port: number;
@@ -149,6 +152,8 @@ export interface TwitcastingSettingsUpdate {
 
 export interface GeneralSettingsUpdate {
     download_dir?: string;
+    live_download_dir?: string;
+    vod_download_dir?: string;
     monitor_interval?: number;
     live_format?: string;
     recording_quality?: string;

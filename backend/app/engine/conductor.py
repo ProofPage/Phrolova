@@ -449,7 +449,7 @@ class Conductor:
 
         return await engine.download_by_space_url(
             space_url=space_url,
-            output_dir=settings.download_dir,
+            output_dir=settings.effective_live_download_dir,
             cookie_file=settings.x_cookie_file,
         )
 

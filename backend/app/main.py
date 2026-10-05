@@ -91,6 +91,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         logger.warning(f"⚠️ yt-dlp 확인 실패: {e}")
 
+    # Streamlink는 라이브 HLS/DASH 세그먼트 수신에 사용한다.
+    try:
+        from importlib.metadata import version
+
+        logger.info(f"✅ Streamlink 확인: {version('streamlink')}")
+    except Exception as e:
+        logger.warning(f"⚠️ Streamlink 확인 실패: {e}")
+
     # ── 저장소 ───────────────────────────────────────────
     # 다른 모든 서비스가 저장소에 의존하므로 가장 먼저 연다.
     data_dir = resolve_data_dir()

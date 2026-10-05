@@ -43,6 +43,7 @@ export function InfoTab({ settings, onDirtyChange }: Props) {
                 <div className="space-y-1 text-sm">
                     <InfoRow label="앱 이름"><span className="text-ink-muted">{settings?.app_name || "불러오는 중…"}</span></InfoRow>
                     <InfoRow label="FFmpeg 경로"><span className="text-ink-muted truncate max-w-[220px]" title={settings?.ffmpeg_path}>{settings?.ffmpeg_path || "불러오는 중…"}</span></InfoRow>
+                    <InfoRow label="Streamlink"><span className={settings?.streamlink_version ? "text-ok" : "text-ink-faint"}>{settings?.streamlink_version ? `설치됨 · v${settings.streamlink_version}` : "설치되지 않음"}</span></InfoRow>
                     <InfoRow label="서버"><span className="text-ink-muted">{settings ? `${settings.host}:${settings.port}` : "불러오는 중…"}</span></InfoRow>
                     <InfoRow label="Discord Bot"><span className={settings?.discord_bot_configured ? "text-ok" : "text-ink-faint"}>{settings?.discord_bot_configured ? "연결됨" : "미설정"}</span></InfoRow>
                     <InfoRow label="TwitCasting 설정"><span className={settings?.twitcasting_client_id ? "text-twitcasting" : "text-ink-faint"}>{settings?.twitcasting_client_id ? "설정됨" : "미설정"}</span></InfoRow>

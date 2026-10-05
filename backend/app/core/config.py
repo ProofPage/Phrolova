@@ -92,9 +92,26 @@ class Settings(BaseSettings):
 
     # ── 저장 경로 ────────────────────────────────────────
     download_dir: str = "./recordings"
+    live_download_dir: str = ""       # 라이브 녹화 경로 (빈 문자열 = 구버전 DOWNLOAD_DIR 사용)
+    vod_download_dir: str = ""         # 다시보기/VOD 경로 (빈 문자열 = 구버전 경로 설정 사용)
     split_download_dirs: bool = False   # 분할 저장 경로 사용 여부
     vod_chzzk_dir: str = ""             # 치지직 VOD/클립 저장 경로 (빈 문자열 = download_dir 사용)
     vod_external_dir: str = ""          # 외부 URL(유튜브 등) 저장 경로 (빈 문자열 = download_dir 사용)
+
+    @property
+    def effective_live_download_dir(self) -> str:
+        """새 설정이 없으면 기존 DOWNLOAD_DIR을 라이브 경로로 사용한다."""
+        return self.live_download_dir or self.download_dir
+
+    def effective_vod_download_dir(self, is_chzzk: bool) -> str:
+        """새 공통 VOD 경로를 우선하고, 구버전의 서비스별 설정도 보존한다."""
+        if self.vod_download_dir:
+            return self.vod_download_dir
+        if self.split_download_dirs:
+            legacy_dir = self.vod_chzzk_dir if is_chzzk else self.vod_external_dir
+            if legacy_dir:
+                return legacy_dir
+        return self.download_dir
 
     # ── 치지직 인증 쿠키 (Optional) ──────────────────────
     nid_aut: Optional[str] = None

@@ -165,7 +165,7 @@ class FFmpegPipeline:
         ffmpeg_path = settings.resolve_ffmpeg_path()
 
         # 저장 경로 결정
-        save_dir = Path(output_dir or settings.download_dir)
+        save_dir = Path(output_dir or settings.effective_live_download_dir)
         save_dir.mkdir(parents=True, exist_ok=True)
 
         if not filename:

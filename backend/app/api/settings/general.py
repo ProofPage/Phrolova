@@ -7,6 +7,7 @@ from typing import Optional
 import os
 import platform
 import string
+from importlib.metadata import PackageNotFoundError, version as package_version
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -25,10 +26,25 @@ from app.api.settings._shared import SETTINGS_PREFIX, SETTINGS_TAGS, VALID_FORMA
 router = APIRouter(prefix=SETTINGS_PREFIX, tags=SETTINGS_TAGS)
 
 
+def _streamlink_version() -> str | None:
+    """현재 실행 환경에서 Streamlink 패키지 버전을 반환한다."""
+    try:
+        return package_version("streamlink")
+    except PackageNotFoundError:
+        try:
+            import streamlink
+
+            return getattr(streamlink, "__version__", "설치됨")
+        except ImportError:
+            return None
+
+
 class GeneralSettingsUpdateRequest(BaseModel):
     """일반 설정 업데이트 요청."""
 
     download_dir: Optional[str] = Field(None, description="녹화 저장 경로")
+    live_download_dir: Optional[str] = Field(None, description="라이브 녹화 저장 경로")
+    vod_download_dir: Optional[str] = Field(None, description="다시보기/VOD 저장 경로")
     monitor_interval: Optional[int] = Field(None, ge=5, le=300, description="감시 주기 (초)")
     live_format: Optional[str] = Field(None, description="라이브 녹화 포맷 (ts, mkv, mp4)")
     recording_quality: Optional[str] = Field(None, description="녹화 품질 (best, 1080p, 720p, 480p)")
@@ -45,7 +61,10 @@ async def get_current_settings():
     return {
         "app_name": settings.app_name,
         "download_dir": settings.download_dir,
+        "live_download_dir": settings.effective_live_download_dir,
+        "vod_download_dir": settings.vod_download_dir or settings.download_dir,
         "ffmpeg_path": settings.ffmpeg_path,
+        "streamlink_version": _streamlink_version(),
         "monitor_interval": settings.monitor_interval,
         "host": settings.host,
         "port": settings.port,
@@ -99,6 +118,21 @@ async def update_general_settings(req: GeneralSettingsUpdateRequest):
     """일반 설정(저장 경로, 감시 주기, 포맷, 품질)을 업데이트합니다."""
     settings = get_settings()
     env_updates: dict[str, str] = {}
+
+    # 새 경로 설정은 각각 생성 가능 여부를 확인한 뒤 적용한다.
+    for field_name, env_name, label in (
+        ("live_download_dir", "LIVE_DOWNLOAD_DIR", "라이브 저장 경로"),
+        ("vod_download_dir", "VOD_DOWNLOAD_DIR", "다시보기 저장 경로"),
+    ):
+        value = getattr(req, field_name)
+        if value is None:
+            continue
+        try:
+            Path(value).mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            raise HTTPException(status_code=400, detail=f"{label}를 생성할 수 없습니다: {e}")
+        setattr(settings, field_name, value)
+        env_updates[env_name] = value
 
     # ── download_dir ──
     if req.download_dir is not None:
@@ -182,6 +216,8 @@ async def update_general_settings(req: GeneralSettingsUpdateRequest):
         "message": "설정이 업데이트되었습니다.",
         "settings": {
             "download_dir": settings.download_dir,
+            "live_download_dir": settings.effective_live_download_dir,
+            "vod_download_dir": settings.vod_download_dir or settings.download_dir,
             "monitor_interval": settings.monitor_interval,
             "live_format": settings.live_format,
             "recording_quality": settings.recording_quality,

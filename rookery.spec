@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 import certifi
-from PyInstaller.utils.hooks import collect_submodules, collect_data_files
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files, copy_metadata
 from PyInstaller.utils.win32.versioninfo import (
     FixedFileInfo,
     StringFileInfo,
@@ -113,6 +113,8 @@ datas = [
     ("assets/icon.png", "assets"),
     # SSL 인증서 번들 (certifi)
     (certifi.where(), "certifi"),
+    # 설정 화면과 시작 콘솔에서 Streamlink 설치 버전을 표시한다.
+    *copy_metadata("streamlink"),
 ]
 
 # ── 외부 바이너리: ffmpeg는 라이선스 문제로 번들하지 않음 ──────

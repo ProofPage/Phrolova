@@ -74,17 +74,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## Live recording
+          ## Storage paths
 
-          - Switched live HLS/DASH segment capture to Streamlink and kept FFmpeg for writing recordings.
-          - Preserved CHZZK Time Machine offsets, quality selection, request headers, and scoped cookies.
-          - Added segment and playlist retry handling for more resilient live capture.
+          - Added separate save locations for live recordings and VOD downloads.
+          - Live recordings, chat logs, and X Spaces archives use the live folder; CHZZK replays, clips, and external video downloads use the VOD folder.
+          - Kept existing recordings and chat logs accessible when the live folder changes.
 
-          ## Interface and VOD fixes
+          ## Streamlink status
 
-          - Centered icons and their adjacent text in shared card, page, collapsible-card, and metric headers.
-          - Prevented external yt-dlp configuration from injecting global Cookie headers into app-managed VOD and live extraction.
-          - Kept the legacy download-settings API visible alongside the new live-settings API for older clients.
+          - Added Streamlink version and availability to startup console output and System Information settings.
+          - Included Streamlink package metadata in the Windows executable build.
 
           Download the Windows x64 executable and replace the existing application executable. Settings and saved data are preserved.
           '@

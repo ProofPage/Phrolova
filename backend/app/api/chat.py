@@ -55,15 +55,23 @@ def _decode_file_id(file_id: str) -> str:
 
 
 def _resolve_and_validate(file_id: str) -> Path:
-    """file_id를 절대 경로로 변환하고 base_dir 하위인지 검증한다."""
+    """file_id를 허용된 라이브/기존 저장 경로 안에서 해석한다."""
     settings = get_settings()
-    base_dir = Path(settings.download_dir).resolve()
+    live_dir = Path(settings.effective_live_download_dir).resolve()
+    legacy_dir = Path(settings.download_dir).resolve()
 
     try:
         relative = _decode_file_id(file_id)
     except Exception:
         raise HTTPException(status_code=400, detail="유효하지 않은 file_id입니다.")
 
+    root_name, separator, relative_path = relative.partition("/")
+    if separator and root_name in {"live", "legacy"}:
+        base_dir = live_dir if root_name == "live" else legacy_dir
+        relative = relative_path
+    else:
+        # 이전 버전에서 만든 file_id와의 호환성.
+        base_dir = legacy_dir
     full_path = (base_dir / relative).resolve()
 
     # 경로 탈출 공격 방지
@@ -278,29 +286,36 @@ def _read_messages(
 
 
 def _collect_files() -> list[dict]:
-    """download_dir 하위 .jsonl 파일의 메타데이터를 모은다."""
+    """라이브 및 기존 저장 경로의 .jsonl 파일 메타데이터를 모은다."""
     settings = get_settings()
-    base_dir = Path(settings.download_dir).resolve()
-
-    if not base_dir.exists():
-        return []
+    roots = [("live", Path(settings.effective_live_download_dir).resolve())]
+    legacy = Path(settings.download_dir).resolve()
+    if legacy != roots[0][1]:
+        roots.append(("legacy", legacy))
 
     result: list[dict] = []
-    for file in base_dir.glob("**/*.jsonl"):
-        try:
-            stat = file.stat()
-            relative = str(file.relative_to(base_dir))
-            result.append({
-                "file_id": _encode_file_id(relative),
-                "filename": file.name,
-                "channel": file.parent.name,
-                "size_bytes": stat.st_size,
-                "message_count": _load_index(file).message_count,
-                "created_at": datetime.fromtimestamp(stat.st_ctime).isoformat(),
-                "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-            })
-        except Exception:
-            continue  # 손상된 파일 스킵
+    for root_name, base_dir in roots:
+        if not base_dir.exists():
+            continue
+        for file in base_dir.glob("**/*.jsonl"):
+            try:
+                resolved_file = file.resolve()
+                if root_name == "legacy" and resolved_file.is_relative_to(roots[0][1]):
+                    # 두 경로가 부모/자식 관계일 때 라이브 로그를 중복 노출하지 않는다.
+                    continue
+                stat = file.stat()
+                relative = f"{root_name}/{file.relative_to(base_dir).as_posix()}"
+                result.append({
+                    "file_id": _encode_file_id(relative),
+                    "filename": file.name,
+                    "channel": file.parent.name,
+                    "size_bytes": stat.st_size,
+                    "message_count": _load_index(file).message_count,
+                    "created_at": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                    "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                })
+            except Exception:
+                continue  # 손상된 파일 스킵
 
     result.sort(key=lambda x: x["modified_at"], reverse=True)
     return result

@@ -115,13 +115,13 @@ async def get_stats():
     # ── 저장소 사용량 ─────────────────────────────────
 
     storage: dict = {
-        "download_dir": settings.download_dir,
+        "download_dir": settings.effective_live_download_dir,
         "used_bytes": 0,
         "total_bytes": 0,
         "free_bytes": 0,
     }
 
-    download_path = Path(settings.download_dir)
+    download_path = Path(settings.effective_live_download_dir)
     if download_path.exists():
         try:
             usage = shutil.disk_usage(str(download_path))
