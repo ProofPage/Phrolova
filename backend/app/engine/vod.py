@@ -204,6 +204,10 @@ class VodEngine:
         ffmpeg_dir = str(Path(ffmpeg_path).parent)
 
         opts: dict[str, Any] = {
+            # Keep app-managed cookie files/headers authoritative. A user's global
+            # yt-dlp config may inject `--add-header Cookie`, which is deprecated
+            # and can leak credentials to CDN hosts.
+            "ignoreconfig": True,
             "format": task.quality,
             # 제목이 같아도 다른 영상이면 기존 파일로 오인해 건너뛰지 않도록 구분한다.
             "outtmpl": str(
@@ -303,6 +307,7 @@ class VodEngine:
             title, duration, thumbnail, formats 등.
         """
         opts: dict[str, Any] = {
+            "ignoreconfig": True,
             "quiet": True,
             "no_warnings": True,
             "extract_flat": False,

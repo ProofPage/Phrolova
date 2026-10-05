@@ -4,6 +4,7 @@ python-multipart
 httpx
 aiofiles
 yt-dlp
+streamlink>=7.3,<9
 ffmpeg-python
 python-dotenv
 pydantic-settings

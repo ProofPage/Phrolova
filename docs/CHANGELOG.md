@@ -8,6 +8,15 @@
 
 ## [Unreleased]
 
+## [2.0.18] - 2026-10-05
+
+### Changed
+- **Streamlink live recording** — Streamlink now receives live HLS/DASH segments and handles retries, while FFmpeg writes the recording. Chzzk Time Machine offsets, quality selection, request headers, and scoped cookies are preserved.
+- **Centered icon and title alignment** — aligned icons, titles, descriptions, and actions in shared card, page, collapsible-card, and metric headers.
+
+### Fixed
+- **yt-dlp cookie-header warning path** — app-managed VOD and live URL extraction now ignore external yt-dlp configuration, preventing global `Cookie` header options from overriding scoped cookie files.
+
 ## [2.0.17] - 2026-10-05
 
 ### Changed
@@ -407,7 +416,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.17...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.18...HEAD
+[2.0.18]: https://github.com/ProofPage/Phrolova/compare/v2.0.17...v2.0.18
 [2.0.17]: https://github.com/ProofPage/Phrolova/compare/v2.0.16...v2.0.17
 [2.0.16]: https://github.com/ProofPage/Phrolova/compare/v2.0.15...v2.0.16
 [2.0.15]: https://github.com/ProofPage/Phrolova/compare/v2.0.14...v2.0.15

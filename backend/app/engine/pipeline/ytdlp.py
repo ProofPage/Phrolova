@@ -1,10 +1,11 @@
-"""yt-dlp subprocess로 라이브를 녹화하는 파이프라인 (Chzzk/TwitCasting)."""
+"""yt-dlp로 스트림을 찾고 Streamlink/FFmpeg로 라이브를 녹화한다."""
 
 from __future__ import annotations
 
 import asyncio
 import asyncio.subprocess
 import mimetypes
+import re
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -20,7 +21,7 @@ from app.engine.pipeline.state import RecordingState
 
 
 class YtdlpLivePipeline:
-    """yt-dlp URL 추출 + ffmpeg 직접 녹화 파이프라인.
+    """yt-dlp URL 추출 + Streamlink HLS 수신 + FFmpeg 저장 파이프라인.
 
     yt-dlp는 라이브 HLS에 무조건 ffmpegFD를 사용하므로(--downloader native 무시),
     yt-dlp를 URL 추출 용도로만 쓰고 ffmpeg은 직접 제어한다.
@@ -41,6 +42,9 @@ class YtdlpLivePipeline:
         self._channel_id = channel_id
         self._state = RecordingState.IDLE
         self._process: Optional[asyncio.subprocess.Process] = None
+        self._streamlink_fd: Optional[object] = None
+        self._streamlink_session: Optional[object] = None
+        self._feeder_task: Optional[asyncio.Task[None]] = None
         self._output_path: Optional[str] = None
         self._start_time: Optional[datetime] = None
         self._intentional_stop = False
@@ -261,7 +265,15 @@ class YtdlpLivePipeline:
                     self._state = RecordingState.ERROR
                     raise
 
-        # ── Phase 2: ffmpeg으로 직접 녹화 ──
+        # ── Phase 2: Streamlink가 HLS를 받고 FFmpeg에 전달 ──
+        try:
+            import streamlink  # noqa: F401
+        except ImportError as exc:
+            self._state = RecordingState.ERROR
+            raise RuntimeError(
+                "라이브 녹화에 Streamlink가 필요합니다. 최신 Phrolova 빌드를 설치해 주세요."
+            ) from exc
+
         ffmpeg_path = settings.resolve_ffmpeg_path()
 
         cmd = [ffmpeg_path, "-hide_banner", "-loglevel", "error"]
@@ -274,22 +286,14 @@ class YtdlpLivePipeline:
         if ffmpeg_supports_extension_picky(ffmpeg_path):
             cmd += ["-extension_picky", "0"]
             logger.debug(f"[{self._channel_id}] extension_picky 비활성화 적용 (ffmpeg 7.1.1+)")
-        # yt-dlp가 추출한 HTTP 헤더를 ffmpeg에 전달 (TwitCasting 등 Origin/Referer 필요 플랫폼)
-        # Chzzk는 HLS URL에 Akamai 토큰이 내장되어 있어 헤더 불필요 → http_headers가 비어 있음
+        # FFmpeg no longer downloads HLS itself. Streamlink handles playlist
+        # reloads, segment retries, request headers and the time-machine offset.
+        time_machine_offset = (
+            settings.effective_chzzk_time_machine_offset if time_machine_resolved else 0
+        )
         if http_headers:
-            header_str = "".join(f"{k}: {v}\r\n" for k, v in http_headers.items())
-            cmd += ["-headers", header_str]
-            logger.debug(f"[{self._channel_id}] ffmpeg HTTP 헤더 주입: {list(http_headers.keys())}")
-        # 로그인 쿠키로 추출한 스트림은 받을 때도 로그인이 필요할 수 있다.
-        # yt-dlp가 스트림 주소에 맞춰 골라 준 쿠키만 넘긴다 (yt-dlp FFmpegFD와 같은 방식).
-        if stream_cookies:
-            cookie_lines = self._ffmpeg_cookies(stream_cookies)
-            if cookie_lines:
-                cmd += ["-cookies", cookie_lines]
-                logger.debug(f"[{self._channel_id}] ffmpeg 로그인 쿠키 주입")
-        if live_start_index is not None:
-            cmd += ["-live_start_index", str(live_start_index)]
-        cmd += ["-i", hls_url, "-c", "copy"]
+            logger.debug(f"[{self._channel_id}] Streamlink HTTP 헤더 적용: {list(http_headers.keys())}")
+        cmd += ["-i", "pipe:0", "-c", "copy"]
 
         # 실제 파일 확장자에 맞춰 컨테이너를 기록한다. MP4는 중단된 녹화도
         # 재생할 수 있도록 fragmented MP4로 저장한다.
@@ -304,19 +308,31 @@ class YtdlpLivePipeline:
         cmd += ["-n", str(output_file)]
 
         logger.info(
-            f"[{self._channel_id}] ffmpeg 라이브 녹화 시작 (quality={quality}): {output_file}"
+            f"[{self._channel_id}] Streamlink 라이브 수신 및 FFmpeg 녹화 시작 "
+            f"(quality={quality}, 타임머신 오프셋={time_machine_offset}초): {output_file}"
         )
-        logger.debug(f"[{self._channel_id}] ffmpeg CMD: {' '.join(self._redact_ffmpeg_command(cmd))}")
+        logger.debug(f"[{self._channel_id}] ffmpeg CMD: {' '.join(cmd)}")
 
         try:
             self._process = await asyncio.create_subprocess_exec(
                 *cmd,
-                stdin=asyncio.subprocess.PIPE,   # 종료 시 'q' 전송용
+                stdin=asyncio.subprocess.PIPE,   # Streamlink가 HLS 데이터를 전달
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
             self._state = RecordingState.RECORDING
             self._start_time = datetime.now()
+            self._feeder_task = asyncio.create_task(
+                self._run_streamlink_feeder(
+                    hls_url=hls_url,
+                    headers=http_headers,
+                    cookies=stream_cookies,
+                    start_offset=time_machine_offset,
+                    force_restart=time_machine_resolved,
+                    quality=quality,
+                ),
+                name=f"streamlink-feeder-{self._channel_id}",
+            )
             asyncio.create_task(self._watch_process())
             asyncio.create_task(self._update_statistics_loop())
             if (
@@ -334,6 +350,186 @@ class YtdlpLivePipeline:
             self._state = RecordingState.ERROR
             logger.error(f"[{self._channel_id}] ffmpeg 시작 실패: {e}")
             raise
+
+    async def _run_streamlink_feeder(
+        self,
+        hls_url: str,
+        headers: dict[str, str],
+        cookies: Optional[str],
+        start_offset: int,
+        force_restart: bool,
+        quality: str,
+    ) -> None:
+        """Read HLS data with Streamlink and feed FFmpeg's input pipe."""
+        max_open_retries = 3
+        try:
+            for attempt in range(1, max_open_retries + 1):
+                session = None
+                try:
+                    session, stream = await asyncio.to_thread(
+                        self._create_streamlink_stream,
+                        hls_url,
+                        headers,
+                        cookies,
+                        start_offset,
+                        force_restart,
+                        quality,
+                    )
+                    self._streamlink_session = session
+                    self._streamlink_fd = await asyncio.to_thread(stream.open)
+                    logger.info(
+                        f"[{self._channel_id}] Streamlink HLS 연결 성공 "
+                        f"(시도 {attempt}/{max_open_retries})"
+                    )
+                    break
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:
+                    if session is not None:
+                        try:
+                            await asyncio.to_thread(session.http.close)
+                        except Exception:
+                            pass
+                    logger.warning(
+                        f"[{self._channel_id}] Streamlink 연결 실패 "
+                        f"(시도 {attempt}/{max_open_retries}): {type(exc).__name__}: "
+                        f"{self._redact_streamlink_error(str(exc))}"
+                    )
+                    if attempt == max_open_retries:
+                        raise RuntimeError("Streamlink가 라이브 HLS 스트림을 열지 못했습니다.") from exc
+                    await asyncio.sleep(attempt * 2)
+
+            while self._state == RecordingState.RECORDING:
+                stream_fd = self._streamlink_fd
+                process = self._process
+                if stream_fd is None or process is None or process.stdin is None:
+                    break
+                data = await asyncio.to_thread(stream_fd.read, 128 * 1024)
+                if not data:
+                    logger.info(f"[{self._channel_id}] Streamlink 라이브 스트림이 종료되었습니다.")
+                    break
+                process.stdin.write(data)
+                await process.stdin.drain()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            if self._state == RecordingState.RECORDING:
+                logger.error(
+                    f"[{self._channel_id}] Streamlink 수신 오류: {type(exc).__name__}: "
+                    f"{self._redact_streamlink_error(str(exc))}"
+                )
+                self._state = RecordingState.ERROR
+        finally:
+            stream_fd = self._streamlink_fd
+            self._streamlink_fd = None
+            if stream_fd is not None:
+                try:
+                    await asyncio.to_thread(stream_fd.close)
+                except Exception:
+                    pass
+            session = self._streamlink_session
+            self._streamlink_session = None
+            if session is not None:
+                try:
+                    await asyncio.to_thread(session.http.close)
+                except Exception:
+                    pass
+            process = self._process
+            if process and process.stdin and not process.stdin.is_closing():
+                process.stdin.close()
+
+    @staticmethod
+    def _redact_streamlink_error(message: str) -> str:
+        """Remove signed playlist/segment URLs from third-party error messages."""
+        def redact(match: re.Match[str]) -> str:
+            parsed = urlsplit(match.group(0).rstrip(").,;"))
+            return urlunsplit((parsed.scheme, parsed.netloc, "/<redacted>", "", ""))
+
+        return re.sub(r"https?://[^\s\"'<>]+", redact, message)
+
+    @staticmethod
+    def _create_streamlink_stream(
+        hls_url: str,
+        headers: dict[str, str],
+        cookies: Optional[str],
+        start_offset: int,
+        force_restart: bool,
+        quality: str,
+    ) -> tuple[object, object]:
+        """Create a fresh Streamlink session and HLS/DASH stream reader."""
+        from streamlink import Streamlink
+        from streamlink.stream.hls import HLSStream
+        from http.cookies import CookieError, SimpleCookie
+        from urllib.parse import urlsplit
+        from requests.cookies import create_cookie
+
+        session = Streamlink(plugins_builtin=False)
+        session.set_option("http-timeout", 30.0)
+        session.set_option("stream-segment-timeout", 30.0)
+        session.set_option("stream-segment-attempts", 10)
+        session.set_option("hls-playlist-reload-attempts", 10)
+        session.set_option("dash-manifest-reload-attempts", 10)
+
+        request_headers = {
+            key: value for key, value in headers.items()
+            if key.lower() != "cookie"
+        }
+        session.set_option("http-headers", request_headers)
+
+        # Keep cookies within the CDN host/domain instead of sending a global
+        # Cookie header to every URL encountered while following the playlist.
+        jar = SimpleCookie()
+        cookie_text = cookies or next(
+            (value for key, value in headers.items() if key.lower() == "cookie"),
+            "",
+        )
+        if cookie_text:
+            try:
+                jar.load(cookie_text)
+            except CookieError:
+                jar = SimpleCookie()
+        host = (urlsplit(hls_url).hostname or "").lower()
+        for morsel in jar.values():
+            domain = morsel["domain"].strip() or host
+            normalized_domain = domain.lstrip(".").lower()
+            if not host or not (
+                host == normalized_domain or host.endswith("." + normalized_domain)
+            ):
+                continue
+            session.http.cookies.set_cookie(create_cookie(
+                name=morsel.key,
+                value=morsel.value,
+                domain=domain,
+                path=morsel["path"] or "/",
+                secure=bool(morsel["secure"]),
+            ))
+
+        if urlsplit(hls_url).path.lower().endswith(".mpd"):
+            from streamlink.stream.dash import DASHStream
+
+            streams = DASHStream.parse_manifest(session, hls_url)
+            if not streams:
+                raise RuntimeError("Streamlink에서 사용할 수 있는 DASH 스트림을 찾지 못했습니다.")
+            height_limit = {"1080p": 1080, "720p": 720, "480p": 480}.get(quality)
+            ranked = []
+            for name, candidate in streams.items():
+                match = re.search(r"(\d+)p", str(name).lower())
+                height = int(match.group(1)) if match else 0
+                ranked.append((height, str(name), candidate))
+            candidates = ranked
+            if height_limit is not None:
+                limited = [item for item in ranked if 0 < item[0] <= height_limit]
+                if limited:
+                    candidates = limited
+            stream = max(candidates, key=lambda item: (item[0], item[1]))[2]
+        else:
+            stream = HLSStream(
+                session,
+                hls_url,
+                start_offset=float(max(0, start_offset)),
+                force_restart=force_restart,
+            )
+        return session, stream
 
     async def _extract_hls_url(
         self,
@@ -355,7 +551,10 @@ class YtdlpLivePipeline:
         ytdlp_path = get_settings().resolve_ytdlp_path()
         fmt = self._QUALITY_MAP.get(quality, self._QUALITY_MAP["best"])
 
-        cmd = [ytdlp_path, page_url, "--format", fmt, "-j", "--no-warnings"]
+        cmd = [
+            ytdlp_path, page_url, "--format", fmt, "-j", "--no-warnings",
+            "--ignore-config",
+        ]
 
         cookie_file_path: Optional[str] = None
         if cookie_file:
@@ -472,41 +671,6 @@ class YtdlpLivePipeline:
         except Exception as exc:
             logger.warning(f"[{self._channel_id}] 미리보기 저장 실패 (녹화는 계속 진행): {exc}")
 
-    @staticmethod
-    def _redact_ffmpeg_command(command: list[str]) -> list[str]:
-        """Hide signed stream URLs and authentication headers from debug logs."""
-        redacted = list(command)
-        for index, argument in enumerate(redacted[:-1]):
-            if argument in ("-headers", "-cookies"):
-                redacted[index + 1] = "<redacted>"
-            elif argument == "-i":
-                parsed = urlsplit(redacted[index + 1])
-                redacted[index + 1] = urlunsplit(
-                    (parsed.scheme, parsed.netloc, "/<redacted>", "", "")
-                )
-        return redacted
-
-    @staticmethod
-    def _ffmpeg_cookies(cookies: str) -> str:
-        """yt-dlp `cookies` 필드를 ffmpeg `-cookies` 형식(쿠키마다 한 줄)으로 바꾼다.
-
-        yt-dlp는 `-j` 출력의 http_headers에서 Cookie를 빼고 도메인 정보가 붙은
-        `cookies` 필드로 따로 준다. ffmpeg도 도메인을 보고 보내도록 그대로 옮긴다.
-        """
-        from http.cookies import CookieError, SimpleCookie
-
-        jar = SimpleCookie()
-        try:
-            jar.load(cookies)
-        except CookieError as e:
-            # 쿠키를 못 옮겨도 녹화 시도 자체는 막지 않는다.
-            logger.warning(f"스트림 쿠키 해석 실패, 쿠키 없이 녹화합니다: {e}")
-            return ""
-        return "".join(
-            f"{m.key}={m.value}; path={m['path'] or '/'}; domain={m['domain']};\r\n"
-            for m in jar.values()
-        )
-
     async def stop_recording(self) -> None:
         """ffmpeg 프로세스를 정상 종료한다."""
         proc = self._process
@@ -516,24 +680,28 @@ class YtdlpLivePipeline:
 
         self._intentional_stop = True
         self._state = RecordingState.STOPPING
-        logger.info(f"[{self._channel_id}] ffmpeg 녹화 종료 요청...")
+        logger.info(f"[{self._channel_id}] Streamlink/FFmpeg 녹화 종료 요청...")
+
+        stream_fd = self._streamlink_fd
+        if stream_fd is not None:
+            try:
+                await asyncio.to_thread(stream_fd.close)
+            except Exception:
+                pass
+        feeder_task = self._feeder_task
+        if feeder_task is not None and not feeder_task.done():
+            feeder_task.cancel()
+            await asyncio.gather(feeder_task, return_exceptions=True)
+        self._feeder_task = None
 
         if proc.returncode is None:
             try:
-                # Windows: stdin에 'q' 전송으로 ffmpeg 정상 종료
+                # stdin is the media pipe, so sending FFmpeg's interactive "q"
+                # command here would corrupt the stream. Close Streamlink first,
+                # then EOF on pipe:0 lets FFmpeg finalize the output cleanly.
                 stdin = proc.stdin
                 if stdin is not None and not stdin.is_closing():
-                    try:
-                        stdin.write(b"q")
-                        await stdin.drain()
-                    except (BrokenPipeError, ConnectionResetError, OSError):
-                        pass
-                    try:
-                        stdin.close()
-                    except Exception:
-                        pass
-                else:
-                    proc.terminate()
+                    stdin.close()
 
                 await asyncio.wait_for(proc.wait(), timeout=10.0)
                 logger.info(
@@ -548,6 +716,9 @@ class YtdlpLivePipeline:
 
         self._state = RecordingState.COMPLETED
         self._process = None
+        self._streamlink_fd = None
+        self._streamlink_session = None
+        self._feeder_task = None
 
     async def _watch_process(self) -> None:
         """ffmpeg 프로세스의 종료를 감시한다."""

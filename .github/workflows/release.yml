@@ -74,17 +74,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## VOD and live settings
+          ## Live recording
 
-          - Separated VOD-only settings, including partial-file retention, from live recording controls.
-          - Added a dedicated live settings API while keeping the legacy settings route available for older clients.
-          - Moved live chat archiving to its own settings section.
+          - Switched live HLS/DASH segment capture to Streamlink and kept FFmpeg for writing recordings.
+          - Preserved CHZZK Time Machine offsets, quality selection, request headers, and scoped cookies.
+          - Added segment and playlist retry handling for more resilient live capture.
 
-          ## Responsive download queue
+          ## Interface and VOD fixes
 
-          - Reflowed narrow VOD task cards so titles, status, progress, and actions fit the available screen width.
+          - Centered icons and their adjacent text in shared card, page, collapsible-card, and metric headers.
+          - Prevented external yt-dlp configuration from injecting global Cookie headers into app-managed VOD and live extraction.
 
-          Download the Windows x64 executable and replace the existing Rookery.exe. Settings and saved data are preserved.
+          Download the Windows x64 executable and replace the existing application executable. Settings and saved data are preserved.
           '@
           $notes | Set-Content -Path release-notes.md -Encoding utf8
           $asset = "dist/Rookery-$env:GITHUB_REF_NAME-windows-x64.exe"

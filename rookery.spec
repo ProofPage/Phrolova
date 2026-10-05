@@ -96,6 +96,9 @@ hidden_imports = [
     "discord.ext.commands",
     # yt-dlp
     "yt_dlp",
+    # Streamlink direct HLS API used by the live recording pipeline
+    *collect_submodules("streamlink.stream"),
+    "streamlink",
     # dotenv
     "dotenv",
     # ssl

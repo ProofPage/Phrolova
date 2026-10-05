@@ -43,7 +43,7 @@ export function PageHeader({
         <header className="page-hero relative border border-line rounded-[calc(var(--radius-card)+4px)] p-5 sm:p-6">
             <div aria-hidden="true" className="page-hero-decoration pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" />
             <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-5">
-                <div className="flex items-start gap-4 min-w-0">
+                <div className="flex items-center gap-4 min-w-0">
                     <span className="page-hero-icon grid place-items-center w-11 h-11 rounded-[var(--radius-card)] shrink-0">
                         {createElement(icon, { className: "w-5 h-5" })}
                     </span>
@@ -84,7 +84,7 @@ export function MetricCard({
     return (
         <Card className="relative overflow-hidden group">
             <span className="absolute inset-x-0 top-0 h-px opacity-70" style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} />
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center justify-between gap-4">
                 <div>
                     <p className="text-[11px] font-medium text-ink-faint uppercase tracking-[0.08em]">{label}</p>
                     <p className="text-2xl font-bold tracking-tight text-ink mt-2">{value}</p>
@@ -146,11 +146,11 @@ export function CardHeader({
         : "var(--primary)";
 
     return (
-        <header className="flex items-start justify-between gap-4 mb-5">
-            <div className="flex items-start gap-3 min-w-0">
+        <header className="flex items-center justify-between gap-4 mb-5">
+            <div className="flex items-center gap-3 min-w-0">
                 {icon && (
                     <span
-                        className="mt-0.5 w-9 h-9 rounded-[var(--radius-control)] grid place-items-center shrink-0"
+                        className="w-9 h-9 rounded-[var(--radius-control)] grid place-items-center shrink-0"
                         style={{
                             backgroundColor: "color-mix(in srgb, " + toneColor + " 14%, transparent)",
                             color: toneColor,
@@ -208,18 +208,18 @@ export function CollapsibleCard({
 
     return (
         <Card>
-            <div className={clsx("flex items-start justify-between gap-4", open && "mb-5")}>
+            <div className={clsx("flex items-center justify-between gap-4", open && "mb-5")}>
                 {/* 헤더 전체가 토글이다. action은 버튼 밖에 둬야 중첩 클릭이 꼬이지 않는다. */}
                 <button
                     type="button"
                     onClick={() => setOpen((v) => !v)}
                     aria-expanded={open}
                     aria-controls={bodyId}
-                    className="flex items-start gap-3 min-w-0 flex-1 text-left group"
+                    className="flex items-center gap-3 min-w-0 flex-1 text-left group"
                 >
                     {icon && (
                         <span
-                            className="mt-0.5 w-9 h-9 rounded-[var(--radius-control)] grid place-items-center shrink-0"
+                            className="w-9 h-9 rounded-[var(--radius-control)] grid place-items-center shrink-0"
                             style={{
                                 backgroundColor: "color-mix(in srgb, " + toneColor + " 14%, transparent)",
                                 color: toneColor,
