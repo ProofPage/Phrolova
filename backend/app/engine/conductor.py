@@ -211,8 +211,10 @@ class Conductor:
 
     @staticmethod
     def _can_auto_record(task: ChannelTask) -> bool:
-        if not task.auto_record:
-            return False
+        return task.auto_record and Conductor._matches_download_condition(task)
+
+    @staticmethod
+    def _matches_download_condition(task: ChannelTask) -> bool:
         if task.platform != Platform.CHZZK:
             return True
         settings = get_settings()
@@ -225,7 +227,7 @@ class Conductor:
         )
 
     def _download_hold_reason(self, task: ChannelTask) -> Optional[str]:
-        if not task.is_live or not task.auto_record or task.is_recording or self._can_auto_record(task):
+        if not task.is_live or task.is_recording or self._matches_download_condition(task):
             return None
         condition = task.download_condition or get_settings().live_download_condition
         if task.is_watchalong is None and task.broadcast_tags is None:

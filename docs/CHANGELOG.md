@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.34] - 2026-10-05
+
+### Changed
+- **자동 녹화 OFF 조건 안내** — 자동 녹화가 꺼져 있어도 조건에 맞지 않는 방송의 이유를 카드와 목록에 표시합니다. OFF 상태는 ‘다운로드 조건 안내’, ON 상태는 ‘다운로드 보류’로 구분합니다.
+
 ## [2.0.33] - 2026-10-05
 
 ### Fixed
@@ -525,7 +530,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.33...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.34...HEAD
+[2.0.34]: https://github.com/ProofPage/Phrolova/compare/v2.0.33...v2.0.34
 [2.0.33]: https://github.com/ProofPage/Phrolova/compare/v2.0.32...v2.0.33
 [2.0.32]: https://github.com/ProofPage/Phrolova/compare/v2.0.31...v2.0.32
 [2.0.31]: https://github.com/ProofPage/Phrolova/compare/v2.0.30...v2.0.31
