@@ -15,6 +15,10 @@ interface Props {
 export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [keepParts, setKeepParts] = useState(false);
     const [maxRetries, setMaxRetries] = useState(3);
+    const [streamMode, setStreamMode] = useState<"standard" | "request-timemachine" | "force-timemachine">("request-timemachine");
+    const [timeMachineOffset, setTimeMachineOffset] = useState(0);
+    const [saveLivePreview, setSaveLivePreview] = useState(false);
+    const [liveFilenameTemplate, setLiveFilenameTemplate] = useState("[{download_date}][{name}] {title}");
     const [vodMaxConcurrent, setVodMaxConcurrent] = useState(3);
     const [vodDefaultQuality, setVodDefaultQuality] = useState("best");
     const [vodMaxSpeed, setVodMaxSpeed] = useState(0);
@@ -29,6 +33,10 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         if (!settings) return;
         setKeepParts(settings.keep_download_parts);
         setMaxRetries(settings.max_record_retries);
+        setStreamMode(settings.chzzk_stream_mode ?? (settings.chzzk_time_machine_enabled ? "force-timemachine" : "standard"));
+        setTimeMachineOffset(settings.chzzk_time_machine_offset ?? settings.chzzk_time_machine_shift ?? 0);
+        setSaveLivePreview(settings.save_live_preview ?? false);
+        setLiveFilenameTemplate(settings.live_filename_template || "[{download_date}][{name}] {title}");
         setVodMaxConcurrent(settings.vod_max_concurrent);
         setVodDefaultQuality(settings.vod_default_quality);
         setVodMaxSpeed(settings.vod_max_speed);
@@ -39,6 +47,10 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const dirty = !!settings && (
         keepParts !== settings.keep_download_parts ||
         maxRetries !== settings.max_record_retries ||
+        streamMode !== (settings.chzzk_stream_mode ?? (settings.chzzk_time_machine_enabled ? "force-timemachine" : "standard")) ||
+        timeMachineOffset !== (settings.chzzk_time_machine_offset ?? settings.chzzk_time_machine_shift ?? 0) ||
+        saveLivePreview !== (settings.save_live_preview ?? false) ||
+        liveFilenameTemplate !== (settings.live_filename_template || "[{download_date}][{name}] {title}") ||
         vodMaxConcurrent !== settings.vod_max_concurrent ||
         vodDefaultQuality !== settings.vod_default_quality ||
         vodMaxSpeed !== settings.vod_max_speed ||
@@ -60,7 +72,10 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     });
 
     const handleSaveDownload = () => saveDownload({
-        request: () => api.updateDownloadSettings(keepParts, maxRetries),
+        request: () => api.updateDownloadSettings(
+            keepParts, maxRetries, streamMode, timeMachineOffset,
+            saveLivePreview, liveFilenameTemplate,
+        ),
         success: "다운로드 설정이 저장되었습니다.",
         failure: "다운로드 설정 저장에 실패했습니다.",
     });
@@ -118,6 +133,33 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                 />
                 <Field label="자동 재시도 횟수" hint="라이브 녹화 중단 시 자동 재시도 횟수.">
                     <Input type="number" min={0} max={100} value={maxRetries} onChange={(event) => setMaxRetries(parseInt(event.target.value) || 0)} />
+                </Field>
+                <Field
+                    label="치지직 스트림 획득 방법"
+                    hint={streamMode === "force-timemachine" ? "타임머신을 강제 사용하며, 사용할 수 없으면 녹화 요청을 실패 처리합니다." : streamMode === "request-timemachine" ? "타임머신 API를 먼저 요청하고, 사용할 수 없으면 기본 스트림으로 자동 전환합니다." : "치지직 기본 API에서 yt-dlp가 선택한 라이브 스트림을 사용합니다."}
+                >
+                    <Select
+                        value={streamMode}
+                        onChange={(event) => setStreamMode(event.target.value as typeof streamMode)}
+                        options={[
+                            { value: "standard", label: "기본 스트림 사용" },
+                            { value: "request-timemachine", label: "가능하면 타임머신 사용" },
+                            { value: "force-timemachine", label: "강제로 타임머신 사용" },
+                        ]}
+                    />
+                </Field>
+                {streamMode !== "standard" && (
+                    <Field label="스트림 시작 오프셋 (초)" hint="타임머신이 제공하는 스트림의 시작점에서 건너뛸 시간입니다. 0이면 사용 가능한 가장 앞부분부터 받습니다.">
+                        <Input type="number" min={0} max={86400} value={timeMachineOffset} onChange={(event) => setTimeMachineOffset(Math.max(0, Math.min(86400, Number(event.target.value) || 0)))} />
+                    </Field>
+                )}
+                <SettingRow
+                    label="라이브 미리보기 이미지 저장"
+                    hint={saveLivePreview ? "치지직 라이브 썸네일을 녹화 파일 옆에 저장합니다." : "미리보기 이미지를 별도 파일로 저장하지 않습니다."}
+                    control={<Switch checked={saveLivePreview} onChange={setSaveLivePreview} label="라이브 미리보기 이미지 저장" />}
+                />
+                <Field label="라이브 파일명 형식" hint="{name}/{channel_name}, {title}/{live_title}, {channel_uid}, {category}, {date_year}, {live_date_year}, {download_date_year}, {live_date_month}, {live_date_day}, {live_date_hour}, {live_date_minute}, {live_date_second}, {quality}, {extension} 사용 가능. 확장자는 자동 추가됩니다.">
+                    <Input value={liveFilenameTemplate} onChange={(event) => setLiveFilenameTemplate(event.target.value)} maxLength={240} />
                 </Field>
                 <SettingRow
                     label="실시간 채팅 저장"

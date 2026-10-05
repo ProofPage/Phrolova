@@ -31,6 +31,7 @@ class ChannelTask:
     channel_name: Optional[str] = None
     title: Optional[str] = None
     category: Optional[str] = None
+    live_started_at: Optional[str] = None
     viewer_count: int = 0
     thumbnail_url: Optional[str] = None
     profile_image_url: Optional[str] = None

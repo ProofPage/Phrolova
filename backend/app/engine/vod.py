@@ -8,10 +8,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
+import os
 import shutil
 import subprocess
+import tempfile
 import threading
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -219,19 +223,15 @@ class VodEngine:
             "file_access_retries": 5,
         }
 
-        # 치지직 URL인 경우에만 인증 쿠키 주입
+        # 쿠키는 별도 Netscape jar에 두어 각 도메인에만 전송되게 한다.
         if self._is_chzzk_url(task.url):
-            cookies = self._auth.get_cookies()
-            if cookies:
-                # yt-dlp에 쿠키를 전달하는 방법: http_headers를 통한 Cookie 헤더
-                opts["http_headers"] = {
-                    "Cookie": cookies.to_cookie_string(),
-                    "User-Agent": (
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/131.0.0.0 Safari/537.36"
-                    ),
-                }
+            opts["http_headers"] = {
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/131.0.0.0 Safari/537.36"
+                ),
+            }
 
         if cookie_file:
             opts["cookiefile"] = cookie_file
@@ -308,18 +308,12 @@ class VodEngine:
             "extract_flat": False,
         }
 
-        # 치지직 URL인 경우에만 쿠키 주입
-        if self._is_chzzk_url(url):
-            cookies = self._auth.get_cookies()
-            if cookies:
-                opts["http_headers"] = {"Cookie": cookies.to_cookie_string()}
-
         def _extract() -> dict[str, Any] | None:
             import yt_dlp
             with yt_dlp.YoutubeDL(opts) as ydl:
                 return ydl.extract_info(url, download=False)
 
-        with borrow_cookie_file(url) as cookie_file:
+        with self._borrow_ytdlp_cookie_file(url) as cookie_file:
             if cookie_file:
                 opts["cookiefile"] = cookie_file
             info: dict[str, Any] | None = await asyncio.to_thread(lambda: _extract())  # type: ignore[arg-type]
@@ -414,6 +408,10 @@ class VodEngine:
                 return
 
             task = self._tasks[task_id]
+            # CDN을 바꾸는 재시도는 이전 CDN에서 받은 조각을 이어받지 않는다.
+            # 서명·세그먼트 체계가 다른 CDN의 조각이 한 파일에 섞이는 것을 막는다.
+            if self._is_chzzk_url(task.url):
+                self._cleanup_partial_files(task)
             # 일시적 오류일 가능성이 있으므로 잠시 대기 후 재시도.
             # 슬롯은 이미 반납했으니 기다리는 동안 대기 중인 다른 다운로드가 쓸 수 있다.
             await asyncio.sleep(3 * task.retry_count)  # 백오프: 3초, 6초, 9초...
@@ -422,6 +420,8 @@ class VodEngine:
             task.progress = 0.0
             task.download_speed = 0.0
             task.downloaded_bytes = 0
+            task.total_bytes = 0
+            task.eta_seconds = 0
 
     async def _attempt_download(self, task_id: str) -> bool:
         """슬롯을 쥔 상태에서 한 번 시도한다. 다시 시도해야 하면 True를 돌려준다."""
@@ -445,6 +445,8 @@ class VodEngine:
         except DownloadCancelledError:
             task.state = VodDownloadState.IDLE
             task.progress = 0.0
+            if not get_settings().keep_download_parts:
+                self._cleanup_partial_files(task)
             logger.info(f"[{task_id}] 다운로드 취소됨: {task.url}")
 
         except asyncio.CancelledError:
@@ -459,6 +461,8 @@ class VodEngine:
             if task.cancel_flag:
                 task.state = VodDownloadState.IDLE
                 task.progress = 0.0
+                if not get_settings().keep_download_parts:
+                    self._cleanup_partial_files(task)
                 logger.info(f"[{task_id}] 다운로드 취소됨 (예외 처리): {task.url}")
             else:
                 import traceback
@@ -477,6 +481,8 @@ class VodEngine:
                     logger.error(f"[{task_id}] 다운로드 불가: {e}")
                     task.error_message = error_msg
                     task.state = VodDownloadState.ERROR
+                    if not get_settings().keep_download_parts:
+                        self._cleanup_partial_files(task)
                     self._save_history()
                     return False
 
@@ -496,6 +502,8 @@ class VodEngine:
 
                     task.error_message = f"재시도 {task.max_retries}회 실패: {str(e)}"
                     task.state = VodDownloadState.ERROR
+                    if not get_settings().keep_download_parts:
+                        self._cleanup_partial_files(task)
                     # 에러 발생 시 이력 저장
                     self._save_history()
 
@@ -523,10 +531,30 @@ class VodEngine:
         api_url = f"https://api.chzzk.naver.com/service/v1/play-info/clip/{clip_id}"
         headers = self._auth.get_http_headers()
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(api_url, headers=headers, timeout=10.0)
-            resp.raise_for_status()
-            data = resp.json()
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            for attempt in range(3):
+                try:
+                    resp = await client.get(api_url, headers=headers, timeout=30.0)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    break
+                except httpx.HTTPStatusError as exc:
+                    status_code = exc.response.status_code
+                    retryable = status_code in (408, 425, 429) or status_code >= 500
+                    if not retryable:
+                        raise NonRetryableDownloadError(
+                            f"CHZZK 클립 정보를 가져올 수 없습니다 (HTTP {status_code})."
+                        ) from None
+                    if attempt == 2:
+                        raise RuntimeError(
+                            f"CHZZK 클립 정보 요청이 재시도 후 실패했습니다 (HTTP {status_code})."
+                        ) from None
+                except (httpx.HTTPError, ValueError) as exc:
+                    if attempt == 2:
+                        raise RuntimeError(
+                            f"CHZZK 클립 정보 요청이 재시도 후 실패했습니다 ({type(exc).__name__})."
+                        ) from None
+                await asyncio.sleep(attempt + 1)
 
         content = data.get("content") or {}
 
@@ -553,8 +581,12 @@ class VodEngine:
                 f"?key={in_key}&env=real&lc=en_US&cpl=en_US"
             )
             logger.info(f"[{task_id}] 클립 ABR_HLS 재생 URL 사용: {playback_url[:80]}...")
+            source_url = task.url
             task.url = playback_url
-            await self._download_external(task_id, task)
+            try:
+                await self._download_external(task_id, task)
+            finally:
+                task.url = source_url
             # _download_external이 task.title을 yt-dlp 메타로 덮어쓰므로 복원
             self._rename_clip_output(task_id, task, safe_channel, safe_title)
             return
@@ -572,8 +604,12 @@ class VodEngine:
                 hls_path = media.get("path") or ""
                 if hls_path.startswith("http"):
                     logger.info(f"[{task_id}] 클립 HLS URL 사용 ({json_key}): {hls_path[:80]}...")
+                    source_url = task.url
                     task.url = hls_path
-                    await self._download_external(task_id, task)
+                    try:
+                        await self._download_external(task_id, task)
+                    finally:
+                        task.url = source_url
                     self._rename_clip_output(task_id, task, safe_channel, safe_title)
                     return
 
@@ -729,8 +765,30 @@ class VodEngine:
     async def _download_external(self, task_id: str, task: VodDownloadTask) -> None:
         """yt-dlp를 사용한 외부 URL(유튜브 등) 다운로드."""
         # 메타데이터 추출부터 실제 다운로드까지 같은 쿠키 사본을 쓰고, 끝나면 지운다.
-        with borrow_cookie_file(task.url) as cookie_file:
+        with self._borrow_ytdlp_cookie_file(task.url) as cookie_file:
             await self._download_with_ytdlp(task_id, task, cookie_file)
+
+    @contextmanager
+    def _borrow_ytdlp_cookie_file(self, url: str):
+        """Provide a domain-scoped cookie file for yt-dlp instead of a global Cookie header."""
+        if self._is_chzzk_url(url):
+            cookies = self._auth.get_cookies()
+            if cookies:
+                fd, cookie_path = tempfile.mkstemp(prefix="chzzk_ytdlp_cookie_", suffix=".txt")
+                try:
+                    with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as cookie_file:
+                        cookie_file.write("# Netscape HTTP Cookie File\n")
+                        for name, value in cookies.to_dict().items():
+                            cookie_file.write(
+                                f".naver.com\tTRUE\t/\tTRUE\t0\t{name}\t{value}\n"
+                            )
+                    yield cookie_path
+                finally:
+                    Path(cookie_path).unlink(missing_ok=True)
+                return
+
+        with borrow_cookie_file(url) as cookie_file:
+            yield cookie_file
 
     async def _download_with_ytdlp(
         self, task_id: str, task: VodDownloadTask, cookie_file: Optional[str]
@@ -780,6 +838,9 @@ class VodEngine:
         # 때마다 원래 Naver CDN과 번갈아 시도한다. 서명 경로/쿼리 문자열은 보존한다.
         if self._is_chzzk_url(task.url) and task.retry_count % 2 == 0:
             info = self._rewrite_chzzk_cdn(info, "light-slit.akamaized.net")
+            logger.info(f"[{task_id}] CHZZK VOD CDN 시도: light-slit.akamaized.net")
+        elif self._is_chzzk_url(task.url):
+            logger.info(f"[{task_id}] CHZZK VOD CDN 시도: ex-nlive-slitvod-streaming.navercdn.com")
 
         def _download() -> str | None:
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -873,12 +934,30 @@ class VodEngine:
                 return value
             if (parts.hostname or "").lower() != old_host:
                 return value
-            netloc = target_host
-            if parts.port:
-                netloc = f"{target_host}:{parts.port}"
-            return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+            return urlunsplit(("https", target_host, parts.path, parts.query, parts.fragment))
 
         return rewrite(info)
+
+    @staticmethod
+    def _cleanup_partial_files(task: VodDownloadTask) -> None:
+        """Remove yt-dlp's incomplete file and fragment artifacts for this task only."""
+        if not task.expected_part_file:
+            return
+        expected_part = Path(task.expected_part_file)
+        try:
+            candidates = [expected_part]
+            if expected_part.parent.is_dir():
+                candidates.extend(
+                    candidate
+                    for candidate in expected_part.parent.iterdir()
+                    if candidate.name.startswith(expected_part.name + "-Frag")
+                    or candidate.name.startswith(expected_part.name + ".")
+                )
+            for candidate in set(candidates):
+                if candidate.is_file():
+                    candidate.unlink(missing_ok=True)
+        except OSError as exc:
+            logger.warning(f"[{task.task_id}] 임시 VOD 조각 파일 정리 실패: {exc}")
 
     @staticmethod
     def _probe_media_duration(filepath: str) -> float:
@@ -902,9 +981,12 @@ class VodEngine:
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
         try:
-            return float(result.stdout.strip())
+            duration = float(result.stdout.strip())
         except ValueError as exc:
             raise RuntimeError("ffprobe가 유효한 VOD 길이를 반환하지 않았습니다.") from exc
+        if not math.isfinite(duration) or duration < 0:
+            raise RuntimeError("ffprobe가 유효하지 않은 VOD 길이를 반환했습니다.")
+        return duration
 
     def _clean_filename(self, name: str) -> str:
         """파일명에서 사용할 수 없는 특수문자를 제거한다."""

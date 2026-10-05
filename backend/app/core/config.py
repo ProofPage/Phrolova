@@ -123,11 +123,39 @@ class Settings(BaseSettings):
     discord_notify_ttl: int = 3600
 
     # ── 감시 주기 (초) ───────────────────────────────────
-    monitor_interval: int = 30
+    monitor_interval: int = 60
 
     # ── 다운로드 설정 ─────────────────────────────────────
     keep_download_parts: bool = False  # VOD 다운로드 중단 시 .part 파일 유지 여부
     max_record_retries: int = 3        # 라이브 녹화 자동 재시도 최대 횟수
+    chzzk_stream_mode: Optional[str] = None   # standard | request-timemachine | force-timemachine
+    chzzk_time_machine_enabled: Optional[bool] = None  # 구버전 설정 호환용
+    chzzk_time_machine_offset: Optional[int] = None  # 스트림 시작 기준 건너뛸 초 수
+    chzzk_time_machine_shift: Optional[int] = None  # 구버전 설정 호환용
+    save_live_preview: bool = False           # 치지직 녹화 시작 시 미리보기 이미지 저장
+    live_filename_template: str = "[{download_date}][{name}] {title}"
+
+    @property
+    def effective_chzzk_stream_mode(self) -> str:
+        """Resolve current and legacy time-machine settings to the reference modes."""
+        if self.chzzk_stream_mode in {
+            "standard", "request-timemachine", "force-timemachine"
+        }:
+            return self.chzzk_stream_mode
+        if self.chzzk_time_machine_enabled is True:
+            return "force-timemachine"
+        if self.chzzk_time_machine_enabled is False:
+            return "standard"
+        return "request-timemachine"
+
+    @property
+    def effective_chzzk_time_machine_offset(self) -> int:
+        """Use the new start offset, migrating older rewind settings if present."""
+        if self.chzzk_time_machine_offset is not None:
+            return max(0, min(86400, self.chzzk_time_machine_offset))
+        if self.chzzk_time_machine_shift is not None:
+            return max(0, min(86400, self.chzzk_time_machine_shift))
+        return 0
 
     # ── 녹화 포맷/품질 ─────────────────────────────────────
     live_format: str = "ts"            # 라이브 녹화 포맷: ts(권장), mkv, mp4

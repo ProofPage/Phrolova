@@ -90,6 +90,12 @@ export interface Settings {
 
     keep_download_parts: boolean;
     max_record_retries: number;
+    chzzk_time_machine_enabled: boolean;
+    chzzk_stream_mode: "standard" | "request-timemachine" | "force-timemachine";
+    chzzk_time_machine_shift: number;
+    chzzk_time_machine_offset: number;
+    save_live_preview: boolean;
+    live_filename_template: string;
 
     live_format: string;
     vod_format: string;
@@ -395,8 +401,22 @@ export const api = {
         const res = await client.put("/settings/cookies", { nid_aut, nid_ses });
         return res.data;
     },
-    updateDownloadSettings: async (keep_download_parts: boolean, max_record_retries: number) => {
-        const res = await client.put("/settings/download", { keep_download_parts, max_record_retries });
+    updateDownloadSettings: async (
+        keep_download_parts: boolean,
+        max_record_retries: number,
+        chzzk_stream_mode: "standard" | "request-timemachine" | "force-timemachine",
+        chzzk_time_machine_offset: number,
+        save_live_preview: boolean,
+        live_filename_template: string,
+    ) => {
+        const res = await client.put("/settings/download", {
+            keep_download_parts,
+            max_record_retries,
+            chzzk_stream_mode,
+            chzzk_time_machine_offset,
+            save_live_preview,
+            live_filename_template,
+        });
         return res.data;
     },
     updateGeneralSettings: async (data: GeneralSettingsUpdate) => {

@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import asyncio.subprocess
+import mimetypes
 import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlsplit, urlunsplit
 
 from app.core.config import get_settings
 from app.core.logger import logger
 from app.core.utils import ffmpeg_supports_extension_picky
+from app.engine.chzzk_time_machine import resolve_time_machine_stream
 
 from app.engine.pipeline.state import RecordingState
 
@@ -88,9 +91,12 @@ class YtdlpLivePipeline:
         headers: Optional[dict[str, str]] = None,
         streamer_name: Optional[str] = None,
         title: Optional[str] = None,
+        category: Optional[str] = None,
+        live_started_at: Optional[str] = None,
         quality: str = "best",
         cookie_str: Optional[str] = None,
         fallback_cookie_file: Optional[str] = None,
+        thumbnail_url: Optional[str] = None,
     ) -> str:
         """yt-dlp로 HLS URL을 추출한 뒤 ffmpeg으로 직접 녹화한다.
 
@@ -114,43 +120,146 @@ class YtdlpLivePipeline:
 
         page_url = str(stream_obj) if stream_obj else ""
         settings = get_settings()
+        live_start_index: Optional[int] = None
 
         save_dir = Path(output_dir or settings.download_dir)
         save_dir.mkdir(parents=True, exist_ok=True)
 
+        now = datetime.now()
+        live_date = now
+        if live_started_at:
+            try:
+                live_date = datetime.fromisoformat(live_started_at.replace("Z", "+00:00"))
+            except ValueError:
+                logger.warning(f"[{self._channel_id}] 라이브 시작 시각을 읽지 못해 현재 시각을 파일명에 사용합니다.")
+        ext = (settings.live_format or "ts").lower().lstrip(".")
+        if ext not in {"ts", "mkv", "mp4"}:
+            ext = "ts"
         if not filename:
-            now = datetime.now()
-            ts_str = now.strftime("%Y-%m-%d %H：%M")
-            ext = settings.live_format or "ts"
-            raw_name = f"[{streamer_name or self._channel_id}] {ts_str} {title or 'live'}"
-            filename = self._clean_filename(raw_name) + f".{ext}"
+            def date_values(prefix: str, value: datetime) -> dict[str, str]:
+                return {
+                    f"{prefix}date": value.strftime("%Y%m%d%H%M%S"),
+                    f"{prefix}date_year": value.strftime("%Y"),
+                    f"{prefix}date_year_full": value.strftime("%Y"),
+                    f"{prefix}date_year_short": value.strftime("%y"),
+                    f"{prefix}date_month": value.strftime("%m"),
+                    f"{prefix}date_month_full": value.strftime("%B"),
+                    f"{prefix}date_month_short": value.strftime("%b"),
+                    f"{prefix}date_day": value.strftime("%d"),
+                    f"{prefix}date_hour": value.strftime("%H"),
+                    f"{prefix}date_minute": value.strftime("%M"),
+                    f"{prefix}date_second": value.strftime("%S"),
+                }
 
+            values = {
+                "channel_name": streamer_name or self._channel_id,
+                "channel_uid": self._channel_id,
+                "verified": "",
+                "title": title or "live",
+                "category": category or "",
+                "category_value": category or "",
+                "category_type": "",
+                "date_time": now.strftime("%Y-%m-%d %H-%M"),
+                "year": now.strftime("%Y"),
+                "month": now.strftime("%m"),
+                "day": now.strftime("%d"),
+                "hour": now.strftime("%H"),
+                "minute": now.strftime("%M"),
+                "second": now.strftime("%S"),
+                "quality": quality,
+                "extension": f".{ext}",
+            }
+            values.update({
+                "name": values["channel_name"],
+                "live_title": values["title"],
+                "live_date_year": values["year"],
+                "live_date_month": values["month"],
+                "live_date_day": values["day"],
+                "live_date_hour": values["hour"],
+                "live_date_minute": values["minute"],
+                "live_date_second": values["second"],
+                "record_quality": values["quality"],
+                "file_extension": values["extension"],
+            })
+            values.update(date_values("", now))
+            values.update(date_values("live_", live_date))
+            values.update(date_values("download_", now))
+            template = settings.live_filename_template or "[{download_date}][{name}] {title}"
+            try:
+                filename = template.format(**values)
+            except (KeyError, ValueError, IndexError) as exc:
+                logger.warning(f"[{self._channel_id}] 파일명 형식이 잘못되어 기본 형식을 사용합니다: {exc}")
+                filename = "[{download_date}][{name}] {title}".format(**values)
+            filename = self._clean_filename(filename) or self._channel_id
+            if not filename.lower().endswith(f".{ext}".lower()):
+                filename += f".{ext}"
+
+        # 같은 채널/제목이 같은 분 안에 재시작되더라도 기존 파일을 덮어쓰지 않는다.
+        filename = self._clean_filename(filename)
         output_file = save_dir / filename
+        suffix_number = 1
+        preview_suffixes = (".jpg", ".jpeg", ".png", ".webp", ".avif")
+        while output_file.exists() or any(
+            (save_dir / f"{output_file.stem}{suffix}").exists()
+            for suffix in preview_suffixes
+        ):
+            output_file = save_dir / f"{Path(filename).stem} ({suffix_number}){Path(filename).suffix}"
+            suffix_number += 1
         self._output_path = str(output_file)
 
-        # ── Phase 1: yt-dlp로 HLS URL + HTTP 헤더 추출 ──
+        # ── Phase 1: 타임머신 또는 yt-dlp에서 HLS URL + HTTP 헤더 추출 ──
         # 로그인 쿠키는 실패했을 때만 쓴다. 지금 되는 녹화는 그대로 두고,
         # 로그인 전용 라이브만 한 번 더 시도한다. yt-dlp가 로그인 요구를 여러 문구로
         # 알려서 문구로 가려내지 않고 추출 실패면 모두 다시 시도한다.
         stream_cookies: Optional[str] = None
-        try:
-            hls_url, http_headers, _ = await self._extract_hls_url(
-                page_url, quality, cookie_str
-            )
-        except Exception as e:
-            if not fallback_cookie_file:
-                self._state = RecordingState.ERROR
-                raise
-            logger.warning(
-                f"[{self._channel_id}] 쿠키 없이 URL 추출 실패, 로그인 쿠키로 다시 시도: {e}"
-            )
+        stream_mode = settings.effective_chzzk_stream_mode
+        time_machine_resolved = False
+        if stream_mode != "standard" and self._is_chzzk_live_page(page_url):
             try:
-                hls_url, http_headers, stream_cookies = await self._extract_hls_url(
-                    page_url, quality, None, cookie_file=fallback_cookie_file
+                time_machine_stream = await resolve_time_machine_stream(
+                    channel_id=self._channel_id,
+                    quality=quality,
+                    offset_seconds=settings.effective_chzzk_time_machine_offset,
+                    cookie_header=cookie_str,
                 )
-            except Exception:
-                self._state = RecordingState.ERROR
-                raise
+                hls_url = time_machine_stream.url
+                http_headers = time_machine_stream.headers
+                live_start_index = time_machine_stream.live_start_index
+                time_machine_resolved = True
+                logger.info(
+                    f"[{self._channel_id}] 치지직 타임머신 스트림 연결 "
+                    f"(시작 오프셋={settings.effective_chzzk_time_machine_offset}초, "
+                    f"시작 인덱스={live_start_index if live_start_index is not None else '기본'})"
+                )
+            except Exception as e:
+                if stream_mode == "force-timemachine":
+                    self._state = RecordingState.ERROR
+                    raise RuntimeError(
+                        f"[{self._channel_id}] 타임머신 스트림을 가져오지 못해 강제 녹화를 시작하지 못했습니다: {e}"
+                    ) from e
+                logger.warning(
+                    f"[{self._channel_id}] 타임머신 스트림을 사용할 수 없어 일반 스트림으로 전환합니다: {e}"
+                )
+
+        if not time_machine_resolved:
+            try:
+                hls_url, http_headers, _ = await self._extract_hls_url(
+                    page_url, quality, cookie_str
+                )
+            except Exception as e:
+                if not fallback_cookie_file:
+                    self._state = RecordingState.ERROR
+                    raise
+                logger.warning(
+                    f"[{self._channel_id}] 쿠키 없이 URL 추출 실패, 로그인 쿠키로 다시 시도: {e}"
+                )
+                try:
+                    hls_url, http_headers, stream_cookies = await self._extract_hls_url(
+                        page_url, quality, None, cookie_file=fallback_cookie_file
+                    )
+                except Exception:
+                    self._state = RecordingState.ERROR
+                    raise
 
         # ── Phase 2: ffmpeg으로 직접 녹화 ──
         ffmpeg_path = settings.resolve_ffmpeg_path()
@@ -178,17 +287,26 @@ class YtdlpLivePipeline:
             if cookie_lines:
                 cmd += ["-cookies", cookie_lines]
                 logger.debug(f"[{self._channel_id}] ffmpeg 로그인 쿠키 주입")
+        if live_start_index is not None:
+            cmd += ["-live_start_index", str(live_start_index)]
         cmd += ["-i", hls_url, "-c", "copy"]
 
-        # 라이브 HLS → MPEG-TS 출력 강제 (yt-dlp FFmpegFD와 동일)
-        cmd += ["-f", "mpegts"]
+        # 실제 파일 확장자에 맞춰 컨테이너를 기록한다. MP4는 중단된 녹화도
+        # 재생할 수 있도록 fragmented MP4로 저장한다.
+        if ext == "mkv":
+            cmd += ["-f", "matroska"]
+        elif ext == "mp4":
+            cmd += ["-movflags", "+frag_keyframe+empty_moov+default_base_moof", "-f", "mp4"]
+        else:
+            cmd += ["-f", "mpegts"]
 
-        cmd += ["-y", str(output_file)]
+        # 이름 확인 후 파일이 생기는 경합 상황에서도 FFmpeg가 덮어쓰지 않게 한다.
+        cmd += ["-n", str(output_file)]
 
         logger.info(
             f"[{self._channel_id}] ffmpeg 라이브 녹화 시작 (quality={quality}): {output_file}"
         )
-        logger.debug(f"[{self._channel_id}] ffmpeg CMD: {' '.join(cmd)}")
+        logger.debug(f"[{self._channel_id}] ffmpeg CMD: {' '.join(self._redact_ffmpeg_command(cmd))}")
 
         try:
             self._process = await asyncio.create_subprocess_exec(
@@ -201,6 +319,12 @@ class YtdlpLivePipeline:
             self._start_time = datetime.now()
             asyncio.create_task(self._watch_process())
             asyncio.create_task(self._update_statistics_loop())
+            if (
+                settings.save_live_preview
+                and thumbnail_url
+                and self._is_chzzk_live_page(page_url)
+            ):
+                await self._save_live_preview(thumbnail_url, output_file)
             return self._output_path
 
         except FileNotFoundError:
@@ -279,6 +403,88 @@ class YtdlpLivePipeline:
 
         logger.debug(f"[{self._channel_id}] HLS URL 추출 완료: {hls_url[:100]}...")
         return hls_url, http_headers, cookies
+
+    @staticmethod
+    def _is_chzzk_live_page(page_url: str) -> bool:
+        """타임머신은 치지직 라이브 페이지에만 적용한다."""
+        from urllib.parse import urlsplit
+
+        parsed = urlsplit(page_url)
+        return (
+            parsed.scheme in ("http", "https")
+            and parsed.hostname in ("chzzk.naver.com", "www.chzzk.naver.com")
+            and parsed.path.startswith("/live/")
+        )
+
+    async def _save_live_preview(self, thumbnail_url: str, output_file: Path) -> None:
+        """Save the current Chzzk preview beside the recording without blocking it on errors."""
+        from app.core.http import get_http_client
+
+        parsed = urlsplit(thumbnail_url)
+        host = (parsed.hostname or "").lower()
+        trusted = (
+            parsed.scheme == "https"
+            and not parsed.username
+            and not parsed.password
+            and (
+                host == "chzzk.naver.com"
+                or host.endswith(".chzzk.naver.com")
+                or host.endswith(".pstatic.net")
+                or host.endswith(".nimg.naver.net")
+            )
+        )
+        if not trusted:
+            logger.warning(f"[{self._channel_id}] 미리보기 이미지 URL을 허용된 Chzzk CDN으로 확인하지 못했습니다.")
+            return
+
+        try:
+            async with get_http_client().stream("GET", thumbnail_url, timeout=10.0) as response:
+                response.raise_for_status()
+                final_url = urlsplit(str(response.url))
+                final_host = (final_url.hostname or "").lower()
+                if final_url.scheme != "https" or not (
+                    final_host == "chzzk.naver.com"
+                    or final_host.endswith(".chzzk.naver.com")
+                    or final_host.endswith(".pstatic.net")
+                    or final_host.endswith(".nimg.naver.net")
+                ):
+                    logger.warning(f"[{self._channel_id}] 미리보기 리디렉션 주소를 허용된 도메인으로 확인하지 못했습니다.")
+                    return
+                content_type = response.headers.get("content-type", "").split(";", 1)[0].lower()
+                content_length = response.headers.get("content-length")
+                if not content_type.startswith("image/") or (
+                    content_length and int(content_length) > 20 * 1024 * 1024
+                ):
+                    logger.warning(f"[{self._channel_id}] 미리보기 응답이 이미지가 아니거나 20MB를 초과합니다.")
+                    return
+                image_data = bytearray()
+                async for chunk in response.aiter_bytes():
+                    image_data.extend(chunk)
+                    if len(image_data) > 20 * 1024 * 1024:
+                        logger.warning(f"[{self._channel_id}] 미리보기 이미지가 20MB를 초과합니다.")
+                        return
+            extension = Path(final_url.path).suffix.lower()
+            if extension not in {".jpg", ".jpeg", ".png", ".webp", ".avif"}:
+                extension = mimetypes.guess_extension(content_type) or ".jpg"
+            preview_path = output_file.with_suffix(extension)
+            await asyncio.to_thread(preview_path.write_bytes, image_data)
+            logger.info(f"[{self._channel_id}] 라이브 미리보기 저장: {preview_path}")
+        except Exception as exc:
+            logger.warning(f"[{self._channel_id}] 미리보기 저장 실패 (녹화는 계속 진행): {exc}")
+
+    @staticmethod
+    def _redact_ffmpeg_command(command: list[str]) -> list[str]:
+        """Hide signed stream URLs and authentication headers from debug logs."""
+        redacted = list(command)
+        for index, argument in enumerate(redacted[:-1]):
+            if argument in ("-headers", "-cookies"):
+                redacted[index + 1] = "<redacted>"
+            elif argument == "-i":
+                parsed = urlsplit(redacted[index + 1])
+                redacted[index + 1] = urlunsplit(
+                    (parsed.scheme, parsed.netloc, "/<redacted>", "", "")
+                )
+        return redacted
 
     @staticmethod
     def _ffmpeg_cookies(cookies: str) -> str:
@@ -432,7 +638,7 @@ class YtdlpLivePipeline:
                 continue
             name, _, value = part.partition("=")
             lines.append(
-                f".naver.com\tTRUE\t/\tFALSE\t0\t{name.strip()}\t{value.strip()}"
+                f".naver.com\tTRUE\t/\tTRUE\t0\t{name.strip()}\t{value.strip()}"
             )
         fd, path = tempfile.mkstemp(prefix="chzzk_cookie_", suffix=".txt")
         try:

@@ -57,6 +57,7 @@ class ChzzkLiveEngine:
             "channel_name": channel.get("channelName", "Unknown"),
             "title": content.get("liveTitle", "No Title"),
             "category": content.get("liveCategoryValue", ""),
+            "live_started_at": content.get("openDate"),
             "viewer_count": content.get("concurrentUserCount", 0),
             "thumbnail_url": thumbnail_url,
             "profile_image_url": channel.get("channelImageUrl", ""),

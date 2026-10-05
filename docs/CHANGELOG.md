@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+## [2.0.15] - 2026-10-05
+
+### Fixed
+- **CHZZK live recording and Time Machine** — added standard, request-Time-Machine, and force-Time-Machine modes with fallback behavior, configurable offsets, safer output naming, thumbnail handling, and container-aware recording.
+- **Long CHZZK VOD downloads** — increased network and fragment timeouts/retries, alternated between Akamai and Naver CDNs, and validate downloaded duration before marking a task complete.
+- **Akamai CDN fallback** — rewrite CHZZK VOD segment hosts from `ex-nlive-slitvod-streaming.navercdn.com` to `light-slit.akamaized.net` while preserving signed paths and query parameters.
+- **Cookie handling** — pass scoped temporary cookie files to yt-dlp instead of global Cookie headers.
+
 ## [2.0.14] - 2026-10-05
 
 ## [2.0.13] - 2026-10-05
@@ -388,7 +396,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.14...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.15...HEAD
+[2.0.15]: https://github.com/ProofPage/Phrolova/compare/v2.0.14...v2.0.15
 [2.0.14]: https://github.com/ProofPage/Phrolova/compare/v2.0.13...v2.0.14
 [2.0.13]: https://github.com/ProofPage/Phrolova/compare/v2.0.12...v2.0.13
 [2.0.12]: https://github.com/ProofPage/Phrolova/compare/v2.0.11...v2.0.12

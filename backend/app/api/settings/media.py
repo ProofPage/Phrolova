@@ -24,6 +24,21 @@ class DownloadSettingsUpdateRequest(BaseModel):
 
     keep_download_parts: bool = Field(..., description="VOD 다운로드 중단 시 .part 파일 유지 여부")
     max_record_retries: int = Field(..., ge=0, le=100, description="라이브 녹화 자동 재시도 횟수")
+    chzzk_stream_mode: Optional[str] = Field(
+        None,
+        pattern=r"^(standard|request-timemachine|force-timemachine)$",
+        description="치지직 라이브 스트림 획득 방식",
+    )
+    chzzk_time_machine_enabled: Optional[bool] = Field(None, description="구버전 치지직 타임머신 설정 호환")
+    chzzk_time_machine_offset: Optional[int] = Field(None, ge=0, le=86400, description="스트림 시작 기준 오프셋(초)")
+    chzzk_time_machine_shift: Optional[int] = Field(None, ge=0, le=86400, description="구버전 타임머신 설정 호환")
+    save_live_preview: Optional[bool] = Field(None, description="치지직 라이브 미리보기 이미지 저장 여부")
+    live_filename_template: Optional[str] = Field(
+        None,
+        max_length=240,
+        pattern=r"^[^\r\n]*$",
+        description="라이브 녹화 파일명 형식",
+    )
 
 
 class VodSettingsUpdateRequest(BaseModel):
@@ -47,12 +62,38 @@ async def update_download_settings(req: DownloadSettingsUpdateRequest):
     settings = get_settings()
     settings.keep_download_parts = req.keep_download_parts
     settings.max_record_retries = req.max_record_retries
+    stream_mode = req.chzzk_stream_mode
+    if stream_mode is None and req.chzzk_time_machine_enabled is not None:
+        stream_mode = "force-timemachine" if req.chzzk_time_machine_enabled else "standard"
+    if stream_mode is not None:
+        settings.chzzk_stream_mode = stream_mode
+        settings.chzzk_time_machine_enabled = None
+    time_machine_offset = req.chzzk_time_machine_offset
+    if time_machine_offset is None:
+        time_machine_offset = req.chzzk_time_machine_shift
+    if time_machine_offset is not None:
+        settings.chzzk_time_machine_offset = time_machine_offset
+        settings.chzzk_time_machine_shift = None
+    if req.save_live_preview is not None:
+        settings.save_live_preview = req.save_live_preview
+    if req.live_filename_template is not None:
+        settings.live_filename_template = req.live_filename_template
+
+    env_updates = {
+        "KEEP_DOWNLOAD_PARTS": str(req.keep_download_parts).lower(),
+        "MAX_RECORD_RETRIES": str(req.max_record_retries),
+    }
+    if stream_mode is not None:
+        env_updates["CHZZK_STREAM_MODE"] = stream_mode
+    if time_machine_offset is not None:
+        env_updates["CHZZK_TIME_MACHINE_OFFSET"] = str(time_machine_offset)
+    if req.save_live_preview is not None:
+        env_updates["SAVE_LIVE_PREVIEW"] = str(req.save_live_preview).lower()
+    if req.live_filename_template is not None:
+        env_updates["LIVE_FILENAME_TEMPLATE"] = req.live_filename_template
 
     try:
-        _update_env_file({
-            "KEEP_DOWNLOAD_PARTS": str(req.keep_download_parts).lower(),
-            "MAX_RECORD_RETRIES": str(req.max_record_retries),
-        })
+        _update_env_file(env_updates)
     except Exception as e:
         print(f"설정 파일 저장 실패: {e}")
 
@@ -61,6 +102,12 @@ async def update_download_settings(req: DownloadSettingsUpdateRequest):
         "settings": {
             "keep_download_parts": settings.keep_download_parts,
             "max_record_retries": settings.max_record_retries,
+            "chzzk_stream_mode": settings.effective_chzzk_stream_mode,
+            "chzzk_time_machine_enabled": settings.effective_chzzk_stream_mode != "standard",
+            "chzzk_time_machine_offset": settings.effective_chzzk_time_machine_offset,
+            "chzzk_time_machine_shift": settings.effective_chzzk_time_machine_offset,
+            "save_live_preview": settings.save_live_preview,
+            "live_filename_template": settings.live_filename_template,
         },
     }
 

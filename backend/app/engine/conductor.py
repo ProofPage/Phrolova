@@ -596,6 +596,7 @@ class Conductor:
         task.channel_name = status.get("channel_name")
         task.title = status.get("title")
         task.category = status.get("category")
+        task.live_started_at = status.get("live_started_at")
         task.viewer_count = status.get("viewer_count", 0)
         task.thumbnail_url = status.get("thumbnail_url")
         task.profile_image_url = status.get("profile_image_url")
@@ -967,9 +968,12 @@ class Conductor:
                     stream_obj=live_url,
                     streamer_name=channel_name or task.channel_name,
                     title=title or task.title,
+                    category=task.category,
+                    live_started_at=task.live_started_at,
                     quality=quality,
                     cookie_str=cookie_str,
                     fallback_cookie_file=fallback_cookie_file,
+                    thumbnail_url=task.thumbnail_url,
                 )
             logger.info(f"[{composite_key}] 자동 라이브 녹화 시작 (quality={quality}).")
 
