@@ -174,6 +174,7 @@ export interface VodSettingsUpdate {
     vod_default_quality?: string;
     vod_max_speed?: number;
     vod_format?: string;
+    keep_download_parts?: boolean;
 }
 
 export interface ChatSettingsUpdate {
@@ -402,15 +403,13 @@ export const api = {
         return res.data;
     },
     updateDownloadSettings: async (
-        keep_download_parts: boolean,
         max_record_retries: number,
         chzzk_stream_mode: "standard" | "request-timemachine" | "force-timemachine",
         chzzk_time_machine_offset: number,
         save_live_preview: boolean,
         live_filename_template: string,
     ) => {
-        const res = await client.put("/settings/download", {
-            keep_download_parts,
+        const res = await client.put("/settings/live", {
             max_record_retries,
             chzzk_stream_mode,
             chzzk_time_machine_offset,

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Download, Film, MessageSquare, RefreshCcw, Save } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Film, MessageSquare, Radio, RefreshCcw, Save } from "lucide-react";
 import { useSettingsSave } from "../../hooks/useSettingsSave";
 import { api, type Settings as SettingsType } from "../../api/client";
 import { Button, Card, CardHeader, Field, Input, Select, SettingRow, Switch } from "../ui/primitives";
@@ -24,13 +24,17 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [vodMaxSpeed, setVodMaxSpeed] = useState(0);
     const [vodFormat, setVodFormat] = useState("mp4");
     const [chatArchiveEnabled, setChatArchiveEnabled] = useState(false);
+    const initialized = useRef(false);
     // 세 영역이 각각 따로 저장되므로 훅도 따로 둔다 — 저장 중 표시가 서로 섞이지 않는다.
-    const { saving: downloadSaving, save: saveDownload } = useSettingsSave(onSaved);
+    const { saving: liveSaving, save: saveLive } = useSettingsSave(onSaved);
     const { saving: vodSaving, save: saveVod } = useSettingsSave(onSaved);
     const { saving: chatSaving, save: saveChat } = useSettingsSave(onSaved);
 
     useEffect(() => {
-        if (!settings) return;
+        // Save 후 부모가 설정을 새로 불러와도 다른 섹션의 미저장값은 보존한다.
+        // 탭을 나갔다 돌아오면 컴포넌트가 다시 마운트되어 최신 값을 읽는다.
+        if (!settings || initialized.current) return;
+        initialized.current = true;
         setKeepParts(settings.keep_download_parts);
         setMaxRetries(settings.max_record_retries);
         setStreamMode(settings.chzzk_stream_mode ?? (settings.chzzk_time_machine_enabled ? "force-timemachine" : "standard"));
@@ -66,18 +70,19 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
             vod_default_quality: vodDefaultQuality,
             vod_max_speed: vodMaxSpeed,
             vod_format: vodFormat,
+            keep_download_parts: keepParts,
         }),
         success: "VOD 설정이 저장되었습니다.",
         failure: "VOD 설정 저장에 실패했습니다.",
     });
 
-    const handleSaveDownload = () => saveDownload({
+    const handleSaveLive = () => saveLive({
         request: () => api.updateDownloadSettings(
-            keepParts, maxRetries, streamMode, timeMachineOffset,
+            maxRetries, streamMode, timeMachineOffset,
             saveLivePreview, liveFilenameTemplate,
         ),
-        success: "다운로드 설정이 저장되었습니다.",
-        failure: "다운로드 설정 저장에 실패했습니다.",
+        success: "라이브 설정이 저장되었습니다.",
+        failure: "라이브 설정 저장에 실패했습니다.",
     });
 
     const handleSaveChat = () => saveChat({
@@ -119,18 +124,18 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                         ]}
                     />
                 </Field>
+                <SettingRow
+                    label="미완료 VOD 파일 보관 (.part)"
+                    hint={keepParts ? "취소 또는 오류가 발생해도 미완료 파일을 보관합니다." : "취소하거나 오류가 발생하면 미완료 파일을 삭제합니다."}
+                    control={<Switch checked={keepParts} onChange={setKeepParts} label="미완료 VOD 파일 보관" />}
+                />
                 <Button variant="primary" icon={Save} loading={vodSaving} onClick={handleSaveVod} className="w-full">
                     {vodSaving ? "저장 중..." : "VOD 설정 저장"}
                 </Button>
             </Card>
 
             <Card className="space-y-5">
-                <CardHeader icon={Download} title="다운로드 설정" />
-                <SettingRow
-                    label="미완료 파일 보관 (.part)"
-                    hint={keepParts ? "취소/오류 시 보관" : "취소 시 삭제"}
-                    control={<Switch checked={keepParts} onChange={setKeepParts} label="미완료 파일 보관" />}
-                />
+                <CardHeader icon={Radio} title="라이브 녹화 설정" />
                 <Field label="자동 재시도 횟수" hint="라이브 녹화 중단 시 자동 재시도 횟수.">
                     <Input type="number" min={0} max={100} value={maxRetries} onChange={(event) => setMaxRetries(parseInt(event.target.value) || 0)} />
                 </Field>
@@ -161,19 +166,21 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                 <Field label="라이브 파일명 형식" hint="{name}/{channel_name}, {title}/{live_title}, {channel_uid}, {category}, {date_year}, {live_date_year}, {download_date_year}, {live_date_month}, {live_date_day}, {live_date_hour}, {live_date_minute}, {live_date_second}, {quality}, {extension} 사용 가능. 확장자는 자동 추가됩니다.">
                     <Input value={liveFilenameTemplate} onChange={(event) => setLiveFilenameTemplate(event.target.value)} maxLength={240} />
                 </Field>
+                <Button icon={liveSaving ? RefreshCcw : Save} loading={liveSaving} onClick={handleSaveLive} className="w-full">
+                    {liveSaving ? "저장 중..." : "라이브 설정 저장"}
+                </Button>
+            </Card>
+
+            <Card className="space-y-5">
+                <CardHeader icon={MessageSquare} title="실시간 채팅 설정" />
                 <SettingRow
-                    label="실시간 채팅 저장"
-                    hint={chatArchiveEnabled ? "녹화 시 채팅을 JSONL 파일로 자동 저장합니다." : "채팅을 저장하지 않습니다."}
-                    control={<Switch checked={chatArchiveEnabled} onChange={setChatArchiveEnabled} label="실시간 채팅 저장" />}
+                    label="라이브 채팅 저장"
+                    hint={chatArchiveEnabled ? "녹화 중 채팅을 JSONL 파일로 자동 저장합니다." : "라이브 채팅을 저장하지 않습니다."}
+                    control={<Switch checked={chatArchiveEnabled} onChange={setChatArchiveEnabled} label="라이브 채팅 저장" />}
                 />
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <Button icon={downloadSaving ? RefreshCcw : Save} loading={downloadSaving} onClick={handleSaveDownload} className="flex-1">
-                        {downloadSaving ? "저장 중..." : "다운로드 설정 저장"}
-                    </Button>
-                    <Button icon={MessageSquare} loading={chatSaving} onClick={handleSaveChat} className="flex-1">
-                        {chatSaving ? "저장 중..." : "채팅 설정 저장"}
-                    </Button>
-                </div>
+                <Button icon={chatSaving ? RefreshCcw : Save} loading={chatSaving} onClick={handleSaveChat} className="w-full">
+                    {chatSaving ? "저장 중..." : "채팅 설정 저장"}
+                </Button>
             </Card>
         </div>
     );

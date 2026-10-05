@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.17] - 2026-10-05
+
+### Changed
+- **Separated VOD and live settings** — VOD-only partial-file handling now stays with VOD options, live recording controls use a dedicated API, and live chat archiving has its own section.
+- **Responsive VOD task cards** — reflowed narrow cards so task details use the full available width instead of being clipped beside the status icon.
+
 ## [2.0.16] - 2026-10-05
 
 ### Changed
@@ -401,7 +407,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.16...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.17...HEAD
+[2.0.17]: https://github.com/ProofPage/Phrolova/compare/v2.0.16...v2.0.17
 [2.0.16]: https://github.com/ProofPage/Phrolova/compare/v2.0.15...v2.0.16
 [2.0.15]: https://github.com/ProofPage/Phrolova/compare/v2.0.14...v2.0.15
 [2.0.14]: https://github.com/ProofPage/Phrolova/compare/v2.0.13...v2.0.14

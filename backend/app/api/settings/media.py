@@ -20,9 +20,11 @@ router = APIRouter(prefix=SETTINGS_PREFIX, tags=SETTINGS_TAGS)
 
 
 class DownloadSettingsUpdateRequest(BaseModel):
-    """다운로드 설정 업데이트 요청."""
+    """라이브 녹화 설정 업데이트 요청."""
 
-    keep_download_parts: bool = Field(..., description="VOD 다운로드 중단 시 .part 파일 유지 여부")
+    # /settings/download를 사용하는 구버전 앱 호환 필드. 신규 클라이언트는
+    # VOD 설정 API를 통해 이 값을 저장한다.
+    keep_download_parts: Optional[bool] = Field(None, description="구버전 클라이언트 호환 필드")
     max_record_retries: int = Field(..., ge=0, le=100, description="라이브 녹화 자동 재시도 횟수")
     chzzk_stream_mode: Optional[str] = Field(
         None,
@@ -48,6 +50,7 @@ class VodSettingsUpdateRequest(BaseModel):
     vod_default_quality: Optional[str] = Field(None, description="기본 화질 (best, 1080p, 720p, 480p)")
     vod_max_speed: Optional[int] = Field(None, ge=0, le=1000, description="최대 다운로드 속도 (MB/s, 0=무제한)")
     vod_format: Optional[str] = Field(None, description="VOD 다운로드 포맷 (mp4, mkv, ts)")
+    keep_download_parts: Optional[bool] = Field(None, description="VOD 다운로드 중단 시 .part 파일 유지 여부")
 
 
 class ChatSettingsUpdateRequest(BaseModel):
@@ -56,11 +59,13 @@ class ChatSettingsUpdateRequest(BaseModel):
     chat_archive_enabled: bool = Field(..., description="녹화 시 채팅 자동 아카이빙 여부")
 
 
-@router.put("/download", summary="다운로드/녹화 설정 업데이트")
+@router.put("/live", summary="라이브 녹화 설정 업데이트")
+@router.put("/download", summary="라이브 녹화 설정 업데이트", include_in_schema=False)
 async def update_download_settings(req: DownloadSettingsUpdateRequest):
-    """다운로드 및 녹화 관련 설정을 업데이트합니다."""
+    """라이브 녹화 설정을 업데이트합니다. /download는 구버전 호환 경로입니다."""
     settings = get_settings()
-    settings.keep_download_parts = req.keep_download_parts
+    if req.keep_download_parts is not None:
+        settings.keep_download_parts = req.keep_download_parts
     settings.max_record_retries = req.max_record_retries
     stream_mode = req.chzzk_stream_mode
     if stream_mode is None and req.chzzk_time_machine_enabled is not None:
@@ -79,10 +84,9 @@ async def update_download_settings(req: DownloadSettingsUpdateRequest):
     if req.live_filename_template is not None:
         settings.live_filename_template = req.live_filename_template
 
-    env_updates = {
-        "KEEP_DOWNLOAD_PARTS": str(req.keep_download_parts).lower(),
-        "MAX_RECORD_RETRIES": str(req.max_record_retries),
-    }
+    env_updates = {"MAX_RECORD_RETRIES": str(req.max_record_retries)}
+    if req.keep_download_parts is not None:
+        env_updates["KEEP_DOWNLOAD_PARTS"] = str(req.keep_download_parts).lower()
     if stream_mode is not None:
         env_updates["CHZZK_STREAM_MODE"] = stream_mode
     if time_machine_offset is not None:
@@ -98,7 +102,7 @@ async def update_download_settings(req: DownloadSettingsUpdateRequest):
         print(f"설정 파일 저장 실패: {e}")
 
     return {
-        "message": "다운로드 설정이 업데이트되었습니다.",
+        "message": "라이브 녹화 설정이 업데이트되었습니다.",
         "settings": {
             "keep_download_parts": settings.keep_download_parts,
             "max_record_retries": settings.max_record_retries,
@@ -117,6 +121,10 @@ async def update_vod_settings(req: VodSettingsUpdateRequest):
     """VOD 다운로드 설정을 업데이트합니다."""
     settings = get_settings()
     env_updates: dict[str, str] = {}
+
+    if req.keep_download_parts is not None:
+        settings.keep_download_parts = req.keep_download_parts
+        env_updates["KEEP_DOWNLOAD_PARTS"] = str(req.keep_download_parts).lower()
 
     # ── vod_max_concurrent ──
     if req.vod_max_concurrent is not None:
@@ -166,6 +174,7 @@ async def update_vod_settings(req: VodSettingsUpdateRequest):
             "vod_default_quality": settings.vod_default_quality,
             "vod_max_speed": settings.vod_max_speed,
             "vod_format": settings.vod_format,
+            "keep_download_parts": settings.keep_download_parts,
         },
     }
 

@@ -172,9 +172,9 @@ export default function VodDownload() {
                 {isInitialLoad ? (
                     <div className="space-y-3">
                         {[1, 2, 3].map(i => (
-                            <div key={i} className="bg-surface-2 border border-line p-4 rounded-[var(--radius-card)] flex items-start gap-4 animate-pulse">
-                                <div className="w-24 h-20 bg-surface-3 rounded-[var(--radius-control)] shrink-0" />
-                                <div className="flex-1 space-y-3 pt-2">
+                            <div key={i} className="grid w-full min-w-0 grid-cols-[auto_auto_1fr] gap-x-3 gap-y-2 p-3 sm:flex sm:items-start sm:gap-4 sm:p-4 bg-surface-2 border border-line rounded-[var(--radius-card)] animate-pulse">
+                                <div className="col-start-2 row-start-1 w-12 h-12 bg-surface-3 rounded-[var(--radius-control)] shrink-0 sm:w-24 sm:h-20" />
+                                <div className="col-span-3 row-start-2 w-full min-w-0 space-y-3 pt-1 sm:col-span-1 sm:row-auto sm:flex-1 sm:pt-2">
                                     <div className="skeleton h-4 rounded w-1/3" />
                                     <div className="skeleton w-full h-2 rounded-full" />
                                     <div className="skeleton h-3 rounded w-1/4" />
@@ -194,7 +194,7 @@ export default function VodDownload() {
                                 onDragOver={(e) => handleDragOver(e, index)}
                                 onDrop={(e) => handleDrop(e, index)}
                                 className={clsx(
-                                    "transition-opacity",
+                                    "min-w-0 transition-opacity",
                                     draggedIndex === index && "opacity-50"
                                 )}
                             >
@@ -257,36 +257,43 @@ function TaskCard({ task, onCancel, onPause, onResume, onRetry, onOpenLocation }
                     : "bg-info";
 
     return (
-        <div className="bg-surface-2 border border-line p-4 rounded-[var(--radius-card)] flex items-start gap-4 hover:border-line-strong transition-colors surface-raise">
+        <div className="grid w-full min-w-0 grid-cols-[auto_auto_1fr] gap-x-3 gap-y-2 p-3 sm:flex sm:items-start sm:gap-4 sm:p-4 bg-surface-2 border border-line rounded-[var(--radius-card)] hover:border-line-strong transition-colors surface-raise">
             {/* 드래그 핸들 */}
-            <div className="flex items-center justify-center text-ink-faint hover:text-ink-muted cursor-grab active:cursor-grabbing pt-8">
+            <div className="col-start-1 row-start-1 flex items-center justify-center text-ink-faint hover:text-ink-muted cursor-grab active:cursor-grabbing sm:pt-8">
                 <GripVertical className="w-5 h-5" />
             </div>
 
             {/* 상태 아이콘 영역 */}
-            <div className="w-24 h-20 bg-surface-1 border border-line rounded-[var(--radius-control)] flex items-center justify-center flex-shrink-0">
-                {task.state === "completed" && <CheckCircle className="text-ok w-8 h-8" />}
+            <div className="col-start-2 row-start-1 w-12 h-12 bg-surface-1 border border-line rounded-[var(--radius-control)] flex items-center justify-center shrink-0 sm:w-24 sm:h-20">
+                {task.state === "completed" && <CheckCircle className="text-ok w-6 h-6 sm:w-8 sm:h-8" />}
                 {task.state === "downloading" && (
-                    <div className="text-ink font-mono font-bold text-lg">
+                    <div className="text-ink font-mono font-bold text-sm sm:text-lg">
                         {Math.round(task.progress)}%
                     </div>
                 )}
-                {task.state === "paused" && <Pause className="text-warn w-8 h-8" />}
-                {task.state === "error" && <AlertCircle className="text-danger w-8 h-8" />}
-                {task.state === "idle" && <Clock className="text-ink-faint w-8 h-8" />}
+                {task.state === "paused" && <Pause className="text-warn w-6 h-6 sm:w-8 sm:h-8" />}
+                {task.state === "error" && <AlertCircle className="text-danger w-6 h-6 sm:w-8 sm:h-8" />}
+                {task.state === "idle" && <Clock className="text-ink-faint w-6 h-6 sm:w-8 sm:h-8" />}
                 {task.state === "cancelling" && (
                     <Loader2 className="text-danger w-6 h-6 animate-spin" />
                 )}
             </div>
 
-            <div className="flex-1 min-w-0 w-full space-y-2">
+            <span className={clsx(
+                "col-start-3 row-start-1 inline-flex items-center justify-self-end self-center text-[11px] font-medium px-2 py-1 rounded-full border whitespace-nowrap sm:hidden",
+                statusBadgeClass,
+            )}>
+                {statusLabels[task.state] || task.state}
+            </span>
+
+            <div className="col-span-3 row-start-2 w-full min-w-0 space-y-2 sm:col-span-1 sm:row-auto sm:flex-1">
                 <div className="flex justify-between items-start gap-2">
                     <h4 className="font-semibold text-ink truncate text-sm flex-1">
                         {task.title}
                     </h4>
                     <span
                         className={clsx(
-                            "text-[11px] font-medium px-2 py-1 rounded-full border capitalize whitespace-nowrap",
+                            "hidden sm:inline-flex text-[11px] font-medium px-2 py-1 rounded-full border capitalize whitespace-nowrap",
                             statusBadgeClass
                         )}
                     >

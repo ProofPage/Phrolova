@@ -74,10 +74,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## Phrolova branding and Korean interface
+          ## VOD and live settings
 
-          - Replaced remaining Rookery labels with Phrolova in the app name, startup screen, and sidebar.
-          - Localized page headings, navigation, settings labels, loading text, and status badges into Korean.
+          - Separated VOD-only settings, including partial-file retention, from live recording controls.
+          - Added a dedicated live settings API while keeping the legacy settings route available for older clients.
+          - Moved live chat archiving to its own settings section.
+
+          ## Responsive download queue
+
+          - Reflowed narrow VOD task cards so titles, status, progress, and actions fit the available screen width.
 
           Download the Windows x64 executable and replace the existing Rookery.exe. Settings and saved data are preserved.
           '@
