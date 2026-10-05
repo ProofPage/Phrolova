@@ -74,16 +74,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## Live recording
+          ## First-run setup
 
-          - Fixed live recording startup with Streamlink by removing an unsupported HLS-only option from FFmpeg's pipe input.
-          - Streamlink continues to receive HLS while FFmpeg records the media stream.
+          - Default live recordings to `Downloads/Phrolova/Live` and VOD downloads to `Downloads/Phrolova/Video` for new installations.
 
-          ## VOD downloads and task cleanup
+          ## VOD downloads
 
-          - Keep VOD downloads on yt-dlp with FFmpeg available for merging and post-processing.
-          - Allow queued, completed, and failed tasks to be cleared; downloading and paused tasks are preserved.
-          - Persist cleanup and retry deletion of cancelled partial files when Windows releases file locks.
+          - Center the task drag handle for consistent alignment across download cards.
+          - Clarify feature labels as high-quality support and automatic remuxing.
 
           Download the Windows x64 executable and replace the existing application executable. Settings and saved data are preserved.
           '@

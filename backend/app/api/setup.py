@@ -56,12 +56,20 @@ class SetupCompleteRequest(BaseModel):
 @router.get("/status", summary="초기 설정 완료 여부 확인")
 async def get_setup_status():
     """초기 설정이 필요한지 반환한다."""
-    return {
-        "needs_setup": not is_setup_complete(),
+    needs_setup = not is_setup_complete()
+    response = {
+        "needs_setup": needs_setup,
         # Docker 지원은 걷어냈지만 필드는 남긴다. 이미 설치된 구버전 화면이
         # 이 키를 읽으므로, 없애면 그쪽에서 undefined를 만난다.
         "is_docker": False,
     }
+    if needs_setup:
+        downloads_dir = Path.home() / "Downloads" / "Phrolova"
+        response["default_directories"] = {
+            "live_download_dir": str(downloads_dir / "Live"),
+            "vod_download_dir": str(downloads_dir / "Video"),
+        }
+    return response
 
 
 @router.post("/complete", summary="초기 설정 완료 처리")

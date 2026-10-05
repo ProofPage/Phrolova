@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.24] - 2026-10-05
+
+### Changed
+- **First-run save paths** — Default new installations to `Downloads/Phrolova/Live` for live recordings and `Downloads/Phrolova/Video` for VOD downloads.
+- **VOD download screen** — Center the task drag handle and clarify the feature labels for high-quality support and automatic remuxing.
+
 ## [2.0.23] - 2026-10-05
 
 ### Fixed
@@ -449,7 +455,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.23...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.24...HEAD
+[2.0.24]: https://github.com/ProofPage/Phrolova/compare/v2.0.23...v2.0.24
 [2.0.23]: https://github.com/ProofPage/Phrolova/compare/v2.0.22...v2.0.23
 [2.0.22]: https://github.com/ProofPage/Phrolova/compare/v2.0.21...v2.0.22
 [2.0.21]: https://github.com/ProofPage/Phrolova/compare/v2.0.20...v2.0.21

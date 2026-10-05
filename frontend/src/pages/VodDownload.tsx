@@ -160,7 +160,7 @@ export default function VodDownload() {
                 </Field>
 
                 <div className="flex flex-wrap gap-2 pt-1">
-                    {["1080p60 지원", "MP4 자동 리먹싱", "클립 다운로드", "다중 대기열"].map((feature) => (
+                    {["고화질 지원", "자동 리먹싱", "클립 다운로드", "다중 대기열"].map((feature) => (
                         <span key={feature} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-3 border border-line text-[11px] text-ink-faint">
                             <CheckCircle className="w-3 h-3 text-ok" /> {feature}
                         </span>
@@ -278,7 +278,7 @@ function TaskCard({ task, onCancel, onPause, onResume, onRetry, onOpenLocation }
     return (
         <div className="grid w-full min-w-0 grid-cols-[auto_auto_1fr] gap-x-3 gap-y-2 p-3 sm:flex sm:items-start sm:gap-4 sm:p-4 bg-surface-2 border border-line rounded-[var(--radius-card)] hover:border-line-strong transition-colors surface-raise">
             {/* 드래그 핸들 */}
-            <div className="col-start-1 row-start-1 flex items-center justify-center text-ink-faint hover:text-ink-muted cursor-grab active:cursor-grabbing sm:pt-8">
+            <div className="col-start-1 row-start-1 flex self-stretch items-center justify-center text-ink-faint hover:text-ink-muted cursor-grab active:cursor-grabbing">
                 <GripVertical className="w-5 h-5" />
             </div>
 

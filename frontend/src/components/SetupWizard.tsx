@@ -9,6 +9,10 @@ import { Button, Input } from "./ui/primitives";
 // ── Types ─────────────────────────────────────────────
 
 interface SetupWizardProps {
+    defaultDirectories: {
+        live_download_dir: string;
+        vod_download_dir: string;
+    };
     onComplete: () => void;
 }
 
@@ -259,18 +263,18 @@ function Step3({ data }: { data: FormData }) {
 
 // ── Main SetupWizard ─────────────────────────────────
 
-export function SetupWizard({ onComplete }: SetupWizardProps) {
+export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps) {
     const [step, setStep] = useState<Step>(1);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [data, setData] = useState<FormData>({
-        live_download_dir: "",
-        vod_download_dir: "",
+    const [data, setData] = useState<FormData>(() => ({
+        live_download_dir: defaultDirectories.live_download_dir,
+        vod_download_dir: defaultDirectories.vod_download_dir,
         output_format: "ts",
         recording_quality: "best",
         nid_aut: "",
         nid_ses: "",
-    });
+    }));
 
     const onChange = (k: keyof FormData, v: string) =>
         setData((prev) => ({ ...prev, [k]: v }));

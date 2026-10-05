@@ -21,11 +21,18 @@ import { CommandPalette } from "./components/ui/CommandPalette";
 function RootLayout() {
     // null은 "아직 확인 중" — 마법사를 깜빡 띄우지 않으려고 로딩 상태를 구분한다.
     const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
+    const [setupDirectories, setSetupDirectories] = useState<{
+        live_download_dir: string;
+        vod_download_dir: string;
+    } | null>(null);
 
     useEffect(() => {
         fetch("/api/setup/status")
             .then((r) => r.json())
-            .then((data) => setNeedsSetup(data.needs_setup))
+            .then((data) => {
+                setSetupDirectories(data.default_directories ?? null);
+                setNeedsSetup(data.needs_setup);
+            })
             .catch(() => setNeedsSetup(false));
     }, []);
 
@@ -43,7 +50,12 @@ function RootLayout() {
 
     return (
         <>
-            {needsSetup && <SetupWizard onComplete={() => setNeedsSetup(false)} />}
+            {needsSetup && setupDirectories && (
+                <SetupWizard
+                    defaultDirectories={setupDirectories}
+                    onComplete={() => setNeedsSetup(false)}
+                />
+            )}
             <CommandPalette />
             <Outlet />
         </>
