@@ -74,14 +74,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## Settings
+          ## VOD downloads
 
-          - Separate the VOD quality and live quality labels.
-          - Remove the misleading yt-dlp quality hint from the live settings screen and label first-run quality as live quality.
+          - Show useful error details when yt-dlp returns an empty failure message.
+          - Retry cleanup of Windows-locked partial files before switching CDN, and stop safely if old fragments cannot be removed.
 
-          ## Documentation
+          ## Live recording
 
-          - Rewrite the README to document Phrolova's current features, installation, settings, and troubleshooting.
+          - Capture FFmpeg diagnostics while it runs, including when the process exits unexpectedly.
+          - Mark an unexpected end of Streamlink input as a recording error so automatic reconnection can run.
 
           Download the Windows x64 executable and replace the existing application executable. Settings and saved data are preserved.
           '@

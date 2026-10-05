@@ -121,6 +121,7 @@ class YtdlpLivePipeline:
             logger.warning(f"[{self._channel_id}] 이미 녹화 중입니다.")
             return self._output_path or ""
 
+        self._intentional_stop = False
         page_url = str(stream_obj) if stream_obj else ""
         settings = get_settings()
         live_start_index: Optional[int] = None
@@ -311,11 +312,16 @@ class YtdlpLivePipeline:
             self._process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdin=asyncio.subprocess.PIPE,   # Streamlink가 HLS 데이터를 전달
-                stdout=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE,
             )
+            process = self._process
             self._state = RecordingState.RECORDING
             self._start_time = datetime.now()
+            stderr_task = asyncio.create_task(
+                self._drain_process_stderr(process),
+                name=f"ffmpeg-stderr-{self._channel_id}",
+            )
             self._feeder_task = asyncio.create_task(
                 self._run_streamlink_feeder(
                     hls_url=hls_url,
@@ -327,7 +333,10 @@ class YtdlpLivePipeline:
                 ),
                 name=f"streamlink-feeder-{self._channel_id}",
             )
-            asyncio.create_task(self._watch_process())
+            asyncio.create_task(
+                self._watch_process(process, stderr_task),
+                name=f"ffmpeg-watch-{self._channel_id}",
+            )
             asyncio.create_task(self._update_statistics_loop())
             if (
                 settings.save_live_preview
@@ -400,7 +409,11 @@ class YtdlpLivePipeline:
                     break
                 data = await asyncio.to_thread(stream_fd.read, 128 * 1024)
                 if not data:
-                    logger.info(f"[{self._channel_id}] Streamlink 라이브 스트림이 종료되었습니다.")
+                    logger.warning(
+                        f"[{self._channel_id}] 방송 감시 중 Streamlink 입력이 끝났습니다. "
+                        "녹화를 오류로 표시해 자동 재연결을 요청합니다."
+                    )
+                    self._state = RecordingState.ERROR
                     break
                 process.stdin.write(data)
                 await process.stdin.drain()
@@ -409,9 +422,11 @@ class YtdlpLivePipeline:
         except Exception as exc:
             if self._state == RecordingState.RECORDING:
                 if isinstance(exc, (BrokenPipeError, ConnectionResetError)):
+                    proc = self._process
+                    return_code = proc.returncode if proc is not None else None
                     logger.warning(
-                        f"[{self._channel_id}] FFmpeg 입력 파이프가 닫혔습니다. "
-                        "FFmpeg 종료 로그에서 원인을 확인합니다."
+                        f"[{self._channel_id}] FFmpeg 입력 파이프가 닫혔습니다 "
+                        f"(FFmpeg 종료 코드={return_code}). 종료 감시 로그에서 원인을 확인합니다."
                     )
                 else:
                     logger.error(
@@ -731,25 +746,41 @@ class YtdlpLivePipeline:
         self._streamlink_session = None
         self._feeder_task = None
 
-    async def _watch_process(self) -> None:
-        """ffmpeg 프로세스의 종료를 감시한다."""
-        proc = self._process
-        if proc is None:
-            return
+    @staticmethod
+    async def _drain_process_stderr(
+        proc: asyncio.subprocess.Process,
+    ) -> bytearray:
+        """Drain FFmpeg diagnostics while it runs and retain only the newest 16 KiB."""
+        tail = bytearray()
+        if proc.stderr is None:
+            return tail
+        while True:
+            chunk = await proc.stderr.read(4096)
+            if not chunk:
+                return tail
+            tail.extend(chunk)
+            if len(tail) > 16 * 1024:
+                del tail[:-16 * 1024]
 
+    async def _watch_process(
+        self,
+        proc: asyncio.subprocess.Process,
+        stderr_task: asyncio.Task[bytearray],
+    ) -> None:
+        """Watch FFmpeg and report its drained diagnostic tail on failure."""
         return_code = await proc.wait()
-
+        stderr_data = await stderr_task
         if return_code != 0 and not self._intentional_stop:
-            stderr_data = b""
-            if proc.stderr:
-                stderr_data = await proc.stderr.read()
-            err_text = stderr_data.decode(errors="replace")
+            err_text = stderr_data.decode(errors="replace").strip()
+            if not err_text:
+                err_text = "FFmpeg가 상세 오류 없이 종료했습니다. 입력 스트림 또는 프로세스 종료를 확인하세요."
             logger.error(
                 f"[{self._channel_id}] ffmpeg 비정상 종료 (code={return_code}): "
                 f"{err_text[-2000:]}"
             )
-            self._state = RecordingState.ERROR
-        elif self._state == RecordingState.RECORDING:
+            if self._process is proc:
+                self._state = RecordingState.ERROR
+        elif self._process is proc and self._state == RecordingState.RECORDING:
             self._state = RecordingState.COMPLETED
             logger.info(f"[{self._channel_id}] ffmpeg 프로세스 정상 종료.")
 

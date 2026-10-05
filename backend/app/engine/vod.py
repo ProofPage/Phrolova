@@ -409,7 +409,15 @@ class VodEngine:
             # CDN을 바꾸는 재시도는 이전 CDN에서 받은 조각을 이어받지 않는다.
             # 서명·세그먼트 체계가 다른 CDN의 조각이 한 파일에 섞이는 것을 막는다.
             if self._is_chzzk_url(task.url):
-                await self._cleanup_partial_files(task)
+                if not await self._cleanup_partial_files(task):
+                    task.state = VodDownloadState.ERROR
+                    task.error_message = (
+                        "이전 CDN의 임시 조각 파일을 삭제하지 못해 안전한 재시도를 중단했습니다. "
+                        "파일 잠금을 해제한 뒤 다시 시도해 주세요."
+                    )
+                    logger.error(f"[{task_id}] {task.error_message}")
+                    self._save_history()
+                    return
             # 일시적 오류일 가능성이 있으므로 잠시 대기 후 재시도.
             # 슬롯은 이미 반납했으니 기다리는 동안 대기 중인 다른 다운로드가 쓸 수 있다.
             await asyncio.sleep(3 * task.retry_count)  # 백오프: 3초, 6초, 9초...
@@ -465,7 +473,7 @@ class VodEngine:
             else:
                 import traceback
                 tb_str = traceback.format_exc()
-                error_msg = str(e)
+                error_msg = self._format_download_error(e)
 
                 # 이벤트 루프가 종료 중이면 재시도하지 않음
                 loop = asyncio.get_event_loop()
@@ -489,16 +497,16 @@ class VodEngine:
                 # 재시도 가능 여부 확인
                 if task.retry_count < task.max_retries:
                     logger.warning(
-                        f"[{task_id}] 다운로드 실패 (재시도 {task.retry_count}/{task.max_retries}): {e}"
+                        f"[{task_id}] 다운로드 실패 (재시도 {task.retry_count}/{task.max_retries}): {error_msg}"
                     )
-                    task.error_message = f"재시도 중... ({task.retry_count}/{task.max_retries}): {str(e)}"
+                    task.error_message = f"재시도 중... ({task.retry_count}/{task.max_retries}): {error_msg}"
                     return True
                 else:
                     # 최대 재시도 횟수 초과
-                    logger.error(f"[{task_id}] 최대 재시도 횟수 초과: {e}")
+                    logger.error(f"[{task_id}] 최대 재시도 횟수 초과: {error_msg}")
                     logger.error(f"[{task_id}] 상세 트레이스:\n{traceback.format_exc()}")
 
-                    task.error_message = f"재시도 {task.max_retries}회 실패: {str(e)}"
+                    task.error_message = f"재시도 {task.max_retries}회 실패: {error_msg}"
                     task.state = VodDownloadState.ERROR
                     if not get_settings().keep_download_parts:
                         await self._cleanup_partial_files(task)
@@ -937,10 +945,18 @@ class VodEngine:
         return rewrite(info)
 
     @staticmethod
-    async def _cleanup_partial_files(task: VodDownloadTask) -> None:
-        """Remove this task's partial files, retrying transient Windows file locks."""
+    def _format_download_error(exc: Exception) -> str:
+        """Keep yt-dlp failures useful when its exception has an empty message."""
+        message = str(exc).strip()
+        if message:
+            return message
+        return f"{type(exc).__name__}: 다운로드 도구가 상세 오류를 반환하지 않았습니다."
+
+    @staticmethod
+    async def _cleanup_partial_files(task: VodDownloadTask) -> bool:
+        """Remove partial files before retrying, including transient Windows locks."""
         if not task.expected_part_file:
-            return
+            return True
         expected_part = Path(task.expected_part_file)
         try:
             candidates = [expected_part]
@@ -953,26 +969,30 @@ class VodEngine:
                 )
         except OSError as exc:
             logger.warning(f"[{task.task_id}] 임시 VOD 조각 파일 정리 실패: {exc}")
-            return
+            return False
 
+        cleanup_succeeded = True
         for candidate in set(candidates):
             if not candidate.is_file():
                 continue
-            for attempt in range(6):
+            for attempt in range(10):
                 try:
                     await asyncio.to_thread(candidate.unlink, missing_ok=True)
                     break
                 except PermissionError as exc:
-                    if attempt == 5:
+                    if attempt == 9:
+                        cleanup_succeeded = False
                         logger.warning(
                             f"[{task.task_id}] 임시 VOD 조각 파일 정리 실패 "
                             f"(파일 잠금이 해제되지 않음): {exc}"
                         )
                     else:
-                        await asyncio.sleep(min(0.25 * (2 ** attempt), 1.0))
+                        await asyncio.sleep(min(0.25 * (2 ** attempt), 1.5))
                 except OSError as exc:
+                    cleanup_succeeded = False
                     logger.warning(f"[{task.task_id}] 임시 VOD 조각 파일 정리 실패: {exc}")
                     break
+        return cleanup_succeeded
 
     @staticmethod
     def _probe_media_duration(filepath: str) -> float:

@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.27] - 2026-10-05
+
+### Fixed
+- **VOD retry safety** — Show useful diagnostics when yt-dlp returns an empty error and stop CDN retries if Windows keeps the previous CDN's partial files locked.
+- **Live recording diagnostics** — Drain FFmpeg stderr while it runs and mark unexpected Streamlink input termination as a recording error so the monitor can reconnect.
+
 ## [2.0.26] - 2026-10-05
 
 ### Changed
@@ -467,7 +473,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.26...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.27...HEAD
+[2.0.27]: https://github.com/ProofPage/Phrolova/compare/v2.0.26...v2.0.27
 [2.0.26]: https://github.com/ProofPage/Phrolova/compare/v2.0.25...v2.0.26
 [2.0.25]: https://github.com/ProofPage/Phrolova/compare/v2.0.24...v2.0.25
 [2.0.24]: https://github.com/ProofPage/Phrolova/compare/v2.0.23...v2.0.24
