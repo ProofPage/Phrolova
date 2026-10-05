@@ -57,6 +57,7 @@ EXPECTED_API_ROUTES = {
     ("POST", "/api/settings/discord/test"),
     ("PUT", "/api/settings/download"),
     ("PUT", "/api/settings/general"),
+    ("PUT", "/api/settings/live"),
     ("PUT", "/api/settings/vod"),
     ("POST", "/api/setup/complete"),
     ("GET", "/api/setup/status"),

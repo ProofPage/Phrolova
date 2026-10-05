@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.19] - 2026-10-05
+
+### Fixed
+- **Legacy settings API compatibility** — kept `/api/settings/download` visible in OpenAPI alongside `/api/settings/live`, so old clients and API contract checks continue to recognize it.
+
 ## [2.0.18] - 2026-10-05
 
 ### Changed
@@ -416,7 +421,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.18...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.19...HEAD
+[2.0.19]: https://github.com/ProofPage/Phrolova/compare/v2.0.18...v2.0.19
 [2.0.18]: https://github.com/ProofPage/Phrolova/compare/v2.0.17...v2.0.18
 [2.0.17]: https://github.com/ProofPage/Phrolova/compare/v2.0.16...v2.0.17
 [2.0.16]: https://github.com/ProofPage/Phrolova/compare/v2.0.15...v2.0.16

@@ -84,6 +84,7 @@ jobs:
 
           - Centered icons and their adjacent text in shared card, page, collapsible-card, and metric headers.
           - Prevented external yt-dlp configuration from injecting global Cookie headers into app-managed VOD and live extraction.
+          - Kept the legacy download-settings API visible alongside the new live-settings API for older clients.
 
           Download the Windows x64 executable and replace the existing application executable. Settings and saved data are preserved.
           '@

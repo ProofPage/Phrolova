@@ -60,7 +60,7 @@ class ChatSettingsUpdateRequest(BaseModel):
 
 
 @router.put("/live", summary="라이브 녹화 설정 업데이트")
-@router.put("/download", summary="라이브 녹화 설정 업데이트", include_in_schema=False)
+@router.put("/download", summary="라이브 녹화 설정 업데이트 (구버전 호환)")
 async def update_download_settings(req: DownloadSettingsUpdateRequest):
     """라이브 녹화 설정을 업데이트합니다. /download는 구버전 호환 경로입니다."""
     settings = get_settings()
