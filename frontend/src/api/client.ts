@@ -37,6 +37,7 @@ export interface Channel {
     is_watchalong?: boolean | null;
     watchalong_tag?: string | null;
     auto_record_eligible?: boolean;
+    download_hold_reason?: string | null;
     is_live: boolean;
     channel_name?: string;
     title?: string;

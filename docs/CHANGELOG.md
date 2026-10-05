@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.33] - 2026-10-05
+
+### Fixed
+- **다운로드 보류 화면 반영** — 자동 다운로드가 조건에 따라 보류되어도 조회한 방송 정보를 즉시 전송합니다. 카드와 목록에서 LIVE 상태와 다운로드 보류 이유를 표시합니다.
+- **같이보기만 다운로드 보류 안내** — 일반 라이브 방송인지, 같이보기 콘텐츠 태그가 지정한 태그와 다른지 구분해 보류 이유를 표시합니다.
+
 ## [2.0.32] - 2026-10-05
 
 ### Changed
@@ -519,7 +525,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.32...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.33...HEAD
+[2.0.33]: https://github.com/ProofPage/Phrolova/compare/v2.0.32...v2.0.33
 [2.0.32]: https://github.com/ProofPage/Phrolova/compare/v2.0.31...v2.0.32
 [2.0.31]: https://github.com/ProofPage/Phrolova/compare/v2.0.30...v2.0.31
 [2.0.30]: https://github.com/ProofPage/Phrolova/compare/v2.0.29...v2.0.30

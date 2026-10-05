@@ -224,6 +224,24 @@ class Conductor:
             watchalong_tag=task.watchalong_tag,
         )
 
+    def _download_hold_reason(self, task: ChannelTask) -> Optional[str]:
+        if not task.is_live or not task.auto_record or task.is_recording or self._can_auto_record(task):
+            return None
+        condition = task.download_condition or get_settings().live_download_condition
+        if task.is_watchalong is None and task.broadcast_tags is None:
+            return "같이보기 정보 확인 대기"
+        if condition == "exclude_watchalong":
+            return "같이보기 방송을 제외하도록 설정되어 있습니다."
+        is_watchalong = matches_download_condition(
+            "watchalong", task.broadcast_tags, "같이보기",
+            is_watchalong=task.is_watchalong, watchalong_tag=task.watchalong_tag,
+        )
+        if task.is_watchalong is False and not is_watchalong:
+            return "일반 라이브 방송입니다. 같이보기 방송만 다운로드하도록 설정되어 있습니다."
+        if is_watchalong:
+            return "방송의 같이보기 태그가 지정한 태그와 일치하지 않습니다."
+        return "같이보기 태그 조건과 일치하지 않는 방송입니다."
+
     def set_auto_record(self, composite_key: str, value: bool) -> None:
         """채널의 자동 녹화 설정을 직접 지정한다."""
         task = self._channels.get(composite_key)
@@ -838,6 +856,8 @@ class Conductor:
 
                 was_live = task.is_live
                 self._apply_status(task, status)
+                # 조건 보류 및 자동 녹화 OFF도 방송 정보는 즉시 화면에 반영한다.
+                self._broadcast_status()
 
                 if task.platform == Platform.X_SPACES:
                     self._capture_space_master_url(composite_key, task, status)
@@ -1204,6 +1224,7 @@ class Conductor:
                 "download_condition": task.download_condition,
                 "watchalong_tags": task.watchalong_tags,
                 "auto_record_eligible": self._can_auto_record(task),
+                "download_hold_reason": self._download_hold_reason(task),
                 "last_error": getattr(task, "last_error", None),
             }
             pipe = task.pipeline

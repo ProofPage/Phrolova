@@ -1,3 +1,4 @@
+import { DownloadHoldStatus } from "./DownloadHoldStatus";
 import { AlertCircle, AlertTriangle, Eye, GripVertical, MessageSquare, Play, Square, Trash2, Users, Video } from "lucide-react";
 import { clsx } from "clsx";
 import { getChannelKey } from "../../utils/channel";
@@ -83,7 +84,7 @@ export function ChannelRow(props: ChannelItemProps) {
                         <Switch checked={channel.auto_record} onChange={() => onToggleAutoRecord(channel)} label={`${displayName} 자동 녹화`} />
                     </div>
                     <Button onClick={() => props.onEditDownloadSettings(channel)} className="text-xs">다운로드 설정</Button>
-                    {channel.is_live && channel.auto_record && !channel.recording?.is_recording && channel.auto_record_eligible === false && <p className="text-xs text-ink-faint">{channel.broadcast_tags == null ? "방송 태그 확인 대기" : "조건에 맞는 방송 대기"}</p>}
+                    <DownloadHoldStatus channel={channel} />
                 </div>
 
                 <div className="w-64 border-l border-line pl-4 shrink-0 space-y-2">
