@@ -55,15 +55,14 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
         }
     };
 
-    const placeholder = selectedPlatform === "chzzk" ? "치지직 채널 ID 입력"
-        : selectedPlatform === "youtube" ? "핸들(@username) 또는 채널 ID 입력"
+    const placeholder = selectedPlatform === "chzzk" ? "치지직 채널 ID"
+        : selectedPlatform === "youtube" ? "핸들(@username) 또는 채널 ID"
         : selectedPlatform === "x_spaces" ? "X 유저네임 입력"
-        : "채널 ID 입력";
+        : "채널 ID";
 
     return (
         <>
         <form onSubmit={handleSubmit} aria-label="감시 채널 추가" className="space-y-2.5">
-            <p className="text-xs font-medium text-ink-muted">채널 추가</p>
             <div className="flex w-full min-w-0 items-stretch gap-2">
             <div className="relative shrink-0">
                 <button

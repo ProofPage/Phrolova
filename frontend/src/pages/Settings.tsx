@@ -21,6 +21,7 @@ import { SystemTab } from "../components/settings/SystemTab";
 import { useConfirm } from "../components/ui/ConfirmModal";
 import { Badge, PageHeader } from "../components/ui/primitives";
 import { useToast } from "../components/ui/Toast";
+import { useLanguage } from "../contexts/LanguageContext";
 
 type TabId = "general" | "download" | "auth" | "notifications" | "appearance" | "system" | "info";
 
@@ -45,6 +46,7 @@ const EMPTY_DIRTY: Record<TabId, boolean> = {
 };
 
 export default function Settings() {
+    const { t } = useLanguage();
     const [settings, setSettings] = useState<SettingsType | null>(null);
     const [activeTab, setActiveTab] = useState<TabId>("general");
     const [dirtyTabs, setDirtyTabs] = useState<Record<TabId, boolean>>(EMPTY_DIRTY);
@@ -120,19 +122,19 @@ export default function Settings() {
         <div className="space-y-6">
             <PageHeader
                 icon={SettingsIcon}
-                eyebrow="프로그램 설정"
-                title="설정"
-                description="녹화 방식과 인증, 알림, 화면 테마 및 시스템 동작을 구성합니다."
+                eyebrow={t("프로그램 설정")}
+                title={t("설정")}
+                description={t("녹화 방식과 인증, 알림, 화면 테마 및 시스템 동작을 구성합니다.")}
                 meta={(
                     <>
-                        <Badge tone="neutral">7개 항목</Badge>
-                        {hasDirtyTab && <Badge tone="warn">저장하지 않은 변경사항</Badge>}
-                        {updateAvailable && <Badge tone="ok">업데이트 가능</Badge>}
+                        <Badge tone="neutral">{t("7개 항목")}</Badge>
+                        {hasDirtyTab && <Badge tone="warn">{t("저장하지 않은 변경사항")}</Badge>}
+                        {updateAvailable && <Badge tone="ok">{t("업데이트 가능")}</Badge>}
                     </>
                 )}
             />
 
-            <nav className="flex gap-1.5 p-1.5 bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-x-auto surface-raise" aria-label="설정 탭">
+            <nav className="flex gap-1.5 p-1.5 bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-x-auto surface-raise" aria-label={t("설정 탭")}>
                 {TABS.map((tab) => {
                     const Icon = tab.icon;
                     return (
@@ -142,7 +144,7 @@ export default function Settings() {
                             className={`flex shrink-0 items-center gap-2 px-3.5 py-2.5 rounded-[var(--radius-control)] text-[13px] font-medium whitespace-nowrap transition-all relative ${activeTab === tab.id ? "btn-ghost-primary text-ink shadow-sm" : "text-ink-faint hover:bg-surface-3 hover:text-ink-muted"}`}
                         >
                             <Icon className="w-4 h-4" />
-                            {tab.label}
+                            {t(tab.label)}
                             {dirtyTabs[tab.id] && <span className="w-2 h-2 rounded-full bg-warn absolute top-2 right-2 animate-pulse" />}
                             {tab.id === "system" && updateAvailable && <span className="w-2 h-2 rounded-full bg-ok absolute top-2 right-2 animate-pulse" />}
                         </button>

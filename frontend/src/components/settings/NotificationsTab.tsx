@@ -21,6 +21,7 @@ import {
     type Settings as SettingsType,
 } from "../../api/client";
 import { useToast } from "../ui/Toast";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { NotificationDeliveryCard } from "./NotificationDeliveryCard";
 import { getErrorMessage } from "../../utils/error";
 import {
@@ -53,6 +54,7 @@ interface Props {
 
 export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
     const toast = useToast();
+    const { t } = useLanguage();
 
     // ── 폼 상태 ──────────────────────────────────────
     const [botToken, setBotToken] = useState("");
@@ -189,8 +191,8 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
             */}
             <CollapsibleCard
                 icon={Bot}
-                title="디스코드에서 원격 제어까지 하려면"
-                description="Bot을 등록하면 /status, /start, /stop 같은 슬래시 커맨드로 녹화를 제어할 수 있습니다. 알림만 받을 거라면 설정하지 않아도 됩니다."
+                title={t("디스코드에서 원격 제어까지 하려면")}
+                description={t("Bot을 등록하면 /status, /start, /stop 같은 슬래시 커맨드로 녹화를 제어할 수 있습니다. 알림만 받을 거라면 설정하지 않아도 됩니다.")}
                 defaultOpen={!!botReady}
                 action={
                     // 봇은 선택 사항이므로 미설정을 경고로 보이지 않게 둔다.
@@ -351,7 +353,7 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                                             : "bg-surface-3 border-line-strong text-ink-faint hover:text-ink-muted")
                                     }
                                 >
-                                    {p.label}
+                                    {t(p.label)}
                                 </button>
                             ))}
                         </div>
@@ -370,10 +372,10 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
 
                     <div>
                         <p className="text-[13px] font-medium text-ink-muted mb-1">
-                            멘션을 붙일 알림
+                            {t("멘션을 붙일 알림")}
                         </p>
                         <p className="text-xs text-ink-faint mb-3">
-                            아무것도 고르지 않으면 멘션 없이 전송됩니다.
+                            {t("아무것도 고르지 않으면 멘션 없이 전송됩니다.")}
                         </p>
                         <div className="flex flex-wrap gap-2">
                             {kinds.map((kind) => {
@@ -396,7 +398,7 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                                         }
                                     >
                                         {on && <BellRing className="w-3 h-3" />}
-                                        {kind.label}
+                                        {t(kind.label)}
                                     </button>
                                 );
                             })}

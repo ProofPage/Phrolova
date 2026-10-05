@@ -8,6 +8,18 @@
 
 ## [Unreleased]
 
+## [2.0.37] - 2026-10-06
+
+### Added
+- **YouTube 채널 다운로드** — `@핸들`, 채널 ID 등 채널 주소를 입력하면 채널 영상들을 다운로드 대기열에 추가합니다.
+- **한국어·영어·일본어 언어 선택** — 외관 설정에서 앱 언어를 선택하고, 선택한 언어를 저장해 다시 실행해도 유지합니다.
+
+### Changed
+- **다시보기 다운로드 화면** — 플랫폼 선택과 영상 주소 입력을 대시보드 헤더 아래에 배치하고, 대기·진행·오류 상태를 한눈에 확인하도록 정리했습니다.
+- **라이브 채팅 저장 기본값** — 녹화 중 JSONL 채팅 저장을 기본적으로 끕니다.
+- **통계·설정 번역** — 영어와 일본어 화면 문구, 날짜·시간 표기를 추가하고 인증·알림·시스템 설정까지 번역 범위를 넓혔습니다.
+- **채널 삭제 버튼** — 카드와 목록 보기에서 스트리밍 상태나 마우스 오버와 관계없이 삭제 버튼을 항상 표시합니다.
+
 ## [2.0.36] - 2026-10-06
 
 ### Changed
@@ -549,7 +561,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.36...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.37...HEAD
+[2.0.37]: https://github.com/ProofPage/Phrolova/compare/v2.0.36...v2.0.37
 [2.0.36]: https://github.com/ProofPage/Phrolova/compare/v2.0.35...v2.0.36
 [2.0.35]: https://github.com/ProofPage/Phrolova/compare/v2.0.34...v2.0.35
 [2.0.34]: https://github.com/ProofPage/Phrolova/compare/v2.0.33...v2.0.34

@@ -378,7 +378,7 @@ export const api = {
 
     // VOD
     downloadVod: async (url: string, quality: string = "best", output_dir?: string) => {
-        const res = await client.post<{ task_id: string; message: string }>("/vod/download", {
+        const res = await client.post<{ task_id: string; task_ids: string[]; added_count: number; message: string }>("/vod/download", {
             url,
             quality,
             output_dir,

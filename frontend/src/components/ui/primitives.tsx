@@ -17,6 +17,7 @@ import {
 } from "react";
 import { clsx } from "clsx";
 import { ChevronDown, Loader2, type LucideIcon } from "lucide-react";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 /* ── PageHeader ──────────────────────────────────────── */
 
@@ -39,24 +40,28 @@ export function PageHeader({
     description: ReactNode;
     meta?: ReactNode;
     actions?: ReactNode;
-    actionsPlacement?: "inline" | "below";
+    actionsPlacement?: "inline" | "inline-top" | "below";
 }) {
+    const { t } = useLanguage();
+    const actionsBelow = actionsPlacement === "below";
+    const actionsTopAligned = actionsPlacement === "inline-top";
+
     return (
         <header className="page-hero relative border border-line rounded-[calc(var(--radius-card)+4px)] p-5 sm:p-6">
             <div aria-hidden="true" className="page-hero-decoration pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" />
-            <div className={`relative z-10 flex ${actionsPlacement === "below" ? "flex-col" : "flex-col md:flex-row md:items-center"} justify-between gap-5`}>
-                <div className={clsx("flex gap-4 min-w-0", actionsPlacement === "below" ? "items-start" : "items-center")}>
-                    <span className={clsx("page-hero-icon grid place-items-center w-11 h-11 rounded-[var(--radius-card)] shrink-0", actionsPlacement === "below" && "mt-1")}>
+            <div className={`relative z-10 flex ${actionsBelow ? "flex-col" : `flex-col md:flex-row ${actionsTopAligned ? "md:items-start" : "md:items-center"}`} justify-between gap-5`}>
+                <div className={clsx("flex gap-4 min-w-0", actionsBelow || actionsTopAligned ? "items-start" : "items-center")}>
+                    <span className={clsx("page-hero-icon grid place-items-center w-11 h-11 rounded-[var(--radius-card)] shrink-0", actionsBelow && "mt-1", actionsTopAligned && "mt-4")}>
                         {createElement(icon, { className: "w-5 h-5" })}
                     </span>
                     <div className="min-w-0">
-                        {eyebrow && <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-faint mb-1.5">{eyebrow}</p>}
-                        <h1 className={clsx("text-[24px] sm:text-[28px] font-bold tracking-[-0.035em] text-ink", actionsPlacement === "below" ? "leading-tight" : "leading-none")}>{title}</h1>
-                        <p className="text-[13px] sm:text-[14px] text-ink-faint mt-2 max-w-2xl leading-relaxed">{description}</p>
+                        {eyebrow && <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-faint mb-1.5">{t(eyebrow)}</p>}
+                        <h1 className={clsx("text-[24px] sm:text-[28px] font-bold tracking-[-0.035em] text-ink", actionsBelow ? "leading-tight" : "leading-none")}>{t(title)}</h1>
+                        <p className="text-[13px] sm:text-[14px] text-ink-faint mt-2 max-w-2xl leading-relaxed">{typeof description === "string" ? t(description) : description}</p>
                         {meta && <div className="flex flex-wrap items-center gap-2 mt-3">{meta}</div>}
                     </div>
                 </div>
-                {actions && <div className={actionsPlacement === "below" ? "w-full border-t border-line/80 pt-4" : "shrink-0 md:max-w-[44%]"}>{actions}</div>}
+                {actions && <div className={actionsBelow ? "w-full border-t border-line/80 pt-4" : "shrink-0 md:max-w-[44%]"}>{actions}</div>}
             </div>
         </header>
     );
@@ -77,6 +82,7 @@ export function MetricCard({
     detail?: ReactNode;
     tone?: "primary" | "live" | "ok" | "warn" | "info";
 }) {
+    const { t } = useLanguage();
     const color = tone === "live" ? "var(--color-live)"
         : tone === "ok" ? "var(--color-ok)"
         : tone === "warn" ? "var(--color-warn)"
@@ -88,9 +94,9 @@ export function MetricCard({
             <span className="absolute inset-x-0 top-0 h-px opacity-70" style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} />
             <div className="flex items-center justify-between gap-4">
                 <div>
-                    <p className="text-[11px] font-medium text-ink-faint uppercase tracking-[0.08em]">{label}</p>
+                    <p className="text-[11px] font-medium text-ink-faint uppercase tracking-[0.08em]">{t(label)}</p>
                     <p className="text-2xl font-bold tracking-tight text-ink mt-2">{value}</p>
-                    {detail && <p className="text-xs text-ink-faint mt-1.5">{detail}</p>}
+                    {detail && <p className="text-xs text-ink-faint mt-1.5">{typeof detail === "string" ? t(detail) : detail}</p>}
                 </div>
                 <span className="w-9 h-9 rounded-[var(--radius-control)] grid place-items-center" style={{ color, backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)` }}>
                     {createElement(icon, { className: "w-[18px] h-[18px]" })}
@@ -141,6 +147,7 @@ export function CardHeader({
     action?: ReactNode;
     tone?: "primary" | "danger" | "warn" | "ok";
 }) {
+    const { t } = useLanguage();
     const toneColor =
         tone === "danger" ? "var(--color-danger)"
         : tone === "warn" ? "var(--color-warn)"
@@ -162,9 +169,9 @@ export function CardHeader({
                     </span>
                 )}
                 <div className="min-w-0">
-                    <h3 className="text-[15px] font-semibold text-ink leading-tight">{title}</h3>
+                    <h3 className="text-[15px] font-semibold text-ink leading-tight">{t(title)}</h3>
                     {description && (
-                        <p className="text-[13px] text-ink-faint mt-1 leading-relaxed">{description}</p>
+                        <p className="text-[13px] text-ink-faint mt-1 leading-relaxed">{typeof description === "string" ? t(description) : description}</p>
                     )}
                 </div>
             </div>
@@ -269,19 +276,20 @@ export function Field({
     children: ReactNode;
     error?: string;
 }) {
+    const { t } = useLanguage();
     return (
         <div className="space-y-2">
             <label
                 htmlFor={htmlFor}
                 className="block text-[13px] font-medium text-ink-muted"
             >
-                {label}
+                {t(label)}
             </label>
             {children}
             {error ? (
-                <p className="text-xs text-danger">{error}</p>
+                <p className="text-xs text-danger">{t(error)}</p>
             ) : (
-                hint && <p className="text-xs text-ink-faint leading-relaxed">{hint}</p>
+                hint && <p className="text-xs text-ink-faint leading-relaxed">{typeof hint === "string" ? t(hint) : hint}</p>
             )}
         </div>
     );
@@ -299,6 +307,7 @@ export function SettingRow({
     control: ReactNode;
     className?: string;
 }) {
+    const { t } = useLanguage();
     return (
         <div
             className={clsx(
@@ -307,8 +316,8 @@ export function SettingRow({
             )}
         >
             <div className="min-w-0">
-                <p className="text-[13px] font-medium text-ink-muted">{label}</p>
-                {hint && <p className="text-xs text-ink-faint mt-0.5 leading-relaxed">{hint}</p>}
+                <p className="text-[13px] font-medium text-ink-muted">{t(label)}</p>
+                {hint && <p className="text-xs text-ink-faint mt-0.5 leading-relaxed">{typeof hint === "string" ? t(hint) : hint}</p>}
             </div>
             <div className="shrink-0">{control}</div>
         </div>
@@ -318,7 +327,8 @@ export function SettingRow({
 /* ── Input ──────────────────────────────────────────── */
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
-    function Input({ className, ...props }, ref) {
+    function Input({ className, placeholder, ...props }, ref) {
+        const { t } = useLanguage();
         return (
             <input
                 ref={ref}
@@ -329,6 +339,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
                     "disabled:opacity-50 disabled:cursor-not-allowed",
                     className,
                 )}
+                placeholder={placeholder ? t(placeholder) : placeholder}
                 {...props}
             />
         );
@@ -338,6 +349,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement> & {
     options: { value: string; label: string }[];
 }>(function Select({ className, options, ...props }, ref) {
+    const { t } = useLanguage();
     return (
         <div className="relative">
             <select
@@ -354,7 +366,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
             >
                 {options.map((o) => (
                     <option key={o.value} value={o.value}>
-                        {o.label}
+                        {t(o.label)}
                     </option>
                 ))}
             </select>
@@ -386,12 +398,13 @@ export function Switch({
     /** 시각적 라벨이 따로 없을 때 스크린 리더용 이름. */
     label?: string;
 }) {
+    const { t } = useLanguage();
     return (
         <button
             type="button"
             role="switch"
             aria-checked={checked}
-            aria-label={label}
+            aria-label={label ? t(label) : undefined}
             disabled={disabled}
             onClick={() => onChange(!checked)}
             className={clsx(
@@ -430,6 +443,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
     disabled,
     ...props
 }, ref) {
+    const { t } = useLanguage();
     const base =
         "inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] " +
         "px-4 py-2.5 text-[14px] font-medium transition-colors " +
@@ -454,7 +468,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
             ) : (
                 icon && createElement(icon, { className: "w-4 h-4" })
             )}
-            {children}
+            {typeof children === "string" ? t(children) : children}
         </button>
     );
 });
@@ -470,6 +484,7 @@ export function Badge({
     tone?: "neutral" | "ok" | "warn" | "danger" | "info" | "primary";
     className?: string;
 }) {
+    const { t } = useLanguage();
     const tones: Record<string, string> = {
         neutral: "bg-surface-4 text-ink-muted border-line-strong",
         ok: "bg-ok/12 text-ok border-ok/25",
@@ -488,7 +503,7 @@ export function Badge({
                 className,
             )}
         >
-            {children}
+            {typeof children === "string" ? t(children) : children}
         </span>
     );
 }
@@ -503,6 +518,7 @@ export function StatusDot({
     label: string;
     tone?: "ok" | "warn" | "danger";
 }) {
+    const { t } = useLanguage();
     const color =
         tone === "danger" ? "var(--color-danger)"
         : tone === "warn" ? "var(--color-warn)"
@@ -514,7 +530,7 @@ export function StatusDot({
                 className="w-2 h-2 rounded-full shrink-0"
                 style={{ backgroundColor: active ? color : "var(--color-line-strong)" }}
             />
-            {label}
+            {t(label)}
         </span>
     );
 }
@@ -534,6 +550,7 @@ export function EmptyState({
     action?: ReactNode;
     compact?: boolean;
 }) {
+    const { t } = useLanguage();
     return (
         <div className={clsx(compact ? "py-8" : "py-12", "px-6 text-center")}>
             {icon && (
@@ -541,10 +558,10 @@ export function EmptyState({
                     {createElement(icon, { className: compact ? "w-4 h-4" : "w-5 h-5" })}
                 </span>
             )}
-            <p className="text-[14px] font-medium text-ink-muted">{title}</p>
+            <p className="text-[14px] font-medium text-ink-muted">{t(title)}</p>
             {description && (
                 <p className="text-[13px] text-ink-faint mt-1.5 max-w-sm mx-auto leading-relaxed">
-                    {description}
+                    {typeof description === "string" ? t(description) : description}
                 </p>
             )}
             {action && <div className="mt-5">{action}</div>}

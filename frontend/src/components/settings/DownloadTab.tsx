@@ -3,6 +3,7 @@ import { Film, MessageSquare, Radio, RefreshCcw, Save } from "lucide-react";
 import { useSettingsSave } from "../../hooks/useSettingsSave";
 import { api, type Settings as SettingsType } from "../../api/client";
 import { Button, Card, CardHeader, Field, Input, Select, SettingRow, Switch } from "../ui/primitives";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 interface Props {
     settings: SettingsType | null;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
+    const { t } = useLanguage();
     const [keepParts, setKeepParts] = useState(false);
     const [maxRetries, setMaxRetries] = useState(3);
     const [recordingQuality, setRecordingQuality] = useState("best");
@@ -79,8 +81,8 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
             vod_filename_template: vodFilenameTemplate,
             keep_download_parts: keepParts,
         }),
-        success: "다시보기 설정이 저장되었습니다.",
-        failure: "다시보기 설정 저장에 실패했습니다.",
+        success: t("영상 다운로드 설정을 저장했습니다."),
+        failure: t("영상 다운로드 설정 저장에 실패했습니다."),
     });
 
     const handleSaveLive = () => saveLive({
@@ -88,29 +90,29 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
             maxRetries, streamMode, timeMachineOffset,
             saveLivePreview, liveFilenameTemplate, recordingQuality,
         ),
-        success: "라이브 설정이 저장되었습니다.",
-        failure: "라이브 설정 저장에 실패했습니다.",
+        success: t("라이브 설정이 저장되었습니다."),
+        failure: t("라이브 설정 저장에 실패했습니다."),
     });
 
     const handleSaveChat = () => saveChat({
         request: () => api.updateChatSettings({ chat_archive_enabled: chatArchiveEnabled }),
-        success: "채팅 설정이 저장되었습니다.",
-        failure: "채팅 설정 저장에 실패했습니다.",
+        success: t("채팅 설정이 저장되었습니다."),
+        failure: t("채팅 설정 저장에 실패했습니다."),
     });
 
     return (
         <div className="space-y-6">
             <Card className="space-y-5">
-                <CardHeader icon={Film} title="다시보기 다운로드 설정" />
+                <CardHeader icon={Film} title="영상 다운로드 설정" />
                 <Field label="동시 다운로드 개수" hint="한 번에 다운로드할 수 있는 최대 영상 개수 (1~10개)">
                     <Input type="number" value={vodMaxConcurrent} onChange={(event) => setVodMaxConcurrent(Number(event.target.value))} min={1} max={10} />
                 </Field>
-                <Field label="다시보기 품질" hint="다시보기 다운로드 시 기본으로 사용할 화질">
+                <Field label="영상 다운로드 품질" hint="영상 다운로드 시 기본으로 사용할 화질">
                     <Select
                         value={vodDefaultQuality}
                         onChange={(event) => setVodDefaultQuality(event.target.value)}
                         options={[
-                            { value: "best", label: "최고 화질 (Best)" },
+                            { value: "best", label: "최고 화질" },
                             { value: "1080p", label: "1080p" },
                             { value: "720p", label: "720p" },
                             { value: "480p", label: "480p" },
@@ -120,7 +122,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                 <Field label="최대 다운로드 속도 (MB/s)" hint="0 = 무제한, 네트워크 대역폭 제한 시 사용">
                     <Input type="number" value={vodMaxSpeed} onChange={(event) => setVodMaxSpeed(Number(event.target.value))} min={0} max={1000} />
                 </Field>
-                <Field label="다시보기 다운로드 포맷" hint="다시보기와 클립은 MP4가 가장 호환성이 좋습니다. 오디오·비디오 병합이 필요한 경우 ffmpeg를 사용합니다.">
+                <Field label="영상 파일 형식" hint="다시보기와 클립은 MP4가 여러 기기에서 잘 재생됩니다. 영상과 음성을 합칠 때 ffmpeg를 사용합니다.">
                     <Select
                         value={vodFormat}
                         onChange={(event) => setVodFormat(event.target.value)}
@@ -132,15 +134,15 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                     />
                 </Field>
                 <SettingRow
-                    label="미완료 다시보기 파일 보관 (.part)"
+                    label="미완료 영상 파일 보관 (.part)"
                     hint={keepParts ? "취소 또는 오류가 발생해도 미완료 파일을 보관합니다." : "취소하거나 오류가 발생하면 미완료 파일을 삭제합니다."}
-                    control={<Switch checked={keepParts} onChange={setKeepParts} label="미완료 다시보기 파일 보관" />}
+                    control={<Switch checked={keepParts} onChange={setKeepParts} label="미완료 영상 파일 보관" />}
                 />
-                <Field label="다시보기 파일명 형식" htmlFor="vod-filename-template" hint="{name}, {title}, {date_year}, {date_month}, {date_day}, {date_hour}, {date_minute}, {date_second}, {id}, {extractor}, {upload_date}, {download_date}, {quality} 사용 가능. 날짜·시각은 다운로드 시작 기준이며 확장자는 자동 추가됩니다.">
+                <Field label="영상 파일명 형식" htmlFor="vod-filename-template" hint="{name}, {title}, {date_year}, {date_month}, {date_day}, {date_hour}, {date_minute}, {date_second}, {id}, {extractor}, {upload_date}, {download_date}, {quality}를 사용할 수 있습니다. 날짜와 시각은 다운로드 시작 기준이며 확장자는 자동으로 붙습니다.">
                     <Input id="vod-filename-template" value={vodFilenameTemplate} maxLength={240} onChange={(event) => setVodFilenameTemplate(event.target.value)} />
                 </Field>
                 <Button variant="primary" icon={Save} loading={vodSaving} disabled={!vodFilenameTemplate.trim()} onClick={handleSaveVod} className="w-full">
-                    {vodSaving ? "저장 중..." : "다시보기 설정 저장"}
+                    {vodSaving ? "저장 중..." : "영상 다운로드 설정 저장"}
                 </Button>
             </Card>
 
@@ -151,7 +153,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                         value={recordingQuality}
                         onChange={(event) => setRecordingQuality(event.target.value)}
                         options={[
-                            { value: "best", label: "최고 (Best)" },
+                            { value: "best", label: "최고 화질" },
                             { value: "1080p", label: "1080p" },
                             { value: "720p", label: "720p" },
                             { value: "480p", label: "480p" },

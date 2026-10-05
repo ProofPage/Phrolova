@@ -13,6 +13,7 @@ import {
     type Settings as SettingsType,
 } from "../../api/client";
 import { useToast } from "../ui/Toast";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { getErrorMessage } from "../../utils/error";
 import { Badge, Button, Card, CardHeader, Divider } from "../ui/primitives";
 
@@ -36,6 +37,7 @@ interface Props {
 
 export function NotificationDeliveryCard({ settings, refreshSignal }: Props) {
     const toast = useToast();
+    const { t } = useLanguage();
     const [status, setStatus] = useState<NotificationStatus | null>(null);
     const [testing, setTesting] = useState(false);
 
@@ -87,7 +89,7 @@ export function NotificationDeliveryCard({ settings, refreshSignal }: Props) {
                             variant="ghost"
                             icon={RefreshCcw}
                             onClick={refreshStatus}
-                            aria-label="상태 새로고침"
+                            aria-label={t("상태 새로고침")}
                         />
                         <Button
                             variant="primary"
@@ -104,25 +106,25 @@ export function NotificationDeliveryCard({ settings, refreshSignal }: Props) {
 
             {!anyTransport && (
                 <p className="text-[13px] text-warn bg-warn/10 border border-warn/20 rounded-[var(--radius-control)] px-3 py-2.5 mb-4">
-                    Bot 토큰 + 채널 ID 또는 Webhook URL 중 하나는 설정해야 알림이 전송됩니다.
+                    {t("Bot 토큰 + 채널 ID 또는 Webhook URL 중 하나는 설정해야 알림이 전송됩니다.")}
                 </p>
             )}
 
             <div className="grid gap-3 sm:grid-cols-2">
-                {(status?.transports ?? []).map((t) => (
+                {(status?.transports ?? []).map((transport) => (
                     <div
-                        key={t.name}
+                        key={transport.name}
                         className="flex items-center justify-between gap-3 bg-surface-3 border border-line rounded-[var(--radius-control)] px-3.5 py-3"
                     >
                         <span className="text-[13px] font-medium text-ink">
-                            {TRANSPORT_LABELS[t.name] ?? t.name}
+                            {t(TRANSPORT_LABELS[transport.name] ?? transport.name)}
                         </span>
-                        {!t.configured ? (
+                        {!transport.configured ? (
                             <Badge tone="neutral">미설정</Badge>
-                        ) : t.available ? (
+                        ) : transport.available ? (
                             <Badge tone="ok">
                                 <CheckCircle2 className="w-3 h-3" />
-                                연결됨
+                                {t("연결됨")}
                             </Badge>
                         ) : (
                             <Badge tone="warn">대기 중</Badge>
@@ -143,7 +145,7 @@ export function NotificationDeliveryCard({ settings, refreshSignal }: Props) {
                         ].map((s) => (
                             <div key={s.label}>
                                 <dt className="text-[11px] uppercase tracking-wide text-ink-faint">
-                                    {s.label}
+                                    {t(s.label)}
                                 </dt>
                                 <dd
                                     className="text-lg font-semibold mt-0.5"

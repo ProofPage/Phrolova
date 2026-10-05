@@ -186,6 +186,21 @@ class RecorderService:
         )
         return task_id
 
+    async def download_vod_batch(
+        self,
+        url: str,
+        quality: str = "best",
+        output_dir: Optional[str] = None,
+    ) -> list[str]:
+        """일반 영상은 1개, YouTube 채널 주소는 채널 영상별 작업으로 등록한다."""
+        if self._vod_engine.is_youtube_channel_url(url):
+            return await self._vod_engine.download_youtube_channel(
+                url=url,
+                quality=quality,
+                output_dir=output_dir,
+            )
+        return [await self.download_vod(url, quality, output_dir)]
+
     def list_vod_tasks(self) -> list[dict]:
         """모든 VOD 다운로드 작업 목록을 반환한다."""
         return self._vod_engine.list_all_tasks()

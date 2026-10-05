@@ -103,11 +103,11 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                 </p>
             </div>
 
-            {/* 다시보기 저장 경로 */}
+            {/* 영상 다운로드 저장 경로 */}
             <div>
                 <label className="block text-sm font-medium text-ink-muted mb-2">
                     <FolderOpen className="inline w-4 h-4 mr-1 text-[var(--primary)]" />
-                    다시보기 저장 경로 <span className="text-danger">*</span>
+                    영상 다운로드 저장 경로 <span className="text-danger">*</span>
                 </label>
                 <DirInput
                     value={data.vod_download_dir}
@@ -115,7 +115,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                     placeholder="예: C:\\Recordings\\Video 또는 /home/user/recordings/video"
                 />
                 <p className="text-xs text-ink-faint mt-1.5 flex items-start gap-1">
-                    치지직 다시보기·클립과 외부 영상 다운로드를 저장합니다.
+                    치지직 다시보기·클립, 유튜브와 외부 영상 다운로드를 저장합니다.
                 </p>
             </div>
 
@@ -234,7 +234,7 @@ function Step2({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
 function Step3({ data }: { data: FormData }) {
     const rows: { label: string; value: string }[] = [
         { label: "라이브 저장 경로", value: data.live_download_dir || "(미설정)" },
-        { label: "다시보기 저장 경로", value: data.vod_download_dir || "(미설정)" },
+        { label: "영상 다운로드 저장 경로", value: data.vod_download_dir || "(미설정)" },
         { label: "라이브 품질", value: data.recording_quality },
         { label: "출력 포맷", value: `.${data.output_format.toUpperCase()}` },
         { label: "치지직 인증", value: data.nid_aut && data.nid_ses ? "✅ 설정됨" : "⏭️ 건너뜀 (나중에 설정 가능)" },
@@ -305,7 +305,7 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
     };
 
     const stepTitles: Record<Step, { title: string; subtitle: string }> = {
-        1: { title: "기본 설정", subtitle: "라이브와 다시보기 저장 경로 및 기본 품질을 설정하세요." },
+        1: { title: "기본 설정", subtitle: "라이브와 영상 다운로드 저장 경로 및 기본 화질을 설정하세요." },
         2: { title: "치지직 인증 쿠키 (선택)", subtitle: "성인 방송 및 1080p 녹화를 위한 로그인 쿠키를 입력하세요." },
         3: { title: "설정 확인", subtitle: "아래 내용을 확인하고 완료 버튼을 누르세요." },
     };

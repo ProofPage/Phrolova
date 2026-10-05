@@ -14,8 +14,10 @@ import { useChannelReorder } from "../hooks/useChannelReorder";
 import { useChannelStream } from "../hooks/useChannelStream";
 import { getChannelKey } from "../utils/channel";
 import { getErrorMessage } from "../utils/error";
+import { useLanguage } from "../contexts/LanguageContext";
 
 export default function Dashboard() {
+    const { t } = useLanguage();
     const { channels, initialLoading, connectionError, fetchChannels } = useChannelStream();
     const { orderedChannels, getReorderProps } = useChannelReorder(channels);
     const [platformStatus, setPlatformStatus] = useState<PlatformStatus | null>(null);
@@ -213,14 +215,14 @@ export default function Dashboard() {
         <div className="space-y-6">
             <PageHeader
                 icon={Radio}
-                eyebrow="실시간 방송 관리"
-                title="라이브 대시보드"
-                description="방송 상태를 확인하고 채널별 자동 다운로드와 녹화를 관리합니다."
+                eyebrow={t("실시간 방송 관리")}
+                title={t("라이브 대시보드")}
+                description={t("방송 상태를 확인하고 채널별 자동 다운로드와 녹화를 관리합니다.")}
                 meta={(
                     <>
-                        <Badge tone="primary">감시 채널 {channels.length}개</Badge>
-                        <Badge tone={liveCount > 0 ? "danger" : "neutral"}>방송 중 {liveCount}개</Badge>
-                        <Badge tone={recordingCount > 0 ? "ok" : "neutral"}>녹화 중 {recordingCount}개</Badge>
+                        <Badge tone="primary">{t("감시 채널")} {channels.length}</Badge>
+                        <Badge tone={liveCount > 0 ? "danger" : "neutral"}>{t("방송 중")} {liveCount}</Badge>
+                        <Badge tone={recordingCount > 0 ? "ok" : "neutral"}>{t("녹화 중")} {recordingCount}</Badge>
                     </>
                 )}
                 actions={<AddChannelForm platformStatus={platformStatus} onAdded={fetchChannels} />}

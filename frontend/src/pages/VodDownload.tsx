@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import {
+    ChevronDown,
     Download,
     Play,
     AlertCircle,
@@ -12,19 +13,24 @@ import {
     RotateCw,
     GripVertical,
     FolderOpen,
+    Plus,
     Trash2,
 } from "lucide-react";
 import { useVod } from "../contexts/VodContext";
 import { api, VodTask } from "../api/client";
 import { useToast } from "../components/ui/Toast";
 import { useConfirm } from "../components/ui/ConfirmModal";
-import { Badge, Button, EmptyState, Field, Input, PageHeader } from "../components/ui/primitives";
+import { Badge, Button, EmptyState, Input, PageHeader } from "../components/ui/primitives";
 import { clsx } from "clsx";
 import { formatDuration } from "../utils/format";
 import { getErrorMessage } from "../utils/error";
+import { useLanguage } from "../contexts/LanguageContext";
 
 export default function VodDownload() {
+    const { t } = useLanguage();
     const { tasks, activeCount, addTask, cancelTask, pauseTask, resumeTask, retryTask, clearCompleted, openFileLocation } = useVod();
+    const [selectedSource, setSelectedSource] = useState<"chzzk" | "youtube" | "external">("chzzk");
+    const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
     const [url, setUrl] = useState("");
     const [loading, setLoading] = useState(false);
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -34,6 +40,20 @@ export default function VodDownload() {
     const clearableTaskCount = tasks.filter((task) =>
         task.state === "idle" || task.state === "completed" || task.state === "error"
     ).length;
+    const queuedCount = tasks.filter((task) => task.state === "idle").length;
+    const errorCount = tasks.filter((task) => task.state === "error").length;
+    const sourceOptions = [
+        { id: "chzzk", label: t("치지직"), dot: "bg-chzzk" },
+        { id: "youtube", label: t("유튜브"), dot: "bg-youtube" },
+        { id: "external", label: t("외부 영상"), dot: "bg-[var(--primary)]" },
+    ] as const;
+    const selectedSourceOption = sourceOptions.find((option) => option.id === selectedSource)!;
+
+    const sourcePlaceholder = selectedSource === "chzzk"
+        ? t("다시보기 URL 또는 클립 URL")
+        : selectedSource === "youtube"
+            ? t("핸들(@username) 또는 동영상 ID")
+            : t("다운로드할 영상 링크");
 
     useEffect(() => {
         const timer = setTimeout(() => setIsInitialLoad(false), 500);
@@ -44,14 +64,53 @@ export default function VodDownload() {
         e.preventDefault();
         if (!url) return;
 
+        const input = url.trim();
+        let downloadUrl = input;
+        if (selectedSource === "youtube") {
+            const handle = input.match(/^@([A-Za-z0-9._-]+)$/);
+            const videoId = input.match(/^[A-Za-z0-9_-]{11}$/);
+            if (handle) downloadUrl = `https://www.youtube.com/@${handle[1]}`;
+            else if (videoId) downloadUrl = `https://www.youtube.com/watch?v=${videoId[0]}`;
+        }
+
+        let hostname: string;
+        try {
+            hostname = new URL(downloadUrl).hostname.toLowerCase();
+        } catch {
+            toast.error(selectedSource === "youtube"
+                ? t("유튜브 링크, @핸들 또는 11자리 동영상 ID를 입력해 주세요.")
+                : t("올바른 영상 주소를 입력해 주세요."));
+            return;
+        }
+        const isChzzk = hostname === "chzzk.naver.com" || hostname.endsWith(".chzzk.naver.com");
+        const isYouTube = hostname === "youtube.com" || hostname.endsWith(".youtube.com")
+            || hostname === "youtu.be" || hostname === "youtube-nocookie.com"
+            || hostname.endsWith(".youtube-nocookie.com");
+        const matchesSource = selectedSource === "chzzk"
+            ? isChzzk
+            : selectedSource === "youtube"
+                ? isYouTube
+                : !isChzzk && !isYouTube;
+
+        if (!matchesSource) {
+            toast.error(selectedSource === "chzzk"
+                ? t("치지직 다시보기 또는 클립 주소를 입력해 주세요.")
+                : selectedSource === "youtube"
+                    ? t("유튜브 링크, @핸들 또는 동영상 ID를 입력해 주세요.")
+                    : t("지원되는 외부 영상 주소인지 확인해 주세요."));
+            return;
+        }
+
         setLoading(true);
 
         try {
-            await addTask(url);
+            const addedCount = await addTask(downloadUrl);
             setUrl("");
-            toast.success("다운로드가 시작되었습니다.");
+            toast.success(addedCount > 1
+                ? `유튜브 채널에서 영상 ${addedCount}개를 다운로드 목록에 추가했습니다.`
+                : t("다운로드 목록에 추가했습니다."));
         } catch (err: unknown) {
-            toast.error(getErrorMessage(err, "다운로드 시작에 실패했습니다."));
+            toast.error(getErrorMessage(err, t("영상 추가에 실패했습니다.")));
         } finally {
             setLoading(false);
         }
@@ -59,9 +118,9 @@ export default function VodDownload() {
 
     const handleCancel = async (taskId: string, title: string) => {
         const ok = await confirm({
-            title: "다운로드 취소",
-            message: `'${title}' 다운로드를 취소할까요?`,
-            confirmText: "중단",
+            title: "다운로드 중지",
+            message: `'${title}' 다운로드를 중지할까요?`,
+            confirmText: "중지",
             variant: "danger",
         });
         if (ok) cancelTask(taskId);
@@ -69,17 +128,17 @@ export default function VodDownload() {
 
     const handleRetry = async (taskId: string, title: string) => {
         const ok = await confirm({
-            title: "재다운로드",
-            message: `'${title}'을(를) 다시 다운로드할까요?`,
-            confirmText: "재다운로드",
+            title: "다시 다운로드",
+            message: `'${title}'을(를) 다시 받을까요?`,
+            confirmText: "다시 받기",
         });
         if (ok) retryTask(taskId);
     };
 
     const handleClearCompleted = async () => {
         const ok = await confirm({
-            title: "작업 정리",
-            message: "대기, 완료, 오류 상태의 작업을 삭제할까요? 다운로드 중이거나 일시정지한 작업은 유지됩니다.",
+            title: "목록 정리",
+            message: "대기·완료·오류 항목을 목록에서 삭제할까요? 진행 중이거나 일시정지한 항목은 유지됩니다.",
             confirmText: "정리",
             variant: "danger",
         });
@@ -87,9 +146,9 @@ export default function VodDownload() {
 
         try {
             const result = await clearCompleted();
-            toast.success(`${result.deleted_count}개 작업을 정리했습니다.`);
+            toast.success(`${result.deleted_count}개 항목을 정리했습니다.`);
         } catch (err: unknown) {
-            toast.error(getErrorMessage(err, "작업 정리에 실패했습니다."));
+            toast.error(getErrorMessage(err, "목록 정리에 실패했습니다."));
         }
     };
 
@@ -126,47 +185,74 @@ export default function VodDownload() {
         <div className="space-y-6">
             <PageHeader
                 icon={Download}
-                eyebrow="다운로드 대기열"
-                title="다시보기 다운로드"
-                description="치지직 다시보기와 클립, 외부 영상 주소를 대기열에 추가하고 진행 상황을 관리합니다."
+                eyebrow={t("영상 다운로드")}
+                title={t("다시보기 대시보드")}
+                description={t("여러 플랫폼의 다시보기와 클립을 추가하고 다운로드 상태를 한곳에서 관리합니다.")}
                 meta={(
                     <>
-                        <Badge tone={activeCount > 0 ? "ok" : "neutral"}>{activeCount}개 진행 중</Badge>
-                        <Badge tone="neutral">전체 {tasks.length}개</Badge>
+                        <Badge tone={activeCount > 0 ? "ok" : "neutral"}>{t("진행 중")} {activeCount}</Badge>
+                        <Badge tone="neutral">{t("대기")} {queuedCount}</Badge>
+                        <Badge tone={errorCount > 0 ? "danger" : "neutral"}>{t("오류")} {errorCount}</Badge>
+                        <Badge tone="neutral">{t("전체")} {tasks.length}</Badge>
                     </>
                 )}
+                actions={(
+                    <form onSubmit={handleSubmit}>
+                        <div className="flex flex-col items-start gap-2 sm:flex-row">
+                            <div className="relative shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setSourceMenuOpen((open) => !open)}
+                                    className="h-11 bg-surface-2 border border-line rounded-[var(--radius-control)] px-3 text-ink text-sm flex items-center gap-1.5 hover:bg-surface-3 transition-colors whitespace-nowrap"
+                                    aria-expanded={sourceMenuOpen}
+                                    aria-haspopup="listbox"
+                                    aria-label={`${t("플랫폼 선택")}: ${selectedSourceOption.label}`}
+                                >
+                                    <span className={`inline-block h-2 w-2 rounded-full ${selectedSourceOption.dot}`} />
+                                    <span>{selectedSourceOption.label}</span>
+                                    <ChevronDown className="h-3 w-3 text-ink-faint" />
+                                </button>
+                                {sourceMenuOpen && (
+                                    <div className="absolute left-0 top-full z-20 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-control)] border border-line-strong bg-surface-2 shadow-xl" role="listbox" aria-label={t("다운로드 플랫폼")}>
+                                        {sourceOptions.map((option) => (
+                                            <button
+                                                key={option.id}
+                                                type="button"
+                                                role="option"
+                                                aria-selected={selectedSource === option.id}
+                                                onClick={() => {
+                                                    setSelectedSource(option.id);
+                                                    setSourceMenuOpen(false);
+                                                }}
+                                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-muted transition-colors hover:bg-surface-3"
+                                            >
+                                                <span className={`inline-block h-2 w-2 rounded-full ${option.dot}`} />
+                                                <span className="flex-1">{option.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <Input
+                                id="vod-url"
+                                type="text"
+                                className="min-w-0 flex-1"
+                                aria-label={selectedSource === "youtube"
+                                    ? "유튜브 링크, 채널 핸들 또는 동영상 ID"
+                                    : `${selectedSourceOption.label} 영상 주소`}
+                                placeholder={sourcePlaceholder}
+                                value={url}
+                                onChange={(event) => setUrl(event.target.value)}
+                                autoComplete="off"
+                            />
+                                <Button type="submit" icon={Plus} loading={loading} disabled={!url} variant="primary" className="sm:px-5">
+                                {t("추가")}
+                            </Button>
+                        </div>
+                    </form>
+                )}
+                actionsPlacement="below"
             />
-
-            <form
-                onSubmit={handleSubmit}
-                className="relative overflow-hidden bg-surface-2 p-5 sm:p-6 rounded-[var(--radius-card)] border border-line surface-raise space-y-4"
-            >
-                <span className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[var(--primary)] to-transparent opacity-70" />
-                <Field label="영상 URL" htmlFor="vod-url" hint="치지직 다시보기·클립 및 yt-dlp가 지원하는 외부 영상 링크를 사용할 수 있습니다.">
-                    <div className="flex flex-col sm:flex-row gap-2">
-                        <Input
-                            id="vod-url"
-                            type="url"
-                            className="flex-1"
-                            placeholder="https://chzzk.naver.com/video/..."
-                            value={url}
-                            onChange={(event) => setUrl(event.target.value)}
-                            autoComplete="off"
-                        />
-                        <Button type="submit" icon={Download} loading={loading} disabled={!url} variant="primary" className="sm:px-5">
-                            다운로드 시작
-                        </Button>
-                    </div>
-                </Field>
-
-                <div className="flex flex-wrap gap-2 pt-1">
-                    {["고화질 지원", "자동 리먹싱", "클립 다운로드", "다중 대기열"].map((feature) => (
-                        <span key={feature} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-3 border border-line text-[11px] text-ink-faint">
-                            <CheckCircle className="w-3 h-3 text-ok" /> {feature}
-                        </span>
-                    ))}
-                </div>
-            </form>
 
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -180,10 +266,10 @@ export default function VodDownload() {
                             onClick={handleClearCompleted}
                             disabled={clearableTaskCount === 0}
                             title={clearableTaskCount > 0
-                                ? "대기, 완료, 오류 작업을 정리합니다."
-                                : "다운로드 중이거나 일시정지한 작업만 정리할 수 없습니다."}
+                                ? "대기·완료·오류 항목을 정리합니다."
+                                : "진행 중이거나 일시정지한 항목은 정리할 수 없습니다."}
                         >
-                            작업 정리
+                            목록 정리
                         </Button>
                     )}
                 </div>
@@ -202,7 +288,7 @@ export default function VodDownload() {
                         ))}
                     </div>
                 ) : tasks.length === 0 ? (
-                    <EmptyState icon={FileVideo} title="대기열이 비어 있습니다" description="위에 영상 URL을 입력하면 다운로드 작업이 이곳에 표시됩니다." />
+                    <EmptyState icon={FileVideo} title="아직 추가한 영상이 없습니다" description="위에서 영상 주소를 추가하면 진행 상황과 저장된 파일을 이곳에서 확인할 수 있습니다." />
                 ) : (
                     <div className="space-y-3">
                         {tasks.map((task, index) => (
@@ -323,7 +409,7 @@ function TaskCard({ task, onCancel, onPause, onResume, onRetry, onOpenLocation }
                 </div>
 
                 <div className="text-xs text-ink-faint font-mono flex flex-wrap gap-x-4">
-                    <span>화질: {task.quality}</span>
+                    <span>화질: {task.quality === "best" ? "최고 화질" : task.quality}</span>
                     {task.error_message && (
                         <span className="text-danger">오류: {task.error_message}</span>
                     )}
@@ -393,10 +479,10 @@ function TaskCard({ task, onCancel, onPause, onResume, onRetry, onOpenLocation }
                         <button
                             onClick={onRetry}
                             className="p-1.5 bg-surface-3 hover:bg-surface-4 text-info border border-line rounded-[var(--radius-control)] transition-colors flex items-center gap-1 text-xs"
-                            title="재다운로드"
+                            title="다시 받기"
                         >
                             <RotateCw className="w-3 h-3" />
-                            <span>재다운로드</span>
+                                <span>다시 받기</span>
                         </button>
                         {task.state === "completed" && task.output_path && (
                             <button

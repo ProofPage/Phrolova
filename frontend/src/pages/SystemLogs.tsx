@@ -13,6 +13,7 @@ import {
 import { clsx } from "clsx";
 import { api, SystemLogFile } from "../api/client";
 import { useToast } from "../components/ui/Toast";
+import { useLanguage } from "../contexts/LanguageContext";
 import { useConfirm } from "../components/ui/ConfirmModal";
 import { Button, Input, PageHeader } from "../components/ui/primitives";
 import { formatBytes, formatDate as _formatDate } from "../utils/format";
@@ -22,6 +23,7 @@ function formatDate(iso: string): string {
 }
 
 export default function SystemLogs() {
+    const { t } = useLanguage();
     const [selectedFile, setSelectedFile] = useState<SystemLogFile | null>(null);
     const [listRefreshKey, setListRefreshKey] = useState(0);
     const [clearing, setClearing] = useState(false);
@@ -54,9 +56,9 @@ export default function SystemLogs() {
         <div className="flex flex-col gap-6 xl:h-[calc(100vh-4rem)]">
             <PageHeader
                 icon={Terminal}
-                eyebrow="서비스 상태 확인"
-                title="로그"
-                description="실시간 서비스 로그와 일자별 백업을 검색하고 서버 상태를 추적합니다."
+                eyebrow={t("서비스 상태 확인")}
+                title={t("로그")}
+                description={t("실시간 서비스 로그와 일자별 백업을 검색하고 서버 상태를 추적합니다.")}
                 actions={(
                     <Button
                         icon={Trash2}
@@ -64,7 +66,7 @@ export default function SystemLogs() {
                         loading={clearing}
                         onClick={handleClearLogs}
                     >
-                        로그 초기화
+                        {t("로그 초기화")}
                     </Button>
                 )}
             />

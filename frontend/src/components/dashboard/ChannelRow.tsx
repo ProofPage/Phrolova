@@ -6,9 +6,11 @@ import { formatDuration } from "../../utils/format";
 import { TagManager } from "../ui/TagManager";
 import { Button, Card, Switch } from "../ui/primitives";
 import { PlatformBadge, RecordingStats, type ChannelItemProps, useRecordingDuration } from "./ChannelCard";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 export function ChannelRow(props: ChannelItemProps) {
     const { channel, onStartRecord, onStopRecord, onRemove, onToggleAutoRecord, isActionLoading, globalTags, onAddTag, onRemoveTag, onCreateTag, onReorderPointerDown, onReorderPointerMove, onReorderPointerUp, onReorderMouseMove, onReorderMouseUp, onReorderKeyDown, isDragging, isDropTarget } = props;
+    const { t } = useLanguage();
     const displayName = channel.channel_name || channel.channel_id;
     const platform = channel.platform || "chzzk";
     const duration = useRecordingDuration(channel);
@@ -104,7 +106,7 @@ export function ChannelRow(props: ChannelItemProps) {
                     )}
                 </div>
 
-                <button onClick={() => onRemove(channel)} className="p-2 text-ink-faint hover:text-danger transition-colors opacity-0 group-hover:opacity-100" title="채널 제거"><Trash2 className="w-4 h-4" /></button>
+                <button type="button" onClick={() => onRemove(channel)} className="p-2 bg-surface-3 border border-line-strong rounded-[var(--radius-control)] text-ink-muted hover:bg-danger hover:border-danger hover:text-white transition-colors opacity-100" title={t("채널 제거")} aria-label={t("채널 제거")}><Trash2 className="w-4 h-4" /></button>
             </div>
         </Card>
     );

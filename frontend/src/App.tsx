@@ -6,6 +6,7 @@ import { ToastProvider } from "./components/ui/Toast";
 import { ConfirmProvider } from "./components/ui/ConfirmModal";
 import { SetupWizard } from "./components/SetupWizard";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
 import Dashboard from "./pages/Dashboard";
 import VodDownload from "./pages/VodDownload";
 import ArchivePage from "./pages/Archive";
@@ -19,6 +20,7 @@ import { CommandPalette } from "./components/ui/CommandPalette";
 // SetupWizard 오버레이와 CommandPalette를 포함하며,
 // 하위 라우트(<Layout />)는 <Outlet />으로 렌더링된다.
 function RootLayout() {
+    const { t } = useLanguage();
     // null은 "아직 확인 중" — 마법사를 깜빡 띄우지 않으려고 로딩 상태를 구분한다.
     const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
     const [setupDirectories, setSetupDirectories] = useState<{
@@ -42,7 +44,7 @@ function RootLayout() {
                 <div className="relative z-10 flex flex-col items-center">
                     <span className="brand-mark w-12 h-12 rounded-2xl grid place-items-center mb-4"><Radio className="w-5 h-5 animate-pulse" /></span>
                     <p className="text-sm font-semibold text-ink">Phrolova</p>
-                    <p className="text-[11px] text-ink-faint mt-1">워크스페이스를 준비하고 있습니다</p>
+                    <p className="text-[11px] text-ink-faint mt-1">{t("워크스페이스를 준비하고 있습니다")}</p>
                 </div>
             </div>
         );
@@ -85,13 +87,15 @@ const router = createBrowserRouter([
 
 function App() {
     return (
-        <ThemeProvider>
-            <ToastProvider>
-                <ConfirmProvider>
-                    <RouterProvider router={router} />
-                </ConfirmProvider>
-            </ToastProvider>
-        </ThemeProvider>
+        <LanguageProvider>
+            <ThemeProvider>
+                <ToastProvider>
+                    <ConfirmProvider>
+                        <RouterProvider router={router} />
+                    </ConfirmProvider>
+                </ToastProvider>
+            </ThemeProvider>
+        </LanguageProvider>
     );
 }
 

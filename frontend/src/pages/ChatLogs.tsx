@@ -16,6 +16,7 @@ import { api, ChatLogFile, ChatMessageItem, MessagesResponse } from "../api/clie
 import { useToast } from "../components/ui/Toast";
 import { Button, Input, PageHeader } from "../components/ui/primitives";
 import { formatBytes, formatDate as _formatDate, formatTime } from "../utils/format";
+import { useLanguage } from "../contexts/LanguageContext";
 
 function formatDate(iso: string): string {
     return _formatDate(iso, true);
@@ -24,6 +25,7 @@ function formatDate(iso: string): string {
 // ── 메인 페이지 ──────────────────────────────────────────
 
 export default function ChatLogs() {
+    const { t } = useLanguage();
     const [selectedFile, setSelectedFile] = useState<ChatLogFile | null>(null);
     const toast = useToast();
     const [refreshKey, setRefreshKey] = useState(0);
@@ -32,15 +34,15 @@ export default function ChatLogs() {
         <div className="flex flex-col gap-6 xl:h-[calc(100vh-4rem)]">
             <PageHeader
                 icon={MessageSquare}
-                eyebrow="라이브 채팅 아카이브"
+                eyebrow={t("라이브 채팅 아카이브")}
                 title="Chat Logs"
-                description="채널별 채팅 기록을 검색하고, 녹화 세션의 원본 로그를 다운로드하세요."
-                actions={<Button icon={RefreshCw} onClick={() => setRefreshKey((value) => value + 1)}>새로고침</Button>}
+                description={t("채널별 채팅 기록을 검색하고, 녹화 세션의 원본 로그를 다운로드하세요.")}
+                actions={<Button icon={RefreshCw} onClick={() => setRefreshKey((value) => value + 1)}>{t("새로고침")}</Button>}
             />
 
             <div className="flex flex-col lg:flex-row flex-1 gap-4 min-h-[480px] xl:min-h-0">
                 <div className="lg:w-[340px] xl:w-[30%] flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[260px]">
-                    <div className="px-4 py-3 border-b border-line text-xs font-semibold text-ink-muted">로그 파일</div>
+                    <div className="px-4 py-3 border-b border-line text-xs font-semibold text-ink-muted">{t("로그 파일")}</div>
                     <FileListView 
                         refreshKey={refreshKey}
                         selectedFile={selectedFile} 
@@ -50,11 +52,11 @@ export default function ChatLogs() {
                 </div>
 
                 <div className="flex-1 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[320px]">
-                    <div className="px-4 py-3 border-b border-line text-xs font-semibold text-ink-muted">채팅 내용</div>
+                    <div className="px-4 py-3 border-b border-line text-xs font-semibold text-ink-muted">{t("채팅 내용")}</div>
                     {selectedFile === null ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-ink-faint p-8 text-center">
                             <span className="w-14 h-14 rounded-2xl bg-surface-3 border border-line grid place-items-center mb-4"><MessageSquare className="w-6 h-6 opacity-60" /></span>
-                            <p className="text-sm">채팅 로그를 선택해 내용을 확인하세요.</p>
+                            <p className="text-sm">{t("채팅 로그를 선택해 내용을 확인하세요.")}</p>
                         </div>
                     ) : (
                         <MessageViewer

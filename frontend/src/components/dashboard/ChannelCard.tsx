@@ -8,6 +8,7 @@ import { getChannelKey } from "../../utils/channel";
 import { formatBytes, formatDuration } from "../../utils/format";
 import { TagManager } from "../ui/TagManager";
 import { Button, Card, Switch } from "../ui/primitives";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 const PLATFORM_BADGE_STYLES: Record<Platform, string> = {
     chzzk: "bg-chzzk/10 text-chzzk border-chzzk/25",
@@ -80,6 +81,7 @@ export function RecordingStats({ channel }: { channel: Channel }) {
 
 export function ChannelCard(props: ChannelItemProps) {
     const { channel, onStartRecord, onStopRecord, onRemove, onToggleAutoRecord, isActionLoading, globalTags, onAddTag, onRemoveTag, onCreateTag, onReorderPointerDown, onReorderPointerMove, onReorderPointerUp, onReorderMouseMove, onReorderMouseUp, onReorderKeyDown, isDragging, isDropTarget } = props;
+    const { t } = useLanguage();
     const displayName = channel.channel_name || channel.channel_id;
     const platform = channel.platform || "chzzk";
     const duration = useRecordingDuration(channel);
@@ -146,7 +148,7 @@ export function ChannelCard(props: ChannelItemProps) {
                             </div>
                         </div>
                     )}
-                    <button onClick={() => onRemove(channel)} className="p-1.5 bg-surface-0/70 hover:bg-danger text-ink-faint hover:text-white rounded-[var(--radius-control)] transition-all opacity-0 group-hover:opacity-100" title="채널 제거">
+                    <button type="button" onClick={() => onRemove(channel)} className="p-1.5 bg-surface-3/95 border border-line-strong text-ink-muted hover:bg-danger hover:border-danger hover:text-white rounded-[var(--radius-control)] transition-colors opacity-100" title={t("채널 제거")} aria-label={t("채널 제거")}>
                         <Trash2 className="w-3.5 h-3.5" />
                     </button>
                 </div>

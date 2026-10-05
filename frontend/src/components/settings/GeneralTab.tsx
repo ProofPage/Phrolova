@@ -4,6 +4,7 @@ import { api, type Settings as SettingsType } from "../../api/client";
 import { useSettingsSave } from "../../hooks/useSettingsSave";
 import { DirInput } from "../ui/DirInput";
 import { Button, Card, CardHeader, Field, Input, Select } from "../ui/primitives";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 interface Props {
     settings: SettingsType | null;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function GeneralTab({ settings, onSaved, onDirtyChange }: Props) {
+    const { t } = useLanguage();
     const [liveDownloadDir, setLiveDownloadDir] = useState("");
     const [vodDownloadDir, setVodDownloadDir] = useState("");
     const [monitorInterval, setMonitorInterval] = useState(30);
@@ -44,46 +46,46 @@ export function GeneralTab({ settings, onSaved, onDirtyChange }: Props) {
             monitor_interval: monitorInterval,
             live_format: liveFormat,
         }),
-        success: "일반 설정이 저장되었습니다.",
-        failure: "일반 설정 저장에 실패했습니다.",
+        success: t("일반 설정이 저장되었습니다."),
+        failure: t("일반 설정 저장에 실패했습니다."),
     });
 
     return (
         <Card className="space-y-5">
-            <CardHeader icon={Settings} title="일반 설정" />
+            <CardHeader icon={Settings} title={t("일반 설정")} />
 
             <Field
-                label="라이브 저장 경로"
-                hint="라이브 녹화 파일과 해당 방송의 채팅 로그가 저장됩니다."
+                label={t("라이브 저장 경로")}
+                hint={t("라이브 녹화 파일과 해당 방송의 채팅 로그가 저장됩니다.")}
             >
                 <DirInput value={liveDownloadDir} onChange={setLiveDownloadDir} placeholder="예: E:\\recordings\\Live" />
             </Field>
 
             <Field
-                label="다시보기 저장 경로"
-                hint="치지직 다시보기·클립과 외부 영상 다운로드가 저장됩니다."
+                label={t("다시보기 저장 경로")}
+                hint={t("치지직 다시보기·클립과 외부 영상 다운로드가 저장됩니다.")}
             >
                 <DirInput value={vodDownloadDir} onChange={setVodDownloadDir} placeholder="예: E:\\recordings\\Video" />
             </Field>
 
-            <Field label="감시 주기 (초)" hint="채널 라이브 상태를 확인하는 간격 (5~300초).">
+            <Field label={t("감시 주기 (초)")} hint={t("채널 라이브 상태를 확인하는 간격 (5~300초).") }>
                 <Input type="number" min={5} max={300} value={monitorInterval} onChange={(event) => setMonitorInterval(parseInt(event.target.value) || 30)} />
             </Field>
 
-            <Field label="라이브 녹화 포맷" hint="TS/MKV는 녹화 중단 시에도 파일이 유지됩니다. MP4는 라이브 녹화에 적합하지 않습니다.">
+            <Field label={t("라이브 녹화 포맷")} hint={t("TS/MKV는 녹화 중단 시에도 파일이 유지됩니다. MP4는 라이브 녹화에 적합하지 않습니다.")}>
                 <Select
                     value={liveFormat}
                     onChange={(event) => setLiveFormat(event.target.value)}
                     options={[
-                        { value: "ts", label: "TS — MPEG Transport Stream (권장)" },
+                        { value: "ts", label: t("TS — MPEG Transport Stream (권장)") },
                         { value: "mkv", label: "MKV — Matroska" },
-                        { value: "mp4", label: "MP4 (권장하지 않음 — 라이브 중단 시 파일 손상 가능)" },
+                        { value: "mp4", label: t("MP4 (권장하지 않음 — 라이브 중단 시 파일 손상 가능)") },
                     ]}
                 />
             </Field>
 
             <Button variant="primary" icon={Save} loading={saving} onClick={handleSave} className="w-full">
-                {saving ? "저장 중..." : "일반 설정 저장"}
+                {saving ? t("저장 중...") : t("일반 설정 저장")}
             </Button>
         </Card>
     );

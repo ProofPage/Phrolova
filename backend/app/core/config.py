@@ -204,7 +204,7 @@ class Settings(BaseSettings):
     vod_max_speed: int = 0             # 최대 다운로드 속도 (MB/s, 0 = 무제한)
 
     # ── 채팅 아카이빙 ────────────────────────────────────
-    chat_archive_enabled: bool = True   # 녹화 시 채팅 자동 아카이빙 여부
+    chat_archive_enabled: bool = False  # 녹화 시 채팅 자동 아카이빙 여부
 
     # ── TwitCasting 인증 ──────────────────────────────────
     twitcasting_client_id: Optional[str] = None

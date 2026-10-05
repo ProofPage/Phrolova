@@ -33,12 +33,14 @@ export interface NavGroup {
 export const NAV_GROUPS: NavGroup[] = [
     {
         title: "모니터링",
-        items: [{ name: "라이브 대시보드", to: "/", icon: LayoutDashboard }],
+        items: [
+            { name: "라이브 대시보드", to: "/", icon: LayoutDashboard },
+            { name: "다시보기 대시보드", to: "/vod", icon: Download },
+        ],
     },
     {
         title: "미디어 허브",
         items: [
-            { name: "다시보기 다운로드", to: "/vod", icon: Download },
             { name: "X Spaces", to: "/archive", icon: Radio },
             { name: "Chat Logs", to: "/chat", icon: MessageSquare },
         ],

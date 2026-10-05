@@ -6,7 +6,7 @@ import { getErrorMessage } from "../utils/error";
 export interface VodContextType {
     tasks: VodTask[];
     activeCount: number;
-    addTask: (url: string, quality?: string) => Promise<string>;
+    addTask: (url: string, quality?: string) => Promise<number>;
     cancelTask: (taskId: string) => Promise<void>;
     pauseTask: (taskId: string) => Promise<void>;
     resumeTask: (taskId: string) => Promise<void>;
@@ -45,9 +45,9 @@ export function VodProvider({ children }: { children: ReactNode }) {
     }, [refreshTasks]);
 
     const addTask = async (url: string, quality = "best") => {
-        const { task_id } = await api.downloadVod(url, quality);
+        const { added_count } = await api.downloadVod(url, quality);
         await refreshTasks();
-        return task_id;
+        return added_count;
     };
 
     const cancelTask = async (taskId: string) => {

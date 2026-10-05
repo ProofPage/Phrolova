@@ -6,6 +6,7 @@ import { useSettingsSave } from "../../hooks/useSettingsSave";
 import { useConfirm } from "../ui/ConfirmModal";
 import { useToast } from "../ui/Toast";
 import { Badge, Button, Card, CardHeader, Field, Input, StatusDot } from "../ui/primitives";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 interface Props {
     settings: SettingsType | null;
@@ -18,6 +19,7 @@ interface Props {
 type CookieStatus = "valid" | "invalid" | "checking" | "unknown";
 
 export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
+    const { t } = useLanguage();
     const toast = useToast();
     const confirm = useConfirm();
     const cookieFileInputRef = useRef<HTMLInputElement>(null);
@@ -130,9 +132,9 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
     const cookieBadge = cookieStatus === "checking" ? (
         <Badge>확인 중...</Badge>
     ) : cookieStatus === "valid" ? (
-        <Badge tone="ok"><Shield className="w-3 h-3" /> 유효함 {nickname && `(${nickname})`}</Badge>
+        <Badge tone="ok"><Shield className="w-3 h-3" /> {t("유효함")} {nickname && `(${nickname})`}</Badge>
     ) : cookieStatus === "invalid" ? (
-        <Badge tone="danger"><AlertCircle className="w-3 h-3" /> 만료/미설정</Badge>
+        <Badge tone="danger"><AlertCircle className="w-3 h-3" /> {t("만료/미설정")}</Badge>
     ) : (
         <Button variant="ghost" onClick={() => checkCookieStatus()}>상태 확인</Button>
     );
@@ -157,7 +159,7 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
                 <CardHeader
                     icon={KeyRound}
                     title="TwitCasting"
-                    description={<><a href="https://twitcasting.tv/developer.php" target="_blank" rel="noopener noreferrer" className="text-twitcasting hover:underline">개발자 페이지</a>에서 앱 등록 후 발급받은 API v2 인증 정보를 입력하세요.</>}
+                    description={<><a href="https://twitcasting.tv/developer.php" target="_blank" rel="noopener noreferrer" className="text-twitcasting hover:underline">{t("개발자 페이지")}</a>{t("에서 앱을 등록하고 발급받은 API v2 인증 정보를 입력하세요.")}</>}
                 />
                 <Field label="Client ID">
                     <Input value={twitcastingClientId} onChange={(event) => setTwitcastingClientId(event.target.value)} placeholder="TwitCasting Client ID..." />

@@ -5,6 +5,7 @@ import { getErrorMessage } from "../../utils/error";
 import { UpdateModal } from "../ui/UpdateModal";
 import { useToast } from "../ui/Toast";
 import { Button, Card, CardHeader } from "../ui/primitives";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 interface Props {
     settings: SettingsType | null;
@@ -17,6 +18,7 @@ interface Props {
 
 export function SystemTab({ onDirtyChange, onUpdateAvailabilityChange }: Props) {
     const toast = useToast();
+    const { t } = useLanguage();
     const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
     const [checkingUpdate, setCheckingUpdate] = useState(false);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -38,9 +40,9 @@ export function SystemTab({ onDirtyChange, onUpdateAvailabilityChange }: Props) 
             const info = await api.checkUpdateNow();
             setUpdateInfo(info);
             onUpdateAvailabilityChange?.(info.has_update);
-            toast.success(info.has_update ? "새로운 버전이 있습니다!" : "최신 버전을 사용 중입니다.");
+            toast.success(info.has_update ? t("새로운 버전이 있습니다!") : t("최신 버전을 사용 중입니다."));
         } catch (error) {
-            toast.error(getErrorMessage(error, "업데이트 확인에 실패했습니다."));
+            toast.error(getErrorMessage(error, t("업데이트 확인에 실패했습니다.")));
         } finally {
             setCheckingUpdate(false);
         }
@@ -52,29 +54,29 @@ export function SystemTab({ onDirtyChange, onUpdateAvailabilityChange }: Props) 
                 <CardHeader icon={Terminal} title="프로그램 업데이트" />
                 <div className="bg-surface-3 p-4 rounded-[var(--radius-control)] border border-line flex items-center justify-between">
                     <div>
-                        <h4 className="text-sm font-medium text-ink mb-1">현재 버전</h4>
+                        <h4 className="text-sm font-medium text-ink mb-1">{t("현재 버전")}</h4>
                         <p className="text-xs text-ink-faint font-mono">v{updateInfo?.current_version || "..."}</p>
                     </div>
                     <div className="text-right">
-                        <h4 className="text-sm font-medium text-ink mb-1">최신 릴리즈</h4>
-                        <p className="text-xs text-ink-faint font-mono">{updateInfo?.latest_version ? `v${updateInfo.latest_version}` : "확인 중..."}</p>
+                        <h4 className="text-sm font-medium text-ink mb-1">{t("최신 릴리즈")}</h4>
+                        <p className="text-xs text-ink-faint font-mono">{updateInfo?.latest_version ? `v${updateInfo.latest_version}` : t("확인 중...")}</p>
                     </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
                     <Button icon={RefreshCcw} loading={checkingUpdate} onClick={handleCheckUpdate} className="flex-1">
-                        {checkingUpdate ? "확인 중..." : "업데이트 확인"}
+                        {checkingUpdate ? t("확인 중...") : t("업데이트 확인")}
                     </Button>
                     {updateInfo?.has_update && (
                         <Button variant="primary" icon={Gift} onClick={() => setShowUpdateModal(true)} className="flex-1">
-                            v{updateInfo.latest_version} 업데이트 하기
+                            {t("v{version} 업데이트 하기").replace("{version}", updateInfo.latest_version)}
                         </Button>
                     )}
                 </div>
 
                 {updateInfo?.has_update && updateInfo.release_notes && (
                     <div className="mt-6">
-                        <h4 className="text-sm font-medium text-ok mb-2 flex items-center gap-2"><Gift className="w-4 h-4" /> 릴리즈 노트</h4>
+                        <h4 className="text-sm font-medium text-ok mb-2 flex items-center gap-2"><Gift className="w-4 h-4" /> {t("릴리즈 노트")}</h4>
                         <div className="bg-surface-3 border border-line p-4 rounded-[var(--radius-control)] overflow-y-auto max-h-60 whitespace-pre-wrap text-sm text-ink-muted font-mono leading-relaxed">
                             {updateInfo.release_notes}
                         </div>

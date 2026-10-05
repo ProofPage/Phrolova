@@ -45,25 +45,29 @@ async def get_vod_info(req: VodInfoRequest):
 
 @router.post("/download", summary="VOD 다운로드 시작")
 async def download_vod(req: VodDownloadRequest):
-    """VOD/클립/유튜브 영상 다운로드를 시작합니다. task_id를 반환합니다."""
+    """영상 또는 YouTube 채널 다운로드를 시작합니다."""
     from app.main import get_recorder_service
 
     service = get_recorder_service()
 
     try:
-        task_id = await service.download_vod(
+        task_ids = await service.download_vod_batch(
             url=req.url,
             quality=req.quality,
             output_dir=req.output_dir,
         )
         return {
-            "task_id": task_id,
-            "message": "다운로드가 시작되었습니다.",
+            "task_id": task_ids[0],
+            "task_ids": task_ids,
+            "added_count": len(task_ids),
+            "message": f"다운로드 목록에 {len(task_ids)}개 영상을 추가했습니다.",
             "url": req.url,
             "quality": req.quality,
         }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/status", summary="모든 다운로드 상태 조회")
