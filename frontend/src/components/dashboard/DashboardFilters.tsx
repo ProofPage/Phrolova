@@ -7,11 +7,11 @@ import { useLanguage } from "../../contexts/LanguageContext";
 export type StatusFilter = "all" | "recording" | "live" | "offline";
 export type ViewMode = "grid" | "list";
 
-const FILTERS: { value: StatusFilter; label: string; selectedClass: string }[] = [
-    { value: "all", label: "전체", selectedClass: "text-ink" },
-    { value: "recording", label: "녹화 중", selectedClass: "text-ok" },
-    { value: "live", label: "라이브", selectedClass: "text-live" },
-    { value: "offline", label: "오프라인", selectedClass: "text-ink-muted" },
+const FILTERS: { value: StatusFilter; label: string; selectedClass: string; countKey: "totalCount" | "recordingCount" | "liveCount" | "offlineCount" }[] = [
+    { value: "all", label: "전체", selectedClass: "text-ink", countKey: "totalCount" },
+    { value: "recording", label: "녹화 중", selectedClass: "text-ok", countKey: "recordingCount" },
+    { value: "live", label: "라이브", selectedClass: "text-live", countKey: "liveCount" },
+    { value: "offline", label: "오프라인", selectedClass: "text-ink-muted", countKey: "offlineCount" },
 ];
 
 interface Props {
@@ -26,6 +26,9 @@ interface Props {
     viewMode: ViewMode;
     onViewModeChange: (mode: ViewMode) => void;
     recordingCount: number;
+    totalCount: number;
+    liveCount: number;
+    offlineCount: number;
     onScanNow: () => void;
     onStopAll: () => void;
 }
@@ -42,35 +45,43 @@ export function DashboardFilters({
     viewMode,
     onViewModeChange,
     recordingCount,
+    totalCount,
+    liveCount,
+    offlineCount,
     onScanNow,
     onStopAll,
 }: Props) {
     const { t } = useLanguage();
     return (
-        <div className="flex flex-col gap-3 p-3 sm:p-4 bg-surface-2 border border-line rounded-[var(--radius-card)] surface-raise">
+        <div className="dashboard-toolbar flex flex-col gap-3 p-2.5 sm:p-3">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                <div role="group" aria-label={t("채널 상태 필터")} className="flex flex-wrap gap-1 p-1 bg-surface-3 rounded-[var(--radius-control)]">
-                    {FILTERS.map((option) => (
+                <div className="max-w-full overflow-x-auto">
+                <div role="group" aria-label={t("채널 상태 필터")} className="flex w-max gap-1 p-1">
+                    {FILTERS.map((option) => {
+                        const count = { totalCount, recordingCount, liveCount, offlineCount }[option.countKey];
+                        return (
                         <button
                             key={option.value}
                             type="button"
                             aria-pressed={filter === option.value}
                             onClick={() => onFilterChange(option.value)}
-                            className={`px-3 py-1.5 rounded-md text-[13px] font-medium transition-all whitespace-nowrap ${filter === option.value ? `bg-surface-1 shadow-sm ${option.selectedClass}` : "text-ink-faint hover:text-ink-muted"}`}
+                            className={`dashboard-filter px-3 py-2 rounded-[9px] text-[13px] font-medium transition-all whitespace-nowrap ${filter === option.value ? `is-selected ${option.selectedClass}` : "text-ink-faint hover:text-ink-muted"}`}
                         >
-                            {t(option.label)}
+                            {t(option.label)} <span className="ml-1 tabular-nums opacity-75">{count}</span>
                         </button>
-                    ))}
+                        );
+                    })}
+                </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
-                    <Button icon={RefreshCw} onClick={onScanNow} className="px-3 py-2 whitespace-nowrap shrink-0">{t("즉시 스캔")}</Button>
-                    <Button variant="danger" icon={Square} onClick={onStopAll} disabled={recordingCount === 0} className="px-3 py-2 whitespace-nowrap shrink-0">{t("전체 중지")}</Button>
-                    <div role="group" aria-label={t("채널 보기 방식")} className="flex bg-surface-3 border border-line rounded-[var(--radius-control)] p-1 ml-auto">
+                    <Button icon={RefreshCw} onClick={onScanNow} title={t("등록한 채널의 방송 상태를 다시 확인합니다.")} className="px-3 py-2 whitespace-nowrap shrink-0">{t("방송 상태 확인")}</Button>
+                    <Button variant="danger" icon={Square} onClick={onStopAll} disabled={recordingCount === 0} className="px-3 py-2 whitespace-nowrap shrink-0">{t("전체 녹화 중지")}</Button>
+                    <div role="group" aria-label={t("채널 보기 방식")} className="flex bg-surface-3/80 rounded-[var(--radius-control)] p-1 ml-auto">
                         <button
                             type="button"
                             onClick={() => onViewModeChange("grid")}
-                            className={`p-1.5 rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-4 text-ink" : "text-ink-faint hover:text-ink"}`}
+                            className={`grid size-11 place-items-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-1 text-ink shadow-sm" : "text-ink-faint hover:text-ink"}`}
                             title={t("카드로 보기")}
                             aria-label={t("카드로 보기")}
                             aria-pressed={viewMode === "grid"}
@@ -80,7 +91,7 @@ export function DashboardFilters({
                         <button
                             type="button"
                             onClick={() => onViewModeChange("list")}
-                            className={`p-1.5 rounded-md transition-colors ${viewMode === "list" ? "bg-surface-4 text-ink" : "text-ink-faint hover:text-ink"}`}
+                            className={`grid size-11 place-items-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-1 text-ink shadow-sm" : "text-ink-faint hover:text-ink"}`}
                             title={t("목록으로 보기")}
                             aria-label={t("목록으로 보기")}
                             aria-pressed={viewMode === "list"}

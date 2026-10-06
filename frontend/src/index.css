@@ -18,20 +18,20 @@
 
 @theme {
   /* 표면 — 낮은 번호일수록 배경에 가깝다 */
-  --color-surface-0: #0B0D12;   /* 앱 배경 */
-  --color-surface-1: #101319;   /* 탐색 */
-  --color-surface-2: #151922;   /* 정보 패널 */
-  --color-surface-3: #1D222D;   /* 입력창 */
-  --color-surface-4: #282E3B;   /* hover 상태 */
+  --color-surface-0: #090D15;   /* 앱 배경 */
+  --color-surface-1: #0F1520;   /* 탐색 */
+  --color-surface-2: #141B27;   /* 정보 패널 */
+  --color-surface-3: #1B2432;   /* 입력창 */
+  --color-surface-4: #232E40;   /* hover 상태 */
 
   /* 테두리 — hairline은 거의 보이지 않는 구분선 */
-  --color-line: #252A35;
-  --color-line-strong: #363D4C;
+  --color-line: #253145;
+  --color-line-strong: #34435A;
 
   /* 텍스트 */
   --color-ink: #F5F7FB;         /* 제목 */
-  --color-ink-muted: #B7BECD;   /* 본문 */
-  --color-ink-faint: #8993A6;   /* 보조 설명 */
+  --color-ink-muted: #C0C9D7;   /* 본문 */
+  --color-ink-faint: #8D9AAF;   /* 보조 설명 */
 
   /* 상태 색 */
   --color-live: #FF4D4D;
@@ -215,8 +215,8 @@ code,
 /* 앱 전체 캔버스 — 데이터 화면의 빈 공간에도 깊이가 남도록 한다. */
 .app-canvas {
   background:
-    radial-gradient(circle at 18% -8%, color-mix(in srgb, var(--primary) 5%, transparent), transparent 30rem),
-    radial-gradient(circle at 92% 12%, rgba(59, 130, 246, 0.04), transparent 28rem),
+    radial-gradient(circle at 18% -8%, rgba(67, 141, 255, 0.055), transparent 34rem),
+    radial-gradient(circle at 92% 12%, rgba(59, 130, 246, 0.035), transparent 28rem),
     var(--color-surface-0);
 }
 
@@ -225,7 +225,7 @@ code,
   position: fixed;
   inset: 0;
   pointer-events: none;
-  opacity: 0.07;
+  opacity: 0.04;
   background-image:
     linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
@@ -260,6 +260,92 @@ code,
   color: var(--primary);
   background: var(--primary-dim);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 24%, transparent);
+}
+
+.page-header-plain {
+  position: relative;
+  padding: 0.25rem 0 0;
+}
+
+.page-header-plain > div > div:last-child {
+  border-top: 1px solid color-mix(in srgb, var(--color-line) 82%, transparent);
+  padding-top: 1rem;
+}
+
+.page-header-plain .page-hero-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 12px;
+}
+
+.page-header-plain h1 {
+  font-size: clamp(1.35rem, 1.8vw, 1.65rem);
+  letter-spacing: -0.04em;
+}
+
+.dashboard-page .page-header-plain > div:first-of-type > div:first-child {
+  row-gap: 0.75rem;
+}
+
+.dashboard-summary {
+  gap: 0.85rem;
+  align-self: center;
+  padding-left: 1rem;
+}
+
+.dashboard-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--color-ink-faint);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.dashboard-metric strong {
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.dashboard-metric-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--color-line-strong);
+}
+
+.dashboard-metric-dot.is-live { background: var(--color-live); }
+.dashboard-metric-dot.is-recording { background: var(--color-ok); }
+
+.dashboard-toolbar {
+  border: 1px solid color-mix(in srgb, var(--color-line-strong) 70%, transparent);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--color-surface-1) 86%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.dashboard-filter.is-selected {
+  background: color-mix(in srgb, var(--primary) 13%, var(--color-surface-2));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.dashboard-page .input-focus:focus {
+  border-color: color-mix(in srgb, var(--primary) 70%, var(--color-line-strong));
+}
+
+.dashboard-add-channel .input-focus {
+  min-height: 2.75rem;
+}
+
+.channel-row-card {
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.channel-row-card:hover {
+  background-color: color-mix(in srgb, var(--color-surface-2) 90%, white 2%);
+  border-color: color-mix(in srgb, var(--color-line-strong) 75%, transparent);
 }
 
 button,
@@ -345,6 +431,15 @@ textarea {
   .glass-popover { background: #1B202B; -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 
+@media (max-width: 639px) {
+  .dashboard-summary {
+    width: 100%;
+    margin-left: 3.25rem;
+    padding-left: 0;
+    gap: 0.7rem;
+  }
+}
+
 @supports not (backdrop-filter: blur(1px)) {
   .app-topbar,
   .glass-popover { background: #1B202B; }
@@ -357,6 +452,11 @@ textarea {
   border-radius: var(--radius-control);
   color: var(--color-ink-faint);
   transition: color 160ms ease, background-color 160ms ease;
+}
+
+.app-topbar .icon-button {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
 }
 
 .icon-button:hover {
@@ -394,6 +494,151 @@ textarea {
 .nav-icon-active {
   color: var(--primary);
   background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+/* ── 앱 셸: 데스크톱 좌측 탐색 + 모바일 드로어 ── */
+.app-sidebar {
+  position: relative;
+  z-index: 30;
+  width: 252px;
+  height: 100%;
+  flex: 0 0 252px;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid rgba(164, 195, 235, 0.14);
+  background:
+    radial-gradient(ellipse at 0% 0%, rgba(46, 130, 224, 0.16), transparent 42%),
+    linear-gradient(180deg, rgba(17, 33, 54, 0.94), rgba(12, 20, 33, 0.96));
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.025), 12px 0 36px rgba(0, 0, 0, 0.12);
+  -webkit-backdrop-filter: blur(24px) saturate(145%);
+  backdrop-filter: blur(24px) saturate(145%);
+}
+
+.sidebar-brand {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid rgba(164, 195, 235, 0.12);
+}
+
+.sidebar-navigation {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.2rem 0.8rem;
+}
+
+.sidebar-nav-group + .sidebar-nav-group { margin-top: 1.4rem; }
+.sidebar-nav-heading {
+  margin: 0 0 0.45rem;
+  padding: 0 0.7rem;
+  color: color-mix(in srgb, var(--color-ink-faint) 82%, #c5dcff);
+  font-size: 0.65rem;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+}
+
+.sidebar-nav-link {
+  position: relative;
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  color: var(--color-ink-faint);
+  font-size: 0.83rem;
+  font-weight: 560;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+.sidebar-nav-link:hover {
+  color: var(--color-ink);
+  background: rgba(177, 210, 255, 0.07);
+}
+
+.sidebar-nav-link-active {
+  color: #eaf4ff;
+  border-color: rgba(111, 181, 255, 0.2);
+  background: linear-gradient(100deg, rgba(45, 133, 225, 0.23), rgba(63, 145, 231, 0.1));
+  box-shadow: inset 2px 0 0 #54b5ff, inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-nav-link-active svg { color: #70c3ff; }
+.sidebar-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.9rem 1rem calc(0.9rem + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(164, 195, 235, 0.12);
+  color: var(--color-ink-faint);
+  font-size: 0.7rem;
+}
+.sidebar-footer-mark { width: 0.45rem; height: 0.45rem; border-radius: 50%; background: #48baff; box-shadow: 0 0 10px rgba(72, 186, 255, 0.45); }
+
+.app-main { background: linear-gradient(130deg, rgba(29, 69, 109, 0.055), transparent 30rem); }
+.app-topbar { border-color: transparent; background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.app-topbar-inner { padding-left: 1rem; }
+.app-topbar .top-search,
+.app-topbar .download-pill {
+  background: rgba(42, 64, 91, 0.38);
+  border-color: rgba(177, 202, 235, 0.12);
+}
+.app-topbar .top-search:hover,
+.app-topbar .download-pill:hover { background: rgba(60, 91, 128, 0.45); }
+
+.sidebar-mobile-trigger {
+  position: fixed;
+  z-index: 40;
+  top: max(0.55rem, env(safe-area-inset-top));
+  left: max(0.65rem, env(safe-area-inset-left));
+  background: rgba(20, 34, 52, 0.88);
+  border: 1px solid rgba(177, 202, 235, 0.17);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.sidebar-mobile-overlay {
+  position: fixed;
+  z-index: 99;
+  inset: 0;
+}
+.sidebar-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border: 0;
+  background: rgba(3, 8, 15, 0.72);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+.app-sidebar-mobile {
+  position: relative;
+  width: min(290px, calc(100vw - 3rem));
+  height: 100%;
+  animation: slide-in-left 180ms ease-out;
+  box-shadow: 18px 0 50px rgba(0, 0, 0, 0.38);
+}
+.sidebar-mobile-close {
+  position: absolute;
+  z-index: 1;
+  top: max(0.65rem, env(safe-area-inset-top));
+  right: 0.7rem;
+}
+
+.settings-tabs { -webkit-overflow-scrolling: touch; }
+.settings-tabs::-webkit-scrollbar { height: 4px; }
+
+@media (max-width: 639px) {
+  .app-topbar-inner { padding-left: 3.75rem; padding-right: max(0.75rem, env(safe-area-inset-right)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-nav-link,
+  .app-sidebar-mobile { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
 /* 강조색 배경 버튼 */

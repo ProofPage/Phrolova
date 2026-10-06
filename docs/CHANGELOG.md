@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+## [2.0.42] - 2026-10-06
+
+### Changed
+- **라이브 대시보드** — 채널 상태와 녹화 제어를 미리보기 위에 배치하고, 방송 미리보기와 크게 보기 동작을 개선했습니다.
+- **다운로드·설정 화면** — 플랫폼 선택 메뉴와 설정 탭을 정리하고 작은 화면에서도 사용하기 쉽게 다듬었습니다.
+- **통계 화면** — 저장 위치와 경로를 읽기 쉽게 정리하고 불필요한 복사 버튼을 제거했습니다.
+- **브랜드 표기** — 메뉴의 보조 문구를 제거하고 플랫폼 이름을 일관되게 표시합니다.
+
 ## [2.0.41] - 2026-10-06
 
 ### Changed
@@ -593,7 +601,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.41...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.42...HEAD
+[2.0.42]: https://github.com/ProofPage/Phrolova/compare/v2.0.41...v2.0.42
 [2.0.41]: https://github.com/ProofPage/Phrolova/compare/v2.0.40...v2.0.41
 [2.0.40]: https://github.com/ProofPage/Phrolova/compare/v2.0.39...v2.0.40
 [2.0.39]: https://github.com/ProofPage/Phrolova/compare/v2.0.38...v2.0.39

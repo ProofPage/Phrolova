@@ -33,6 +33,7 @@ export function PageHeader({
     meta,
     actions,
     actionsPlacement = "inline",
+    variant = "default",
 }: {
     icon: LucideIcon;
     eyebrow?: string;
@@ -41,27 +42,32 @@ export function PageHeader({
     meta?: ReactNode;
     actions?: ReactNode;
     actionsPlacement?: "inline" | "inline-top" | "below";
+    variant?: "default" | "plain";
 }) {
     const { t } = useLanguage();
     const actionsBelow = actionsPlacement === "below";
     const actionsTopAligned = actionsPlacement === "inline-top";
+    const metaBelow = actionsBelow && variant !== "plain" && meta;
 
     return (
-        <header className="page-hero relative border border-line rounded-[var(--radius-card)] p-4 sm:px-5 sm:py-4">
-            <div aria-hidden="true" className="page-hero-decoration pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" />
-            <div className={`relative z-10 flex ${actionsBelow ? "flex-col" : `flex-col md:flex-row ${actionsTopAligned ? "md:items-start" : "md:items-center"}`} justify-between gap-4`}>
-                <div className={clsx("flex gap-3 min-w-0", actionsBelow || actionsTopAligned ? "items-start" : "items-center")}>
-                    <span className="page-hero-icon grid place-items-center w-9 h-9 rounded-[10px] shrink-0">
+        <header className={clsx(
+            variant === "plain" ? "page-header-plain" : "page-hero relative border border-line rounded-[var(--radius-card)] p-4 sm:px-5 sm:py-4",
+        )}>
+            {variant !== "plain" && <div aria-hidden="true" className="page-hero-decoration pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" />}
+            <div className={clsx("relative z-10 flex justify-between gap-4", actionsBelow ? "flex-col" : `flex-col md:flex-row ${actionsTopAligned ? "md:items-start" : "md:items-center"}`)}>
+                <div className={clsx("flex min-w-0 gap-3", variant === "plain" ? "flex-wrap items-center" : actionsBelow || actionsTopAligned ? "items-start" : "items-center")}>
+                    <span className="page-hero-icon grid place-items-center w-9 h-9 rounded-[10px] shrink-0 self-center">
                         {createElement(icon, { className: "w-[18px] h-[18px]" })}
                     </span>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                         {eyebrow && <p className="text-[10px] font-semibold tracking-[0.08em] text-ink-faint mb-0.5">{t(eyebrow)}</p>}
                         <h1 className="text-[21px] sm:text-[23px] font-bold tracking-[-0.035em] text-ink leading-tight">{t(title)}</h1>
                         <p className="text-[12px] sm:text-[13px] text-ink-faint mt-1 max-w-2xl leading-relaxed">{typeof description === "string" ? t(description) : description}</p>
-                        {meta && <div className="flex flex-wrap items-center gap-1.5 mt-2.5">{meta}</div>}
                     </div>
+                    {meta && !metaBelow && <div className={clsx("flex flex-wrap items-center gap-1.5", variant === "plain" ? "dashboard-summary sm:ml-auto" : "mt-2.5")}>{meta}</div>}
                 </div>
-                {actions && <div className={actionsBelow ? "w-full border-t border-line/80 pt-3" : "shrink-0 md:max-w-[44%]"}>{actions}</div>}
+                {metaBelow && <div className="mt-2.5 flex flex-wrap items-center gap-1.5 pl-12">{meta}</div>}
+                {actions && <div className={clsx(actionsBelow ? "w-full pt-3" : "shrink-0 md:max-w-[44%]", actionsBelow && variant !== "plain" && "border-t border-line/80")}>{actions}</div>}
             </div>
         </header>
     );
@@ -408,18 +414,20 @@ export function Switch({
             disabled={disabled}
             onClick={() => onChange(!checked)}
             className={clsx(
-                "relative inline-flex h-[26px] w-[46px] items-center rounded-full",
-                "transition-colors duration-200 shrink-0",
-                "disabled:opacity-40 disabled:cursor-not-allowed",
-                !checked && "bg-surface-4",
+                "relative inline-flex h-11 w-[52px] shrink-0 items-center rounded-full transition-colors duration-200",
+                "disabled:cursor-not-allowed disabled:opacity-40",
             )}
-            style={checked ? { backgroundColor: "var(--primary)" } : undefined}
         >
             <span
+                aria-hidden="true"
+                className="absolute inset-x-[3px] top-1/2 h-[26px] -translate-y-1/2 rounded-full transition-colors duration-200"
+                style={{ backgroundColor: checked ? "var(--primary)" : "var(--color-surface-4)" }}
+            />
+            <span
+                aria-hidden="true"
                 className={clsx(
-                    "inline-block h-[20px] w-[20px] rounded-full bg-white shadow-sm",
-                    "transition-transform duration-200",
-                    checked ? "translate-x-[23px]" : "translate-x-[3px]",
+                    "absolute top-1/2 size-5 -translate-y-1/2 rounded-full bg-white shadow-sm transition-[left] duration-200",
+                    checked ? "left-[26px]" : "left-[6px]",
                 )}
             />
         </button>

@@ -74,7 +74,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
 
     return (
         <>
-        <form onSubmit={handleSubmit} aria-label="감시 채널 추가" className="space-y-2.5">
+        <form onSubmit={handleSubmit} aria-label="감시 채널 추가" className="dashboard-add-channel space-y-2">
             <div className="flex w-full min-w-0 flex-col items-stretch gap-2 sm:flex-row">
             <div className="relative shrink-0" ref={dropdownRef}>
                 <button
@@ -119,12 +119,12 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
 
             <div className="flex min-w-0 gap-2 sm:flex-1">
             <Input value={channelId} onChange={(event) => setChannelId(event.target.value)} aria-label={`${PLATFORM_LABELS[selectedPlatform]} 채널 ID`} placeholder={placeholder} className="h-11 min-w-0 flex-1" />
-            <Button type="submit" variant="primary" icon={Plus} loading={loading} disabled={!channelId.trim()} aria-label="채널 추가 설정 열기" title="채널 추가 설정 열기" className="h-11 shrink-0 px-3 sm:px-4">
-                추가
+                    <Button type="submit" variant="primary" icon={Plus} loading={loading} disabled={!channelId.trim()} aria-label="채널 추가 설정 열기" title="채널 추가 설정 열기" className="h-11 shrink-0 px-3 sm:px-4">
+                채널 추가
             </Button>
             </div>
             </div>
-            <p className="text-[11px] text-ink-faint leading-relaxed">추가 후 채널별 자동 녹화 여부와 조건을 설정할 수 있습니다.</p>
+            <p className="text-[11px] text-ink-faint leading-relaxed">채널을 추가한 뒤 자동 녹화 여부와 조건을 선택할 수 있습니다.</p>
         </form>
         {settingsOpen && <ChannelDownloadModal platform={selectedPlatform} name={channelId.trim()} onClose={() => setSettingsOpen(false)} onSave={handleAdd} />}
         </>

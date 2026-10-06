@@ -115,7 +115,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                     placeholder="예: C:\\Recordings\\Video 또는 /home/user/recordings/video"
                 />
                 <p className="text-xs text-ink-faint mt-1.5 flex items-start gap-1">
-                    치지직 다시보기·클립, 유튜브와 외부 영상이 이곳에 저장됩니다.
+                    치지직 다시보기·클립, YouTube와 외부 영상이 이곳에 저장됩니다.
                 </p>
             </div>
 

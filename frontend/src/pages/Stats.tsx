@@ -39,7 +39,6 @@ const formatCount = (count: number, language: string, unit: "item" | "session" |
 function StorageCard({ used, total, free, dir, t }: { used: number; total: number; free: number; dir: string; t: (text: string) => string }) {
     const percentage = total > 0 ? Math.round((used / total) * 100) : 0;
     const tone = percentage >= 90 ? "var(--color-danger)" : percentage >= 70 ? "var(--color-warn)" : "var(--color-ok)";
-
     return (
         <Card className="relative overflow-hidden">
             <span className="absolute inset-x-0 top-0 h-px opacity-70" style={{ background: `linear-gradient(90deg, transparent, ${tone}, transparent)` }} />
@@ -56,9 +55,12 @@ function StorageCard({ used, total, free, dir, t }: { used: number; total: numbe
             <div className="mt-4 h-1.5 rounded-full bg-surface-4 overflow-hidden">
                 <div className="h-full rounded-full transition-all" style={{ width: `${percentage}%`, backgroundColor: tone }} />
             </div>
-            <div className="mt-2 flex min-w-0 items-center justify-between gap-3 text-[11px] text-ink-faint font-mono">
-                <p className="shrink-0 whitespace-nowrap">{formatBytes(used)} / {formatBytes(total)}</p>
-                <p className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap text-right leading-4" title={`${t("용량 확인 기준 경로")}: ${dir}`}>{dir}</p>
+            <div className="mt-2 min-w-0 font-mono text-[11px] text-ink-faint">
+                <p className="whitespace-nowrap">{formatBytes(used)} / {formatBytes(total)}</p>
+                <div className="mt-3 border-t border-line/80 pt-3">
+                    <p className="font-sans text-xs font-medium text-ink-muted">{t("저장 위치")}</p>
+                    <p className="mt-1.5 max-w-full whitespace-normal break-all leading-relaxed text-ink-faint" title={`${t("저장 위치")}: ${dir}`}>{dir || "—"}</p>
+                </div>
             </div>
         </Card>
     );

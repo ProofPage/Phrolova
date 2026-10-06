@@ -8,7 +8,7 @@ import { ChannelCard } from "../components/dashboard/ChannelCard";
 import { ChannelRow } from "../components/dashboard/ChannelRow";
 import { DashboardFilters, type StatusFilter, type ViewMode } from "../components/dashboard/DashboardFilters";
 import { useConfirm } from "../components/ui/ConfirmModal";
-import { Badge, Button, EmptyState, PageHeader } from "../components/ui/primitives";
+import { Button, EmptyState, PageHeader } from "../components/ui/primitives";
 import { useToast } from "../components/ui/Toast";
 import { useChannelReorder } from "../hooks/useChannelReorder";
 import { useChannelStream } from "../hooks/useChannelStream";
@@ -16,13 +16,27 @@ import { getChannelKey } from "../utils/channel";
 import { getErrorMessage } from "../utils/error";
 import { useLanguage } from "../contexts/LanguageContext";
 
+function DashboardMetric({ label, value, tone }: { label: string; value: number; tone?: "live" | "recording" }) {
+    const { t } = useLanguage();
+    return (
+        <div className="dashboard-metric">
+            <span className={tone === "live" && value > 0 ? "dashboard-metric-dot is-live" : tone === "recording" && value > 0 ? "dashboard-metric-dot is-recording" : "dashboard-metric-dot"} />
+            <span>{t(label)}</span>
+            <strong>{value}</strong>
+        </div>
+    );
+}
+
 export default function Dashboard() {
     const { t } = useLanguage();
     const { channels, initialLoading, connectionError, fetchChannels } = useChannelStream();
     const { orderedChannels, getReorderProps } = useChannelReorder(channels);
     const [platformStatus, setPlatformStatus] = useState<PlatformStatus | null>(null);
     const [filter, setFilter] = useState<StatusFilter>("all");
-    const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem("dashboardViewMode") as ViewMode) || "grid");
+    const [viewMode, setViewMode] = useState<ViewMode>(() => {
+        const saved = localStorage.getItem("dashboardViewMode");
+        return saved === "grid" || saved === "list" ? saved : "list";
+    });
     const [globalTags, setGlobalTags] = useState<string[]>([]);
     const [selectedFilterTags, setSelectedFilterTags] = useState<string[]>([]);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -117,9 +131,9 @@ export default function Dashboard() {
     const handleScanNow = async () => {
         try {
             await api.scanNow();
-            toast.success("즉시 스캔 요청됨. 잠시 후 상태가 업데이트됩니다.");
+            toast.success("채널 상태 확인을 요청했습니다. 잠시 후 결과가 반영됩니다.");
         } catch {
-            toast.error("즉시 스캔 요청에 실패했습니다.");
+            toast.error("채널 상태를 확인하지 못했습니다.");
         }
     };
 
@@ -212,7 +226,7 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="dashboard-page space-y-5 sm:space-y-6">
             <PageHeader
                 icon={Radio}
                 eyebrow={t("실시간 방송 관리")}
@@ -220,13 +234,14 @@ export default function Dashboard() {
                 description={t("방송 상태를 확인하고 채널별 자동 녹화와 녹화 조건을 관리합니다.")}
                 meta={(
                     <>
-                        <Badge tone="primary">{t("감시 채널")} {channels.length}</Badge>
-                        <Badge tone={liveCount > 0 ? "danger" : "neutral"}>{t("방송 중")} {liveCount}</Badge>
-                        <Badge tone={recordingCount > 0 ? "ok" : "neutral"}>{t("녹화 중")} {recordingCount}</Badge>
+                        <DashboardMetric label="감시 채널" value={channels.length} />
+                        <DashboardMetric label="라이브" value={liveCount} tone="live" />
+                        <DashboardMetric label="녹화 중" value={recordingCount} tone="recording" />
                     </>
                 )}
                 actions={<AddChannelForm platformStatus={platformStatus} onAdded={fetchChannels} />}
                 actionsPlacement="below"
+                variant="plain"
             />
 
             {connectionError && !initialLoading && (
@@ -248,6 +263,9 @@ export default function Dashboard() {
                     viewMode={viewMode}
                     onViewModeChange={setViewMode}
                     recordingCount={recordingCount}
+                    totalCount={channels.length}
+                    liveCount={liveCount}
+                    offlineCount={channels.length - liveCount}
                     onScanNow={handleScanNow}
                     onStopAll={handleStopAll}
                 ><LiveDownloadCondition /></DashboardFilters>
@@ -258,10 +276,10 @@ export default function Dashboard() {
                 )}
             </div>
 
-            <div className={viewMode === "grid" ? "grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" : "flex min-w-0 flex-col gap-3"}>
+            <div className={viewMode === "grid" ? "grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" : "flex min-w-0 flex-col gap-2.5"}>
                 {initialLoading && [1, 2, 3].map((item) => (
-                    <div key={item} className={`min-w-0 bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden ${viewMode === "list" ? "flex flex-col md:flex-row" : ""}`}>
-                        <div className={`skeleton ${viewMode === "list" ? "h-28 w-full xl:h-auto xl:w-48 xl:shrink-0" : "w-full aspect-video"}`} />
+                    <div key={item} className={`min-w-0 bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden ${viewMode === "list" ? "flex flex-col lg:flex-row" : ""}`}>
+                        <div className={`skeleton ${viewMode === "list" ? "aspect-video w-full lg:w-48 lg:shrink-0" : "w-full aspect-video"}`} />
                         <div className="p-4 space-y-3 flex-1"><div className="skeleton h-4 rounded w-3/4" /><div className="skeleton h-3 rounded w-1/2" /><div className="skeleton h-8 rounded mt-6" /></div>
                     </div>
                 ))}

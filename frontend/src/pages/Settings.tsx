@@ -125,16 +125,14 @@ export default function Settings() {
         <div className="space-y-6">
             <PageHeader
                 icon={SettingsIcon}
-                eyebrow={t("프로그램 설정")}
                 title={t("설정")}
                 description={t("녹화 방식과 인증, 알림, 화면 테마 및 시스템 동작을 구성합니다.")}
-                meta={(
+                meta={hasDirtyTab || updateAvailable ? (
                     <>
-                        <Badge tone="neutral">{t("7개 항목")}</Badge>
                         {hasDirtyTab && <Badge tone="warn">{t("저장하지 않은 변경사항")}</Badge>}
                         {updateAvailable && <Badge tone="ok">{t("업데이트 가능")}</Badge>}
                     </>
-                )}
+                ) : undefined}
             />
 
             {settings === null ? (
@@ -147,14 +145,16 @@ export default function Settings() {
                     {loadError && <Button icon={RefreshCw} onClick={() => void loadSettings()} variant="primary">다시 시도</Button>}
                 </Card>
             ) : <div className="space-y-4">
-            <nav className="grid grid-cols-2 gap-1.5 p-1.5 bg-surface-2 border border-line rounded-[var(--radius-card)] surface-raise sm:grid-cols-4 xl:grid-cols-7" aria-label={t("설정 탭")}>
+            <nav className="settings-tabs flex min-w-0 items-center gap-1 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface-2 p-1.5" aria-label={t("설정 탭")}>
                 {TABS.map((tab) => {
                     const Icon = tab.icon;
                     return (
                         <button
                             key={tab.id}
+                            type="button"
                             onClick={() => handleTabChange(tab.id)}
-                            className={`relative flex min-w-0 items-center justify-center gap-2 rounded-[var(--radius-control)] px-2 py-2.5 text-[12px] font-medium transition-all sm:px-3.5 sm:text-[13px] ${activeTab === tab.id ? "btn-ghost-primary text-ink shadow-sm" : "text-ink-faint hover:bg-surface-3 hover:text-ink-muted"}`}
+                            aria-current={activeTab === tab.id ? "page" : undefined}
+                            className={`relative flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] px-3 text-[12px] font-medium transition-all sm:px-3.5 sm:text-[13px] ${activeTab === tab.id ? "bg-info/15 text-info shadow-sm ring-1 ring-info/15" : "text-ink-faint hover:bg-surface-3 hover:text-ink-muted"}`}
                         >
                             <Icon className="w-4 h-4" />
                             {t(tab.label)}

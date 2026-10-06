@@ -28,7 +28,7 @@ export function YouTubeAuth() {
                 await client.delete("/platforms/youtube/cookie");
             }
             setConfigured(!!file);
-            toast.success(t(file ? "유튜브 쿠키를 등록했습니다." : "쿠키 파일이 삭제되었습니다."));
+            toast.success(t(file ? "YouTube 쿠키를 등록했습니다." : "쿠키 파일이 삭제되었습니다."));
         } catch (err) {
             toast.error(getErrorMessage(err, t("요청에 실패했습니다.")));
         } finally {
@@ -37,7 +37,7 @@ export function YouTubeAuth() {
         }
     };
     return <Card className="space-y-5">
-        <CardHeader icon={KeyRound} title={t("유튜브")} description={t("로그인 확인이 필요한 경우 Netscape 형식의 유튜브 쿠키 파일을 등록하세요.")} />
+        <CardHeader icon={KeyRound} title={t("YouTube")} description={t("로그인 확인이 필요한 경우 Netscape 형식의 YouTube 쿠키 파일을 등록하세요.")} />
         <div className="flex flex-wrap items-center gap-3">
             <StatusDot active={configured} label={t(configured ? "업로드됨" : "없음")} />
             <input ref={input} type="file" accept=".txt" className="hidden" onChange={(event) => {
@@ -47,6 +47,6 @@ export function YouTubeAuth() {
             <Button icon={Upload} loading={busy} onClick={() => input.current?.click()}>{t("파일 선택")}</Button>
             {configured && <Button variant="danger" icon={Trash2} disabled={busy} onClick={() => void change()}>{t("삭제")}</Button>}
         </div>
-        <a className="text-xs text-accent underline" href="https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies" target="_blank" rel="noreferrer">{t("유튜브 쿠키 내보내기 안내")}</a>
+        <a className="text-xs text-accent underline" href="https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies" target="_blank" rel="noreferrer">{t("YouTube 쿠키 내보내기 안내")}</a>
     </Card>;
 }

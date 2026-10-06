@@ -15,6 +15,7 @@ import {
     FolderOpen,
     Plus,
     Trash2,
+    Check,
 } from "lucide-react";
 import { useVod } from "../contexts/VodContext";
 import { api, VodTask } from "../api/client";
@@ -46,7 +47,7 @@ export default function VodDownload() {
     const errorCount = tasks.filter((task) => task.state === "error").length;
     const sourceOptions = [
         { id: "chzzk", label: t("치지직"), dot: "bg-chzzk" },
-        { id: "youtube", label: t("유튜브"), dot: "bg-youtube" },
+        { id: "youtube", label: t("YouTube"), dot: "bg-youtube" },
         { id: "external", label: t("외부 영상"), dot: "bg-[var(--primary)]" },
     ] as const;
     const selectedSourceOption = sourceOptions.find((option) => option.id === selectedSource)!;
@@ -91,7 +92,7 @@ export default function VodDownload() {
             hostname = new URL(downloadUrl).hostname.toLowerCase();
         } catch {
             toast.error(selectedSource === "youtube"
-                ? t("유튜브 링크, @핸들 또는 11자리 동영상 ID를 입력해 주세요.")
+                ? t("YouTube 링크, @핸들 또는 11자리 동영상 ID를 입력해 주세요.")
                 : t("올바른 영상 주소를 입력해 주세요."));
             return;
         }
@@ -109,7 +110,7 @@ export default function VodDownload() {
             toast.error(selectedSource === "chzzk"
                 ? t("치지직 다시보기 또는 클립 주소를 입력해 주세요.")
                 : selectedSource === "youtube"
-                    ? t("유튜브 링크, @핸들 또는 동영상 ID를 입력해 주세요.")
+                    ? t("YouTube 링크, @핸들 또는 동영상 ID를 입력해 주세요.")
                     : t("지원되는 외부 영상 주소인지 확인해 주세요."));
             return;
         }
@@ -221,7 +222,7 @@ export default function VodDownload() {
                 icon={Download}
                 eyebrow={t("다운로드 관리")}
                 title={t("영상 다운로드")}
-                description={t("치지직 다시보기와 클립, 유튜브와 외부 영상을 추가하고 다운로드 상태를 관리합니다.")}
+                description={t("치지직 다시보기와 클립, YouTube와 외부 영상을 추가하고 다운로드 상태를 관리합니다.")}
                 meta={(
                     <>
                         <Badge tone={activeCount > 0 ? "ok" : "neutral"}>{t("진행 중")} {activeCount}</Badge>
@@ -258,10 +259,14 @@ export default function VodDownload() {
                                                     setSelectedSource(option.id);
                                                     setSourceMenuOpen(false);
                                                 }}
-                                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-muted transition-colors hover:bg-surface-3"
+                                                className={clsx(
+                                                    "flex min-h-10 w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors",
+                                                    selectedSource === option.id ? "bg-info/12 text-ink" : "text-ink-muted hover:bg-surface-3 hover:text-ink",
+                                                )}
                                             >
-                                                <span className={`inline-block h-2 w-2 rounded-full ${option.dot}`} />
+                                                <span className={`inline-block size-2 shrink-0 rounded-full ${option.dot}`} />
                                                 <span className="flex-1">{option.label}</span>
+                                                {selectedSource === option.id && <Check className="size-4 shrink-0 text-info" aria-hidden="true" />}
                                             </button>
                                         ))}
                                     </div>
@@ -273,7 +278,7 @@ export default function VodDownload() {
                                     type="text"
                                     className="min-w-0 flex-1"
                                     aria-label={selectedSource === "youtube"
-                                        ? "유튜브 링크, 채널 핸들 또는 동영상 ID"
+                                        ? "YouTube 링크, 채널 핸들 또는 동영상 ID"
                                         : `${selectedSourceOption.label} 영상 주소`}
                                     placeholder={sourcePlaceholder}
                                     value={url}

@@ -1,113 +1,114 @@
-import { DownloadHoldStatus } from "./DownloadHoldStatus";
-import { AlertCircle, AlertTriangle, Eye, GripVertical, MessageSquare, Play, Square, Trash2, Users, Video } from "lucide-react";
+import { AlertCircle, AlertTriangle, GripVertical, Play, Square, Trash2, Users, Video } from "lucide-react";
 import { clsx } from "clsx";
 import { getChannelKey } from "../../utils/channel";
-import { formatDuration } from "../../utils/format";
+import { formatBytes, formatDuration } from "../../utils/format";
 import { TagManager } from "../ui/TagManager";
 import { Button, Card, Switch } from "../ui/primitives";
-import { PlatformBadge, RecordingStats, type ChannelItemProps, useRecordingDuration } from "./ChannelCard";
+import { ChannelThumbnail, PlatformBadge, type ChannelItemProps, useRecordingDuration } from "./ChannelCard";
+import { DownloadHoldStatus } from "./DownloadHoldStatus";
 import { useLanguage } from "../../contexts/LanguageContext";
 
 export function ChannelRow(props: ChannelItemProps) {
-    const { channel, onStartRecord, onStopRecord, onRemove, onToggleAutoRecord, isActionLoading, globalTags, onAddTag, onRemoveTag, onCreateTag, onReorderPointerDown, onReorderPointerMove, onReorderPointerUp, onReorderMouseMove, onReorderMouseUp, onReorderKeyDown, isDragging, isDropTarget } = props;
+    const {
+        channel, onStartRecord, onStopRecord, onRemove, onToggleAutoRecord,
+        isActionLoading, globalTags, onAddTag, onRemoveTag, onCreateTag,
+        onReorderPointerDown, onReorderPointerMove, onReorderPointerUp,
+        onReorderMouseMove, onReorderMouseUp, onReorderKeyDown,
+        isDragging, isDropTarget,
+    } = props;
     const { t } = useLanguage();
     const displayName = channel.channel_name || channel.channel_id;
     const platform = channel.platform || "chzzk";
     const duration = useRecordingDuration(channel);
+    const recording = channel.recording?.is_recording === true;
 
     return (
         <Card
             padded={false}
             className={clsx(
-                "overflow-hidden transition-all group flex min-h-[150px] min-w-0 flex-col xl:flex-row",
-                channel.recording?.is_recording && "animate-pulse-border",
+                "channel-row-card group relative flex min-w-0 flex-col overflow-hidden transition-colors",
                 isDragging && "opacity-45",
                 isDropTarget && "ring-2 ring-[var(--primary)] ring-offset-2 ring-offset-surface-0",
             )}
             data-channel-key={getChannelKey(channel)}
         >
-            <div
-                role="button"
-                tabIndex={0}
-                onPointerDown={onReorderPointerDown}
-                onPointerMove={onReorderPointerMove}
-                onPointerUp={onReorderPointerUp}
-                onPointerCancel={onReorderPointerUp}
-                onLostPointerCapture={onReorderPointerUp}
-                onMouseMove={onReorderMouseMove}
-                onMouseUp={onReorderMouseUp}
-                onKeyDown={onReorderKeyDown}
-                className="order-1 grid h-10 w-10 self-end place-items-center text-ink-faint hover:text-ink hover:bg-surface-3 cursor-grab active:cursor-grabbing rounded-md transition-colors shrink-0 touch-none select-none xl:order-none xl:h-auto xl:w-9 xl:self-stretch xl:rounded-none xl:border-b-0 xl:border-r"
-                title="드래그하거나 방향키를 눌러 채널 순서 변경"
-                aria-label={`${displayName} 채널 순서 변경`}
-                aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown"
-            >
-                <GripVertical className="w-4 h-4 pointer-events-none" />
-            </div>
-            <div className="relative order-2 h-28 bg-surface-0 overflow-hidden w-full shrink-0 xl:order-none xl:h-auto xl:w-64">
-                {channel.is_live && channel.thumbnail_url ? (
-                    <img src={channel.thumbnail_url} alt={`${displayName} 방송 썸네일`} className="w-full h-full object-cover" loading="lazy" />
-                ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-ink-faint bg-linear-to-br from-surface-2 to-surface-0">
-                        <AlertCircle className="w-8 h-8 mb-2 opacity-40" />
-                        <span className="text-xs font-medium opacity-70">{t("오프라인")}</span>
-                    </div>
-                )}
-                {channel.is_live && <span className="absolute top-2 left-2 bg-live text-white text-[10px] font-bold px-2 py-0.5 rounded-sm animate-pulse">● {t("방송 중")}</span>}
-                {channel.is_live && !!channel.viewer_count && <span className="absolute bottom-2 right-2 bg-surface-0/80 text-ink text-[11px] px-2 py-0.5 rounded flex items-center gap-1"><Eye className="w-3 h-3" /> {channel.viewer_count.toLocaleString()}</span>}
-                {platform !== "chzzk" && <div className="absolute bottom-2 left-2"><PlatformBadge platform={platform} /></div>}
-            </div>
-
-            <div className="order-3 grid min-w-0 flex-1 grid-cols-1 gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:p-4 xl:order-none xl:flex xl:items-center xl:gap-4">
-                <div className="flex min-w-0 items-center gap-3 sm:col-span-1 xl:flex-1">
-                    {channel.profile_image_url ? (
-                        <img src={channel.profile_image_url} alt={displayName} className="w-9 h-9 rounded-full object-cover shrink-0 border-2 border-line-strong" />
-                    ) : (
-                        <div className="w-9 h-9 rounded-full bg-surface-3 flex items-center justify-center shrink-0 border-2 border-line-strong"><Users className="w-4 h-4 text-ink-faint" /></div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-ink text-sm truncate" title={displayName}>{displayName}</h3>
-                            {channel.last_error && <span title={channel.last_error}><AlertTriangle className="w-4 h-4 text-danger shrink-0" /></span>}
-                        </div>
-                        {channel.title && channel.is_live ? <p className="text-xs text-ink-muted truncate" title={channel.title}>{channel.title}</p> : <p className="text-xs text-ink-faint font-mono truncate">{channel.channel_id}</p>}
-                        {channel.category && channel.is_live && <p className="text-[11px] text-ink-faint truncate mt-1">{channel.category}</p>}
-                    </div>
-                </div>
-
-                <div className="min-w-0 sm:col-span-1 xl:w-40 xl:shrink-0">
-                    <TagManager availableTags={globalTags} selectedTags={channel.tags || []} onAddTag={(tag) => onAddTag(channel, tag)} onRemoveTag={(tag) => onRemoveTag(channel, tag)} onCreateTag={onCreateTag} />
-                </div>
-
-                <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-t border-line pt-3 sm:col-span-2 xl:flex-col xl:items-stretch xl:border-l xl:border-t-0 xl:px-4 xl:pt-0 xl:shrink-0">
-                    <span className={`text-xs font-medium ${channel.is_live ? "text-live" : "text-ink-faint"}`}>{channel.is_live ? t("방송 중") : "방송 대기 중"}</span>
-                    <div className="flex items-center gap-2 text-xs text-ink-faint">
-                        자동 녹화
-                        <Switch checked={channel.auto_record} onChange={() => onToggleAutoRecord(channel)} label={`${displayName} 자동 녹화`} />
-                    </div>
-                    <Button onClick={() => props.onEditDownloadSettings(channel)} className="text-xs">{t("녹화 설정")}</Button>
-                    <DownloadHoldStatus channel={channel} />
-                </div>
-
-                <div className="min-w-0 space-y-2 sm:col-span-2 xl:w-64 xl:shrink-0 xl:border-l xl:pl-4">
-                    {channel.recording?.is_recording ? (
-                        <>
-                            <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-danger/10 border border-danger/20 rounded-[var(--radius-control)] p-2 flex items-center justify-center gap-2 text-xs text-live animate-pulse"><Video className="w-3 h-3" /> {formatDuration(duration)}</div>
-                                <Button variant="danger" icon={Square} loading={isActionLoading} onClick={() => onStopRecord(channel)} className="p-2" title="녹화 중단" />
+            <div className="min-w-0 space-y-4 p-4 sm:p-5">
+                <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                        {channel.profile_image_url ? (
+                            <img src={channel.profile_image_url} alt="" className="size-11 shrink-0 rounded-full border border-line-strong object-cover" />
+                        ) : (
+                            <span className="grid size-11 shrink-0 place-items-center rounded-full border border-line-strong bg-surface-3 text-ink-faint"><Users className="size-4" /></span>
+                        )}
+                        <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                <h3 className="max-w-full truncate text-sm font-semibold text-ink" title={displayName}>{displayName}</h3>
+                                {platform !== "chzzk" && <PlatformBadge platform={platform} />}
+                                {channel.last_error && <span className="shrink-0" title={channel.last_error} aria-label={t("녹화 오류")}><AlertTriangle className="size-4 text-danger" /></span>}
                             </div>
-                            <RecordingStats channel={channel} />
-                            {channel.chat_archiving?.is_running && <p className="flex items-center gap-1 text-xs text-info"><MessageSquare className="w-3 h-3" /> 채팅 {channel.chat_archiving.message_count.toLocaleString()}개</p>}
-                        </>
-                    ) : channel.is_live ? (
-                        <Button icon={Play} loading={isActionLoading} onClick={() => onStartRecord(channel)} className="w-full text-ok">{isActionLoading ? "녹화 시작 중..." : "수동 녹화 시작"}</Button>
-                    ) : (
-                        <div className="bg-surface-3 border border-line rounded-[var(--radius-control)] p-2 flex items-center gap-2 text-xs text-ink-faint"><AlertCircle className="w-3 h-3" /> 방송을 기다리고 있습니다.</div>
-                    )}
+                            {channel.title && channel.is_live
+                                ? <p className="mt-1 line-clamp-2 break-words text-[13px] leading-5 text-ink-muted" title={channel.title}>{channel.title}</p>
+                                : <p className="mt-1 break-all font-mono text-[11px] text-ink-faint" title={channel.channel_id}>{channel.channel_id}</p>}
+                            {channel.category && channel.is_live && <p className="mt-1 break-words text-[11px] text-ink-faint" title={channel.category}>{channel.category}</p>}
+                        </div>
+                    </div>
+
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        <span className={clsx("inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-medium", channel.is_live ? "border-live/20 bg-live/8 text-live" : "border-line bg-surface-3 text-ink-faint")}>
+                            <span className={clsx("size-1.5 rounded-full", channel.is_live ? "bg-live" : "bg-line-strong")} />{channel.is_live ? t("라이브") : t("오프라인")}
+                        </span>
+                        {recording && <span className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-ok/20 bg-ok/8 px-2.5 text-[11px] font-medium text-ok"><span className="size-1.5 rounded-full bg-ok" />{t("녹화 중")}</span>}
+                    </div>
                 </div>
 
-                <button type="button" onClick={() => onRemove(channel)} className="grid min-h-11 min-w-11 place-items-center self-end bg-surface-3 border border-line-strong rounded-[var(--radius-control)] text-ink-muted hover:bg-danger hover:border-danger hover:text-white transition-colors opacity-100 xl:min-h-0 xl:min-w-0 xl:p-2" title={t("채널 제거")} aria-label={t("채널 제거")}><Trash2 className="w-4 h-4" /></button>
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-5 gap-y-2">
+                        <div className="flex items-center gap-2 text-xs text-ink-muted"><span>{t("자동 녹화")}</span><Switch checked={channel.auto_record} onChange={() => onToggleAutoRecord(channel)} label={`${displayName} ${t("자동 녹화")}`} /></div>
+                        <Button variant="secondary" onClick={() => props.onEditDownloadSettings(channel)} className="min-h-10 text-xs">{t("녹화 설정")}</Button>
+                        <TagManager availableTags={globalTags} selectedTags={channel.tags || []} onAddTag={(tag) => onAddTag(channel, tag)} onRemoveTag={(tag) => onRemoveTag(channel, tag)} onCreateTag={onCreateTag} />
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                        <div
+                            role="button"
+                            tabIndex={0}
+                            onPointerDown={onReorderPointerDown}
+                            onPointerMove={onReorderPointerMove}
+                            onPointerUp={onReorderPointerUp}
+                            onPointerCancel={onReorderPointerUp}
+                            onLostPointerCapture={onReorderPointerUp}
+                            onMouseMove={onReorderMouseMove}
+                            onMouseUp={onReorderMouseUp}
+                            onKeyDown={onReorderKeyDown}
+                            className="grid size-10 place-items-center rounded-[var(--radius-control)] border border-line bg-surface-2 text-ink-faint transition-colors hover:bg-surface-3 hover:text-ink cursor-grab active:cursor-grabbing touch-none select-none"
+                            title={t("드래그하거나 방향키를 눌러 채널 순서 변경")}
+                            aria-label={`${displayName} ${t("채널 순서 변경")}`}
+                            aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown"
+                        ><GripVertical className="size-4 pointer-events-none" /></div>
+                        <button type="button" onClick={() => onRemove(channel)} className="grid size-10 place-items-center rounded-[var(--radius-control)] border border-line bg-surface-2 text-ink-faint transition-colors hover:border-danger/40 hover:bg-danger/10 hover:text-danger" title={t("채널 제거")} aria-label={`${t("채널 제거")}: ${displayName}`}><Trash2 className="size-4" /></button>
+                    </div>
+                </div>
+
+                <DownloadHoldStatus channel={channel} />
+
+                {recording ? (
+                    <div className="space-y-3 border-t border-line/80 pt-3">
+                        <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-4">
+                            <div className="min-w-0"><p className="text-[10px] text-ink-faint">{t("녹화 시간")}</p><p className="mt-1 inline-flex items-center gap-1.5 whitespace-nowrap font-mono text-xs font-semibold tabular-nums text-ok"><Video className="size-3.5" />{formatDuration(duration)}</p></div>
+                            <div className="min-w-0"><p className="text-[10px] text-ink-faint">{t("용량")}</p><p className="mt-1 whitespace-nowrap font-mono text-xs font-medium tabular-nums text-ink">{formatBytes(channel.recording?.file_size_bytes || 0)}</p></div>
+                            <div className="min-w-0"><p className="text-[10px] text-ink-faint">{t("속도")}</p><p className="mt-1 whitespace-nowrap font-mono text-xs font-medium tabular-nums text-ink">{(channel.recording?.download_speed || 0).toFixed(2)} MB/s</p></div>
+                            <div className="min-w-0"><p className="text-[10px] text-ink-faint">{t("비트레이트")}</p><p className="mt-1 whitespace-nowrap font-mono text-xs font-medium tabular-nums text-ink">{((channel.recording?.bitrate || 0) / 1000).toFixed(2)} Mbps</p></div>
+                        </div>
+                        {channel.chat_archiving?.is_running && <p className="flex items-center gap-1.5 text-[11px] text-info"><span>{t("채팅 저장 중")}</span> · {channel.chat_archiving.message_count.toLocaleString()}{t("개")}</p>}
+                        <div className="flex justify-end"><Button variant="danger" icon={Square} loading={isActionLoading} onClick={() => onStopRecord(channel)} className="min-h-10 min-w-36" title={t("녹화 중지")}>{t("녹화 중지")}</Button></div>
+                    </div>
+                ) : channel.is_live ? (
+                    <div className="flex justify-end border-t border-line/80 pt-3"><Button variant="primary" icon={Play} loading={isActionLoading} onClick={() => onStartRecord(channel)} className="min-h-10 min-w-40">{isActionLoading ? t("녹화 시작 중...") : t("수동 녹화 시작")}</Button></div>
+                ) : (
+                    <div className="flex min-h-10 items-center gap-2 border-t border-line/80 pt-3 text-xs text-ink-faint"><AlertCircle className="size-4 shrink-0" />{t("방송을 기다리고 있습니다.")}</div>
+                )}
             </div>
+
+            <ChannelThumbnail channel={channel} className="mx-auto aspect-video w-full max-w-[1200px]" />
         </Card>
     );
 }
