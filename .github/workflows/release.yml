@@ -74,14 +74,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## Interface and workflow improvements
+          ## Live preview improvements
 
-          - Reorganized the interface with a compact sidebar, consistent controls, and a restrained dark theme.
-          - Added a larger preview for the selected live channel and compact views for other channels.
-          - Improved download lists, status filters, settings navigation, and mobile layouts.
-          - Made storage paths fully readable and added a path copy action.
-          - Removed duplicate page names from the top bar while preserving search and notifications.
-          - Limited the download platform selector to CHZZK and YouTube.
+          - Expand one live channel at a time without changing channel order, and collapse it by selecting it again.
+          - Play live video in expanded channel details with muted autoplay and standard playback controls.
+          - Keep previews independent of recording, and stop playback when details close, channels change, or broadcasts end.
+          - Show preview loading and error states with a retry action.
 
           Replace your existing executable with the Windows x64 release build.
           '@

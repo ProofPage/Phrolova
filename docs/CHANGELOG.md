@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+## [2.0.44] - 2026-10-07
+
+### Changed
+- Expand one live channel at a time without changing channel order, and collapse it by selecting it again.
+- Play live video in expanded channel details with muted autoplay and standard playback controls.
+- Keep live previews independent of recording, and stop preview playback when details close, channels change, or broadcasts end.
+- Show preview loading and error states with a retry action.
+
 ## [2.0.43] - 2026-10-06
 
 ### Changed
@@ -611,7 +619,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.43...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.44...HEAD
+[2.0.44]: https://github.com/ProofPage/Phrolova/compare/v2.0.43...v2.0.44
 [2.0.43]: https://github.com/ProofPage/Phrolova/compare/v2.0.42...v2.0.43
 [2.0.42]: https://github.com/ProofPage/Phrolova/compare/v2.0.41...v2.0.42
 [2.0.41]: https://github.com/ProofPage/Phrolova/compare/v2.0.40...v2.0.41
