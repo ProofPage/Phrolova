@@ -1,3 +1,4 @@
+import { YouTubeAuth } from "./YouTubeAuth";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { AlertCircle, CheckCircle2, KeyRound, Save, Shield, Trash2, Upload } from "lucide-react";
 import { api, type Settings as SettingsType } from "../../api/client";
@@ -171,6 +172,8 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
                     {twitcastingSaving ? "저장 중..." : "TwitCasting 설정 저장"}
                 </Button>
             </Card>
+
+            <YouTubeAuth />
 
             <Card className="space-y-5">
                 <CardHeader icon={KeyRound} title="X Spaces" description="X Spaces 녹화 시 사용할 Netscape 형식 쿠키 파일을 업로드하세요." />

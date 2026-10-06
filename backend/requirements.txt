@@ -3,7 +3,7 @@ uvicorn[standard]
 python-multipart
 httpx
 aiofiles
-yt-dlp
+yt-dlp[default]
 streamlink>=7.3,<9
 ffmpeg-python
 python-dotenv

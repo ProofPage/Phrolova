@@ -28,12 +28,13 @@ import { useLanguage } from "../contexts/LanguageContext";
 
 export default function VodDownload() {
     const { t } = useLanguage();
-    const { tasks, activeCount, addTask, cancelTask, pauseTask, resumeTask, retryTask, clearCompleted, openFileLocation } = useVod();
+    const { tasks, imports, refreshTasks, activeCount, addTask, cancelTask, pauseTask, resumeTask, retryTask, clearCompleted, openFileLocation } = useVod();
     const [selectedSource, setSelectedSource] = useState<"chzzk" | "youtube" | "external">("chzzk");
     const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
     const [url, setUrl] = useState("");
     const [loading, setLoading] = useState(false);
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+    const [visibleCount, setVisibleCount] = useState(50);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const toast = useToast();
     const confirm = useConfirm();
@@ -67,7 +68,7 @@ export default function VodDownload() {
         const input = url.trim();
         let downloadUrl = input;
         if (selectedSource === "youtube") {
-            const handle = input.match(/^@([A-Za-z0-9._-]+)$/);
+            const handle = input.match(/^@([^\s/?#]+)$/);
             const videoId = input.match(/^[A-Za-z0-9_-]{11}$/);
             if (handle) downloadUrl = `https://www.youtube.com/@${handle[1]}`;
             else if (videoId) downloadUrl = `https://www.youtube.com/watch?v=${videoId[0]}`;
@@ -104,10 +105,10 @@ export default function VodDownload() {
         setLoading(true);
 
         try {
-            const addedCount = await addTask(downloadUrl);
+            const result = await addTask(downloadUrl);
             setUrl("");
-            toast.success(addedCount > 1
-                ? `유튜브 채널에서 영상 ${addedCount}개를 다운로드 목록에 추가했습니다.`
+            toast.success(result.import_id
+                ? t("채널 영상 수집을 시작했습니다.")
                 : t("다운로드 목록에 추가했습니다."));
         } catch (err: unknown) {
             toast.error(getErrorMessage(err, t("영상 추가에 실패했습니다.")));
@@ -254,6 +255,32 @@ export default function VodDownload() {
                 actionsPlacement="below"
             />
 
+            {imports.map((job) => {
+                const running = job.state === "queued" || job.state === "collecting";
+                const label = job.state === "queued" ? "채널 영상 수집 대기 중"
+                    : job.state === "collecting" ? "채널 영상을 불러오는 중"
+                    : job.state === "completed" ? "채널 영상 수집 완료"
+                    : job.state === "cancelled" ? "채널 영상 수집 중지됨" : "채널 영상 수집 실패";
+                return (
+                    <div key={job.id} role="status" className="rounded-[var(--radius-card)] border border-line bg-surface-2 p-4 flex items-start gap-3">
+                        {running ? <Loader2 className="w-5 h-5 animate-spin text-accent shrink-0 mt-0.5" />
+                            : job.state === "error" ? <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                            : <CheckCircle className="w-5 h-5 text-accent shrink-0 mt-0.5" />}
+                        <div className="min-w-0 flex-1 space-y-1">
+                            <p className="text-sm font-semibold text-ink">{t(label)}</p>
+                            <p className="text-xs text-ink-muted break-all">{job.url}</p>
+                            <p className="text-xs text-ink-muted">{t("추가한 영상")}: {job.added_count} · {t("이미 목록에 있는 영상")}: {job.skipped_count}</p>
+                            {running && <p className="text-xs text-ink-muted">{t("찾은 영상부터 다운로드합니다. 수집을 중지해도 추가된 영상은 유지됩니다.")}</p>}
+                            {job.error && <p className="text-xs text-red-400 break-words">{job.error}</p>}
+                        </div>
+                        <Button onClick={async () => {
+                            try { await api.cancelVodImport(job.id); await refreshTasks(); }
+                            catch (err) { toast.error(getErrorMessage(err, t("요청에 실패했습니다."))); }
+                        }}>{t(running ? "수집 중지" : "닫기")}</Button>
+                    </div>
+                );
+            })}
+
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <h3 className="text-base font-semibold text-ink flex items-center gap-2">
@@ -287,11 +314,13 @@ export default function VodDownload() {
                             </div>
                         ))}
                     </div>
+                ) : tasks.length === 0 && imports.some(job => job.state === "queued" || job.state === "collecting") ? (
+                    <p className="py-8 text-center text-sm text-ink-muted">{t("영상을 찾으면 이곳에 표시됩니다.")}</p>
                 ) : tasks.length === 0 ? (
                     <EmptyState icon={FileVideo} title="아직 추가한 영상이 없습니다" description="위에서 영상 주소를 추가하면 진행 상황과 저장된 파일을 이곳에서 확인할 수 있습니다." />
                 ) : (
                     <div className="space-y-3">
-                        {tasks.map((task, index) => (
+                        {tasks.slice(0, visibleCount).map((task, index) => (
                             <div
                                 key={task.task_id}
                                 draggable
@@ -313,6 +342,9 @@ export default function VodDownload() {
                                 />
                             </div>
                         ))}
+                        {tasks.length > visibleCount && <Button className="w-full" onClick={() => setVisibleCount(count => count + 50)}>
+                            {t("더 보기")} ({Math.min(visibleCount, tasks.length)} / {tasks.length})
+                        </Button>}
                     </div>
                 )}
             </div>

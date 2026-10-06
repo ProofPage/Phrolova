@@ -27,6 +27,8 @@ from app.core.vod_filename import build_vod_outtmpl
 from app.core.config import get_settings
 from app.core.logger import logger
 from app.engine.auth import AuthManager
+from app.engine.youtube_channel import ChannelImports
+from app.engine.youtube_support import is_youtube_url, runtime_options, youtube_cookies
 from app.engine.twitcasting import borrow_cookie_file, explain_unplayable, is_twitcasting_url
 
 # ── yt-dlp DASH MPD 파서 멍키패치 ──────────────────────────────
@@ -139,6 +141,7 @@ class VodEngine:
     ) -> None:
         self._auth = auth or AuthManager()
         self._tasks: dict[str, VodDownloadTask] = {}
+        self.channel_imports = ChannelImports(self._enqueue_channel_video)
         self._notifier = notifier
         self._repo = repo or VodRepository()
 
@@ -233,6 +236,10 @@ class VodEngine:
             "extractor_retries": 5,
             "file_access_retries": 5,
         }
+
+        if is_youtube_url(task.url):
+            opts.update(runtime_options())
+            opts["noplaylist"] = True
 
         # 쿠키는 별도 Netscape jar에 두어 각 도메인에만 전송되게 한다.
         if self._is_chzzk_url(task.url):
@@ -416,75 +423,14 @@ class VodEngine:
             or path.startswith("/user/")
         )
 
-    async def download_youtube_channel(
-        self,
-        url: str,
-        output_dir: Optional[str] = None,
-        quality: str = "best",
-    ) -> list[str]:
-        """채널의 영상 목록을 가져와 영상별 다운로드 작업으로 등록한다."""
-        import yt_dlp
-
-        if not self.is_youtube_channel_url(url):
-            raise ValueError("유튜브 채널 주소를 입력해 주세요.")
-
-        opts: dict[str, Any] = {
-            "ignoreconfig": True,
-            "extract_flat": "in_playlist",
-            "skip_download": True,
-            "ignoreerrors": True,
-            "quiet": True,
-            "no_warnings": True,
-            "no_color": True,
-            "socket_timeout": 60,
-            "retries": 5,
-            "extractor_retries": 5,
-        }
-
-        def _extract_channel() -> dict[str, Any] | None:
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                # Materialize any lazy playlist entries before closing YoutubeDL.
-                if info and info.get("entries") is not None:
-                    info["entries"] = list(info["entries"])
-                return info
-
-        info = await asyncio.to_thread(_extract_channel)
-        if not info:
-            raise RuntimeError("유튜브 채널의 영상 목록을 가져오지 못했습니다.")
-
-        entries = info.get("entries")
-        if entries is None:
-            raise RuntimeError("유튜브 채널에서 다운로드할 영상을 찾지 못했습니다.")
-
-        # yt-dlp's flat channel entries normally contain video IDs. Normalize them
-        # to watch URLs so each queued task is handled by the existing single-video
-        # download path, progress hooks, retry logic, and output-file tracking.
-        video_urls: list[str] = []
-        seen_ids: set[str] = set()
-        for entry in entries:
-            if not entry:
-                continue
-            video_id = entry.get("id")
-            if not video_id:
-                continue
-            video_id = str(video_id).strip()
-            if len(video_id) != 11 or video_id in seen_ids:
-                continue
-            seen_ids.add(video_id)
-            video_urls.append(f"https://www.youtube.com/watch?v={video_id}")
-
-        if not video_urls:
-            raise RuntimeError("유튜브 채널에서 다운로드할 수 있는 영상을 찾지 못했습니다.")
-
-        # Downloads are prepended to the task list, so reverse insertion preserves
-        # YouTube's newest-first order in the UI.
-        task_ids: list[str] = []
-        for video_url in reversed(video_urls):
-            task_ids.append(await self.download(video_url, output_dir, quality))
-
-        logger.info(f"유튜브 채널 다운로드 작업 등록: {len(task_ids)}개 ({url})")
-        return list(reversed(task_ids))
+    async def _enqueue_channel_video(self, entry, output_dir, quality) -> bool:
+        url = entry["url"]
+        if any(task.url == url and task.state != VodDownloadState.ERROR
+               for task in self._tasks.values()):
+            return False
+        task_id = await self.download(url, output_dir, quality)
+        self._tasks[task_id].title = entry.get("title") or url
+        return True
 
     async def _run_download(self, task_id: str) -> None:
         """실제 다운로드 실행 (세마포어로 동시 실행 제어).
@@ -898,6 +844,11 @@ class VodEngine:
                     Path(cookie_path).unlink(missing_ok=True)
                 return
 
+        if is_youtube_url(url):
+            with youtube_cookies() as cookie_file:
+                yield cookie_file
+            return
+
         with borrow_cookie_file(url) as cookie_file:
             yield cookie_file
 
@@ -916,6 +867,12 @@ class VodEngine:
         try:
             info: dict[str, Any] | None = await asyncio.to_thread(lambda: _extract_info())  # type: ignore[arg-type]
         except Exception as e:
+            if is_youtube_url(task.url) and any(text in str(e).lower() for text in
+                    ("not a bot", "sign in to confirm", "login required", "members-only", "private video")):
+                raise NonRetryableDownloadError(
+                    "유튜브 로그인이 필요하거나 시청 권한이 없는 영상입니다. "
+                    "설정 → 인증 → 유튜브에서 로그인 쿠키를 등록한 뒤 다시 시도해 주세요."
+                ) from e
             if is_twitcasting_url(task.url):
                 reason = await explain_unplayable(
                     task.url, str(e), has_cookies=cookie_file is not None

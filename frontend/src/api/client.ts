@@ -84,7 +84,25 @@ export interface VodTask {
     eta_seconds: number;
 }
 
+export interface VodImport {
+    id: string;
+    url: string;
+    state: "queued" | "collecting" | "completed" | "error" | "cancelled";
+    added_count: number;
+    skipped_count: number;
+    error: string | null;
+}
+
+export interface VodAddResult {
+    task_id: string | null;
+    task_ids: string[];
+    added_count: number;
+    import_id?: string;
+    message: string;
+}
+
 export interface VodStatusResponse {
+    imports?: VodImport[];
     tasks: VodTask[];
     active_count: number;
     queued_count: number;
@@ -378,7 +396,7 @@ export const api = {
 
     // VOD
     downloadVod: async (url: string, quality: string = "best", output_dir?: string) => {
-        const res = await client.post<{ task_id: string; task_ids: string[]; added_count: number; message: string }>("/vod/download", {
+        const res = await client.post<VodAddResult>("/vod/download", {
             url,
             quality,
             output_dir,
@@ -388,6 +406,9 @@ export const api = {
     getAllVodStatus: async () => {
         const res = await client.get<VodStatusResponse>("/vod/status");
         return res.data;
+    },
+    cancelVodImport: async (id: string) => {
+        await client.post(`/vod/imports/${id}/cancel`);
     },
     cancelVodDownload: async (task_id: string) => {
         const res = await client.post(`/vod/${task_id}/cancel`);

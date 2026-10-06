@@ -187,19 +187,25 @@ class RecorderService:
         return task_id
 
     async def download_vod_batch(
-        self,
-        url: str,
-        quality: str = "best",
-        output_dir: Optional[str] = None,
-    ) -> list[str]:
-        """일반 영상은 1개, YouTube 채널 주소는 채널 영상별 작업으로 등록한다."""
+        self, url: str, quality: str = "best", output_dir: Optional[str] = None,
+    ) -> dict:
+        """Return immediately; channel enumeration continues in the background."""
+        url = url.strip()
+        if url.startswith("@"):
+            url = "https://www.youtube.com/" + url
         if self._vod_engine.is_youtube_channel_url(url):
-            return await self._vod_engine.download_youtube_channel(
-                url=url,
-                quality=quality,
-                output_dir=output_dir,
-            )
-        return [await self.download_vod(url, quality, output_dir)]
+            job = self._vod_engine.channel_imports.start(url, output_dir, quality)
+            return {"task_id": None, "task_ids": [], "added_count": 0,
+                    "import_id": job["id"], "message": "채널 영상 수집을 시작했습니다."}
+        task_id = await self.download_vod(url, quality, output_dir)
+        return {"task_id": task_id, "task_ids": [task_id], "added_count": 1,
+                "message": "다운로드 목록에 추가했습니다."}
+
+    def list_vod_imports(self) -> list[dict]:
+        return self._vod_engine.channel_imports.list()
+
+    def cancel_vod_import(self, import_id: str) -> dict:
+        return self._vod_engine.channel_imports.cancel(import_id)
 
     def list_vod_tasks(self) -> list[dict]:
         """모든 VOD 다운로드 작업 목록을 반환한다."""

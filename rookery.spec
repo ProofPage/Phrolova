@@ -3,6 +3,9 @@
 # 사용법: pyinstaller rookery.spec --clean
 
 import re
+import shutil
+import subprocess
+import urllib.request
 from pathlib import Path
 
 import certifi
@@ -120,7 +123,19 @@ datas = [
 # ── 외부 바이너리: ffmpeg는 라이선스 문제로 번들하지 않음 ──────
 # 사용자가 bin/ffmpeg.exe에 넣거나 시스템 PATH에 설치해야 함.
 # run.py의 _run_dependency_check()가 시작 시 자동 감지 및 안내함.
-binaries = []
+# YouTube's EJS solver needs an external JavaScript runtime even in a frozen app.
+node_path = shutil.which("node")
+if not node_path:
+    raise RuntimeError("Node.js 22+ is required to build the YouTube runtime bundle")
+node_version = subprocess.check_output([node_path, "--version"], text=True).strip()
+if not re.fullmatch(r"v\d+\.\d+\.\d+", node_version) or int(node_version.split('.')[0][1:]) < 22:
+    raise RuntimeError("Node.js 22+ is required to build the YouTube runtime bundle")
+license_path = Path("build/node-LICENSE.txt")
+license_path.parent.mkdir(parents=True, exist_ok=True)
+with urllib.request.urlopen(f"https://raw.githubusercontent.com/nodejs/node/{node_version}/LICENSE", timeout=30) as response:
+    license_path.write_bytes(response.read())
+datas.append((str(license_path), "third_party"))
+binaries = [(node_path, "bin")]
 
 a = Analysis(
     ["backend/run.py"],

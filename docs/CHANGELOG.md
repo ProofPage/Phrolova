@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.38] - 2026-10-06
+
+### Fixed
+- **YouTube 채널 수집** — 동영상·라이브·쇼츠 하위 목록을 순회하고, 찾은 영상부터 백그라운드에서 추가합니다. 수집 진행 상황, 중지, 오류를 표시하고 중복 영상을 건너뜁니다.
+- **YouTube 인증과 JavaScript 지원** — 로그인 쿠키 등록을 추가하고 로그인 필요 오류의 반복 재시도를 중단합니다. Windows 빌드에 Node.js와 yt-dlp EJS를 포함합니다.
+
 ## [2.0.37] - 2026-10-06
 
 ### Added
@@ -561,7 +567,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.37...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.38...HEAD
+[2.0.38]: https://github.com/ProofPage/Phrolova/compare/v2.0.37...v2.0.38
 [2.0.37]: https://github.com/ProofPage/Phrolova/compare/v2.0.36...v2.0.37
 [2.0.36]: https://github.com/ProofPage/Phrolova/compare/v2.0.35...v2.0.36
 [2.0.35]: https://github.com/ProofPage/Phrolova/compare/v2.0.34...v2.0.35

@@ -51,19 +51,10 @@ async def download_vod(req: VodDownloadRequest):
     service = get_recorder_service()
 
     try:
-        task_ids = await service.download_vod_batch(
-            url=req.url,
-            quality=req.quality,
-            output_dir=req.output_dir,
+        result = await service.download_vod_batch(
+            url=req.url, quality=req.quality, output_dir=req.output_dir,
         )
-        return {
-            "task_id": task_ids[0],
-            "task_ids": task_ids,
-            "added_count": len(task_ids),
-            "message": f"다운로드 목록에 {len(task_ids)}개 영상을 추가했습니다.",
-            "url": req.url,
-            "quality": req.quality,
-        }
+        return {**result, "url": req.url, "quality": req.quality}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -80,6 +71,7 @@ async def get_all_vod_status():
 
     return {
         "tasks": tasks,
+        "imports": service.list_vod_imports(),
         "active_count": sum(
             1 for t in tasks if t["state"] in ["downloading", "paused"]
         ),
@@ -209,3 +201,12 @@ async def open_vod_file_location(task_id: str):
         raise HTTPException(status_code=404, detail=result["error"])
 
     return result
+
+
+@router.post("/imports/{import_id}/cancel", summary="채널 영상 수집 중지 또는 알림 닫기")
+async def cancel_channel_import(import_id: str):
+    from app.main import get_recorder_service
+    try:
+        return get_recorder_service().cancel_vod_import(import_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))

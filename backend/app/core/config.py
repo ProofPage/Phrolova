@@ -212,6 +212,7 @@ class Settings(BaseSettings):
     # 로그인한 사용자만 볼 수 있는 아카이브·라이브용 Netscape 쿠키 파일 경로.
     # 계정 세션 그 자체라 .env로만 지정하고 설정 API·UI로는 내보내지 않는다.
     twitcasting_cookie_file: Optional[str] = None
+    youtube_cookie_file: Optional[str] = None
 
     # ── X Spaces 인증 ────────────────────────────────────
     x_cookie_file: Optional[str] = None  # Netscape 형식 쿠키 파일 경로

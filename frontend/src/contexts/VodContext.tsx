@@ -1,12 +1,13 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
-import { api, VodTask } from "../api/client";
+import { api, VodTask, VodImport, VodAddResult, VodStatusResponse } from "../api/client";
 import { useToast } from "../components/ui/Toast";
 import { getErrorMessage } from "../utils/error";
 
 export interface VodContextType {
     tasks: VodTask[];
+    imports: VodImport[];
     activeCount: number;
-    addTask: (url: string, quality?: string) => Promise<number>;
+    addTask: (url: string, quality?: string) => Promise<VodAddResult>;
     cancelTask: (taskId: string) => Promise<void>;
     pauseTask: (taskId: string) => Promise<void>;
     resumeTask: (taskId: string) => Promise<void>;
@@ -21,10 +22,12 @@ const VodContext = createContext<VodContextType | null>(null);
 export function VodProvider({ children }: { children: ReactNode }) {
     const toast = useToast();
     const [tasks, setTasks] = useState<VodTask[]>([]);
+    const [imports, setImports] = useState<VodImport[]>([]);
     const [activeCount, setActiveCount] = useState(0);
 
-    const applyStatus = useCallback((data: { tasks: VodTask[]; active_count: number; queued_count: number; total_count: number }) => {
+    const applyStatus = useCallback((data: VodStatusResponse) => {
         setTasks(data.tasks);
+        setImports(data.imports ?? []);
         setActiveCount(data.active_count);
     }, []);
 
@@ -45,9 +48,9 @@ export function VodProvider({ children }: { children: ReactNode }) {
     }, [refreshTasks]);
 
     const addTask = async (url: string, quality = "best") => {
-        const { added_count } = await api.downloadVod(url, quality);
+        const result = await api.downloadVod(url, quality);
         await refreshTasks();
-        return added_count;
+        return result;
     };
 
     const cancelTask = async (taskId: string) => {
@@ -89,6 +92,7 @@ export function VodProvider({ children }: { children: ReactNode }) {
         <VodContext.Provider
             value={{
                 tasks,
+                imports,
                 activeCount,
                 addTask,
                 cancelTask,

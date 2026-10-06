@@ -230,3 +230,61 @@ async def delete_x_cookie():
     _update_env_file({"X_COOKIE_FILE": ""})
     get_settings.cache_clear()
     return {"message": "쿠키 파일 삭제 완료."}
+
+
+@router.get("/youtube/cookie")
+async def youtube_cookie_status():
+    source = get_settings().youtube_cookie_file
+    return {"configured": bool(source and Path(source).is_file())}
+
+
+@router.post("/youtube/cookie")
+async def upload_youtube_cookie(file: UploadFile = File(...)):
+    import http.cookiejar
+    import tempfile
+
+    content = await file.read(1024 * 1024 + 1)
+    if len(content) > 1024 * 1024:
+        raise HTTPException(400, "쿠키 파일은 1MB 이하여야 합니다.")
+    destination = _COOKIE_SAVE_PATH.with_name("youtube_cookies.txt")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=destination.parent) as directory:
+        temporary = Path(directory) / "cookies.txt"
+        try:
+            lines = content.decode("utf-8-sig").splitlines()
+        except UnicodeError:
+            raise HTTPException(400, "Netscape 형식의 유튜브 쿠키 파일을 선택해 주세요.")
+        # Browser exporters use 0 for session cookies; CookieJar expects an empty expiry.
+        normalized = []
+        for line in lines:
+            fields = line.split("\t")
+            if len(fields) == 7 and fields[4] == "0":
+                fields[4] = ""
+                line = "\t".join(fields)
+            normalized.append(line)
+        temporary.write_text("\n".join(normalized) + "\n", encoding="utf-8")
+        jar = http.cookiejar.MozillaCookieJar(str(temporary))
+        try:
+            jar.load(ignore_discard=True, ignore_expires=False)
+        except (OSError, ValueError, UnicodeError):
+            raise HTTPException(400, "Netscape 형식의 유튜브 쿠키 파일을 선택해 주세요.")
+        for cookie in list(jar):
+            domain = cookie.domain.lstrip(".").lower()
+            if not any(domain == allowed or domain.endswith("." + allowed)
+                       for allowed in ("youtube.com", "google.com")):
+                jar.clear(cookie.domain, cookie.path, cookie.name)
+        if not len(jar):
+            raise HTTPException(400, "사용 가능한 유튜브 로그인 쿠키가 없습니다.")
+        jar.save(ignore_discard=True)
+        temporary.replace(destination)
+    _update_env_file({"YOUTUBE_COOKIE_FILE": str(destination)})
+    get_settings.cache_clear()
+    return {"configured": True}
+
+
+@router.delete("/youtube/cookie")
+async def delete_youtube_cookie():
+    _COOKIE_SAVE_PATH.with_name("youtube_cookies.txt").unlink(missing_ok=True)
+    _update_env_file({"YOUTUBE_COOKIE_FILE": ""})
+    get_settings.cache_clear()
+    return {"configured": False}
