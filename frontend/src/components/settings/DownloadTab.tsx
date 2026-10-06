@@ -107,7 +107,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                 <Field label="동시 다운로드 개수" hint="한 번에 다운로드할 수 있는 최대 영상 개수 (1~10개)">
                     <Input type="number" value={vodMaxConcurrent} onChange={(event) => setVodMaxConcurrent(Number(event.target.value))} min={1} max={10} />
                 </Field>
-                <Field label="영상 다운로드 품질" hint="영상 다운로드 시 기본으로 사용할 화질">
+                <Field label={t("기본 화질")} hint={t("영상 다운로드에 사용할 기본 해상도입니다.")}>
                     <Select
                         value={vodDefaultQuality}
                         onChange={(event) => setVodDefaultQuality(event.target.value)}
@@ -119,10 +119,10 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                         ]}
                     />
                 </Field>
-                <Field label="최대 다운로드 속도 (MB/s)" hint="0 = 무제한, 네트워크 대역폭 제한 시 사용">
+                <Field label={t("다운로드 속도 제한 (MB/s)")} hint={t("0으로 설정하면 속도 제한 없이 다운로드합니다.")}>
                     <Input type="number" value={vodMaxSpeed} onChange={(event) => setVodMaxSpeed(Number(event.target.value))} min={0} max={1000} />
                 </Field>
-                <Field label="영상 파일 형식" hint="다시보기와 클립은 MP4가 여러 기기에서 잘 재생됩니다. 영상과 음성을 합칠 때 ffmpeg를 사용합니다.">
+                <Field label={t("영상 파일 형식")} hint={t("MP4는 대부분의 기기와 플레이어에서 재생할 수 있습니다.")}>
                     <Select
                         value={vodFormat}
                         onChange={(event) => setVodFormat(event.target.value)}
@@ -148,7 +148,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
 
             <Card className="space-y-5">
                 <CardHeader icon={Radio} title="라이브 다운로드 설정" />
-                <Field label="라이브 품질" hint="라이브 녹화에 사용할 yt-dlp 화질입니다.">
+                <Field label="라이브 녹화 화질" hint="녹화할 해상도를 선택합니다. 높은 해상도일수록 저장 공간을 더 사용합니다.">
                     <Select
                         value={recordingQuality}
                         onChange={(event) => setRecordingQuality(event.target.value)}
@@ -160,7 +160,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                         ]}
                     />
                 </Field>
-                <Field label="자동 재시도 횟수" hint="라이브 녹화 중단 시 자동 재시도 횟수.">
+                <Field label={t("녹화 자동 재시도 횟수")} hint={t("연결이 끊기거나 녹화에 실패했을 때 다시 시도할 횟수입니다.")}>
                     <Input type="number" min={0} max={100} value={maxRetries} onChange={(event) => setMaxRetries(parseInt(event.target.value) || 0)} />
                 </Field>
                 <Field

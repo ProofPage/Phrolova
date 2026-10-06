@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
     BarChart2,
+    AlertCircle,
     Calendar,
     Clock,
     Database,
@@ -14,7 +15,6 @@ import {
 } from "lucide-react";
 import { api, type ChannelLiveStat, type LiveSession, type StatsResponse } from "../api/client";
 import { Button, Card, EmptyState, MetricCard, PageHeader } from "../components/ui/primitives";
-import { useToast } from "../components/ui/Toast";
 import { useLanguage } from "../contexts/LanguageContext";
 import { formatDuration as formatDurationBase, formatBytes } from "../utils/format";
 
@@ -69,23 +69,27 @@ export default function Stats() {
     const [data, setData] = useState<StatsResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
-    const toast = useToast();
+    const [loadError, setLoadError] = useState(false);
     const requestInFlightRef = useRef(false);
 
     const loadStats = useCallback(async (silent = false) => {
         if (requestInFlightRef.current) return;
         requestInFlightRef.current = true;
-        if (!silent) setLoading(true);
+        if (!silent) {
+            setLoading(true);
+            setLoadError(false);
+        }
         try {
             setData(await api.getStats());
             setUpdatedAt(new Date());
+            setLoadError(false);
         } catch {
-            if (!silent) toast.error("통계 데이터를 불러오는 데 실패했습니다.");
+            setLoadError(true);
         } finally {
             requestInFlightRef.current = false;
             if (!silent) setLoading(false);
         }
-    }, [toast]);
+    }, []);
 
     useEffect(() => {
         void loadStats();
@@ -105,9 +109,9 @@ export default function Stats() {
                     <div className="flex flex-wrap items-center justify-between gap-2 md:justify-end">
                         <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-line bg-surface-3/70 px-3 py-2 text-xs text-ink-faint">
                             <span className="h-1.5 w-1.5 rounded-full bg-ok" aria-hidden="true" />
-                            {updatedAt ? `${t("30초마다 갱신")} · ${updatedAt.toLocaleTimeString(language === "ko" ? "ko-KR" : language === "ja" ? "ja-JP" : "en-US")}` : t("통계 정보를 불러오는 중")}
+                            {updatedAt ? `${t("30초마다 갱신")} · ${updatedAt.toLocaleTimeString(language === "ko" ? "ko-KR" : language === "ja" ? "ja-JP" : "en-US")}` : loadError ? t("통계 조회 실패") : t("통계 정보를 불러오는 중")}
                         </span>
-                        <Button icon={RefreshCw} onClick={() => void loadStats()} loading={loading}>{t("새로고침")}</Button>
+                        <Button icon={RefreshCw} onClick={() => void loadStats()} loading={loading} variant={loadError ? "primary" : "secondary"}>{t(loadError ? "다시 시도" : "새로고침")}</Button>
                     </div>
                 )}
             />
@@ -116,6 +120,23 @@ export default function Stats() {
                 <Card className="min-h-56 grid place-items-center text-ink-faint">
                     <span className="inline-flex items-center gap-2 text-sm"><Loader2 className="w-5 h-5 animate-spin" /> {t("통계를 집계하고 있습니다")}</span>
                 </Card>
+            )}
+
+            {!loading && !data && loadError && (
+                <Card className="flex min-h-52 flex-col items-center justify-center gap-3 text-center">
+                    <AlertCircle className="size-6 text-danger" />
+                    <div>
+                        <p className="text-sm font-medium text-ink">{t("통계 정보를 불러오지 못했습니다")}</p>
+                        <p className="mt-1 text-xs text-ink-faint">{t("서버 연결을 확인한 뒤 다시 시도해 주세요.")}</p>
+                    </div>
+                </Card>
+            )}
+
+            {data && loadError && (
+                <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border border-warn/20 bg-warn/5 px-4 py-3 text-sm text-ink-muted">
+                    <span className="flex min-w-0 items-center gap-2"><AlertCircle className="size-4 shrink-0 text-warn" />{t("통계 갱신에 실패했습니다. 이전 데이터를 표시합니다.")}</span>
+                    <Button icon={RefreshCw} onClick={() => void loadStats()}>{t("다시 시도")}</Button>
+                </div>
             )}
 
             {data && (() => {

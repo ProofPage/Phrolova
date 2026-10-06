@@ -49,7 +49,7 @@ export function DashboardFilters({
     return (
         <div className="flex flex-col gap-3 p-3 sm:p-4 bg-surface-2 border border-line rounded-[var(--radius-card)] surface-raise">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                <div role="group" aria-label={t("채널 상태 필터")} className="flex gap-1 p-1 bg-surface-3 rounded-[var(--radius-control)] overflow-x-auto">
+                <div role="group" aria-label={t("채널 상태 필터")} className="flex flex-wrap gap-1 p-1 bg-surface-3 rounded-[var(--radius-control)]">
                     {FILTERS.map((option) => (
                         <button
                             key={option.value}
@@ -93,7 +93,7 @@ export function DashboardFilters({
 
             <details className="dashboard-options border-t border-line/80 pt-2">
                 <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium text-ink-muted hover:bg-surface-3 hover:text-ink">
-                    <SlidersHorizontal className="size-4 text-ink-faint" />{t("채널 태그")} · {t("기본 다운로드 조건")}
+                    <SlidersHorizontal className="size-4 text-ink-faint" />{t("채널 태그")} · {t("기본 녹화 조건")}
                     {selectedTags.length > 0 && <span className="rounded-full bg-[var(--primary-dim)] px-1.5 text-[10px] text-[var(--primary)]">{selectedTags.length}</span>}
                     <ChevronDown className="ml-auto size-4 text-ink-faint transition-transform" />
                 </summary>

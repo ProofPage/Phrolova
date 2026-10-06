@@ -6,6 +6,7 @@ import { getErrorMessage } from "../../utils/error";
 import { useToast } from "../ui/Toast";
 import { Button, Field, Input, Select, SettingRow, Switch } from "../ui/primitives";
 import { DOWNLOAD_CONDITIONS } from "./LiveDownloadCondition";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 interface Props {
     platform: Platform;
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function ChannelDownloadModal({ platform, name, channel, onClose, onSave }: Props) {
+    const { t } = useLanguage();
     const dialog = useRef<HTMLDialogElement>(null);
     const editedTags = useRef(false);
     const [autoRecord, setAutoRecord] = useState(channel?.auto_record ?? true);
@@ -35,7 +37,7 @@ export function ChannelDownloadModal({ platform, name, channel, onClose, onSave 
         void api.getSettings().then((settings) => {
             if (!active) return;
             const label = DOWNLOAD_CONDITIONS.find((item) => item.value === settings.live_download_condition)?.label;
-            setDefaultLabel(label || "모든 라이브 다운로드");
+            setDefaultLabel(label || "모든 방송 녹화");
             if (!channel?.watchalong_tags && !editedTags.current) {
                 setTags(settings.watchalong_tags || "같이보기");
                 setInitialTags(settings.watchalong_tags || "같이보기");
@@ -67,24 +69,24 @@ export function ChannelDownloadModal({ platform, name, channel, onClose, onSave 
                 <div className="flex items-start gap-3">
                     <SlidersHorizontal className="w-5 h-5 text-[var(--primary)] shrink-0 mt-1" />
                     <div className="flex-1 min-w-0">
-                        <h2 id="channel-download-title" className="font-bold text-lg">{channel ? "채널 다운로드 설정" : "라이브 채널 추가"}</h2>
+                        <h2 id="channel-download-title" className="font-bold text-lg">{channel ? t("채널 녹화 설정") : t("라이브 채널 추가")}</h2>
                         <p className="text-xs text-ink-muted mt-1 truncate" title={name}>{PLATFORM_LABELS[platform]} · {name}</p>
                     </div>
                     <button type="button" onClick={onClose} disabled={saving} aria-label="설정 닫기" className="p-1 text-ink-faint hover:text-ink"><X className="w-5 h-5" /></button>
                 </div>
-                <SettingRow label="자동 다운로드" hint="조건에 맞는 방송을 자동으로 저장합니다."
-                    control={<Switch checked={autoRecord} disabled={saving} onChange={setAutoRecord} label="자동 다운로드" />} />
+                <SettingRow label={t("자동 녹화")} hint={t("방송이 시작되고 녹화 조건에 맞으면 자동으로 저장합니다.")}
+                    control={<Switch checked={autoRecord} disabled={saving} onChange={setAutoRecord} label={`${name} ${t("자동 녹화")}`} />} />
                 {platform === "chzzk" && <>
-                    <Field label="다운로드 조건" htmlFor="channel-download-condition" hint={condition === "inherit" ? `현재 기본값: ${defaultLabel}` : "이 스트리머에만 적용합니다."}>
+                    <Field label={t("녹화 조건")} htmlFor="channel-download-condition" hint={condition === "inherit" ? `${t("현재 기본값")}: ${t(defaultLabel)}` : t("이 채널에만 적용합니다.")}>
                         <Select id="channel-download-condition" value={condition} autoFocus disabled={saving} onChange={(event) => setCondition(event.target.value as typeof condition)}
-                            options={[{ value: "inherit", label: "기본 조건 사용" }, ...DOWNLOAD_CONDITIONS]} />
+                            options={[{ value: "inherit", label: t("기본 조건 사용") }, ...DOWNLOAD_CONDITIONS.map((item) => ({ ...item, label: t(item.label) }))]} />
                     </Field>
-                    {channel && <div className="text-xs text-ink-muted flex flex-wrap gap-x-2 gap-y-1"><span className="font-medium">현재 방송 태그</span><span className="text-ink-faint">{channel.broadcast_tags == null ? "확인 대기" : channel.broadcast_tags.length ? channel.broadcast_tags.join(" · ") : "없음"}</span></div>}
-                    {channel?.is_watchalong === true && <p className="text-xs text-[var(--primary)]">치지직 같이보기 방송{channel.watchalong_tag ? ` · ${channel.watchalong_tag}` : ""}</p>}
-                    {condition === "watchalong" && <Field label="같이보기 태그" htmlFor="channel-watchalong-tags" hint="‘같이보기’는 전체 같이보기를 선택합니다. 특정 콘텐츠 태그는 쉼표로 구분하세요.">
-                        <Input id="channel-watchalong-tags" value={tags} maxLength={500} disabled={saving} onChange={(event) => { editedTags.current = true; setTags(event.target.value); }} placeholder="예: 같이보기" />
+                    {channel && <div className="text-xs text-ink-muted flex flex-wrap gap-x-2 gap-y-1"><span className="font-medium">{t("현재 방송 태그")}</span><span className="text-ink-faint">{channel.broadcast_tags == null ? t("확인 대기") : channel.broadcast_tags.length ? channel.broadcast_tags.join(" · ") : t("없음")}</span></div>}
+                    {channel?.is_watchalong === true && <p className="text-xs text-[var(--primary)]">{t("치지직 같이보기 방송")}{channel.watchalong_tag ? ` · ${channel.watchalong_tag}` : ""}</p>}
+                    {condition === "watchalong" && <Field label={t("같이보기 태그")} htmlFor="channel-watchalong-tags" hint={t("‘같이보기’는 전체 같이보기를 선택합니다. 특정 콘텐츠 태그는 쉼표로 구분하세요.")}>
+                        <Input id="channel-watchalong-tags" value={tags} maxLength={500} disabled={saving} onChange={(event) => { editedTags.current = true; setTags(event.target.value); }} placeholder={t("예: 같이보기")} />
                     </Field>}
-                    <p className="text-xs text-ink-faint leading-relaxed">치지직 공식 같이보기 정보도 확인합니다. 다음 자동 시작부터 적용되며, 진행 중인 녹화와 수동 시작은 유지됩니다.</p>
+                    <p className="text-xs text-ink-faint leading-relaxed">{t("치지직의 같이보기 정보와 방송 태그를 확인합니다. 변경 사항은 다음 자동 녹화부터 적용되며, 진행 중인 녹화와 수동 녹화에는 영향을 주지 않습니다.")}</p>
                 </>}
                 <div className="flex justify-end gap-2 border-t border-line pt-4">
                     <Button type="button" disabled={saving} onClick={onClose}>취소</Button>

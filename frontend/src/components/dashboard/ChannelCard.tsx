@@ -103,14 +103,14 @@ export function ChannelCard(props: ChannelItemProps) {
                 ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-ink-faint bg-linear-to-br from-surface-2 to-surface-0">
                         <AlertCircle className="w-10 h-10 mb-2 opacity-40" />
-                        <span className="text-xs font-semibold tracking-wider opacity-60">OFFLINE</span>
+                        <span className="text-xs font-medium opacity-70">{t("오프라인")}</span>
                     </div>
                 )}
 
                 {channel.is_live && (
                     <div className="absolute top-2 left-2 flex gap-1.5">
-                        <span className="bg-live text-white text-[10px] font-bold px-2 py-0.5 rounded-sm shadow-lg animate-pulse">● LIVE</span>
-                        {channel.recording?.is_recording && <span className="bg-ok text-surface-0 text-[10px] font-bold px-2 py-0.5 rounded-sm">REC</span>}
+                        <span className="bg-live text-white text-[10px] font-bold px-2 py-0.5 rounded-sm shadow-lg animate-pulse">● {t("방송 중")}</span>
+                        {channel.recording?.is_recording && <span className="bg-ok text-surface-0 text-[10px] font-bold px-2 py-0.5 rounded-sm">녹화 중</span>}
                     </div>
                 )}
 
@@ -173,9 +173,9 @@ export function ChannelCard(props: ChannelItemProps) {
                 </div>
 
                 <div className="flex flex-col gap-3 mb-3">
-                    <div className="flex items-center justify-between text-xs"><span className="text-ink-faint">상태</span><span className={channel.is_live ? "text-live" : "text-ink-faint"}>{channel.is_live ? "LIVE" : "OFFLINE"}</span></div>
+                    <div className="flex items-center justify-between text-xs"><span className="text-ink-faint">상태</span><span className={channel.is_live ? "text-live" : "text-ink-faint"}>{channel.is_live ? t("방송 중") : t("오프라인")}</span></div>
                     <div className="flex items-center justify-between text-xs"><span className="text-ink-faint">자동 녹화</span><Switch checked={channel.auto_record} onChange={() => onToggleAutoRecord(channel)} label={`${displayName} 자동 녹화`} /></div>
-                    <Button onClick={() => props.onEditDownloadSettings(channel)} className="w-full text-xs">다운로드 설정</Button>
+                    <Button onClick={() => props.onEditDownloadSettings(channel)} className="w-full text-xs">{t("녹화 설정")}</Button>
                     <DownloadHoldStatus channel={channel} />
                 </div>
 
@@ -187,12 +187,12 @@ export function ChannelCard(props: ChannelItemProps) {
                                 <Button variant="danger" icon={Square} loading={isActionLoading} onClick={() => onStopRecord(channel)} className="p-2" title="녹화 중단" />
                             </div>
                             <RecordingStats channel={channel} />
-                            {channel.chat_archiving?.is_running && <div className="flex items-center gap-2 bg-info/10 border border-info/20 rounded-[var(--radius-control)] p-2 text-xs text-info"><MessageSquare className="w-3 h-3" /> 채팅 수집 중 ({channel.chat_archiving.message_count.toLocaleString()}개)</div>}
+                            {channel.chat_archiving?.is_running && <div className="flex items-center gap-2 bg-info/10 border border-info/20 rounded-[var(--radius-control)] p-2 text-xs text-info"><MessageSquare className="w-3 h-3" /> 채팅 저장 중 · {channel.chat_archiving.message_count.toLocaleString()}개</div>}
                         </>
                     ) : channel.is_live ? (
-                        <Button icon={Play} loading={isActionLoading} onClick={() => onStartRecord(channel)} className="w-full text-ok">{isActionLoading ? "처리 중..." : "수동 녹화 시작"}</Button>
+                        <Button icon={Play} loading={isActionLoading} onClick={() => onStartRecord(channel)} className="w-full text-ok">{isActionLoading ? "녹화 시작 중..." : "수동 녹화 시작"}</Button>
                     ) : (
-                        <div className="bg-surface-3 border border-line rounded-[var(--radius-control)] p-2 flex items-center gap-2 text-xs text-ink-faint"><AlertCircle className="w-3 h-3" /> 방송 대기 중...</div>
+                        <div className="bg-surface-3 border border-line rounded-[var(--radius-control)] p-2 flex items-center gap-2 text-xs text-ink-faint"><AlertCircle className="w-3 h-3" /> 방송을 기다리고 있습니다.</div>
                     )}
                 </div>
             </div>

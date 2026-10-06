@@ -91,7 +91,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
             <div>
                 <label className="block text-sm font-medium text-ink-muted mb-2">
                     <FolderOpen className="inline w-4 h-4 mr-1 text-[var(--primary)]" />
-                    라이브 저장 경로 <span className="text-danger">*</span>
+                    라이브 저장 위치 <span className="text-danger">*</span>
                 </label>
                 <DirInput
                     value={data.live_download_dir}
@@ -99,7 +99,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                     placeholder="예: C:\\Recordings\\Live 또는 /home/user/recordings/live"
                 />
                 <p className="text-xs text-ink-faint mt-1.5 flex items-start gap-1">
-                    라이브 녹화와 채팅 로그를 저장합니다. 경로가 없으면 자동 생성됩니다.
+                    라이브 녹화와 채팅 로그를 저장합니다. 폴더가 없으면 자동으로 만듭니다.
                 </p>
             </div>
 
@@ -107,7 +107,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
             <div>
                 <label className="block text-sm font-medium text-ink-muted mb-2">
                     <FolderOpen className="inline w-4 h-4 mr-1 text-[var(--primary)]" />
-                    영상 다운로드 저장 경로 <span className="text-danger">*</span>
+                    영상 저장 위치 <span className="text-danger">*</span>
                 </label>
                 <DirInput
                     value={data.vod_download_dir}
@@ -115,13 +115,13 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                     placeholder="예: C:\\Recordings\\Video 또는 /home/user/recordings/video"
                 />
                 <p className="text-xs text-ink-faint mt-1.5 flex items-start gap-1">
-                    치지직 다시보기·클립, 유튜브와 외부 영상 다운로드를 저장합니다.
+                    치지직 다시보기·클립, 유튜브와 외부 영상이 이곳에 저장됩니다.
                 </p>
             </div>
 
             {/* 라이브 품질 */}
             <div>
-                <label className="block text-sm font-medium text-ink-muted mb-2">라이브 품질</label>
+                <label className="block text-sm font-medium text-ink-muted mb-2">라이브 녹화 화질</label>
                 <div className="grid grid-cols-4 gap-2">
                     {qualities.map((q) => (
                         <button
@@ -139,9 +139,9 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                 </div>
             </div>
 
-            {/* 출력 포맷 */}
+            {/* 파일 형식 */}
             <div>
-                <label className="block text-sm font-medium text-ink-muted mb-2">출력 포맷</label>
+                <label className="block text-sm font-medium text-ink-muted mb-2">라이브 녹화 파일 형식</label>
                 <div className="grid grid-cols-3 gap-2">
                     {formats.map((f) => (
                         <button
@@ -158,7 +158,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                     ))}
                 </div>
                 <p className="text-xs text-ink-faint mt-1.5">
-                    TS: 녹화 안정성 최우선 · MP4/MKV: 즉시 재생 가능
+                    TS는 녹화가 중단되어도 파일을 재생할 수 있어 라이브 녹화에 적합합니다.
                 </p>
             </div>
         </div>
@@ -233,10 +233,10 @@ function Step2({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
 
 function Step3({ data }: { data: FormData }) {
     const rows: { label: string; value: string }[] = [
-        { label: "라이브 저장 경로", value: data.live_download_dir || "(미설정)" },
-        { label: "영상 다운로드 저장 경로", value: data.vod_download_dir || "(미설정)" },
-        { label: "라이브 품질", value: data.recording_quality },
-        { label: "출력 포맷", value: `.${data.output_format.toUpperCase()}` },
+        { label: "라이브 저장 위치", value: data.live_download_dir || "(미설정)" },
+        { label: "영상 저장 위치", value: data.vod_download_dir || "(미설정)" },
+        { label: "라이브 녹화 화질", value: data.recording_quality },
+        { label: "라이브 녹화 파일 형식", value: `.${data.output_format.toUpperCase()}` },
         { label: "치지직 인증", value: data.nid_aut && data.nid_ses ? "✅ 설정됨" : "⏭️ 건너뜀 (나중에 설정 가능)" },
     ];
 
@@ -298,14 +298,14 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
             await completeSetup(data);
             onComplete();
         } catch (e) {
-            setError(e instanceof Error ? e.message : "알 수 없는 오류");
+        setError("설정을 저장하지 못했습니다. 입력값을 확인하고 다시 시도해 주세요.");
         } finally {
             setSaving(false);
         }
     };
 
     const stepTitles: Record<Step, { title: string; subtitle: string }> = {
-        1: { title: "기본 설정", subtitle: "라이브와 영상 다운로드 저장 경로 및 기본 화질을 설정하세요." },
+        1: { title: "기본 설정", subtitle: "라이브와 영상의 저장 위치, 기본 화질을 설정하세요." },
         2: { title: "치지직 인증 쿠키 (선택)", subtitle: "성인 방송 및 1080p 녹화를 위한 로그인 쿠키를 입력하세요." },
         3: { title: "설정 확인", subtitle: "아래 내용을 확인하고 완료 버튼을 누르세요." },
     };

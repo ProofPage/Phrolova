@@ -67,7 +67,7 @@ export default function ArchivePage() {
                 </Card>
 
                 <Card>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink-faint mb-4">{t("Before you start")}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink-faint mb-4">{t("시작 전에")}</p>
                     <div className="space-y-4">
                         <div className="flex gap-3">
                             <span className="w-8 h-8 rounded-[var(--radius-control)] bg-info/10 text-info grid place-items-center shrink-0"><FileAudio className="w-4 h-4" /></span>
@@ -82,7 +82,7 @@ export default function ArchivePage() {
                             <div><p className="text-sm font-medium text-ink">{t("비공개 Space")}</p><p className="text-xs text-ink-faint mt-0.5">{t("설정에서 X 쿠키 파일을 먼저 지정해 주세요.")}</p></div>
                         </div>
                     </div>
-                    <p className="mt-5 pt-4 border-t border-line text-xs text-ink-faint">{t("진행 상황과 저장된 파일은 모니터링의 다시보기 대시보드에서 확인할 수 있습니다.")}</p>
+                    <p className="mt-5 pt-4 border-t border-line text-xs text-ink-faint">{t("진행 상황과 저장한 파일은 영상 다운로드 화면에서 확인할 수 있습니다.")}</p>
                 </Card>
             </div>
         </div>

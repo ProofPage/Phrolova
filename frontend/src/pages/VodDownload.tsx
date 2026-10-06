@@ -52,10 +52,10 @@ export default function VodDownload() {
     const selectedSourceOption = sourceOptions.find((option) => option.id === selectedSource)!;
 
     const sourcePlaceholder = selectedSource === "chzzk"
-        ? t("다시보기 URL 또는 클립 URL")
+        ? t("다시보기·클립 링크")
         : selectedSource === "youtube"
-            ? t("핸들(@username) 또는 동영상 ID")
-            : t("다운로드할 영상 링크");
+            ? t("@핸들 또는 동영상 ID")
+            : t("영상 링크 입력");
 
     useEffect(() => {
         const timer = setTimeout(() => setIsInitialLoad(false), 500);
@@ -120,7 +120,7 @@ export default function VodDownload() {
             const result = await addTask(downloadUrl);
             setUrl("");
             toast.success(result.import_id
-                ? t("채널 영상 수집을 시작했습니다.")
+                ? t("채널 영상 목록 불러오기를 시작했습니다.")
                 : t("다운로드 목록에 추가했습니다."));
         } catch (err: unknown) {
             toast.error(getErrorMessage(err, t("영상 추가에 실패했습니다.")));
@@ -131,37 +131,58 @@ export default function VodDownload() {
 
     const handleCancel = async (taskId: string, title: string) => {
         const ok = await confirm({
-            title: "다운로드 중지",
-            message: `'${title}' 다운로드를 중지할까요?`,
-            confirmText: "중지",
+            title: t("다운로드를 취소할까요?"),
+            message: t("‘{title}’ 다운로드를 취소합니다.").replace("{title}", title),
+            confirmText: t("다운로드 취소"),
             variant: "danger",
         });
-        if (ok) cancelTask(taskId);
+        if (!ok) return;
+        try {
+            await cancelTask(taskId);
+            toast.success(t("다운로드 취소를 요청했습니다."));
+        } catch (err: unknown) {
+            toast.error(getErrorMessage(err, t("다운로드를 취소하지 못했습니다.")));
+        }
     };
 
     const handleRetry = async (taskId: string, title: string) => {
         const ok = await confirm({
-            title: "다시 다운로드",
-            message: `'${title}'을(를) 다시 받을까요?`,
-            confirmText: "다시 받기",
+            title: t("다운로드를 다시 시작할까요?"),
+            message: t("‘{title}’을(를) 다시 다운로드합니다.").replace("{title}", title),
+            confirmText: t("다시 시도"),
         });
-        if (ok) retryTask(taskId);
+        if (!ok) return;
+        try {
+            await retryTask(taskId);
+            toast.success(t("다운로드를 다시 시작했습니다."));
+        } catch (err: unknown) {
+            toast.error(getErrorMessage(err, t("다운로드를 다시 시작하지 못했습니다.")));
+        }
+    };
+
+    const handleTaskAction = async (action: () => Promise<void>, success: string, fallback: string) => {
+        try {
+            await action();
+            toast.success(t(success));
+        } catch (err: unknown) {
+            toast.error(getErrorMessage(err, t(fallback)));
+        }
     };
 
     const handleClearCompleted = async () => {
         const ok = await confirm({
-            title: "목록 정리",
-            message: "대기·완료·오류 항목을 목록에서 삭제할까요? 진행 중이거나 일시정지한 항목은 유지됩니다.",
-            confirmText: "정리",
+            title: t("다운로드 목록을 정리할까요?"),
+            message: t("대기 중·완료·실패한 작업만 목록에서 삭제합니다. 진행 중이거나 일시정지한 작업과 저장된 파일은 유지됩니다."),
+            confirmText: t("목록 정리"),
             variant: "danger",
         });
         if (!ok) return;
 
         try {
             const result = await clearCompleted();
-            toast.success(`${result.deleted_count}개 항목을 정리했습니다.`);
+            toast.success(t("다운로드 목록에서 {count}개 항목을 삭제했습니다.").replace("{count}", String(result.deleted_count)));
         } catch (err: unknown) {
-            toast.error(getErrorMessage(err, "목록 정리에 실패했습니다."));
+            toast.error(getErrorMessage(err, t("목록 정리에 실패했습니다.")));
         }
     };
 
@@ -188,7 +209,7 @@ export default function VodDownload() {
             const taskIds = newTasks.map((t) => t.task_id);
             await api.reorderVodTasks(taskIds);
         } catch {
-            toast.error("작업 순서 변경에 실패했습니다.");
+            toast.error(t("작업 순서 변경에 실패했습니다."));
         }
 
         setDraggedIndex(null);
@@ -198,21 +219,21 @@ export default function VodDownload() {
         <div className="space-y-6">
             <PageHeader
                 icon={Download}
-                eyebrow={t("영상 다운로드")}
-                title={t("다시보기 대시보드")}
-                description={t("여러 플랫폼의 다시보기와 클립을 추가하고 다운로드 상태를 한곳에서 관리합니다.")}
+                eyebrow={t("다운로드 관리")}
+                title={t("영상 다운로드")}
+                description={t("치지직 다시보기와 클립, 유튜브와 외부 영상을 추가하고 다운로드 상태를 관리합니다.")}
                 meta={(
                     <>
                         <Badge tone={activeCount > 0 ? "ok" : "neutral"}>{t("진행 중")} {activeCount}</Badge>
-                        <Badge tone="neutral">{t("대기")} {queuedCount}</Badge>
-                        <Badge tone={errorCount > 0 ? "danger" : "neutral"}>{t("오류")} {errorCount}</Badge>
+                        <Badge tone="neutral">{t("대기 중")} {queuedCount}</Badge>
+                        <Badge tone={errorCount > 0 ? "danger" : "neutral"}>{t("실패")} {errorCount}</Badge>
                         <Badge tone="neutral">{t("전체")} {tasks.length}</Badge>
                     </>
                 )}
                 actions={(
                     <form onSubmit={handleSubmit}>
-                        <div className="flex min-w-0 items-stretch gap-2">
-                            <div className="relative shrink-0" ref={sourceMenuRef}>
+                        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
+                            <div className="relative w-fit shrink-0" ref={sourceMenuRef}>
                                 <button
                                     type="button"
                                     onClick={() => setSourceMenuOpen((open) => !open)}
@@ -246,21 +267,23 @@ export default function VodDownload() {
                                     </div>
                                 )}
                             </div>
-                            <Input
-                                id="vod-url"
-                                type="text"
-                                className="min-w-0 flex-1"
-                                aria-label={selectedSource === "youtube"
-                                    ? "유튜브 링크, 채널 핸들 또는 동영상 ID"
-                                    : `${selectedSourceOption.label} 영상 주소`}
-                                placeholder={sourcePlaceholder}
-                                value={url}
-                                onChange={(event) => setUrl(event.target.value)}
-                                autoComplete="off"
-                            />
+                            <div className="flex min-w-0 gap-2 sm:flex-1">
+                                <Input
+                                    id="vod-url"
+                                    type="text"
+                                    className="min-w-0 flex-1"
+                                    aria-label={selectedSource === "youtube"
+                                        ? "유튜브 링크, 채널 핸들 또는 동영상 ID"
+                                        : `${selectedSourceOption.label} 영상 주소`}
+                                    placeholder={sourcePlaceholder}
+                                    value={url}
+                                    onChange={(event) => setUrl(event.target.value)}
+                                    autoComplete="off"
+                                />
                                 <Button type="submit" icon={Plus} loading={loading} disabled={!url} variant="primary" className="shrink-0 px-3 sm:px-5">
-                                {t("추가")}
-                            </Button>
+                                    {t("추가")}
+                                </Button>
+                            </div>
                         </div>
                     </form>
                 )}
@@ -269,10 +292,10 @@ export default function VodDownload() {
 
             {imports.map((job) => {
                 const running = job.state === "queued" || job.state === "collecting";
-                const label = job.state === "queued" ? "채널 영상 수집 대기 중"
-                    : job.state === "collecting" ? "채널 영상을 불러오는 중"
-                    : job.state === "completed" ? "채널 영상 수집 완료"
-                    : job.state === "cancelled" ? "채널 영상 수집 중지됨" : "채널 영상 수집 실패";
+                const label = job.state === "queued" ? "채널 영상 목록 불러오기 대기 중"
+                    : job.state === "collecting" ? "채널 영상 목록을 불러오는 중"
+                    : job.state === "completed" ? "채널 영상 목록 불러오기 완료"
+                    : job.state === "cancelled" ? "채널 영상 목록 불러오기 중지됨" : "채널 영상 목록을 불러오지 못했습니다.";
                 return (
                     <div key={job.id} role="status" className="rounded-[var(--radius-card)] border border-line bg-surface-2 p-4 flex items-start gap-3">
                         {running ? <Loader2 className="w-5 h-5 animate-spin text-accent shrink-0 mt-0.5" />
@@ -282,13 +305,16 @@ export default function VodDownload() {
                             <p className="text-sm font-semibold text-ink">{t(label)}</p>
                             <p className="text-xs text-ink-muted break-all">{job.url}</p>
                             <p className="text-xs text-ink-muted">{t("추가한 영상")}: {job.added_count} · {t("이미 목록에 있는 영상")}: {job.skipped_count}</p>
-                            {running && <p className="text-xs text-ink-muted">{t("찾은 영상부터 다운로드합니다. 수집을 중지해도 추가된 영상은 유지됩니다.")}</p>}
-                            {job.error && <p className="text-xs text-red-400 break-words">{job.error}</p>}
+                            {running && <p className="text-xs text-ink-muted">{t("찾은 영상부터 다운로드합니다. 목록 불러오기를 중지해도 이미 추가된 영상은 유지됩니다.")}</p>}
+                            {job.error && <details className="text-xs text-red-400">
+                                <summary className="cursor-pointer">{t("오류 세부 정보")}</summary>
+                                <p className="mt-1 break-words">{job.error}</p>
+                            </details>}
                         </div>
                         <Button onClick={async () => {
                             try { await api.cancelVodImport(job.id); await refreshTasks(); }
                             catch (err) { toast.error(getErrorMessage(err, t("요청에 실패했습니다."))); }
-                        }}>{t(running ? "수집 중지" : "닫기")}</Button>
+                        }}>{t(running ? "불러오기 중지" : "닫기")}</Button>
                     </div>
                 );
             })}
@@ -329,7 +355,7 @@ export default function VodDownload() {
                 ) : tasks.length === 0 && imports.some(job => job.state === "queued" || job.state === "collecting") ? (
                     <p className="py-8 text-center text-sm text-ink-muted">{t("영상을 찾으면 이곳에 표시됩니다.")}</p>
                 ) : tasks.length === 0 ? (
-                    <EmptyState icon={FileVideo} title="아직 추가한 영상이 없습니다" description="위에서 영상 주소를 추가하면 진행 상황과 저장된 파일을 이곳에서 확인할 수 있습니다." />
+                    <EmptyState icon={FileVideo} title={t("아직 추가한 영상이 없습니다")} description={t("영상 주소를 추가하면 다운로드 진행 상황과 저장 위치를 확인할 수 있습니다.")} />
                 ) : (
                     <div className="space-y-3">
                         {tasks.slice(0, visibleCount).map((task, index) => (
@@ -347,8 +373,8 @@ export default function VodDownload() {
                                 <TaskCard
                                     task={task}
                                     onCancel={() => handleCancel(task.task_id, task.title)}
-                                    onPause={() => pauseTask(task.task_id)}
-                                    onResume={() => resumeTask(task.task_id)}
+                                    onPause={() => void handleTaskAction(() => pauseTask(task.task_id), "다운로드를 일시정지했습니다.", "다운로드를 일시정지하지 못했습니다.")}
+                                    onResume={() => void handleTaskAction(() => resumeTask(task.task_id), "다운로드를 재개했습니다.", "다운로드를 재개하지 못했습니다.")}
                                     onRetry={() => handleRetry(task.task_id, task.title)}
                                     onOpenLocation={() => openFileLocation(task.task_id)}
                                 />
@@ -376,6 +402,7 @@ interface TaskCardProps {
 }
 
 function TaskCard({ task, onCancel, onPause, onResume, onRetry, onOpenLocation }: TaskCardProps) {
+    const { t } = useLanguage();
     const statusBadgeClass =
         task.state === "completed"
             ? "bg-ok/10 text-ok border-ok/20"
@@ -388,12 +415,12 @@ function TaskCard({ task, onCancel, onPause, onResume, onRetry, onOpenLocation }
                         : "bg-surface-4 text-ink-muted border-line";
 
     const statusLabels: Record<string, string> = {
-        idle: "대기",
-        downloading: "다운로드 중",
-        paused: "일시정지",
-        completed: "완료",
-        error: "오류",
-        cancelling: "취소 중",
+        idle: t("대기 중"),
+        downloading: t("다운로드 중"),
+        paused: t("일시정지"),
+        completed: t("완료"),
+        error: t("실패"),
+        cancelling: t("취소 중"),
     };
 
     const barColorClass =
@@ -453,10 +480,11 @@ function TaskCard({ task, onCancel, onPause, onResume, onRetry, onOpenLocation }
                 </div>
 
                 <div className="text-xs text-ink-faint font-mono flex flex-wrap gap-x-4">
-                    <span>화질: {task.quality === "best" ? "최고 화질" : task.quality}</span>
-                    {task.error_message && (
-                        <span className="text-danger">오류: {task.error_message}</span>
-                    )}
+                    <span>{t("화질")}: {task.quality === "best" ? t("최고 화질") : task.quality}</span>
+                    {task.error_message && <details className="w-full text-danger">
+                        <summary className="cursor-pointer">{t("다운로드를 완료하지 못했습니다. 오류 세부 정보")}</summary>
+                        <p className="mt-1 break-words font-sans">{task.error_message}</p>
+                    </details>}
                 </div>
 
                 {/* 진행률 바 */}

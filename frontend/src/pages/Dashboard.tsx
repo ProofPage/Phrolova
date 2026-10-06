@@ -8,7 +8,7 @@ import { ChannelCard } from "../components/dashboard/ChannelCard";
 import { ChannelRow } from "../components/dashboard/ChannelRow";
 import { DashboardFilters, type StatusFilter, type ViewMode } from "../components/dashboard/DashboardFilters";
 import { useConfirm } from "../components/ui/ConfirmModal";
-import { Badge, EmptyState, PageHeader } from "../components/ui/primitives";
+import { Badge, Button, EmptyState, PageHeader } from "../components/ui/primitives";
 import { useToast } from "../components/ui/Toast";
 import { useChannelReorder } from "../hooks/useChannelReorder";
 import { useChannelStream } from "../hooks/useChannelStream";
@@ -217,7 +217,7 @@ export default function Dashboard() {
                 icon={Radio}
                 eyebrow={t("실시간 방송 관리")}
                 title={t("라이브 대시보드")}
-                description={t("방송 상태를 확인하고 채널별 자동 다운로드와 녹화를 관리합니다.")}
+                description={t("방송 상태를 확인하고 채널별 자동 녹화와 녹화 조건을 관리합니다.")}
                 meta={(
                     <>
                         <Badge tone="primary">{t("감시 채널")} {channels.length}</Badge>
@@ -232,7 +232,7 @@ export default function Dashboard() {
             {connectionError && !initialLoading && (
                 <div className="flex items-center gap-3 px-4 py-3 bg-danger/10 border border-danger/20 rounded-[var(--radius-card)] text-danger text-sm">
                     <WifiOff className="w-5 h-5 shrink-0" />
-                    <span>서버와 연결이 끊어졌습니다. 자동으로 재연결을 시도합니다...</span>
+                    <span>{t("서버 연결이 끊겼습니다. 다시 연결하는 중입니다.")}</span>
                 </div>
             )}
 
@@ -258,10 +258,10 @@ export default function Dashboard() {
                 )}
             </div>
 
-            <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" : "flex flex-col gap-3 overflow-x-auto"}>
+            <div className={viewMode === "grid" ? "grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" : "flex min-w-0 flex-col gap-3"}>
                 {initialLoading && [1, 2, 3].map((item) => (
-                    <div key={item} className={`bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden ${viewMode === "list" ? "flex min-w-[900px]" : ""}`}>
-                        <div className={`skeleton ${viewMode === "list" ? "w-48 min-h-[150px] shrink-0" : "w-full aspect-video"}`} />
+                    <div key={item} className={`min-w-0 bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden ${viewMode === "list" ? "flex flex-col md:flex-row" : ""}`}>
+                        <div className={`skeleton ${viewMode === "list" ? "h-28 w-full xl:h-auto xl:w-48 xl:shrink-0" : "w-full aspect-video"}`} />
                         <div className="p-4 space-y-3 flex-1"><div className="skeleton h-4 rounded w-3/4" /><div className="skeleton h-3 rounded w-1/2" /><div className="skeleton h-8 rounded mt-6" /></div>
                     </div>
                 ))}
@@ -279,7 +279,7 @@ export default function Dashboard() {
 
                 {!initialLoading && filteredChannels.length === 0 && (
                     <div className={viewMode === "grid" ? "col-span-full" : ""}>
-                        <EmptyState icon={Radio} title={channels.length === 0 ? "감시 중인 채널이 없습니다." : "필터 조건에 맞는 채널이 없습니다."} description={channels.length === 0 ? "위에서 채널 ID를 입력해 모니터링을 시작하세요." : "상태 또는 태그 필터를 변경해 보세요."} />
+                        <EmptyState icon={Radio} title={channels.length === 0 ? "감시 중인 채널이 없습니다." : "필터 조건에 맞는 채널이 없습니다."} description={channels.length === 0 ? "위에서 채널 ID를 입력해 모니터링을 시작하세요." : "상태 또는 태그 필터를 변경해 보세요."} action={channels.length > 0 ? <Button onClick={() => { setFilter("all"); setSelectedFilterTags([]); }}>필터 초기화</Button> : undefined} />
                     </div>
                 )}
             </div>

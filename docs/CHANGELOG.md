@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+## [2.0.41] - 2026-10-06
+
+### Changed
+- **제품 문구와 용어** — 라이브 저장은 ‘녹화’, 다시보기·클립·외부 영상은 ‘다운로드’로 구분하고, 메뉴·설정·상태 안내를 실제 기능에 맞게 정리했습니다.
+- **녹화 조건 안내** — 자동 녹화 보류 이유와 채널별 녹화 설정 설명을 명확히 했습니다.
+- **다운로드 작업 안내** — 대기·실패·취소·재시도 상태와 작업별 안내를 이해하기 쉽게 다듬었습니다.
+- **화면과 번역** — 채널 추가와 다운로드 입력 흐름을 좁은 화면에 맞게 정리하고, 변경된 문구의 영어·일본어 번역을 보완했습니다.
+
 ## [2.0.40] - 2026-10-06
 
 ### Changed
@@ -585,7 +593,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.40...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.41...HEAD
+[2.0.41]: https://github.com/ProofPage/Phrolova/compare/v2.0.40...v2.0.41
 [2.0.40]: https://github.com/ProofPage/Phrolova/compare/v2.0.39...v2.0.40
 [2.0.39]: https://github.com/ProofPage/Phrolova/compare/v2.0.38...v2.0.39
 [2.0.38]: https://github.com/ProofPage/Phrolova/compare/v2.0.37...v2.0.38

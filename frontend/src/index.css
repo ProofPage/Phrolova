@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Pretendard Variable";
+  font-style: normal;
+  font-weight: 45 920;
+  font-display: swap;
+  src: url("/fonts/PretendardVariable.woff2") format("woff2-variations");
+}
+
 /* ════════════════════════════════════════════════════════
    디자인 토큰
 
@@ -254,6 +262,13 @@ code,
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 24%, transparent);
 }
 
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
 /* Liquid Glass는 탐색·팝오버에만 사용한다. 데이터 패널은 불투명하게 둔다. */
 .app-topbar,
 .glass-popover {
@@ -307,6 +322,23 @@ code,
 .top-search kbd { background: rgba(255, 255, 255, 0.07); color: var(--color-ink-muted); }
 .dashboard-options summary::-webkit-details-marker { display: none; }
 .dashboard-options[open] summary > svg:last-child { transform: rotate(180deg); }
+
+/* 노트북 폭에서는 텍스트 메뉴를 유지하면서 장식만 줄여 전 항목을 한 줄에 표시한다. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .top-nav {
+    justify-content: space-between;
+  }
+
+  .top-nav-link {
+    gap: 0.38rem;
+    padding-inline: 0.58rem;
+    font-size: 0.75rem;
+  }
+
+  .top-search-label { display: none; }
+  .top-search-key { margin-left: 0.2rem; }
+  .top-search { gap: 0.35rem; padding-inline: 0.6rem; }
+}
 
 @media (prefers-reduced-transparency: reduce) {
   .app-topbar,

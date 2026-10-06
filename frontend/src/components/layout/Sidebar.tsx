@@ -53,7 +53,7 @@ export function Sidebar() {
                             {iconUrl ? <img src={iconUrl} alt="" className="w-full h-full object-cover" /> : <Tv className="w-5 h-5" />}
                         </div>
                         <div className="min-w-0">
-                            <p className="text-[10px] uppercase tracking-[0.18em] text-ink-faint font-bold">Recorder</p>
+                            <p className="text-[10px] uppercase tracking-[0.18em] text-ink-faint font-bold">{t("라이브 녹화·영상 다운로드")}</p>
                             <h1 className="text-[15px] font-bold text-ink truncate leading-tight" title={pageTitle}>{pageTitle}</h1>
                         </div>
                     </div>

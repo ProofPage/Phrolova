@@ -55,24 +55,24 @@ export function GeneralTab({ settings, onSaved, onDirtyChange }: Props) {
             <CardHeader icon={Settings} title={t("일반 설정")} />
 
             <Field
-                label={t("라이브 저장 경로")}
+                label={t("라이브 저장 위치")}
                 hint={t("라이브 녹화 파일과 해당 방송의 채팅 로그가 저장됩니다.")}
             >
                 <DirInput value={liveDownloadDir} onChange={setLiveDownloadDir} placeholder="예: E:\\recordings\\Live" />
             </Field>
 
             <Field
-                label={t("다시보기 저장 경로")}
+                label={t("영상 저장 위치")}
                 hint={t("치지직 다시보기·클립과 외부 영상 다운로드가 저장됩니다.")}
             >
                 <DirInput value={vodDownloadDir} onChange={setVodDownloadDir} placeholder="예: E:\\recordings\\Video" />
             </Field>
 
-            <Field label={t("감시 주기 (초)")} hint={t("채널 라이브 상태를 확인하는 간격 (5~300초).") }>
+            <Field label={t("라이브 확인 주기 (초)")} hint={t("등록한 채널의 방송 상태를 확인하는 간격입니다 (5~300초).") }>
                 <Input type="number" min={5} max={300} value={monitorInterval} onChange={(event) => setMonitorInterval(parseInt(event.target.value) || 30)} />
             </Field>
 
-            <Field label={t("라이브 녹화 포맷")} hint={t("TS/MKV는 녹화 중단 시에도 파일이 유지됩니다. MP4는 라이브 녹화에 적합하지 않습니다.")}>
+            <Field label={t("라이브 녹화 파일 형식")} hint={t("TS와 MKV는 녹화가 중단되어도 재생할 수 있습니다. MP4는 중단 시 파일이 손상될 수 있습니다.")}>
                 <Select
                     value={liveFormat}
                     onChange={(event) => setLiveFormat(event.target.value)}

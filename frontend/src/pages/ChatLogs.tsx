@@ -10,11 +10,11 @@ import {
     ChevronRight,
     FolderOpen,
     RefreshCw,
+    AlertCircle,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { api, ChatLogFile, ChatMessageItem, MessagesResponse } from "../api/client";
-import { useToast } from "../components/ui/Toast";
-import { Button, Input, PageHeader } from "../components/ui/primitives";
+import { Button, EmptyState, Input, PageHeader } from "../components/ui/primitives";
 import { formatBytes, formatDate as _formatDate, formatTime } from "../utils/format";
 import { useLanguage } from "../contexts/LanguageContext";
 
@@ -27,7 +27,6 @@ function formatDate(iso: string): string {
 export default function ChatLogs() {
     const { t } = useLanguage();
     const [selectedFile, setSelectedFile] = useState<ChatLogFile | null>(null);
-    const toast = useToast();
     const [refreshKey, setRefreshKey] = useState(0);
 
     return (
@@ -35,34 +34,33 @@ export default function ChatLogs() {
             <PageHeader
                 icon={MessageSquare}
                 eyebrow={t("라이브 채팅 아카이브")}
-                title="Chat Logs"
+                title={t("채팅 기록")}
                 description={t("채널별 채팅 기록을 검색하고, 녹화 세션의 원본 로그를 다운로드하세요.")}
                 actions={<Button icon={RefreshCw} onClick={() => setRefreshKey((value) => value + 1)}>{t("새로고침")}</Button>}
             />
 
             <div className="flex flex-col lg:flex-row flex-1 gap-4 min-h-[480px] xl:min-h-0">
-                <div className="lg:w-[340px] xl:w-[30%] flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[260px]">
+                <div className={clsx("lg:w-[340px] xl:w-[30%] flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[260px]", selectedFile && "hidden lg:flex")}>
                     <div className="px-4 py-3 border-b border-line text-xs font-semibold text-ink-muted">{t("로그 파일")}</div>
                     <FileListView 
                         refreshKey={refreshKey}
                         selectedFile={selectedFile} 
                         onSelect={setSelectedFile} 
-                        toast={toast} 
                     />
                 </div>
 
-                <div className="flex-1 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[320px]">
-                    <div className="px-4 py-3 border-b border-line text-xs font-semibold text-ink-muted">{t("채팅 내용")}</div>
+                <div className={clsx("flex-1 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[320px]", !selectedFile && "hidden lg:flex")}>
+                    <div className="flex min-h-12 items-center gap-3 px-4 py-2 border-b border-line text-xs font-semibold text-ink-muted">
+                        {selectedFile && <button type="button" onClick={() => setSelectedFile(null)} className="inline-flex min-h-11 items-center gap-1.5 text-ink-muted hover:text-ink lg:hidden"><ChevronLeft className="size-4" />{t("로그 파일")}</button>}
+                        <span className={selectedFile ? "hidden lg:inline" : ""}>{t("채팅 내용")}</span>
+                    </div>
                     {selectedFile === null ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-ink-faint p-8 text-center">
                             <span className="w-14 h-14 rounded-2xl bg-surface-3 border border-line grid place-items-center mb-4"><MessageSquare className="w-6 h-6 opacity-60" /></span>
                             <p className="text-sm">{t("채팅 로그를 선택해 내용을 확인하세요.")}</p>
                         </div>
                     ) : (
-                        <MessageViewer
-                            file={selectedFile}
-                            toast={toast}
-                        />
+                        <MessageViewer file={selectedFile} />
                     )}
                 </div>
             </div>
@@ -76,12 +74,13 @@ interface FileListViewProps {
     refreshKey: number;
     selectedFile: ChatLogFile | null;
     onSelect: (file: ChatLogFile) => void;
-    toast: ReturnType<typeof useToast>;
 }
 
-function FileListView({ selectedFile, onSelect, toast, refreshKey }: FileListViewProps) {
+function FileListView({ selectedFile, onSelect, refreshKey }: FileListViewProps) {
+    const { t } = useLanguage();
     const [files, setFiles] = useState<ChatLogFile[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
 
     useEffect(() => {
         loadFiles();
@@ -89,11 +88,12 @@ function FileListView({ selectedFile, onSelect, toast, refreshKey }: FileListVie
 
     const loadFiles = async () => {
         setLoading(true);
+        setLoadError(false);
         try {
             const data = await api.getChatFiles();
             setFiles(data);
         } catch {
-            toast.error("채팅 로그 파일 목록을 불러오는 데 실패했습니다.");
+            setLoadError(true);
         } finally {
             setLoading(false);
         }
@@ -115,11 +115,14 @@ function FileListView({ selectedFile, onSelect, toast, refreshKey }: FileListVie
     }
 
     if (files.length === 0) {
+        if (loadError) {
+            return <EmptyState icon={AlertCircle} title={t("채팅 로그를 불러오지 못했습니다.")} description={t("서버 연결을 확인한 뒤 다시 시도해 주세요.")} action={<Button icon={RefreshCw} onClick={() => void loadFiles()}>{t("다시 시도")}</Button>} />;
+        }
         return (
             <div className="flex flex-col flex-1 items-center justify-center p-8 text-center">
                 <MessageSquare className="w-8 h-8 text-ink-faint mb-3" />
                 <p className="text-ink-muted font-medium text-sm mb-1">저장된 채팅 로그가 없습니다.</p>
-                <p className="text-xs text-ink-faint leading-relaxed">설정에서 채팅 보관을 켜면 라이브 녹화 중 수집한 기록이 여기에 표시됩니다.</p>
+                <p className="text-xs text-ink-faint leading-relaxed">설정에서 채팅 저장을 켜면 라이브 녹화 중 저장된 채팅이 여기에 표시됩니다.</p>
             </div>
         );
     }
@@ -140,11 +143,13 @@ function FileListView({ selectedFile, onSelect, toast, refreshKey }: FileListVie
                         {channelFiles.map((file) => {
                             const isSelected = selectedFile?.file_id === file.file_id;
                             return (
-                                <div
+                                <button
+                                    type="button"
                                     key={file.file_id}
                                     onClick={() => onSelect(file)}
+                                    aria-pressed={isSelected}
                                     className={clsx(
-                                        "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors group",
+                                        "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors group",
                                         isSelected ? "btn-ghost-primary" : "hover:bg-surface-3/70"
                                     )}
                                 >
@@ -169,7 +174,7 @@ function FileListView({ selectedFile, onSelect, toast, refreshKey }: FileListVie
                                             </span>
                                         </div>
                                     </div>
-                                </div>
+                                </button>
                             );
                         })}
                     </div>
@@ -181,14 +186,13 @@ function FileListView({ selectedFile, onSelect, toast, refreshKey }: FileListVie
 
 // ── 메시지 뷰어 ─────────────────────────────────────────
 
-interface MessageViewerProps {
-    file: ChatLogFile;
-    toast: ReturnType<typeof useToast>;
-}
+interface MessageViewerProps { file: ChatLogFile }
 
-function MessageViewer({ file, toast }: MessageViewerProps) {
+function MessageViewer({ file }: MessageViewerProps) {
+    const { t } = useLanguage();
     const [data, setData] = useState<MessagesResponse | null>(null);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
     const [page, setPage] = useState(1);
 
     const [pendingSearch, setPendingSearch] = useState("");
@@ -204,6 +208,7 @@ function MessageViewer({ file, toast }: MessageViewerProps) {
         nickname: string,
     ) => {
         setLoading(true);
+        setLoadError(false);
         try {
             const res = await api.getChatMessages(file.file_id, {
                 page: targetPage,
@@ -213,11 +218,11 @@ function MessageViewer({ file, toast }: MessageViewerProps) {
             });
             setData(res);
         } catch {
-            toast.error("메시지를 불러오는 데 실패했습니다.");
+            setLoadError(true);
         } finally {
             setLoading(false);
         }
-    }, [file.file_id, toast]);
+    }, [file.file_id]);
 
     useEffect(() => {
         loadMessages(page, appliedSearch, appliedNickname);
@@ -314,7 +319,11 @@ function MessageViewer({ file, toast }: MessageViewerProps) {
                     </div>
                 )}
                 
-                {!data || data.messages.length === 0 ? (
+                {loadError ? (
+                    <div className="flex h-full items-center justify-center">
+                        <EmptyState icon={AlertCircle} title={t("메시지를 불러오지 못했습니다.")} description={t("서버 연결을 확인한 뒤 다시 시도해 주세요.")} compact action={<Button icon={RefreshCw} onClick={() => void loadMessages(page, appliedSearch, appliedNickname)}>{t("다시 시도")}</Button>} />
+                    </div>
+                ) : !data || data.messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-ink-faint">
                         <MessageSquare className="w-8 h-8 mb-3 opacity-20" />
                         <p className="text-sm">{hasFilter ? "검색 결과가 없습니다." : "메시지가 없습니다."}</p>

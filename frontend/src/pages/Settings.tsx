@@ -2,11 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useBlocker } from "react-router-dom";
 import {
     Bell,
+    AlertCircle,
     Download,
     Info,
     KeyRound,
     MonitorCog,
     Palette,
+    Loader2,
+    RefreshCw,
     Settings as SettingsIcon,
     type LucideIcon,
 } from "lucide-react";
@@ -19,8 +22,7 @@ import { InfoTab } from "../components/settings/InfoTab";
 import { NotificationsTab } from "../components/settings/NotificationsTab";
 import { SystemTab } from "../components/settings/SystemTab";
 import { useConfirm } from "../components/ui/ConfirmModal";
-import { Badge, PageHeader } from "../components/ui/primitives";
-import { useToast } from "../components/ui/Toast";
+import { Badge, Button, Card, PageHeader } from "../components/ui/primitives";
 import { useLanguage } from "../contexts/LanguageContext";
 
 type TabId = "general" | "download" | "auth" | "notifications" | "appearance" | "system" | "info";
@@ -48,19 +50,20 @@ const EMPTY_DIRTY: Record<TabId, boolean> = {
 export default function Settings() {
     const { t } = useLanguage();
     const [settings, setSettings] = useState<SettingsType | null>(null);
+    const [loadError, setLoadError] = useState(false);
     const [activeTab, setActiveTab] = useState<TabId>("general");
     const [dirtyTabs, setDirtyTabs] = useState<Record<TabId, boolean>>(EMPTY_DIRTY);
     const [updateAvailable, setUpdateAvailable] = useState(false);
-    const toast = useToast();
     const confirm = useConfirm();
 
     const loadSettings = useCallback(async () => {
+        setLoadError(false);
         try {
             setSettings(await api.getSettings());
         } catch {
-            toast.error("설정을 불러오는 데 실패했습니다.");
+            setLoadError(true);
         }
-    }, [toast]);
+    }, []);
 
     useEffect(() => {
         loadSettings();
@@ -134,14 +137,24 @@ export default function Settings() {
                 )}
             />
 
-            <nav className="flex gap-1.5 p-1.5 bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-x-auto surface-raise" aria-label={t("설정 탭")}>
+            {settings === null ? (
+                <Card className="flex min-h-48 flex-col items-center justify-center gap-3 text-center">
+                    {loadError ? <AlertCircle className="size-6 text-danger" /> : <Loader2 className="size-6 animate-spin text-[var(--primary)]" />}
+                    <div>
+                        <p className="text-sm font-medium text-ink">{loadError ? t("설정을 불러오지 못했습니다") : t("설정을 불러오는 중")}</p>
+                        <p className="mt-1 text-xs text-ink-faint">{loadError ? t("서버 연결을 확인한 뒤 다시 시도해 주세요.") : t("잠시만 기다려 주세요.")}</p>
+                    </div>
+                    {loadError && <Button icon={RefreshCw} onClick={() => void loadSettings()} variant="primary">다시 시도</Button>}
+                </Card>
+            ) : <div className="space-y-4">
+            <nav className="grid grid-cols-2 gap-1.5 p-1.5 bg-surface-2 border border-line rounded-[var(--radius-card)] surface-raise sm:grid-cols-4 xl:grid-cols-7" aria-label={t("설정 탭")}>
                 {TABS.map((tab) => {
                     const Icon = tab.icon;
                     return (
                         <button
                             key={tab.id}
                             onClick={() => handleTabChange(tab.id)}
-                            className={`flex shrink-0 items-center gap-2 px-3.5 py-2.5 rounded-[var(--radius-control)] text-[13px] font-medium whitespace-nowrap transition-all relative ${activeTab === tab.id ? "btn-ghost-primary text-ink shadow-sm" : "text-ink-faint hover:bg-surface-3 hover:text-ink-muted"}`}
+                            className={`relative flex min-w-0 items-center justify-center gap-2 rounded-[var(--radius-control)] px-2 py-2.5 text-[12px] font-medium transition-all sm:px-3.5 sm:text-[13px] ${activeTab === tab.id ? "btn-ghost-primary text-ink shadow-sm" : "text-ink-faint hover:bg-surface-3 hover:text-ink-muted"}`}
                         >
                             <Icon className="w-4 h-4" />
                             {t(tab.label)}
@@ -159,6 +172,7 @@ export default function Settings() {
             {activeTab === "appearance" && <AppearanceTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("appearance", dirty)} />}
             {activeTab === "system" && <SystemTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("system", dirty)} onUpdateAvailabilityChange={setUpdateAvailable} />}
             {activeTab === "info" && <InfoTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("info", dirty)} />}
+            </div>}
         </div>
     );
 }

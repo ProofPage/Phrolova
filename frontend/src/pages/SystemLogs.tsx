@@ -9,13 +9,15 @@ import {
     Play,
     Pause,
     Trash2,
+    AlertCircle,
+    ChevronLeft,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { api, SystemLogFile } from "../api/client";
 import { useToast } from "../components/ui/Toast";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useConfirm } from "../components/ui/ConfirmModal";
-import { Button, Input, PageHeader } from "../components/ui/primitives";
+import { Button, EmptyState, Input, PageHeader } from "../components/ui/primitives";
 import { formatBytes, formatDate as _formatDate } from "../utils/format";
 
 function formatDate(iso: string): string {
@@ -72,16 +74,16 @@ export default function SystemLogs() {
             />
 
             <div className="flex flex-col flex-1 gap-4 min-h-[680px] xl:min-h-0">
-                <div className="shrink-0 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[178px] max-h-[290px]">
+                <div className={clsx("shrink-0 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[178px] max-h-[290px]", selectedFile && "hidden lg:flex")}>
                     <LogFileListView 
                         selectedFile={selectedFile} 
                         onSelect={setSelectedFile} 
-                        toast={toast} 
                         refreshKey={listRefreshKey}
                     />
                 </div>
 
-                <div className="flex-1 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[420px]">
+                <div className={clsx("flex-1 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[420px]", !selectedFile && "hidden lg:flex")}>
+                    {selectedFile && <div className="flex min-h-12 items-center gap-3 border-b border-line px-4 py-2 text-xs font-semibold text-ink-muted lg:hidden"><button type="button" onClick={() => setSelectedFile(null)} className="inline-flex min-h-11 items-center gap-1.5 text-ink-muted hover:text-ink"><ChevronLeft className="size-4" />로그 파일</button><span className="truncate">{selectedFile.filename}</span></div>}
                     {selectedFile === null ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-ink-faint p-8 text-center">
                             <span className="w-14 h-14 rounded-2xl bg-surface-3 border border-line grid place-items-center mb-4"><Terminal className="w-6 h-6 opacity-60" /></span>
@@ -90,7 +92,6 @@ export default function SystemLogs() {
                     ) : (
                         <LogContentViewer
                             file={selectedFile}
-                            toast={toast}
                         />
                     )}
                 </div>
@@ -104,29 +105,31 @@ export default function SystemLogs() {
 interface LogFileListViewProps {
     selectedFile: SystemLogFile | null;
     onSelect: (file: SystemLogFile) => void;
-    toast: ReturnType<typeof useToast>;
     refreshKey: number;
 }
 
-function LogFileListView({ selectedFile, onSelect, toast, refreshKey }: LogFileListViewProps) {
+function LogFileListView({ selectedFile, onSelect, refreshKey }: LogFileListViewProps) {
+    const { t } = useLanguage();
     const [files, setFiles] = useState<SystemLogFile[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
 
     const loadFiles = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
         try {
             const data = await api.getSystemLogFiles();
             setFiles(data);
+            setLoadError(false);
             // 만약 선택된 파일이 없고 파일 목록이 존재하면 자동으로 가장 첫번째 파일(보통 실시간 로그인 service.log)을 선택
             if (!selectedFile && data.length > 0) {
                 onSelect(data[0]);
             }
         } catch {
-            if (!silent) toast.error("로그 파일 목록을 불러오는 데 실패했습니다.");
+            if (!silent) setLoadError(true);
         } finally {
             if (!silent) setLoading(false);
         }
-    }, [selectedFile, onSelect, toast]);
+    }, [selectedFile, onSelect]);
 
     useEffect(() => {
         void loadFiles();
@@ -146,6 +149,9 @@ function LogFileListView({ selectedFile, onSelect, toast, refreshKey }: LogFileL
     }
 
     if (files.length === 0) {
+        if (loadError) {
+            return <EmptyState icon={AlertCircle} title={t("로그 목록을 불러오지 못했습니다.")} description={t("서버 연결을 확인한 뒤 다시 시도해 주세요.")} action={<Button icon={RefreshCw} onClick={() => void loadFiles()}>{t("다시 시도")}</Button>} />;
+        }
         return (
             <div className="flex flex-col flex-1 items-center justify-center p-8 text-center">
                 <Terminal className="w-8 h-8 text-ink-faint mb-3" />
@@ -173,11 +179,13 @@ function LogFileListView({ selectedFile, onSelect, toast, refreshKey }: LogFileL
                     const isLive = file.filename === "service.log";
                     
                     return (
-                        <div
+                        <button
+                            type="button"
                             key={file.filename}
                             onClick={() => onSelect(file)}
+                            aria-pressed={isSelected}
                             className={clsx(
-                                "flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-colors group lg:min-w-[260px] lg:flex-1",
+                                "flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors group lg:w-auto lg:min-w-[260px] lg:flex-1",
                                 isSelected ? "btn-ghost-primary" : "hover:bg-surface-3/70"
                             )}
                         >
@@ -196,7 +204,7 @@ function LogFileListView({ selectedFile, onSelect, toast, refreshKey }: LogFileL
                                     </p>
                                     {isLive && (
                                         <span className="px-1.5 py-0.5 bg-ok/15 text-ok border border-ok/20 text-[9px] font-extrabold rounded uppercase tracking-wider animate-pulse">
-                                            LIVE
+                                            {t("실시간")}
                                         </span>
                                     )}
                                 </div>
@@ -208,7 +216,7 @@ function LogFileListView({ selectedFile, onSelect, toast, refreshKey }: LogFileL
                             <span className="text-[10px] font-mono text-ink-faint shrink-0">
                                 {formatBytes(file.size_bytes)}
                             </span>
-                        </div>
+                        </button>
                     );
                 })}
             </div>
@@ -218,18 +226,17 @@ function LogFileListView({ selectedFile, onSelect, toast, refreshKey }: LogFileL
 
 // ── 로그 내용 뷰어 컴포넌트 ─────────────────────────────────
 
-interface LogContentViewerProps {
-    file: SystemLogFile;
-    toast: ReturnType<typeof useToast>;
-}
+interface LogContentViewerProps { file: SystemLogFile }
 
-function LogContentViewer({ file, toast }: LogContentViewerProps) {
+function LogContentViewer({ file }: LogContentViewerProps) {
+    const { t } = useLanguage();
     const [content, setContent] = useState("");
     const [totalLines, setTotalLines] = useState(0);
     const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
     const [linesLimit, setLinesLimit] = useState(1000); // 기본 1000줄
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState(false);
     
     // 자동 스크롤 및 자동 갱신 상태
     const [autoScroll, setAutoScroll] = useState(true);
@@ -248,13 +255,14 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
             setContent(data.content);
             setTotalLines(data.total_lines);
             setLastUpdatedAt(new Date());
+            setLoadError(false);
         } catch {
-            if (!silent) toast.error("로그 내용을 불러오는 데 실패했습니다.");
+            if (!silent) setLoadError(true);
         } finally {
             requestInFlightRef.current = false;
             if (!silent) setLoading(false);
         }
-    }, [file.filename, linesLimit, toast]);
+    }, [file.filename, linesLimit]);
 
     useEffect(() => {
         setAutoRefresh(file.filename === "service.log");
@@ -444,6 +452,8 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
                 </div>
             </div>
 
+            {loadError && content.length > 0 && <div role="status" className="flex flex-wrap items-center justify-between gap-2 border-b border-warn/20 bg-warn/5 px-4 py-2 text-xs text-ink-muted"><span>{t("로그 갱신에 실패했습니다. 기존 내용을 표시합니다.")}</span><Button icon={RefreshCw} onClick={() => void loadContent()}>{t("다시 시도")}</Button></div>}
+
             {/* 터미널 로그 출력창 */}
             <div 
                 ref={terminalRef}
@@ -453,6 +463,10 @@ function LogContentViewer({ file, toast }: LogContentViewerProps) {
                     <div className="h-full flex items-center justify-center text-ink-faint">
                         <Loader2 className="w-6 h-6 animate-spin mr-2 text-[var(--primary)]" />
                         <span>로그 로드 중...</span>
+                    </div>
+                ) : loadError && content.length === 0 ? (
+                    <div className="flex h-full items-center justify-center">
+                        <EmptyState icon={AlertCircle} title={t("로그 내용을 불러오지 못했습니다.")} description={t("서버 연결을 확인한 뒤 다시 시도해 주세요.")} compact action={<Button icon={RefreshCw} onClick={() => void loadContent()}>{t("다시 시도")}</Button>} />
                     </div>
                 ) : lines.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-ink-faint">

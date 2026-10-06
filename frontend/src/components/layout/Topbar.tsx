@@ -44,10 +44,10 @@ export function Topbar() {
         <div className="mx-auto flex h-[62px] max-w-[1760px] items-center gap-3 px-3 sm:px-5 lg:px-7">
             <NavLink to="/" className="flex min-w-0 shrink-0 items-center gap-2.5 pr-2" aria-label={pageTitle}>
                 <span className="brand-mark grid size-8 shrink-0 place-items-center overflow-hidden rounded-[10px]">{iconUrl ? <img src={iconUrl} alt="" className="size-full object-cover" /> : <Tv className="size-[17px]" />}</span>
-                <span className="hidden truncate text-[14px] font-bold tracking-[-0.025em] text-ink sm:block">{pageTitle}</span>
+                <span className="app-brand-name truncate text-[14px] font-bold tracking-[-0.025em] text-ink">{pageTitle}</span>
             </NavLink>
 
-            <nav className="hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto lg:flex" aria-label={t("주 메뉴")}>
+            <nav className="top-nav hidden min-w-0 flex-1 items-center gap-0.5 overflow-hidden lg:flex" aria-label={t("주 메뉴")}>
                 {NAV_GROUPS.flatMap((group) => group.items).map((item) => <NavLink key={item.to} to={item.to} end={item.to === "/"} className={({ isActive }) => clsx("top-nav-link", isActive && "top-nav-link-active")}>
                     <item.icon className="size-[15px] shrink-0" /><span>{t(item.name)}</span>
                 </NavLink>)}
@@ -58,7 +58,7 @@ export function Topbar() {
                     <span className="size-1.5 shrink-0 rounded-full bg-ok" /><span className="truncate">{t("다운로드")} {activeCount}</span><span className="font-mono text-ok">{Math.round(primaryTask.progress)}%</span>
                 </NavLink>}
                 <button type="button" onClick={openSearch} className="top-search hidden items-center gap-2 rounded-[10px] px-3 py-2 text-[12px] text-ink-faint hover:text-ink sm:flex" aria-label={t("빠른 이동")}>
-                    <Search className="size-4" /><span>{t("빠른 이동")}</span><kbd className="ml-3 rounded px-1.5 py-0.5 text-[10px]">Ctrl K</kbd>
+                    <Search className="size-4" /><span className="top-search-label">{t("빠른 이동")}</span><kbd className="top-search-key ml-3 rounded px-1.5 py-0.5 text-[10px]">Ctrl K</kbd>
                 </button>
                 <button type="button" onClick={openSearch} className="icon-button grid sm:hidden" aria-label={t("빠른 이동")}><Search className="size-[18px]" /></button>
                 <div className="relative" ref={notificationRef}>

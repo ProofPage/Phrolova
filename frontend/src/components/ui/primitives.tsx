@@ -446,7 +446,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
     const { t } = useLanguage();
     const base =
         "inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] " +
-        "px-4 py-2.5 text-[14px] font-medium transition-colors " +
+        "min-h-11 px-4 py-2.5 text-[14px] font-medium transition-colors sm:min-h-10 " +
         "disabled:opacity-45 disabled:cursor-not-allowed";
 
     const variants: Record<ButtonVariant, string> = {
