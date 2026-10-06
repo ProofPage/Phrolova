@@ -4,6 +4,8 @@ import { useToast } from "../components/ui/Toast";
 import { getErrorMessage } from "../utils/error";
 
 export interface VodContextType {
+    loading: boolean;
+    loadError: boolean;
     tasks: VodTask[];
     imports: VodImport[];
     activeCount: number;
@@ -21,11 +23,14 @@ const VodContext = createContext<VodContextType | null>(null);
 
 export function VodProvider({ children }: { children: ReactNode }) {
     const toast = useToast();
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
     const [tasks, setTasks] = useState<VodTask[]>([]);
     const [imports, setImports] = useState<VodImport[]>([]);
     const [activeCount, setActiveCount] = useState(0);
 
     const applyStatus = useCallback((data: VodStatusResponse) => {
+        setLoadError(false);
         setTasks(data.tasks);
         setImports(data.imports ?? []);
         setActiveCount(data.active_count);
@@ -36,7 +41,10 @@ export function VodProvider({ children }: { children: ReactNode }) {
             const data = await api.getAllVodStatus();
             applyStatus(data);
         } catch (e) {
+            setLoadError(true);
             console.error("다시보기 상태 갱신 실패:", e);
+        } finally {
+            setLoading(false);
         }
     }, [applyStatus]);
 
@@ -91,6 +99,8 @@ export function VodProvider({ children }: { children: ReactNode }) {
     return (
         <VodContext.Provider
             value={{
+                loading,
+                loadError,
                 tasks,
                 imports,
                 activeCount,

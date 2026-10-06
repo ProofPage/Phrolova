@@ -17,7 +17,7 @@ import { api, SystemLogFile } from "../api/client";
 import { useToast } from "../components/ui/Toast";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useConfirm } from "../components/ui/ConfirmModal";
-import { Button, EmptyState, Input, PageHeader } from "../components/ui/primitives";
+import { Button, EmptyState, Input, LoadingState, PageHeader } from "../components/ui/primitives";
 import { formatBytes, formatDate as _formatDate } from "../utils/format";
 
 function formatDate(iso: string): string {
@@ -55,7 +55,7 @@ export default function SystemLogs() {
     };
 
     return (
-        <div className="flex flex-col gap-6 xl:h-[calc(100vh-4rem)]">
+        <div className="product-page flex flex-col gap-4 lg:h-[calc(100dvh-6.5rem)]">
             <PageHeader
                 icon={Terminal}
                 eyebrow={t("서비스 상태 확인")}
@@ -73,8 +73,8 @@ export default function SystemLogs() {
                 )}
             />
 
-            <div className="flex flex-col flex-1 gap-4 min-h-[680px] xl:min-h-0">
-                <div className={clsx("shrink-0 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[178px] max-h-[290px]", selectedFile && "hidden lg:flex")}>
+            <div className="flex flex-col lg:flex-row flex-1 gap-4 min-h-[440px] lg:min-h-0">
+                <div className={clsx("shrink-0 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[178px] max-h-[290px] lg:w-[260px] lg:min-h-0 lg:max-h-none", selectedFile && "hidden lg:flex")}>
                     <LogFileListView 
                         selectedFile={selectedFile} 
                         onSelect={setSelectedFile} 
@@ -82,11 +82,11 @@ export default function SystemLogs() {
                     />
                 </div>
 
-                <div className={clsx("flex-1 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[420px]", !selectedFile && "hidden lg:flex")}>
+                <div className={clsx("flex-1 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-w-0 min-h-[320px] lg:min-h-0", !selectedFile && "hidden lg:flex")}>
                     {selectedFile && <div className="flex min-h-12 items-center gap-3 border-b border-line px-4 py-2 text-xs font-semibold text-ink-muted lg:hidden"><button type="button" onClick={() => setSelectedFile(null)} className="inline-flex min-h-11 items-center gap-1.5 text-ink-muted hover:text-ink"><ChevronLeft className="size-4" />로그 파일</button><span className="truncate">{selectedFile.filename}</span></div>}
                     {selectedFile === null ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-ink-faint p-8 text-center">
-                            <span className="w-14 h-14 rounded-2xl bg-surface-3 border border-line grid place-items-center mb-4"><Terminal className="w-6 h-6 opacity-60" /></span>
+                            <span className="w-8 h-8 grid place-items-center mb-4"><Terminal className="w-6 h-6 opacity-60" /></span>
                             <p className="text-sm">왼쪽 목록에서 조회할 로그 파일을 선택하세요.</p>
                         </div>
                     ) : (
@@ -139,14 +139,7 @@ function LogFileListView({ selectedFile, onSelect, refreshKey }: LogFileListView
         return () => window.clearInterval(timer);
     }, [refreshKey, loadFiles]);
 
-    if (loading) {
-        return (
-            <div className="flex flex-1 items-center justify-center text-ink-faint">
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                <span className="text-sm">로그 목록 불러오는 중...</span>
-            </div>
-        );
-    }
+    if (loading && files.length === 0) return <LoadingState label="로그 목록을 불러오는 중" />;
 
     if (files.length === 0) {
         if (loadError) {
@@ -173,7 +166,7 @@ function LogFileListView({ selectedFile, onSelect, refreshKey }: LogFileListView
                 </button>
             </div>
             
-            <div className="flex-1 overflow-y-auto divide-y divide-line/50 scrollbar-thin lg:flex lg:overflow-x-auto lg:overflow-y-hidden lg:divide-x lg:divide-y-0">
+            <div className="flex-1 overflow-y-auto divide-y divide-line/50 scrollbar-thin ">
                 {files.map((file) => {
                     const isSelected = selectedFile?.filename === file.filename;
                     const isLive = file.filename === "service.log";
@@ -185,7 +178,7 @@ function LogFileListView({ selectedFile, onSelect, refreshKey }: LogFileListView
                             onClick={() => onSelect(file)}
                             aria-pressed={isSelected}
                             className={clsx(
-                                "flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors group lg:w-auto lg:min-w-[260px] lg:flex-1",
+                                "flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors group ",
                                 isSelected ? "btn-ghost-primary" : "hover:bg-surface-3/70"
                             )}
                         >
@@ -321,7 +314,7 @@ function LogContentViewer({ file }: LogContentViewerProps) {
     const renderLineWithHighlight = (line: string, colorClass: string, idx: number) => {
         if (!searchTerm) {
             return (
-                <div key={idx} className={clsx("py-0.5 whitespace-pre-wrap breakdown-all", colorClass)}>
+                <div key={idx} className={clsx("py-0.5 whitespace-pre-wrap break-all", colorClass)}>
                     {line}
                 </div>
             );
@@ -330,7 +323,7 @@ function LogContentViewer({ file }: LogContentViewerProps) {
         const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const parts = line.split(new RegExp(`(${escapedSearchTerm})`, "gi"));
         return (
-            <div key={idx} className={clsx("py-0.5 whitespace-pre-wrap breakdown-all", colorClass)}>
+            <div key={idx} className={clsx("py-0.5 whitespace-pre-wrap break-all", colorClass)}>
                 {parts.map((part, i) => 
                     part.toLowerCase() === searchTerm.toLowerCase() ? (
                         <mark key={i} className="bg-warn/25 text-warn px-0.5 rounded border-b border-warn/50">
@@ -356,7 +349,7 @@ function LogContentViewer({ file }: LogContentViewerProps) {
     return (
         <div className="flex-1 flex flex-col min-h-0 bg-surface-0">
             <div className="p-3 border-b border-line bg-surface-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
-                <div className="flex w-full items-center justify-between gap-3">
+                <div className="log-toolbar-row w-full justify-between">
                     <span className="text-xs font-mono font-semibold text-ink-muted">
                         {file.filename} ({visibleLines.length}/{totalLines} 줄)
                     </span>
@@ -385,20 +378,21 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                     </div>
                 </div>
 
-                <div className="flex w-full items-center justify-between gap-3">
+                <div className="log-toolbar-row w-full justify-between">
                     {/* 검색 바 */}
                     <div className="relative">
                         <Search className="w-3.5 h-3.5 text-ink-faint absolute left-2.5 top-1/2 -translate-y-1/2" />
                         <Input
                             type="text"
                             placeholder="로그 검색..."
+                            aria-label="로그 검색"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="text-xs pl-8 pr-3 py-1.5 w-40"
                         />
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
                         {/* 실시간 갱신 */}
                         <button
                         onClick={() => setAutoRefresh(!autoRefresh)}
@@ -413,7 +407,7 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                         >
                         {autoRefresh ? (
                             <>
-                                <Loader2 className="w-3 h-3 animate-spin text-ok" />
+                                <span className="size-1.5 rounded-full bg-ok" aria-hidden="true" />
                                 <Pause className="w-3 h-3" />
                                 <span className="text-[10px]">실시간</span>
                             </>
@@ -435,8 +429,10 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                                 : "bg-surface-3 text-ink-muted border-line hover:bg-surface-4 hover:text-ink"
                         )}
                         title="자동 최하단 스크롤"
+                        aria-label="자동 최하단 스크롤"
+                        aria-pressed={autoScroll}
                         >
-                        <ArrowDown className={clsx("w-3.5 h-3.5", autoScroll && "animate-bounce")} />
+                        <ArrowDown className="w-3.5 h-3.5" />
                         </button>
 
                         {/* 수동 새로고침 */}
@@ -457,7 +453,7 @@ function LogContentViewer({ file }: LogContentViewerProps) {
             {/* 터미널 로그 출력창 */}
             <div 
                 ref={terminalRef}
-                className="flex-1 p-4 overflow-y-auto font-mono text-[11px] leading-relaxed select-text scrollbar-thin"
+                className="log-viewer flex-1 min-w-0 p-3 overflow-y-auto font-mono text-[11px] leading-relaxed select-text scrollbar-thin"
             >
                 {loading && content.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-ink-faint">

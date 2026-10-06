@@ -1,3 +1,4 @@
+import { useListboxKeyboard } from "../../hooks/useListboxKeyboard";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ChevronDown, Lock, Plus } from "lucide-react";
 import { api, PLATFORM_LABELS, type ChannelDownloadOptions, type Platform, type PlatformStatus } from "../../api/client";
@@ -44,6 +45,8 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
         return platformStatus.x_spaces.authenticated;
     };
 
+    useListboxKeyboard(dropdownOpen, dropdownRef, () => setDropdownOpen(false));
+
     const handleSubmit = (event: FormEvent) => {
         event.preventDefault();
         if (!channelId.trim()) return;
@@ -80,7 +83,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
                 <button
                     type="button"
                     onClick={() => setDropdownOpen((open) => !open)}
-                    className="h-11 bg-surface-2 border border-line rounded-[var(--radius-control)] px-3 text-ink text-sm flex items-center gap-1.5 hover:bg-surface-3 transition-colors whitespace-nowrap"
+                    className="ui-input w-auto px-3 text-ink text-sm flex items-center gap-1.5 hover:bg-surface-3 transition-colors whitespace-nowrap"
                     aria-expanded={dropdownOpen}
                     aria-haspopup="listbox"
                     aria-label={`플랫폼 선택: ${PLATFORM_LABELS[selectedPlatform]}`}
@@ -91,7 +94,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
                 </button>
 
                 {dropdownOpen && (
-                    <div className="glass-popover absolute top-full mt-2 left-0 z-20 rounded-[var(--radius-control)] min-w-[180px] max-h-[50dvh] overflow-y-auto" role="listbox">
+                    <div className="ui-popover absolute top-full mt-2 left-0 z-20 rounded-[var(--radius-control)] min-w-[180px] max-h-[50dvh] overflow-y-auto" role="listbox">
                         {(Object.keys(PLATFORM_LABELS) as Platform[]).map((platform) => {
                             const enabled = isPlatformEnabled(platform);
                             return (
@@ -118,8 +121,8 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
             </div>
 
             <div className="flex min-w-0 gap-2 sm:flex-1">
-            <Input value={channelId} onChange={(event) => setChannelId(event.target.value)} aria-label={`${PLATFORM_LABELS[selectedPlatform]} 채널 ID`} placeholder={placeholder} className="h-11 min-w-0 flex-1" />
-                    <Button type="submit" variant="primary" icon={Plus} loading={loading} disabled={!channelId.trim()} aria-label="채널 추가 설정 열기" title="채널 추가 설정 열기" className="h-11 shrink-0 px-3 sm:px-4">
+            <Input value={channelId} onChange={(event) => setChannelId(event.target.value)} aria-label={`${PLATFORM_LABELS[selectedPlatform]} 채널 ID`} placeholder={placeholder} className="min-w-0 flex-1" />
+                    <Button type="submit" variant="primary" icon={Plus} loading={loading} disabled={!channelId.trim()} aria-label="채널 추가 설정 열기" title="채널 추가 설정 열기" className="shrink-0 px-3 sm:px-4">
                 채널 추가
             </Button>
             </div>

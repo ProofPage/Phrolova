@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useDialogKeyboard } from "../../hooks/useDialogKeyboard";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { Folder, FolderOpen, HardDrive, ArrowLeft, ChevronRight, X, Loader2 } from "lucide-react";
 import { api, BrowseDirsResponse, DirEntry } from "../../api/client";
 import { Button, Input } from "./primitives";
@@ -13,6 +14,8 @@ interface DirBrowserModalProps {
 }
 
 function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProps) {
+    const dialogRootRef = useRef<HTMLDivElement>(null);
+    useDialogKeyboard(dialogRootRef, onClose);
     const { t } = useLanguage();
     const [data, setData] = useState<BrowseDirsResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -50,10 +53,10 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
             className="fixed inset-0 z-[9998] flex items-center justify-center"
             onClick={onClose}
         >
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="absolute inset-0 bg-black/60 " />
 
             <div
-                className="relative bg-surface-2 border border-line-strong rounded-[calc(var(--radius-card)+4px)] shadow-2xl surface-raise animate-modal-in
+                ref={dialogRootRef} role="dialog" aria-modal="true" aria-label={t("폴더 선택")} tabIndex={-1} className="relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-2xl surface-raise animate-modal-in
                            w-full max-w-lg mx-4 flex flex-col"
                 style={{ maxHeight: "70vh" }}
                 onClick={(e) => e.stopPropagation()}
@@ -75,6 +78,7 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
                         </button>
                         <button
                             onClick={onClose}
+                            aria-label={t("닫기")}
                             className="p-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-surface-3 transition-colors"
                         >
                             <X className="w-4 h-4" />
@@ -84,7 +88,7 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
 
                 {/* Current Path */}
                 <div className="px-5 py-2 bg-surface-1 border-b border-line">
-                    <p className="text-xs text-ink-faint font-mono truncate">
+                    <p className="text-xs text-ink-faint font-mono break-all">
                         {data?.current || t("드라이브 선택")}
                     </p>
                 </div>
@@ -168,6 +172,7 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
 // ── DirInput ─────────────────────────────────────────────
 
 interface DirInputProps {
+    id?: string;
     value: string;
     onChange: (v: string) => void;
     placeholder?: string;
@@ -175,10 +180,11 @@ interface DirInputProps {
 }
 
 export function DirInput({
+    id,
     value,
     onChange,
     placeholder = "경로 입력...",
-    focusBorderColor = "focus:border-[#00FFA3]",
+    focusBorderColor = "",
 }: DirInputProps) {
     const { t } = useLanguage();
     const [showBrowser, setShowBrowser] = useState(false);
@@ -187,13 +193,14 @@ export function DirInput({
         <>
             <div className="flex gap-2">
                 <Input
+                    id={id}
                     type="text"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     className={`flex-1 font-mono text-sm ${focusBorderColor}`}
                     placeholder={t(placeholder)}
                 />
-                <Button type="button" icon={FolderOpen} onClick={() => setShowBrowser(true)} className="px-3 shrink-0" title={t("폴더 찾아보기")}>
+                <Button type="button" icon={FolderOpen} onClick={() => setShowBrowser(true)} className="px-3 shrink-0" title={t("폴더 찾아보기")} aria-label={t("폴더 찾아보기")}>
                     <span className="hidden sm:inline">{t("찾아보기")}</span>
                 </Button>
             </div>

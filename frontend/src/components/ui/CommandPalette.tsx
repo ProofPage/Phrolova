@@ -33,12 +33,12 @@ export function CommandPalette() {
         <Command.Dialog
             open={open}
             onOpenChange={setOpen}
-            className="fixed inset-0 z-[100] flex items-start justify-center pt-[18vh] bg-surface-0/75 backdrop-blur-md"
-            label={t("Global Command Palette")}
+            className="fixed inset-0 z-[100] flex items-start justify-center pt-[18vh] bg-surface-0/75 "
+            label={t("빠른 이동")}
         >
-            <div className="glass-popover w-[calc(100%-2rem)] max-w-lg shadow-[var(--shadow-pop)] rounded-[calc(var(--radius-card)+4px)] overflow-hidden pointer-events-auto">
+            <div className="ui-popover w-[calc(100vw_-_2rem)] max-w-lg shadow-[var(--shadow-pop)] rounded-[var(--radius-card)] overflow-hidden pointer-events-auto">
                 <Command.Input
-                    placeholder={t("검색하거나 명령어를 입력하세요...")}
+                    placeholder={t("페이지 검색...")}
                     className="w-full px-5 py-4 bg-transparent text-ink placeholder:text-ink-faint border-b border-line focus:outline-none focus:ring-0"
                 />
                 
@@ -47,7 +47,7 @@ export function CommandPalette() {
                         {t("검색 결과가 없습니다.")}
                     </Command.Empty>
                     
-                    <Command.Group heading={t("이동 (Navigation)")} className="px-2 py-1.5 text-xs font-semibold text-ink-faint">
+                    <Command.Group heading={t("페이지 이동")} className="px-2 py-1.5 text-xs font-semibold text-ink-faint">
                         {NAV_ITEMS.map((item) => (
                             <Command.Item
                                 key={item.to}

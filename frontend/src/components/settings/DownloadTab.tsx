@@ -147,7 +147,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
             </Card>
 
             <Card className="space-y-5">
-                <CardHeader icon={Radio} title="라이브 다운로드 설정" />
+                <CardHeader icon={Radio} title="라이브 녹화 설정" />
                 <Field label="라이브 녹화 화질" hint="녹화할 해상도를 선택합니다. 높은 해상도일수록 저장 공간을 더 사용합니다.">
                     <Select
                         value={recordingQuality}
@@ -164,7 +164,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                     <Input type="number" min={0} max={100} value={maxRetries} onChange={(event) => setMaxRetries(parseInt(event.target.value) || 0)} />
                 </Field>
                 <Field
-                    label="치지직 스트림 획득 방법"
+                    label="치지직 녹화 방식"
                     hint={streamMode === "force-timemachine" ? "타임머신을 강제 사용하며, 사용할 수 없으면 녹화 요청을 실패 처리합니다." : streamMode === "request-timemachine" ? "타임머신 API를 먼저 요청하고, 사용할 수 없으면 기본 스트림으로 자동 전환합니다." : "치지직 기본 API에서 yt-dlp가 선택한 라이브 스트림을 사용합니다."}
                 >
                     <Select

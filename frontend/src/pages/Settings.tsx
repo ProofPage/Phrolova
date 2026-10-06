@@ -122,11 +122,11 @@ export default function Settings() {
     }, [hasDirtyTab]);
 
     return (
-        <div className="space-y-6">
+        <div className="product-page settings-page space-y-4">
             <PageHeader
                 icon={SettingsIcon}
                 title={t("설정")}
-                description={t("녹화 방식과 인증, 알림, 화면 테마 및 시스템 동작을 구성합니다.")}
+                description={t("녹화, 다운로드, 인증, 알림 및 애플리케이션 동작을 구성합니다.")}
                 meta={hasDirtyTab || updateAvailable ? (
                     <>
                         {hasDirtyTab && <Badge tone="warn">{t("저장하지 않은 변경사항")}</Badge>}
@@ -154,7 +154,7 @@ export default function Settings() {
                             type="button"
                             onClick={() => handleTabChange(tab.id)}
                             aria-current={activeTab === tab.id ? "page" : undefined}
-                            className={`relative flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] px-3 text-[12px] font-medium transition-all sm:px-3.5 sm:text-[13px] ${activeTab === tab.id ? "bg-info/15 text-info shadow-sm ring-1 ring-info/15" : "text-ink-faint hover:bg-surface-3 hover:text-ink-muted"}`}
+                            className={`relative flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] px-3 text-[12px] font-medium transition-all sm:px-3.5 sm:text-[13px] ${activeTab === tab.id ? "text-ink" : "text-ink-faint hover:bg-surface-3 hover:text-ink-muted"}`}
                         >
                             <Icon className="w-4 h-4" />
                             {t(tab.label)}

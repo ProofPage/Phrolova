@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { api, ChatLogFile, ChatMessageItem, MessagesResponse } from "../api/client";
-import { Button, EmptyState, Input, PageHeader } from "../components/ui/primitives";
+import { Button, EmptyState, Input, LoadingState, PageHeader } from "../components/ui/primitives";
 import { formatBytes, formatDate as _formatDate, formatTime } from "../utils/format";
 import { useLanguage } from "../contexts/LanguageContext";
 
@@ -30,7 +30,7 @@ export default function ChatLogs() {
     const [refreshKey, setRefreshKey] = useState(0);
 
     return (
-        <div className="flex flex-col gap-6 xl:h-[calc(100vh-4rem)]">
+        <div className="product-page flex flex-col gap-4 lg:h-[calc(100dvh-6.5rem)]">
             <PageHeader
                 icon={MessageSquare}
                 eyebrow={t("라이브 채팅 아카이브")}
@@ -40,7 +40,7 @@ export default function ChatLogs() {
             />
 
             <div className="flex flex-col lg:flex-row flex-1 gap-4 min-h-[480px] xl:min-h-0">
-                <div className={clsx("lg:w-[340px] xl:w-[30%] flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[260px]", selectedFile && "hidden lg:flex")}>
+                <div className={clsx("lg:w-[280px] lg:shrink-0 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[260px]", selectedFile && "hidden lg:flex")}>
                     <div className="px-4 py-3 border-b border-line text-xs font-semibold text-ink-muted">{t("로그 파일")}</div>
                     <FileListView 
                         refreshKey={refreshKey}
@@ -56,7 +56,7 @@ export default function ChatLogs() {
                     </div>
                     {selectedFile === null ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-ink-faint p-8 text-center">
-                            <span className="w-14 h-14 rounded-2xl bg-surface-3 border border-line grid place-items-center mb-4"><MessageSquare className="w-6 h-6 opacity-60" /></span>
+                            <span className="w-8 h-8 grid place-items-center mb-4"><MessageSquare className="w-6 h-6 opacity-60" /></span>
                             <p className="text-sm">{t("채팅 로그를 선택해 내용을 확인하세요.")}</p>
                         </div>
                     ) : (
@@ -105,14 +105,7 @@ function FileListView({ selectedFile, onSelect, refreshKey }: FileListViewProps)
         return acc;
     }, {});
 
-    if (loading) {
-        return (
-            <div className="flex flex-1 items-center justify-center text-ink-faint">
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                <span className="text-sm">목록 불러오는 중...</span>
-            </div>
-        );
-    }
+    if (loading && files.length === 0) return <LoadingState label="채팅 기록을 불러오는 중" />;
 
     if (files.length === 0) {
         if (loadError) {
@@ -131,7 +124,7 @@ function FileListView({ selectedFile, onSelect, refreshKey }: FileListViewProps)
         <div className="flex-1 overflow-y-auto scrollbar-thin">
             {Object.entries(grouped).map(([channel, channelFiles]) => (
                 <div key={channel} className="border-b border-line/70 last:border-0">
-                    <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2.5 bg-surface-2/95 backdrop-blur-md border-b border-line">
+                    <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2.5 bg-surface-1 border-b border-line">
                         <FolderOpen className="w-4 h-4 text-info" />
                         <span className="text-xs font-semibold text-ink-muted truncate">{channel}</span>
                         <span className="text-[10px] text-ink-faint ml-auto font-mono">
@@ -275,8 +268,8 @@ function MessageViewer({ file }: MessageViewerProps) {
                 </a>
             </div>
 
-            <div className="p-3 border-b border-line bg-surface-2/70 shrink-0 flex flex-wrap gap-2">
-                <div className="flex items-center gap-2 w-full sm:w-auto flex-1">
+            <div className="p-3 border-b border-line bg-surface-1 shrink-0 flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full min-w-0 flex-1">
                     <div className="relative flex-1">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-faint" />
                         <Input
@@ -284,7 +277,7 @@ function MessageViewer({ file }: MessageViewerProps) {
                             value={pendingSearch}
                             onChange={(e) => setPendingSearch(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder="내용 검색..."
+                            aria-label={t("채팅 내용 검색")} placeholder="내용 검색..."
                             className="w-full pl-8 pr-3 py-1.5 text-xs"
                         />
                     </div>
@@ -294,11 +287,11 @@ function MessageViewer({ file }: MessageViewerProps) {
                             value={pendingNickname}
                             onChange={(e) => setPendingNickname(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder="닉네임..."
+                            aria-label={t("닉네임 검색")} placeholder="닉네임..."
                             className="w-full px-3 py-1.5 text-xs"
                         />
                     </div>
-                    <Button icon={Search} onClick={handleSearch} variant="primary" className="px-3 py-1.5 text-xs shrink-0">적용</Button>
+                    <Button icon={Search} onClick={handleSearch} variant="primary" className="px-3 py-1.5 text-xs shrink-0">검색</Button>
                     {hasFilter && (
                         <button
                             onClick={handleClearSearch}
@@ -312,14 +305,14 @@ function MessageViewer({ file }: MessageViewerProps) {
             </div>
 
             <div className="flex-1 overflow-y-auto bg-surface-0/45 relative min-h-0">
-                {loading && (
-                    <div className="absolute inset-0 z-10 bg-surface-0/65 backdrop-blur-[1px] flex items-center justify-center text-ink-faint">
+                {loading && !data && (
+                    <div className="absolute inset-0 z-10 bg-surface-0/65 flex items-center justify-center text-ink-faint">
                         <Loader2 className="w-5 h-5 animate-spin mr-2" />
                         <span className="text-sm">불러오는 중...</span>
                     </div>
                 )}
                 
-                {loadError ? (
+                {loadError && !data ? (
                     <div className="flex h-full items-center justify-center">
                         <EmptyState icon={AlertCircle} title={t("메시지를 불러오지 못했습니다.")} description={t("서버 연결을 확인한 뒤 다시 시도해 주세요.")} compact action={<Button icon={RefreshCw} onClick={() => void loadMessages(page, appliedSearch, appliedNickname)}>{t("다시 시도")}</Button>} />
                     </div>
@@ -344,9 +337,10 @@ function MessageViewer({ file }: MessageViewerProps) {
                     </span>
                     <div className="flex items-center gap-1.5">
                         <button
+                            aria-label={t("이전 페이지")} title={t("이전 페이지")}
                             disabled={page <= 1}
                             onClick={() => setPage((p) => p - 1)}
-                            className="p-1 rounded-md bg-surface-3 hover:bg-surface-4 text-ink-muted disabled:opacity-30 transition-colors"
+                            className="icon-button disabled:opacity-30"
                         >
                             <ChevronLeft className="w-4 h-4" />
                         </button>
@@ -354,9 +348,10 @@ function MessageViewer({ file }: MessageViewerProps) {
                             {page} / {Math.ceil(data.total / LIMIT) || 1}
                         </span>
                         <button
+                            aria-label={t("다음 페이지")} title={t("다음 페이지")}
                             disabled={!data.has_next}
                             onClick={() => setPage((p) => p + 1)}
-                            className="p-1 rounded-md bg-surface-3 hover:bg-surface-4 text-ink-muted disabled:opacity-30 transition-colors"
+                            className="icon-button disabled:opacity-30"
                         >
                             <ChevronRight className="w-4 h-4" />
                         </button>
@@ -377,8 +372,8 @@ function MessageRow({ msg }: { msg: ChatMessageItem }) {
             </span>
 
             <div className="flex-1 min-w-0 flex flex-wrap items-baseline gap-1.5 leading-snug">
-                <span className="text-[11px] font-semibold text-info shrink-0">{msg.nickname}</span>
-                <span className="text-[13px] text-ink-muted break-words">{msg.message}</span>
+                <span className="min-w-0 max-w-full break-all text-xs font-semibold text-ink-muted">{msg.nickname}</span>
+                <span className="chat-message-text min-w-0 max-w-full text-[13px] text-ink-muted">{msg.message}</span>
             </div>
         </div>
     );

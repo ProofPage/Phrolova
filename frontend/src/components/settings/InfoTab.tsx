@@ -17,7 +17,7 @@ interface Props {
 
 function InfoRow({ label, children, last = false }: { label: string; children: ReactNode; last?: boolean }) {
     return (
-        <div className={`flex justify-between gap-4 py-2 ${last ? "" : "border-b border-line"}`}>
+        <div className={`ui-info-row ${last ? "border-0" : ""}`}>
             <span className="text-ink-faint">{label}</span>
             {children}
         </div>
@@ -45,7 +45,7 @@ export function InfoTab({ settings, onDirtyChange }: Props) {
                     <InfoRow label={t("앱 이름")}><span className="text-ink-muted">{settings?.app_name || t("불러오는 중…")}</span></InfoRow>
                     <InfoRow label={t("FFmpeg 버전")}><span className={settings?.ffmpeg_version ? "text-ok" : "text-ink-faint"}>{settings?.ffmpeg_version ? `${t("설치됨")} · v${settings.ffmpeg_version}` : t("버전을 확인할 수 없음")}</span></InfoRow>
                     <InfoRow label="Streamlink"><span className={settings?.streamlink_version ? "text-ok" : "text-ink-faint"}>{settings?.streamlink_version ? `${t("설치됨")} · v${settings.streamlink_version}` : t("설치되지 않음")}</span></InfoRow>
-                    <InfoRow label="Server"><span className="text-ink-muted">{settings ? `${settings.host}:${settings.port}` : t("불러오는 중…")}</span></InfoRow>
+                    <InfoRow label={t("서버 주소")}><span className="text-ink-muted">{settings ? `${settings.host}:${settings.port}` : t("불러오는 중…")}</span></InfoRow>
                     <InfoRow label="Discord Bot"><span className={settings?.discord_bot_configured ? "text-ok" : "text-ink-faint"}>{settings?.discord_bot_configured ? t("연결됨") : t("미설정")}</span></InfoRow>
                     <InfoRow label={t("TwitCasting 설정")}><span className={settings?.twitcasting_client_id ? "text-twitcasting" : "text-ink-faint"}>{settings?.twitcasting_client_id ? t("설정됨") : t("미설정")}</span></InfoRow>
                     <InfoRow label={t("X Spaces 쿠키")} last><span className={settings?.x_cookie_file ? "text-xspaces" : "text-ink-faint"}>{settings?.x_cookie_file ? t("설정됨") : t("미설정")}</span></InfoRow>

@@ -3,19 +3,20 @@ import {
     BarChart2,
     AlertCircle,
     Calendar,
+    Copy,
     Clock,
     Database,
     Download,
     HardDrive,
     History,
-    Loader2,
     Radio,
     RefreshCw,
     Video,
 } from "lucide-react";
 import { api, type ChannelLiveStat, type LiveSession, type StatsResponse } from "../api/client";
-import { Button, Card, EmptyState, MetricCard, PageHeader } from "../components/ui/primitives";
+import { Button, Card, EmptyState, LoadingState, MetricCard, PageHeader } from "../components/ui/primitives";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useToast } from "../components/ui/Toast";
 import { formatDuration as formatDurationBase, formatBytes } from "../utils/format";
 
 const formatDuration = (seconds: number, language: string) => {
@@ -37,33 +38,30 @@ const formatCount = (count: number, language: string, unit: "item" | "session" |
 };
 
 function StorageCard({ used, total, free, dir, t }: { used: number; total: number; free: number; dir: string; t: (text: string) => string }) {
+    const toast = useToast();
     const percentage = total > 0 ? Math.round((used / total) * 100) : 0;
     const tone = percentage >= 90 ? "var(--color-danger)" : percentage >= 70 ? "var(--color-warn)" : "var(--color-ok)";
-    return (
-        <Card className="relative overflow-hidden">
-            <span className="absolute inset-x-0 top-0 h-px opacity-70" style={{ background: `linear-gradient(90deg, transparent, ${tone}, transparent)` }} />
-            <div className="flex items-start justify-between gap-4">
-                <div>
-                    <p className="text-[11px] font-medium text-ink-faint uppercase tracking-[0.08em]">{t("디스크 사용률")}</p>
-                    <p className="text-2xl font-bold tracking-tight text-ink mt-2">{percentage}%</p>
-                    <p className="text-xs text-ink-faint mt-1.5">{formatBytes(free)} {t("여유 공간")}</p>
-                </div>
-                <span className="w-9 h-9 rounded-[var(--radius-control)] grid place-items-center bg-info/10 text-info">
-                    <HardDrive className="w-[18px] h-[18px]" />
-                </span>
-            </div>
-            <div className="mt-4 h-1.5 rounded-full bg-surface-4 overflow-hidden">
-                <div className="h-full rounded-full transition-all" style={{ width: `${percentage}%`, backgroundColor: tone }} />
-            </div>
-            <div className="mt-2 min-w-0 font-mono text-[11px] text-ink-faint">
-                <p className="whitespace-nowrap">{formatBytes(used)} / {formatBytes(total)}</p>
-                <div className="mt-3 border-t border-line/80 pt-3">
-                    <p className="font-sans text-xs font-medium text-ink-muted">{t("저장 위치")}</p>
-                    <p className="mt-1.5 max-w-full whitespace-normal break-all leading-relaxed text-ink-faint" title={`${t("저장 위치")}: ${dir}`}>{dir || "—"}</p>
-                </div>
-            </div>
-        </Card>
-    );
+    const copyPath = async () => {
+        try {
+            if (navigator.clipboard) await navigator.clipboard.writeText(dir);
+            else {
+                const field = document.createElement("textarea");
+                field.value = dir; field.style.position = "fixed"; field.style.opacity = "0";
+                document.body.appendChild(field);
+                try { field.select(); if (!document.execCommand("copy")) throw new Error("Copy failed"); } finally { field.remove(); }
+            }
+            toast.success(t("저장 경로를 복사했습니다."));
+        } catch { toast.error(t("저장 경로를 복사하지 못했습니다.")); }
+    };
+    return <div className="grid min-w-0 gap-6 border-y border-line py-4 md:grid-cols-2">
+        <div className="min-w-0">
+            <div className="flex items-center justify-between"><p className="text-xs text-ink-faint">{t("디스크 사용률")}</p><HardDrive className="size-4 text-ink-faint" /></div>
+            <div className="mt-1 flex flex-wrap items-baseline gap-3"><strong className="text-xl font-semibold text-ink">{percentage}%</strong><span className="text-xs text-ink-faint">{formatBytes(free)} {t("여유 공간")}</span></div>
+            <div className="mt-3 h-1 overflow-hidden rounded bg-surface-4"><div className="h-full" style={{width:`${percentage}%`,backgroundColor:tone}} /></div>
+            <p className="mt-2 text-xs text-ink-faint tabular-nums">{formatBytes(used)} / {formatBytes(total)}</p>
+        </div>
+        <div className="min-w-0"><div className="flex items-center justify-between gap-3"><p className="text-xs text-ink-faint">{t("저장 위치")}</p><Button variant="ghost" icon={Copy} onClick={() => void copyPath()} disabled={!dir} aria-label={t("저장 경로 복사")}>{t("복사")}</Button></div><p className="mt-1 break-all text-xs leading-6 text-ink-muted">{dir || "—"}</p></div>
+    </div>;
 }
 
 export default function Stats() {
@@ -100,7 +98,7 @@ export default function Stats() {
     }, [loadStats]);
 
     return (
-        <div className="space-y-6">
+        <div className="product-page  space-y-4">
             <PageHeader
                 icon={BarChart2}
                 eyebrow={t("녹화 현황 분석")}
@@ -109,7 +107,7 @@ export default function Stats() {
                 actionsPlacement="inline-top"
                 actions={(
                     <div className="flex flex-wrap items-center justify-between gap-2 md:justify-end">
-                        <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-line bg-surface-3/70 px-3 py-2 text-xs text-ink-faint">
+                        <span className="inline-flex items-center gap-2 flex-wrap text-xs text-ink-faint">
                             <span className="h-1.5 w-1.5 rounded-full bg-ok" aria-hidden="true" />
                             {updatedAt ? `${t("30초마다 갱신")} · ${updatedAt.toLocaleTimeString(language === "ko" ? "ko-KR" : language === "ja" ? "ja-JP" : "en-US")}` : loadError ? t("통계 조회 실패") : t("통계 정보를 불러오는 중")}
                         </span>
@@ -118,11 +116,7 @@ export default function Stats() {
                 )}
             />
 
-            {loading && !data && (
-                <Card className="min-h-56 grid place-items-center text-ink-faint">
-                    <span className="inline-flex items-center gap-2 text-sm"><Loader2 className="w-5 h-5 animate-spin" /> {t("통계를 집계하고 있습니다")}</span>
-                </Card>
-            )}
+            {loading && !data && <LoadingState label="통계를 불러오는 중" />}
 
             {!loading && !data && loadError && (
                 <Card className="flex min-h-52 flex-col items-center justify-center gap-3 text-center">
@@ -145,13 +139,14 @@ export default function Stats() {
                 const { live, vod, storage, recent_sessions: recentSessions } = data;
                 return (
                     <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-0">
                             <MetricCard icon={Clock} label={t("완료된 라이브 녹화 시간")} value={formatDuration(live.total_duration_seconds, language)} detail={`${formatCount(live.total_sessions, language, "session")} · ${live.active_recordings} ${t("활성 녹화")}`} tone="ok" />
                             <MetricCard icon={Video} label={t("완료된 녹화 용량")} value={formatBytes(live.total_size_bytes)} detail={t("완료된 라이브 파일 합계")} tone="live" />
                             <MetricCard icon={Download} label={t("영상 다운로드")} value={formatCount(vod.total_completed, language, "item")} detail={`${t("치지직")} ${vod.by_type.chzzk} · ${t("외부")} ${vod.by_type.external}`} tone="primary" />
-                            <StorageCard used={storage.used_bytes} total={storage.total_bytes} free={storage.free_bytes} dir={storage.download_dir} t={t} />
+
                         </div>
 
+                        <StorageCard used={storage.used_bytes} total={storage.total_bytes} free={storage.free_bytes} dir={storage.download_dir} t={t} />
                         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.75fr)] gap-4">
                             <Card padded={false} className="overflow-hidden">
                                 <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-b border-line">
@@ -168,7 +163,9 @@ export default function Stats() {
                                 {live.by_channel.length === 0 ? (
                                     <EmptyState compact icon={Database} title={t("아직 집계할 녹화가 없습니다")} description={t("첫 녹화가 완료되면 채널별 통계가 표시됩니다.")} />
                                 ) : (
-                                    <div className="overflow-x-auto">
+                                    <div>
+                                    <div className="divide-y divide-line md:hidden">{live.by_channel.map(channel => <div key={channel.channel_id} className="px-4 py-3"><p className="break-all text-sm max-w-64 break-words font-medium text-ink">{channel.channel_name}</p><p className="mt-0.5 break-all text-xs text-ink-faint">{channel.channel_id}</p><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted"><span>{t("녹화")} {channel.session_count}</span><span>{t("라이브 감지")} {channel.live_detected_count}{t("일")}</span><span>{formatDuration(channel.total_duration_seconds, language)}</span><span>{formatBytes(channel.total_size_bytes)}</span></div></div>)}</div>
+                                    <div className="hidden overflow-x-auto md:block">
                                         <table className="w-full min-w-[680px] text-sm">
                                             <thead>
                                                 <tr className="bg-surface-3/60 border-b border-line">
@@ -183,8 +180,8 @@ export default function Stats() {
                                                 {live.by_channel.map((channel: ChannelLiveStat) => (
                                                     <tr key={channel.channel_id} className="hover:bg-surface-3/50 transition-colors">
                                                         <td className="px-5 py-3.5">
-                                                            <p className="font-medium text-ink">{channel.channel_name}</p>
-                                                            <p className="text-[11px] text-ink-faint font-mono mt-0.5">{channel.channel_id}</p>
+                                                            <p className="max-w-64 break-words font-medium text-ink">{channel.channel_name}</p>
+                                                            <p className="text-[11px] text-ink-faint font-mono mt-0.5 break-all">{channel.channel_id}</p>
                                                         </td>
                                                         <td className="px-4 py-3.5 text-right text-ink-muted font-mono">{formatCount(channel.session_count, language, "session")}</td>
                                                         <td className="px-4 py-3.5 text-right text-info font-mono font-medium">{language === "en" ? `${channel.live_detected_count} days` : `${channel.live_detected_count}${t("일")}`}</td>
@@ -194,7 +191,7 @@ export default function Stats() {
                                                 ))}
                                             </tbody>
                                         </table>
-                                    </div>
+                                    </div></div>
                                 )}
                             </Card>
 
@@ -215,7 +212,7 @@ export default function Stats() {
                                     <div className="divide-y divide-line/70">
                                         {recentSessions.map((session: LiveSession, index: number) => (
                                             <div key={`${session.channel_name}-${session.ended_at}-${index}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-surface-3/50 transition-colors">
-                                                <span className="w-2 h-2 rounded-full bg-ok shrink-0 shadow-[0_0_10px_var(--color-ok)]" />
+                                                <span className="w-2 h-2 rounded-full bg-ok shrink-0 " />
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-medium text-ink truncate">{session.channel_name}</p>
                                                     <p className="text-[11px] text-ink-faint mt-0.5">{formatStatsDate(session.ended_at, language)}</p>

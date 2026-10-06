@@ -313,11 +313,11 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center animate-backdrop">
             {/* 배경 블러 */}
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+            <div className="absolute inset-0 bg-black/80 " />
 
             {/* 카드 */}
-            <div className="relative bg-surface-2 border border-line-strong rounded-[calc(var(--radius-card)+4px)] shadow-2xl surface-raise w-full max-w-lg mx-4 max-h-[calc(100vh-2rem)] animate-modal-in overflow-y-auto">
-                <div className="h-1 w-full bg-linear-to-r from-transparent via-[var(--primary)] to-transparent" />
+            <div className="relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-2xl surface-raise w-full max-w-lg mx-4 max-h-[calc(100vh-2rem)] animate-modal-in overflow-y-auto">
+
 
                 <div className="p-8">
                     {/* 헤더 */}

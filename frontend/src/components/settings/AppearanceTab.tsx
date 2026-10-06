@@ -61,7 +61,7 @@ export function AppearanceTab({ onDirtyChange }: Props) {
                             onClick={() => setTheme(theme.id as ThemeId)}
                             title={t(theme.label)}
                             aria-label={`${t(theme.label)} ${t("컬러 테마")}`}
-                            className={`w-10 h-10 rounded-full border-4 transition-all hover:scale-110 ${themeId === theme.id ? "border-ink scale-110" : "border-transparent"}`}
+                            className={`w-10 h-10 rounded-full border-4 transition-all  ${themeId === theme.id ? "border-ink " : "border-transparent"}`}
                             style={{ backgroundColor: theme.primary }}
                         />
                     ))}
@@ -71,7 +71,7 @@ export function AppearanceTab({ onDirtyChange }: Props) {
                             onClick={() => colorPickerRef.current?.click()}
                             title={`${t("사용자 지정")} ${t("컬러 테마")}`}
                             aria-label={`${t("사용자 지정")} ${t("컬러 테마")}`}
-                            className={`w-10 h-10 rounded-full border-4 transition-all hover:scale-110 overflow-hidden ${themeId === "custom" ? "border-ink scale-110" : "border-transparent"}`}
+                            className={`w-10 h-10 rounded-full border-4 transition-all  overflow-hidden ${themeId === "custom" ? "border-ink " : "border-transparent"}`}
                             style={{ background: themeId === "custom" ? customColor : "conic-gradient(red, yellow, lime, cyan, blue, magenta, red)" }}
                         />
                     </div>

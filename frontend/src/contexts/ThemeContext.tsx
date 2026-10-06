@@ -14,11 +14,11 @@ export interface ThemePreset {
 }
 
 export const THEMES: ThemePreset[] = [
-    { id: "blue", label: "블루 (기본)", primary: "#438DFF", dark: "#3178EC" },
-    { id: "green", label: "치지직", primary: "#00FFA3", dark: "#00D689" },
-    { id: "purple", label: "퍼플", primary: "#A855F7", dark: "#9333EA" },
-    { id: "orange", label: "오렌지", primary: "#F97316", dark: "#EA6C0A" },
-    { id: "red", label: "레드", primary: "#EF4444", dark: "#DC2626" },
+    { id: "blue", label: "블루 (기본)", primary: "#7c9de1", dark: "#6c8bd0" },
+    { id: "green", label: "치지직", primary: "#70bc97", dark: "#5faa85" },
+    { id: "purple", label: "퍼플", primary: "#ad9cdb", dark: "#9c89d0" },
+    { id: "orange", label: "오렌지", primary: "#d6ad65", dark: "#c99a51" },
+    { id: "red", label: "레드", primary: "#ec777b", dark: "#d9696d" },
 ];
 
 const DEFAULT_TITLE = "Phrolova";

@@ -63,7 +63,7 @@ export function GeneralTab({ settings, onSaved, onDirtyChange }: Props) {
 
             <Field
                 label={t("영상 저장 위치")}
-                hint={t("치지직 다시보기·클립과 외부 영상 다운로드가 저장됩니다.")}
+                hint={t("다운로드한 다시보기, 클립 및 영상이 저장됩니다.")}
             >
                 <DirInput value={vodDownloadDir} onChange={setVodDownloadDir} placeholder="예: E:\\recordings\\Video" />
             </Field>
@@ -84,7 +84,7 @@ export function GeneralTab({ settings, onSaved, onDirtyChange }: Props) {
                 />
             </Field>
 
-            <Button variant="primary" icon={Save} loading={saving} onClick={handleSave} className="w-full">
+            <Button variant="primary" icon={Save} loading={saving} disabled={!dirty} onClick={handleSave} className="w-full">
                 {saving ? t("저장 중...") : t("일반 설정 저장")}
             </Button>
         </Card>

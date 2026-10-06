@@ -10,7 +10,7 @@ export function Layout() {
                 <Sidebar />
                 <div className="app-main flex min-h-0 min-w-0 flex-1 flex-col">
                     <Topbar />
-                    <main id="main-content" tabIndex={-1} className="relative min-h-0 flex-1 overflow-auto px-3 pb-8 pt-5 sm:px-5 lg:px-7 lg:pt-6">
+                    <main id="main-content" tabIndex={-1} className="relative min-h-0 flex-1 overflow-auto px-3 pb-6 pt-4 sm:px-5 lg:px-6">
                         <div className="page-content relative mx-auto max-w-[1680px]">
                             <Outlet />
                         </div>

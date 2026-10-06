@@ -8,6 +8,16 @@
 
 ## [Unreleased]
 
+## [2.0.43] - 2026-10-06
+
+### Changed
+- Reorganized the interface with a compact sidebar, consistent controls, and a restrained dark theme.
+- Added a larger selected-channel preview and compact views for other live channels.
+- Improved download lists, status filters, settings navigation, and mobile layouts.
+- Made storage paths fully readable and added a path copy action.
+- Removed duplicate page names from the top bar while preserving search and notifications.
+- Limited the download platform selector to CHZZK and YouTube.
+
 ## [2.0.42] - 2026-10-06
 
 ### Changed
@@ -601,7 +611,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.42...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.43...HEAD
+[2.0.43]: https://github.com/ProofPage/Phrolova/compare/v2.0.42...v2.0.43
 [2.0.42]: https://github.com/ProofPage/Phrolova/compare/v2.0.41...v2.0.42
 [2.0.41]: https://github.com/ProofPage/Phrolova/compare/v2.0.40...v2.0.41
 [2.0.40]: https://github.com/ProofPage/Phrolova/compare/v2.0.39...v2.0.40

@@ -436,7 +436,7 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
             </Card>
 
             {/* ══ 저장 ══════════════════════════════════ */}
-            <div className="sticky bottom-0 -mx-1 px-1 pb-1 pt-3 bg-gradient-to-t from-surface-0 via-surface-0 to-transparent">
+            <div className="sticky bottom-0 -mx-1 px-1 pb-1 pt-3 bg-surface-0">
                 <Button
                     variant="primary"
                     icon={Save}

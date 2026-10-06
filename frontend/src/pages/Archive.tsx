@@ -29,17 +29,17 @@ export default function ArchivePage() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="product-page  space-y-4">
             <PageHeader
                 icon={Radio}
                 eyebrow={t("오디오 보관함")}
-                title={t("X Spaces 다운로드")}
+                title={t("X Spaces")}
                 description={t("캡처한 X Spaces 스트림을 오래 보관할 수 있는 오디오 파일로 변환합니다.")}
             />
 
             <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.7fr)] gap-4">
                 <Card className="relative overflow-hidden">
-                    <span className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-xspaces to-transparent opacity-70" />
+
                     <div className="flex items-start gap-3 mb-6">
                         <span className="w-9 h-9 rounded-[var(--radius-control)] grid place-items-center bg-xspaces/10 text-xspaces"><Link2 className="w-4 h-4" /></span>
                         <div>

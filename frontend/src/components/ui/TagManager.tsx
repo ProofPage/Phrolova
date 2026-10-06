@@ -1,3 +1,5 @@
+import { createPortal } from "react-dom";
+import { useDialogKeyboard } from "../../hooks/useDialogKeyboard";
 import { useState, useRef, useEffect } from "react";
 import { Tag, X, Plus, Check, Trash2 } from "lucide-react";
 import { clsx } from "clsx";
@@ -29,12 +31,15 @@ export function TagManager({
 }: TagManagerProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState("");
+    const popupRef = useRef<HTMLDivElement>(null);
+    const [position, setPosition] = useState({top:0,left:0});
+    useDialogKeyboard(popupRef, () => setIsOpen(false), isOpen);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // 내부 클릭 이외 시 닫기
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node) && !popupRef.current?.contains(event.target as Node)) {
                 setIsOpen(false);
                 setInputValue("");
             }
@@ -93,7 +98,7 @@ export function TagManager({
                     {!disabled && (
                         <button
                             onClick={() => onRemoveTag(tag)}
-                            className="hover:bg-surface-4/70 rounded-full p-0.5 transition-colors focus:outline-none"
+                            aria-label={`${tag} 태그 제거`} title={`${tag} 태그 제거`} className="icon-button !size-6"
                         >
                             <X className="w-2.5 h-2.5" />
                         </button>
@@ -104,8 +109,9 @@ export function TagManager({
             {/* 태그 추가 버튼 */}
             {!disabled && (
                 <button
-                    onClick={() => setIsOpen(true)}
-                    className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-dashed border-line-strong hover:border-[var(--primary)] hover:bg-surface-3 text-ink-faint hover:text-[var(--primary)] transition-colors focus:outline-none"
+                    onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); setPosition({left: Math.max(8,Math.min(rect.left,window.innerWidth - 216)), top: Math.max(8,Math.min(rect.bottom + 6,window.innerHeight - 270))}); setIsOpen(true); }}
+                    aria-label="태그 관리" aria-expanded={isOpen}
+                    className="icon-button"
                     title="태그 관리"
                 >
                     <Plus className="w-3 h-3" />
@@ -113,8 +119,8 @@ export function TagManager({
             )}
 
             {/* 드롭다운 */}
-            {isOpen && !disabled && (
-                <div className="absolute top-full left-0 mt-1.5 w-52 bg-surface-2 border border-line-strong rounded-[var(--radius-control)] shadow-xl z-50 overflow-hidden text-sm surface-raise">
+            {isOpen && !disabled && createPortal(
+                <div ref={popupRef} role="dialog" aria-modal="true" aria-label="태그 관리" tabIndex={-1} style={position} className="ui-popover fixed z-[100] w-52 max-h-[80dvh] overflow-y-auto text-sm">
                     <div className="p-2 border-b border-line bg-surface-1/70">
                         <div className="relative flex items-center">
                             <Tag className="absolute left-2 w-3.5 h-3.5 text-ink-faint" />
@@ -124,7 +130,7 @@ export function TagManager({
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder="태그 검색 또는 생성..."
+                                aria-label="태그 검색 또는 생성" placeholder="태그 검색 또는 생성..."
                                 className="w-full bg-transparent text-ink placeholder:text-ink-faint pl-7 pr-2 py-1 text-xs focus:outline-none"
                             />
                         </div>
@@ -138,7 +144,7 @@ export function TagManager({
                                     onAddTag(newTag);
                                     setInputValue("");
                                 }}
-                                className="w-full text-left px-3 py-1.5 text-xs text-[var(--primary)] hover:bg-surface-3 transition-colors flex items-center gap-2"
+                                className="w-full text-left min-h-9 px-3 py-2 text-xs text-[var(--primary)] hover:bg-surface-3 transition-colors flex items-center gap-2"
                             >
                                 <Plus className="w-3.5 h-3.5" />
                                 <span>"{inputValue.trim()}" 생성</span>
@@ -150,7 +156,7 @@ export function TagManager({
                                 <button
                                     onClick={() => toggleTag(tag)}
                                     className={clsx(
-                                        "flex-1 min-w-0 text-left px-3 py-1.5 text-xs transition-colors flex items-center justify-between",
+                                        "flex-1 min-w-0 text-left min-h-9 px-3 py-2 text-xs transition-colors flex items-center justify-between",
                                         selectedTags.includes(tag)
                                             ? "text-[var(--primary)] bg-[var(--primary-dim)]"
                                             : "text-ink-muted hover:bg-surface-3 hover:text-ink"
@@ -177,7 +183,7 @@ export function TagManager({
                             </div>
                         )}
                     </div>
-                </div>
+                </div>, document.body
             )}
         </div>
     );

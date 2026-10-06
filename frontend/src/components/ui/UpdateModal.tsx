@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useDialogKeyboard } from "../../hooks/useDialogKeyboard";
+import { useRef, useState } from "react";
 import { X, ExternalLink, Copy, CheckCircle2, Terminal } from "lucide-react";
 import { UpdateInfo } from "../../api/client";
 
@@ -50,6 +51,8 @@ function CommandBlock({ command }: { command: string }) {
 }
 
 export function UpdateModal({ info, onClose }: UpdateModalProps) {
+    const dialogRootRef = useRef<HTMLDivElement>(null);
+    useDialogKeyboard(dialogRootRef, onClose);
     const renderContent = () => {
         switch (info.environment) {
             case "windows-exe": {
@@ -125,8 +128,8 @@ export function UpdateModal({ info, onClose }: UpdateModalProps) {
 
     return (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-surface-2 border border-line-strong rounded-[calc(var(--radius-card)+4px)] w-full max-w-lg shadow-2xl surface-raise animate-modal-in">
+            <div className="absolute inset-0 bg-black/60 " onClick={onClose} />
+            <div ref={dialogRootRef} role="dialog" aria-modal="true" aria-label="업데이트 안내" tabIndex={-1} className="relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] w-full max-w-lg shadow-2xl surface-raise animate-modal-in">
                 <div className="flex items-center justify-between p-5 border-b border-line">
                     <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                         <Terminal className="w-5 h-5 text-[var(--primary)]" />

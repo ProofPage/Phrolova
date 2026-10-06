@@ -53,10 +53,10 @@ export function DashboardFilters({
 }: Props) {
     const { t } = useLanguage();
     return (
-        <div className="dashboard-toolbar flex flex-col gap-3 p-2.5 sm:p-3">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                <div className="max-w-full overflow-x-auto">
-                <div role="group" aria-label={t("채널 상태 필터")} className="flex w-max gap-1 p-1">
+        <div className="dashboard-toolbar flex flex-col gap-2 py-2">
+            <div className="flex flex-col xl:flex-row xl:items-center gap-2">
+                <div className="min-w-0 max-w-full overflow-x-auto xl:flex-1">
+                <div role="group" aria-label={t("채널 상태 필터")} className="flex w-max min-w-full gap-1">
                     {FILTERS.map((option) => {
                         const count = { totalCount, recordingCount, liveCount, offlineCount }[option.countKey];
                         return (
@@ -65,7 +65,7 @@ export function DashboardFilters({
                             type="button"
                             aria-pressed={filter === option.value}
                             onClick={() => onFilterChange(option.value)}
-                            className={`dashboard-filter px-3 py-2 rounded-[9px] text-[13px] font-medium transition-all whitespace-nowrap ${filter === option.value ? `is-selected ${option.selectedClass}` : "text-ink-faint hover:text-ink-muted"}`}
+                            className={`dashboard-filter min-h-11 sm:min-h-8 px-2.5 py-1.5 rounded-[5px] text-[12px] font-medium transition-all whitespace-nowrap ${filter === option.value ? `is-selected ${option.selectedClass}` : "text-ink-faint hover:text-ink-muted"}`}
                         >
                             {t(option.label)} <span className="ml-1 tabular-nums opacity-75">{count}</span>
                         </button>
@@ -74,14 +74,14 @@ export function DashboardFilters({
                 </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2">
                     <Button icon={RefreshCw} onClick={onScanNow} title={t("등록한 채널의 방송 상태를 다시 확인합니다.")} className="px-3 py-2 whitespace-nowrap shrink-0">{t("방송 상태 확인")}</Button>
                     <Button variant="danger" icon={Square} onClick={onStopAll} disabled={recordingCount === 0} className="px-3 py-2 whitespace-nowrap shrink-0">{t("전체 녹화 중지")}</Button>
                     <div role="group" aria-label={t("채널 보기 방식")} className="flex bg-surface-3/80 rounded-[var(--radius-control)] p-1 ml-auto">
                         <button
                             type="button"
                             onClick={() => onViewModeChange("grid")}
-                            className={`grid size-11 place-items-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-1 text-ink shadow-sm" : "text-ink-faint hover:text-ink"}`}
+                            className={`grid size-11 sm:size-8 place-items-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-1 text-ink shadow-sm" : "text-ink-faint hover:text-ink"}`}
                             title={t("카드로 보기")}
                             aria-label={t("카드로 보기")}
                             aria-pressed={viewMode === "grid"}
@@ -91,7 +91,7 @@ export function DashboardFilters({
                         <button
                             type="button"
                             onClick={() => onViewModeChange("list")}
-                            className={`grid size-11 place-items-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-1 text-ink shadow-sm" : "text-ink-faint hover:text-ink"}`}
+                            className={`grid size-11 sm:size-8 place-items-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-1 text-ink shadow-sm" : "text-ink-faint hover:text-ink"}`}
                             title={t("목록으로 보기")}
                             aria-label={t("목록으로 보기")}
                             aria-pressed={viewMode === "list"}

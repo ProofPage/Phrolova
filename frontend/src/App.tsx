@@ -14,6 +14,7 @@ import Settings from "./pages/Settings";
 import ChatLogs from "./pages/ChatLogs";
 import Stats from "./pages/Stats";
 import SystemLogs from "./pages/SystemLogs";
+import { Button } from "./components/ui/primitives";
 import { CommandPalette } from "./components/ui/CommandPalette";
 
 // Data Router 환경 안에서 렌더링되는 루트 레이아웃.
@@ -64,10 +65,18 @@ function RootLayout() {
     );
 }
 
+function RouteError() {
+    const { t } = useLanguage();
+    return <main className="app-canvas grid min-h-dvh place-items-center px-5">
+        <div className="max-w-sm text-center"><h1 className="page-title">{t("화면을 표시하지 못했습니다.")}</h1><p className="page-description">{t("페이지를 새로고침하거나 라이브 화면으로 돌아가세요.")}</p><div className="mt-4 flex justify-center gap-2"><Button onClick={() => window.location.reload()}>{t("새로고침")}</Button><a className="ui-button btn-primary" href="/">{t("라이브로 이동")}</a></div></div>
+    </main>;
+}
+
 const router = createBrowserRouter([
     {
         path: "/",
         element: <RootLayout />,
+        errorElement: <RouteError />,
         children: [
             {
                 element: <Layout />,

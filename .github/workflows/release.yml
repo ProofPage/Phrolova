@@ -74,13 +74,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## 대시보드와 화면 구성 개선
+          ## Interface and workflow improvements
 
-          - 라이브 채널 정보와 녹화 제어를 미리보기 위에 배치하고 방송 미리보기 확대 기능을 개선했습니다.
-          - 다운로드 플랫폼 선택과 설정 화면을 정리하고, 모바일 화면의 사용성을 다듬었습니다.
-          - 통계의 저장 위치 표시를 개선하고 불필요한 보조 문구와 복사 버튼을 제거했습니다.
+          - Reorganized the interface with a compact sidebar, consistent controls, and a restrained dark theme.
+          - Added a larger preview for the selected live channel and compact views for other channels.
+          - Improved download lists, status filters, settings navigation, and mobile layouts.
+          - Made storage paths fully readable and added a path copy action.
+          - Removed duplicate page names from the top bar while preserving search and notifications.
+          - Limited the download platform selector to CHZZK and YouTube.
 
-          Windows x64 실행 파일로 기존 실행 파일을 교체하세요.
+          Replace your existing executable with the Windows x64 release build.
           '@
           $notes | Set-Content -Path release-notes.md -Encoding utf8
           $asset = "dist/Phrolova-$env:GITHUB_REF_NAME-windows-x64.exe"

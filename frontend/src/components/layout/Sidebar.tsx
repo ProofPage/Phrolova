@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { useDialogKeyboard } from "../../hooks/useDialogKeyboard";
+import { useEffect, useRef, useState } from "react";
+import { Link, NavLink } from "react-router-dom";
 import { Menu, Tv, X } from "lucide-react";
 import { clsx } from "clsx";
 import { NAV_GROUPS } from "../../config/navigation";
@@ -8,6 +9,8 @@ import { useLanguage } from "../../contexts/LanguageContext";
 
 export function Sidebar() {
     const [mobileOpen, setMobileOpen] = useState(false);
+    const drawerRef = useRef<HTMLElement>(null);
+    useDialogKeyboard(drawerRef, () => setMobileOpen(false), mobileOpen);
     const { pageTitle, iconUrl } = useTheme();
     const { t } = useLanguage();
 
@@ -22,14 +25,14 @@ export function Sidebar() {
 
     const navigation = (
         <>
-            <NavLink to="/" onClick={() => setMobileOpen(false)} className="sidebar-brand" aria-label={pageTitle}>
+            <Link to="/" onClick={() => setMobileOpen(false)} className="sidebar-brand" aria-label={pageTitle}>
                 <span className="brand-mark grid size-9 shrink-0 place-items-center overflow-hidden rounded-xl">
                     {iconUrl ? <img src={iconUrl} alt="" className="size-full object-cover" /> : <Tv className="size-[18px]" />}
                 </span>
                 <span className="min-w-0">
                     <span className="block truncate text-[15px] font-bold tracking-[-0.03em] text-ink">{pageTitle}</span>
                 </span>
-            </NavLink>
+            </Link>
 
             <nav className="sidebar-navigation" aria-label={t("주 메뉴")}>
                 {NAV_GROUPS.map((group) => (
@@ -72,7 +75,7 @@ export function Sidebar() {
             {mobileOpen && (
                 <div className="sidebar-mobile-overlay lg:hidden">
                     <button className="sidebar-backdrop" onClick={() => setMobileOpen(false)} aria-label={t("메뉴 닫기")} />
-                    <aside id="mobile-sidebar" className="app-sidebar app-sidebar-mobile" aria-label={t("주 메뉴")}>
+                    <aside ref={drawerRef} role="dialog" aria-modal="true" tabIndex={-1} aria-label={t("주 메뉴")} id="mobile-sidebar" className="app-sidebar app-sidebar-mobile">
                         <button type="button" onClick={() => setMobileOpen(false)} className="sidebar-mobile-close icon-button" aria-label={t("메뉴 닫기")}>
                             <X className="size-[18px]" />
                         </button>

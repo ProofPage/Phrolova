@@ -1,3 +1,4 @@
+import { useDialogKeyboard } from "../../hooks/useDialogKeyboard";
 import { useEffect, useRef, createContext, useContext, useState, useCallback } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Button, Input } from "./primitives";
@@ -82,6 +83,8 @@ function ConfirmModal({
     onConfirm,
     onCancel,
 }: ConfirmModalProps) {
+    const dialogRootRef = useRef<HTMLDivElement>(null);
+    useDialogKeyboard(dialogRootRef, onCancel);
     const [inputValue, setInputValue] = useState("");
     const confirmBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -104,11 +107,11 @@ function ConfirmModal({
             onClick={onCancel}
         >
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="absolute inset-0 bg-black/60 " />
 
             {/* Modal */}
             <div
-                className="relative bg-surface-2/95 backdrop-blur-xl border border-line-strong rounded-[calc(var(--radius-card)+4px)] shadow-2xl p-6 w-full max-w-sm mx-4 animate-modal-in surface-raise"
+                ref={dialogRootRef} role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message" tabIndex={-1} className="relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-[var(--shadow-pop)] max-h-[90dvh] overflow-y-auto p-5 w-full max-w-sm mx-4 animate-modal-in surface-raise"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-start gap-4 mb-5">
@@ -118,8 +121,8 @@ function ConfirmModal({
                         </div>
                     )}
                     <div>
-                        <h3 className="text-ink font-bold text-lg">{title}</h3>
-                        <p className="text-ink-muted text-sm mt-1 whitespace-pre-line">{message}</p>
+                        <h3 id="confirm-title" className="text-ink font-semibold text-base">{title}</h3>
+                        <p id="confirm-message" className="text-ink-muted text-[13px] mt-2 whitespace-pre-line break-words">{message}</p>
                     </div>
                 </div>
 

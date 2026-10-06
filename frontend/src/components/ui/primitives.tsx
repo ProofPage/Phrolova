@@ -6,6 +6,8 @@
  */
 import {
     createElement,
+    createContext,
+    useContext,
     forwardRef,
     useId,
     useState,
@@ -25,16 +27,7 @@ import { useLanguage } from "../../contexts/LanguageContext";
  * 페이지마다 제각각이던 제목 영역을 하나의 시각적 진입점으로 묶는다.
  * 핵심 상태와 주요 액션을 첫 화면에서 함께 읽을 수 있게 한다.
  */
-export function PageHeader({
-    icon,
-    eyebrow,
-    title,
-    description,
-    meta,
-    actions,
-    actionsPlacement = "inline",
-    variant = "default",
-}: {
+export function PageHeader({ title, description, meta, actions, actionsPlacement = "inline" }: {
     icon: LucideIcon;
     eyebrow?: string;
     title: string;
@@ -45,43 +38,24 @@ export function PageHeader({
     variant?: "default" | "plain";
 }) {
     const { t } = useLanguage();
-    const actionsBelow = actionsPlacement === "below";
-    const actionsTopAligned = actionsPlacement === "inline-top";
-    const metaBelow = actionsBelow && variant !== "plain" && meta;
-
     return (
-        <header className={clsx(
-            variant === "plain" ? "page-header-plain" : "page-hero relative border border-line rounded-[var(--radius-card)] p-4 sm:px-5 sm:py-4",
-        )}>
-            {variant !== "plain" && <div aria-hidden="true" className="page-hero-decoration pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" />}
-            <div className={clsx("relative z-10 flex justify-between gap-4", actionsBelow ? "flex-col" : `flex-col md:flex-row ${actionsTopAligned ? "md:items-start" : "md:items-center"}`)}>
-                <div className={clsx("flex min-w-0 gap-3", variant === "plain" ? "flex-wrap items-center" : actionsBelow || actionsTopAligned ? "items-start" : "items-center")}>
-                    <span className="page-hero-icon grid place-items-center w-9 h-9 rounded-[10px] shrink-0 self-center">
-                        {createElement(icon, { className: "w-[18px] h-[18px]" })}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                        {eyebrow && <p className="text-[10px] font-semibold tracking-[0.08em] text-ink-faint mb-0.5">{t(eyebrow)}</p>}
-                        <h1 className="text-[21px] sm:text-[23px] font-bold tracking-[-0.035em] text-ink leading-tight">{t(title)}</h1>
-                        <p className="text-[12px] sm:text-[13px] text-ink-faint mt-1 max-w-2xl leading-relaxed">{typeof description === "string" ? t(description) : description}</p>
-                    </div>
-                    {meta && !metaBelow && <div className={clsx("flex flex-wrap items-center gap-1.5", variant === "plain" ? "dashboard-summary sm:ml-auto" : "mt-2.5")}>{meta}</div>}
+        <header className="page-header">
+            <div className="page-heading">
+                <div className="page-heading-copy">
+                    <h1 className="page-title">{t(title)}</h1>
+                    <p className="page-description">{typeof description === "string" ? t(description) : description}</p>
                 </div>
-                {metaBelow && <div className="mt-2.5 flex flex-wrap items-center gap-1.5 pl-12">{meta}</div>}
-                {actions && <div className={clsx(actionsBelow ? "w-full pt-3" : "shrink-0 md:max-w-[44%]", actionsBelow && variant !== "plain" && "border-t border-line/80")}>{actions}</div>}
+                {meta && <div className="page-summary">{meta}</div>}
+                {actions && actionsPlacement !== "below" && <div className="page-actions">{actions}</div>}
             </div>
+            {actions && actionsPlacement === "below" && <div className="page-actions">{actions}</div>}
         </header>
     );
 }
 
 /* ── MetricCard ──────────────────────────────────────── */
 
-export function MetricCard({
-    icon,
-    label,
-    value,
-    detail,
-    tone = "primary",
-}: {
+export function MetricCard({ label, value, detail }: {
     icon: LucideIcon;
     label: string;
     value: ReactNode;
@@ -89,27 +63,11 @@ export function MetricCard({
     tone?: "primary" | "live" | "ok" | "warn" | "info";
 }) {
     const { t } = useLanguage();
-    const color = tone === "live" ? "var(--color-live)"
-        : tone === "ok" ? "var(--color-ok)"
-        : tone === "warn" ? "var(--color-warn)"
-        : tone === "info" ? "var(--color-info)"
-        : "var(--primary)";
-
-    return (
-        <Card className="relative overflow-hidden group">
-            <span className="absolute inset-x-0 top-0 h-px opacity-70" style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} />
-            <div className="flex items-center justify-between gap-4">
-                <div>
-                    <p className="text-[11px] font-medium text-ink-faint uppercase tracking-[0.08em]">{t(label)}</p>
-                    <p className="text-2xl font-bold tracking-tight text-ink mt-2">{value}</p>
-                    {detail && <p className="text-xs text-ink-faint mt-1.5">{typeof detail === "string" ? t(detail) : detail}</p>}
-                </div>
-                <span className="w-9 h-9 rounded-[var(--radius-control)] grid place-items-center" style={{ color, backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)` }}>
-                    {createElement(icon, { className: "w-[18px] h-[18px]" })}
-                </span>
-            </div>
-        </Card>
-    );
+    return <div className="ui-metric">
+        <p className="ui-metric-label">{t(label)}</p>
+        <p className="ui-metric-value">{value}</p>
+        {detail && <p className="ui-metric-detail">{typeof detail === "string" ? t(detail) : detail}</p>}
+    </div>;
 }
 
 /* ── Card ───────────────────────────────────────────── */
@@ -125,8 +83,8 @@ export function Card({
     return (
         <section
             className={clsx(
-                "bg-surface-2 border border-line rounded-[var(--radius-card)] surface-raise",
-                padded && "p-4 sm:p-5",
+                "ui-panel",
+                padded && "p-4",
                 className,
             )}
             {...props}
@@ -140,13 +98,7 @@ export function Card({
  * 카드 상단 제목 줄. 아이콘은 강조색을 따르되,
  * tone을 주면 상태 색(위험/경고 등)으로 바꿀 수 있다.
  */
-export function CardHeader({
-    icon,
-    title,
-    description,
-    action,
-    tone,
-}: {
+export function CardHeader({ title, description, action }: {
     icon?: LucideIcon;
     title: string;
     description?: ReactNode;
@@ -154,36 +106,10 @@ export function CardHeader({
     tone?: "primary" | "danger" | "warn" | "ok";
 }) {
     const { t } = useLanguage();
-    const toneColor =
-        tone === "danger" ? "var(--color-danger)"
-        : tone === "warn" ? "var(--color-warn)"
-        : tone === "ok" ? "var(--color-ok)"
-        : "var(--primary)";
-
-    return (
-        <header className="flex items-center justify-between gap-4 mb-5">
-            <div className="flex items-center gap-3 min-w-0">
-                {icon && (
-                    <span
-                        className="w-9 h-9 rounded-[var(--radius-control)] grid place-items-center shrink-0"
-                        style={{
-                            backgroundColor: "color-mix(in srgb, " + toneColor + " 14%, transparent)",
-                            color: toneColor,
-                        }}
-                    >
-                        {createElement(icon, { className: "w-[18px] h-[18px]" })}
-                    </span>
-                )}
-                <div className="min-w-0">
-                    <h3 className="text-[15px] font-semibold text-ink leading-tight">{t(title)}</h3>
-                    {description && (
-                        <p className="text-[13px] text-ink-faint mt-1 leading-relaxed">{typeof description === "string" ? t(description) : description}</p>
-                    )}
-                </div>
-            </div>
-            {action && <div className="shrink-0">{action}</div>}
-        </header>
-    );
+    return <header className="ui-section-header">
+        <div className="min-w-0"><h3>{t(title)}</h3>{description && <p>{typeof description === "string" ? t(description) : description}</p>}</div>
+        {action && <div className="shrink-0">{action}</div>}
+    </header>;
 }
 
 /* ── CollapsibleCard ────────────────────────────────── */
@@ -234,9 +160,9 @@ export function CollapsibleCard({
                 >
                     {icon && (
                         <span
-                            className="w-9 h-9 rounded-[var(--radius-control)] grid place-items-center shrink-0"
+                            className="grid size-5 place-items-center shrink-0"
                             style={{
-                                backgroundColor: "color-mix(in srgb, " + toneColor + " 14%, transparent)",
+                                backgroundColor: "transparent",
                                 color: toneColor,
                             }}
                         >
@@ -266,6 +192,8 @@ export function CollapsibleCard({
     );
 }
 
+const FieldContext = createContext<string | undefined>(undefined);
+
 /* ── Field ──────────────────────────────────────────── */
 
 /** 라벨 + 설명 + 컨트롤을 세로로 묶는 기본 폼 행. */
@@ -283,22 +211,15 @@ export function Field({
     error?: string;
 }) {
     const { t } = useLanguage();
-    return (
-        <div className="space-y-2">
-            <label
-                htmlFor={htmlFor}
-                className="block text-[13px] font-medium text-ink-muted"
-            >
-                {t(label)}
-            </label>
-            {children}
-            {error ? (
-                <p className="text-xs text-danger">{t(error)}</p>
-            ) : (
-                hint && <p className="text-xs text-ink-faint leading-relaxed">{typeof hint === "string" ? t(hint) : hint}</p>
-            )}
+    const fieldId = useId();
+    const inputId = htmlFor || fieldId;
+    return <FieldContext.Provider value={inputId}><div className="ui-field">
+        <div className="ui-field-copy">
+            <label htmlFor={inputId} className="ui-field-label">{t(label)}</label>
+            {hint && !error && <p className="ui-field-hint">{typeof hint === "string" ? t(hint) : hint}</p>}
         </div>
-    );
+        <div className="ui-field-control">{children}{error && <p role="alert" className="mt-1 text-xs text-danger">{t(error)}</p>}</div>
+    </div></FieldContext.Provider>;
 }
 
 /** 라벨과 컨트롤을 좌우로 배치하는 행 (토글용). */
@@ -317,7 +238,7 @@ export function SettingRow({
     return (
         <div
             className={clsx(
-                "flex items-center justify-between gap-4 py-3",
+                "flex items-center justify-between gap-4 py-3 border-b border-line last:border-0",
                 className,
             )}
         >
@@ -333,16 +254,15 @@ export function SettingRow({
 /* ── Input ──────────────────────────────────────────── */
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
-    function Input({ className, placeholder, ...props }, ref) {
+    function Input({ className, placeholder, id, ...props }, ref) {
+        const fieldId = useContext(FieldContext);
         const { t } = useLanguage();
         return (
             <input
                 ref={ref}
+                id={id || fieldId}
                 className={clsx(
-                    "w-full bg-surface-3 border border-line-strong rounded-[var(--radius-control)]",
-                    "px-3 py-2.5 text-[14px] text-ink placeholder:text-ink-faint",
-                    "transition-colors input-focus",
-                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                    "ui-input input-focus w-full",
                     className,
                 )}
                 placeholder={placeholder ? t(placeholder) : placeholder}
@@ -354,18 +274,16 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
 
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement> & {
     options: { value: string; label: string }[];
-}>(function Select({ className, options, ...props }, ref) {
+}>(function Select({ className, options, id, ...props }, ref) {
+    const fieldId = useContext(FieldContext);
     const { t } = useLanguage();
     return (
         <div className="relative">
             <select
                 ref={ref}
+                id={id || fieldId}
                 className={clsx(
-                    "w-full appearance-none cursor-pointer",
-                    "bg-surface-3 border border-line-strong rounded-[var(--radius-control)]",
-                    "px-3 py-2.5 pr-9 text-[14px] text-ink",
-                    "transition-colors input-focus",
-                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                    "ui-input ui-select input-focus w-full",
                     className,
                 )}
                 {...props}
@@ -405,33 +323,9 @@ export function Switch({
     label?: string;
 }) {
     const { t } = useLanguage();
-    return (
-        <button
-            type="button"
-            role="switch"
-            aria-checked={checked}
-            aria-label={label ? t(label) : undefined}
-            disabled={disabled}
-            onClick={() => onChange(!checked)}
-            className={clsx(
-                "relative inline-flex h-11 w-[52px] shrink-0 items-center rounded-full transition-colors duration-200",
-                "disabled:cursor-not-allowed disabled:opacity-40",
-            )}
-        >
-            <span
-                aria-hidden="true"
-                className="absolute inset-x-[3px] top-1/2 h-[26px] -translate-y-1/2 rounded-full transition-colors duration-200"
-                style={{ backgroundColor: checked ? "var(--primary)" : "var(--color-surface-4)" }}
-            />
-            <span
-                aria-hidden="true"
-                className={clsx(
-                    "absolute top-1/2 size-5 -translate-y-1/2 rounded-full bg-white shadow-sm transition-[left] duration-200",
-                    checked ? "left-[26px]" : "left-[6px]",
-                )}
-            />
-        </button>
-    );
+    return <button type="button" role="switch" aria-checked={checked} aria-label={label ? t(label) : undefined} disabled={disabled} onClick={() => onChange(!checked)} className="ui-switch">
+        <span aria-hidden="true" className="ui-switch-track" /><span aria-hidden="true" className="ui-switch-thumb" />
+    </button>;
 }
 
 /* ── Button ─────────────────────────────────────────── */
@@ -452,22 +346,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
     ...props
 }, ref) {
     const { t } = useLanguage();
-    const base =
-        "inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] " +
-        "min-h-11 px-4 py-2.5 text-[14px] font-medium transition-colors sm:min-h-10 " +
-        "disabled:opacity-45 disabled:cursor-not-allowed";
-
-    const variants: Record<ButtonVariant, string> = {
-        primary: "btn-primary",
-        secondary: "bg-surface-3 text-ink hover:bg-surface-4 border border-line-strong",
-        ghost: "text-ink-muted hover:text-ink hover:bg-surface-3",
-        danger: "bg-danger/12 text-danger hover:bg-danger/20 border border-danger/25",
-    };
-
+    const variants: Record<ButtonVariant, string> = { primary: "btn-primary", secondary: "btn-secondary", ghost: "btn-ghost", danger: "btn-danger" };
     return (
         <button
             ref={ref}
-            className={clsx(base, variants[variant], className)}
+            className={clsx("ui-button", variants[variant], className)}
+            aria-busy={loading || undefined}
             disabled={disabled || loading}
             {...props}
         >
@@ -493,27 +377,7 @@ export function Badge({
     className?: string;
 }) {
     const { t } = useLanguage();
-    const tones: Record<string, string> = {
-        neutral: "bg-surface-4 text-ink-muted border-line-strong",
-        ok: "bg-ok/12 text-ok border-ok/25",
-        warn: "bg-warn/12 text-warn border-warn/25",
-        danger: "bg-danger/12 text-danger border-danger/25",
-        info: "bg-info/12 text-info border-info/25",
-        primary: "btn-ghost-primary border-transparent",
-    };
-
-    return (
-        <span
-            className={clsx(
-                "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full",
-                "text-[11px] font-medium border whitespace-nowrap",
-                tones[tone],
-                className,
-            )}
-        >
-            {typeof children === "string" ? t(children) : children}
-        </span>
-    );
+    return <span className={clsx("ui-badge", `ui-badge-${tone}`, className)}>{typeof children === "string" ? t(children) : children}</span>;
 }
 
 /** 연결/설정 상태를 나타내는 점 + 텍스트. */
@@ -559,26 +423,22 @@ export function EmptyState({
     compact?: boolean;
 }) {
     const { t } = useLanguage();
-    return (
-        <div className={clsx(compact ? "py-8" : "py-12", "px-6 text-center")}>
-            {icon && (
-                <span className={clsx("inline-grid place-items-center rounded-full bg-surface-3 text-ink-faint", compact ? "w-10 h-10 mb-3" : "w-12 h-12 mb-4")}>
-                    {createElement(icon, { className: compact ? "w-4 h-4" : "w-5 h-5" })}
-                </span>
-            )}
-            <p className="text-[14px] font-medium text-ink-muted">{t(title)}</p>
-            {description && (
-                <p className="text-[13px] text-ink-faint mt-1.5 max-w-sm mx-auto leading-relaxed">
-                    {typeof description === "string" ? t(description) : description}
-                </p>
-            )}
-            {action && <div className="mt-5">{action}</div>}
-        </div>
-    );
+    return <div className={clsx("ui-empty", compact && "py-6")}>
+        {icon && <span className="ui-empty-icon">{createElement(icon, { className: "size-5" })}</span>}
+        <p className="ui-empty-title">{t(title)}</p>
+        {description && <p className="ui-empty-description">{typeof description === "string" ? t(description) : description}</p>}
+        {action && <div className="ui-empty-action">{action}</div>}
+    </div>;
 }
 
 /* ── Divider ────────────────────────────────────────── */
 
 export function Divider({ className }: { className?: string }) {
     return <hr className={clsx("border-0 border-t border-line", className)} />;
+}
+
+/** A stable list-shaped placeholder for initial data loads. */
+export function LoadingState({ label, rows = 3 }: { label: string; rows?: number }) {
+    const { t } = useLanguage();
+    return <div className="space-y-3 py-3" role="status" aria-busy="true" aria-label={t(label)}><span className="sr-only">{t(label)}</span>{Array.from({length: rows}, (_,index) => <div key={index} className="flex items-center gap-3 border-b border-line pb-3"><span className="skeleton size-8 shrink-0 rounded" /><div className="flex-1 space-y-2"><div className="skeleton h-3 w-2/5" /><div className="skeleton h-3 w-3/5" /></div></div>)}</div>;
 }
