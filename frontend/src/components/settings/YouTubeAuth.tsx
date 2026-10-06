@@ -37,7 +37,7 @@ export function YouTubeAuth() {
         }
     };
     return <Card className="space-y-5">
-        <CardHeader icon={KeyRound} title={t("YouTube")} description={t("로그인 확인이 필요한 경우 Netscape 형식의 YouTube 쿠키 파일을 등록하세요.")} />
+        <CardHeader icon={KeyRound} title={t("YouTube")} description={t("선택 사항 · 공개 영상은 쿠키 없이 다운로드합니다. 로그인·연령 제한·멤버십 확인이 필요한 경우에만 등록한 쿠키를 사용합니다.")} />
         <div className="flex flex-wrap items-center gap-3">
             <StatusDot active={configured} label={t(configured ? "업로드됨" : "없음")} />
             <input ref={input} type="file" accept=".txt" className="hidden" onChange={(event) => {

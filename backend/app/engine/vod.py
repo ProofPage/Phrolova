@@ -28,7 +28,8 @@ from app.core.config import get_settings
 from app.core.logger import logger, get_media_logger
 from app.engine.auth import AuthManager
 from app.engine.youtube_channel import ChannelImports
-from app.engine.youtube_support import is_youtube_url, runtime_options, youtube_cookies
+from app.engine.youtube_support import (is_youtube_url, runtime_options, youtube_cookies,
+                                       with_youtube_cookie_fallback, YouTubeAuthenticationError)
 from app.engine.twitcasting import borrow_cookie_file, explain_unplayable, is_twitcasting_url
 
 # ── yt-dlp DASH MPD 파서 멍키패치 ──────────────────────────────
@@ -339,10 +340,17 @@ class VodEngine:
             with yt_dlp.YoutubeDL(opts) as ydl:
                 return ydl.extract_info(url, download=False)
 
-        with self._borrow_ytdlp_cookie_file(url) as cookie_file:
+        async def extract(cookie_file):
+            opts.pop("cookiefile", None)
             if cookie_file:
                 opts["cookiefile"] = cookie_file
-            info: dict[str, Any] | None = await asyncio.to_thread(lambda: _extract())  # type: ignore[arg-type]
+            return await asyncio.to_thread(_extract)
+
+        if is_youtube_url(url):
+            info = await with_youtube_cookie_fallback(extract)
+        else:
+            with self._borrow_ytdlp_cookie_file(url) as cookie_file:
+                info = await extract(cookie_file)
 
         if not info:
             raise ValueError(f"영상 정보를 가져올 수 없습니다: {url}")
@@ -834,6 +842,14 @@ class VodEngine:
 
     async def _download_external(self, task_id: str, task: VodDownloadTask) -> None:
         """yt-dlp를 사용한 외부 URL(유튜브 등) 다운로드."""
+        if is_youtube_url(task.url):
+            try:
+                await with_youtube_cookie_fallback(
+                    lambda cookie_file: self._download_with_ytdlp(task_id, task, cookie_file)
+                )
+            except YouTubeAuthenticationError as error:
+                raise NonRetryableDownloadError(str(error)) from None
+            return
         # 메타데이터 추출부터 실제 다운로드까지 같은 쿠키 사본을 쓰고, 끝나면 지운다.
         with self._borrow_ytdlp_cookie_file(task.url) as cookie_file:
             await self._download_with_ytdlp(task_id, task, cookie_file)
@@ -881,12 +897,6 @@ class VodEngine:
         try:
             info: dict[str, Any] | None = await asyncio.to_thread(lambda: _extract_info())  # type: ignore[arg-type]
         except Exception as e:
-            if is_youtube_url(task.url) and any(text in str(e).lower() for text in
-                    ("not a bot", "sign in to confirm", "login required", "members-only", "private video")):
-                raise NonRetryableDownloadError(
-                    "유튜브 로그인이 필요하거나 시청 권한이 없는 영상입니다. "
-                    "설정 → 인증 → 유튜브에서 로그인 쿠키를 등록한 뒤 다시 시도해 주세요."
-                ) from e
             if is_twitcasting_url(task.url):
                 reason = await explain_unplayable(
                     task.url, str(e), has_cookies=cookie_file is not None

@@ -8,6 +8,15 @@
 
 ## [Unreleased]
 
+## [2.0.45] - 2026-10-07
+
+### Changed
+- Keep multiple live channel details open and play their live previews simultaneously.
+- Complete first-run setup in two steps without entering CHZZK cookies. Cookie settings remain available in Settings.
+- Save the recording file format selected during first-run setup correctly.
+- Try YouTube downloads without cookies first, and use uploaded cookies only when YouTube requires authentication.
+- Clarify guidance for YouTube downloads that require sign-in or viewing permissions.
+
 ## [2.0.44] - 2026-10-07
 
 ### Changed
@@ -619,7 +628,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.44...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.45...HEAD
+[2.0.45]: https://github.com/ProofPage/Phrolova/compare/v2.0.44...v2.0.45
 [2.0.44]: https://github.com/ProofPage/Phrolova/compare/v2.0.43...v2.0.44
 [2.0.43]: https://github.com/ProofPage/Phrolova/compare/v2.0.42...v2.0.43
 [2.0.42]: https://github.com/ProofPage/Phrolova/compare/v2.0.41...v2.0.42

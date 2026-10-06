@@ -32,7 +32,7 @@ export default function Dashboard() {
     const { channels, initialLoading, connectionError, fetchChannels } = useChannelStream();
     const { orderedChannels, getReorderProps } = useChannelReorder(channels);
     const [platformStatus, setPlatformStatus] = useState<PlatformStatus | null>(null);
-    const [selectedChannelKey, setSelectedChannelKey] = useState<string | null>(null);
+    const [expandedChannelKeys, setExpandedChannelKeys] = useState<Set<string>>(() => new Set());
     const [filter, setFilter] = useState<StatusFilter>("all");
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
         const saved = localStorage.getItem("dashboardViewMode");
@@ -215,10 +215,13 @@ export default function Dashboard() {
     });
 
     useEffect(() => {
-        if (!initialLoading && selectedChannelKey && !channels.some(channel => getChannelKey(channel) === selectedChannelKey)) {
-            setSelectedChannelKey(null);
-        }
-    }, [channels, initialLoading, selectedChannelKey]);
+        if (initialLoading) return;
+        const availableKeys = new Set(channels.map(getChannelKey));
+        setExpandedChannelKeys(current => {
+            const next = new Set([...current].filter(key => availableKeys.has(key)));
+            return next.size === current.size ? current : next;
+        });
+    }, [channels, initialLoading]);
 
     const itemProps = {
         onStartRecord: handleStartRecord,
@@ -234,7 +237,12 @@ export default function Dashboard() {
 
     const renderChannel = (channel: Channel) => {
         const key = getChannelKey(channel);
-        const props = { ...itemProps, channel, isSelected: key === selectedChannelKey, onSelect: () => setSelectedChannelKey(current => current === key ? null : key), ...getReorderProps(key), isActionLoading: actionLoading === key };
+        const props = { ...itemProps, channel, isSelected: expandedChannelKeys.has(key), onSelect: () => setExpandedChannelKeys(current => {
+            const next = new Set(current);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+        }), ...getReorderProps(key), isActionLoading: actionLoading === key };
         return viewMode === "grid" ? <ChannelCard key={key} {...props} /> : <ChannelRow key={key} {...props} />;
     };
 

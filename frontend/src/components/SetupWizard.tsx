@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
-    FolderOpen, Shield, CheckCircle2,
-    ChevronRight, ChevronLeft, Loader2, Eye, EyeOff,
+    FolderOpen, CheckCircle2,
+    ChevronRight, ChevronLeft, Loader2,
 } from "lucide-react";
 import { DirInput } from "./ui/DirInput";
-import { Button, Input } from "./ui/primitives";
+import { Button } from "./ui/primitives";
 
 // ── Types ─────────────────────────────────────────────
 
@@ -16,15 +16,13 @@ interface SetupWizardProps {
     onComplete: () => void;
 }
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2;
 
 interface FormData {
     live_download_dir: string;
     vod_download_dir: string;
     output_format: string;
     recording_quality: string;
-    nid_aut: string;
-    nid_ses: string;
 }
 
 // ── API ──────────────────────────────────────────────
@@ -38,10 +36,8 @@ async function completeSetup(data: FormData): Promise<void> {
             download_dir: data.live_download_dir,
             live_download_dir: data.live_download_dir,
             vod_download_dir: data.vod_download_dir,
-            output_format: data.output_format,
+            live_format: data.output_format,
             recording_quality: data.recording_quality,
-            nid_aut: data.nid_aut || null,
-            nid_ses: data.nid_ses || null,
         }),
     });
     if (!res.ok) {
@@ -165,79 +161,14 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
     );
 }
 
-// ── Step 2: 치지직 인증 쿠키 ─────────────────────────
+// ── Step 2: 확인 및 완료 ─────────────────────────────
 
-function Step2({ data, onChange }: { data: FormData; onChange: (k: keyof FormData, v: string) => void }) {
-    const [showAut, setShowAut] = useState(false);
-    const [showSes, setShowSes] = useState(false);
-
-    return (
-        <div className="space-y-5">
-            <div className="bg-surface-3 border border-line rounded-[var(--radius-card)] p-4 text-sm text-ink-muted leading-relaxed">
-                <Shield className="inline w-4 h-4 mr-1 text-[var(--primary)]" />
-                치지직 로그인 쿠키를 등록하면 <span className="text-ink font-medium">성인 방송 녹화</span>와{" "}
-                <span className="text-ink font-medium">1080p 고화질</span>에 접근할 수 있습니다.
-                <br />
-                <span className="text-ink-faint text-xs mt-1 block">
-                    브라우저 개발자 도구 (F12) → Application → Cookies → naver.com에서 확인할 수 있습니다.
-                    이 단계는 건너뛸 수 있으며 나중에 설정 페이지에서 변경 가능합니다.
-                </span>
-            </div>
-
-            {/* NID_AUT */}
-            <div>
-                <label className="block text-sm font-medium text-ink-muted mb-2">NID_AUT</label>
-                <div className="relative">
-                    <Input
-                        type={showAut ? "text" : "password"}
-                        value={data.nid_aut}
-                        onChange={(e) => onChange("nid_aut", e.target.value)}
-                        placeholder="NID_AUT 쿠키 값"
-                        className="pr-10 font-mono"
-                    />
-                    <button
-                        type="button"
-                        onClick={() => setShowAut((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink-muted"
-                    >
-                        {showAut ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                </div>
-            </div>
-
-            {/* NID_SES */}
-            <div>
-                <label className="block text-sm font-medium text-ink-muted mb-2">NID_SES</label>
-                <div className="relative">
-                    <Input
-                        type={showSes ? "text" : "password"}
-                        value={data.nid_ses}
-                        onChange={(e) => onChange("nid_ses", e.target.value)}
-                        placeholder="NID_SES 쿠키 값"
-                        className="pr-10 font-mono"
-                    />
-                    <button
-                        type="button"
-                        onClick={() => setShowSes((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink-muted"
-                    >
-                        {showSes ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ── Step 3: 확인 및 완료 ─────────────────────────────
-
-function Step3({ data }: { data: FormData }) {
+function Step2({ data }: { data: FormData }) {
     const rows: { label: string; value: string }[] = [
         { label: "라이브 저장 위치", value: data.live_download_dir || "(미설정)" },
         { label: "영상 저장 위치", value: data.vod_download_dir || "(미설정)" },
         { label: "라이브 녹화 화질", value: data.recording_quality },
         { label: "라이브 녹화 파일 형식", value: `.${data.output_format.toUpperCase()}` },
-        { label: "치지직 인증", value: data.nid_aut && data.nid_ses ? "✅ 설정됨" : "⏭️ 건너뜀 (나중에 설정 가능)" },
     ];
 
     return (
@@ -272,8 +203,6 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
         vod_download_dir: defaultDirectories.vod_download_dir,
         output_format: "ts",
         recording_quality: "best",
-        nid_aut: "",
-        nid_ses: "",
     }));
 
     const onChange = (k: keyof FormData, v: string) =>
@@ -284,7 +213,7 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
         : true;
 
     const handleNext = () => {
-        if (step < 3) setStep((s) => (s + 1) as Step);
+        if (step < 2) setStep((s) => (s + 1) as Step);
     };
 
     const handleBack = () => {
@@ -306,8 +235,7 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
 
     const stepTitles: Record<Step, { title: string; subtitle: string }> = {
         1: { title: "기본 설정", subtitle: "라이브와 영상의 저장 위치, 기본 화질을 설정하세요." },
-        2: { title: "치지직 인증 쿠키 (선택)", subtitle: "성인 방송 및 1080p 녹화를 위한 로그인 쿠키를 입력하세요." },
-        3: { title: "설정 확인", subtitle: "아래 내용을 확인하고 완료 버튼을 누르세요." },
+        2: { title: "설정 확인", subtitle: "아래 내용을 확인하고 완료 버튼을 누르세요." },
     };
 
     return (
@@ -334,13 +262,12 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
                     </div>
 
                     {/* Step 인디케이터 */}
-                    <StepIndicator current={step} total={3} />
+                    <StepIndicator current={step} total={2} />
 
                     {/* Step 콘텐츠 */}
                     <div className="min-h-[240px]">
                         {step === 1 && <Step1 data={data} onChange={onChange} />}
-                        {step === 2 && <Step2 data={data} onChange={onChange} />}
-                        {step === 3 && <Step3 data={data} />}
+                        {step === 2 && <Step2 data={data} />}
                     </div>
 
                     {/* 에러 */}
@@ -354,7 +281,7 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
                     <div className="flex items-center justify-between mt-8">
                         <Button type="button" icon={ChevronLeft} onClick={handleBack} disabled={step === 1} variant="ghost">이전</Button>
 
-                        {step < 3 ? (
+                        {step < 2 ? (
                             <Button
                                 type="button"
                                 onClick={handleNext}
@@ -362,7 +289,7 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
                                 variant="primary"
                                 className="px-6"
                             >
-                                {step === 2 && !data.nid_aut ? "건너뛰기" : "다음"}
+                                다음
                                 <ChevronRight className="w-4 h-4" />
                             </Button>
                         ) : (

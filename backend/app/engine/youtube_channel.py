@@ -9,7 +9,7 @@ import uuid
 
 import yt_dlp
 
-from app.engine.youtube_support import youtube_cookies
+from app.engine.youtube_support import youtube_cookie_fallback, youtube_auth_message, YouTubeAuthenticationError
 from app.core.logger import get_media_logger
 
 
@@ -24,28 +24,42 @@ def channel_entries(url, stopped):
     }
     visited = set()
     video_ids = set()
-    with youtube_cookies() as cookie_file, yt_dlp.YoutubeDL({**options, **({"cookiefile": cookie_file} if cookie_file else {})}) as ydl:
-        def walk(info):
-            if stopped.is_set() or not info:
-                return
-            if info.get("entries") is not None:
-                for entry in info["entries"]:
-                    if stopped.is_set():
-                        return
-                    yield from walk(entry)
-                return
-            video_id = str(info.get("id") or "")
-            if re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
-                if video_id not in video_ids and info.get("live_status") not in {"is_live", "is_upcoming"}:
-                    video_ids.add(video_id)
-                    yield {**info, "url": f"https://www.youtube.com/watch?v={video_id}"}
-                return
-            target = info.get("url")
-            if target and info.get("ie_key") == "YoutubeTab" and target not in visited:
-                visited.add(target)
-                yield from walk(ydl.extract_info(target, download=False, process=False))
+    def collect(cookie_file):
+        with yt_dlp.YoutubeDL({**options, **({"cookiefile": cookie_file} if cookie_file else {})}) as ydl:
+            def walk(info):
+                if stopped.is_set() or not info:
+                    return
+                if info.get("entries") is not None:
+                    for entry in info["entries"]:
+                        if stopped.is_set():
+                            return
+                        yield from walk(entry)
+                    return
+                video_id = str(info.get("id") or "")
+                if re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
+                    if video_id not in video_ids and info.get("live_status") not in {"is_live", "is_upcoming"}:
+                        video_ids.add(video_id)
+                        yield {**info, "url": f"https://www.youtube.com/watch?v={video_id}"}
+                    return
+                target = info.get("url")
+                if target and info.get("ie_key") == "YoutubeTab" and target not in visited:
+                    visited.add(target)
+                    yield from walk(ydl.extract_info(target, download=False, process=False))
 
-        yield from walk(ydl.extract_info(url, download=False, process=False))
+            yield from walk(ydl.extract_info(url, download=False, process=False))
+
+    try:
+        yield from collect(None)
+    except Exception as error:
+        with youtube_cookie_fallback(error) as cookie_file:
+            visited.clear()
+            try:
+                yield from collect(cookie_file)
+            except Exception as authenticated_error:
+                message = youtube_auth_message(authenticated_error, has_cookies=True)
+                if message:
+                    raise YouTubeAuthenticationError(message) from None
+                raise
 
 
 class ChannelImports:

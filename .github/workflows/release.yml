@@ -74,12 +74,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## Live preview improvements
+          ## Playback and setup improvements
 
-          - Expand one live channel at a time without changing channel order, and collapse it by selecting it again.
-          - Play live video in expanded channel details with muted autoplay and standard playback controls.
-          - Keep previews independent of recording, and stop playback when details close, channels change, or broadcasts end.
-          - Show preview loading and error states with a retry action.
+          - Keep multiple live channel details open and play their live previews simultaneously.
+          - Complete first-run setup in two steps without entering CHZZK cookies. Cookie settings remain available in Settings.
+          - Save the recording file format selected during first-run setup correctly.
+          - Try YouTube downloads without cookies first, and use uploaded cookies only when YouTube requires authentication.
+          - Clarify guidance for YouTube downloads that require sign-in or viewing permissions.
 
           Replace your existing executable with the Windows x64 release build.
           '@
