@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ChevronDown, Lock, Plus } from "lucide-react";
 import { api, PLATFORM_LABELS, type ChannelDownloadOptions, type Platform, type PlatformStatus } from "../../api/client";
 import { ChannelDownloadModal } from "./ChannelDownloadModal";
@@ -22,8 +22,20 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
     const [channelId, setChannelId] = useState("");
     const [selectedPlatform, setSelectedPlatform] = useState<Platform>("chzzk");
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
+
+    useEffect(() => {
+        if (!dropdownOpen) return;
+        const closeOutside = (event: MouseEvent) => {
+            if (!dropdownRef.current?.contains(event.target as Node)) setDropdownOpen(false);
+        };
+        const closeEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setDropdownOpen(false); };
+        document.addEventListener("mousedown", closeOutside);
+        document.addEventListener("keydown", closeEscape);
+        return () => { document.removeEventListener("mousedown", closeOutside); document.removeEventListener("keydown", closeEscape); };
+    }, [dropdownOpen]);
 
     const isPlatformEnabled = (platform: Platform): boolean => {
         if (platform === "chzzk" || platform === "youtube") return true;
@@ -64,7 +76,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
         <>
         <form onSubmit={handleSubmit} aria-label="감시 채널 추가" className="space-y-2.5">
             <div className="flex w-full min-w-0 items-stretch gap-2">
-            <div className="relative shrink-0">
+            <div className="relative shrink-0" ref={dropdownRef}>
                 <button
                     type="button"
                     onClick={() => setDropdownOpen((open) => !open)}
@@ -79,7 +91,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
                 </button>
 
                 {dropdownOpen && (
-                    <div className="absolute top-full mt-1 left-0 z-20 bg-surface-2 border border-line-strong rounded-[var(--radius-control)] shadow-xl min-w-[180px] max-h-[50dvh] overflow-y-auto" role="listbox">
+                    <div className="glass-popover absolute top-full mt-2 left-0 z-20 rounded-[var(--radius-control)] min-w-[180px] max-h-[50dvh] overflow-y-auto" role="listbox">
                         {(Object.keys(PLATFORM_LABELS) as Platform[]).map((platform) => {
                             const enabled = isPlatformEnabled(platform);
                             return (

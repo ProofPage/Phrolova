@@ -4,7 +4,7 @@
 
 **라이브 녹화와 다시보기 다운로드를 한곳에서 관리하세요.**
 
-[![Version](https://img.shields.io/badge/version-2.0.39-13d9a3)](https://github.com/ProofPage/Phrolova/releases/latest)
+[![Version](https://img.shields.io/badge/version-2.0.40-438dff)](https://github.com/ProofPage/Phrolova/releases/latest)
 [![Windows](https://img.shields.io/badge/Windows-x64-0078D4)](https://github.com/ProofPage/Phrolova/releases/latest)
 ![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827)

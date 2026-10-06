@@ -14,8 +14,8 @@ export interface ThemePreset {
 }
 
 export const THEMES: ThemePreset[] = [
-    { id: "green", label: "치지직 (기본)", primary: "#00FFA3", dark: "#00D689" },
-    { id: "blue", label: "블루", primary: "#3B82F6", dark: "#2563EB" },
+    { id: "blue", label: "블루 (기본)", primary: "#438DFF", dark: "#3178EC" },
+    { id: "green", label: "치지직", primary: "#00FFA3", dark: "#00D689" },
     { id: "purple", label: "퍼플", primary: "#A855F7", dark: "#9333EA" },
     { id: "orange", label: "오렌지", primary: "#F97316", dark: "#EA6C0A" },
     { id: "red", label: "레드", primary: "#EF4444", dark: "#DC2626" },
@@ -125,7 +125,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
     const [themeId, setThemeId] = useState<ThemeId>(() =>
-        (localStorage.getItem(STORAGE_KEYS.theme) as ThemeId) || "green"
+        (localStorage.getItem(STORAGE_KEYS.theme) as ThemeId) || "blue"
     );
     const [customColor, setCustomColorState] = useState<string>(() =>
         localStorage.getItem(STORAGE_KEYS.customColor) || DEFAULT_CUSTOM_COLOR
@@ -178,7 +178,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     };
 
     const resetAll = () => {
-        setThemeId("green");
+        setThemeId("blue");
         setCustomColorState(DEFAULT_CUSTOM_COLOR);
         setPageTitleState(DEFAULT_TITLE);
         setIconUrlState("");
@@ -186,7 +186,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(STORAGE_KEYS.customColor);
         localStorage.removeItem(STORAGE_KEYS.title);
         localStorage.removeItem(STORAGE_KEYS.iconUrl);
-        applyPresetTheme("green");
+        applyPresetTheme("blue");
         applyTitle(DEFAULT_TITLE);
         applyFavicon("");
     };

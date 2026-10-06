@@ -31,6 +31,7 @@ export default function VodDownload() {
     const { tasks, imports, refreshTasks, activeCount, addTask, cancelTask, pauseTask, resumeTask, retryTask, clearCompleted, openFileLocation } = useVod();
     const [selectedSource, setSelectedSource] = useState<"chzzk" | "youtube" | "external">("chzzk");
     const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
+    const sourceMenuRef = useRef<HTMLDivElement>(null);
     const [url, setUrl] = useState("");
     const [loading, setLoading] = useState(false);
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -60,6 +61,17 @@ export default function VodDownload() {
         const timer = setTimeout(() => setIsInitialLoad(false), 500);
         return () => clearTimeout(timer);
     }, []);
+
+    useEffect(() => {
+        if (!sourceMenuOpen) return;
+        const closeOutside = (event: MouseEvent) => {
+            if (!sourceMenuRef.current?.contains(event.target as Node)) setSourceMenuOpen(false);
+        };
+        const closeEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setSourceMenuOpen(false); };
+        document.addEventListener("mousedown", closeOutside);
+        document.addEventListener("keydown", closeEscape);
+        return () => { document.removeEventListener("mousedown", closeOutside); document.removeEventListener("keydown", closeEscape); };
+    }, [sourceMenuOpen]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -199,8 +211,8 @@ export default function VodDownload() {
                 )}
                 actions={(
                     <form onSubmit={handleSubmit}>
-                        <div className="flex flex-col items-start gap-2 sm:flex-row">
-                            <div className="relative shrink-0">
+                        <div className="flex min-w-0 items-stretch gap-2">
+                            <div className="relative shrink-0" ref={sourceMenuRef}>
                                 <button
                                     type="button"
                                     onClick={() => setSourceMenuOpen((open) => !open)}
@@ -214,7 +226,7 @@ export default function VodDownload() {
                                     <ChevronDown className="h-3 w-3 text-ink-faint" />
                                 </button>
                                 {sourceMenuOpen && (
-                                    <div className="absolute left-0 top-full z-20 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-control)] border border-line-strong bg-surface-2 shadow-xl" role="listbox" aria-label={t("다운로드 플랫폼")}>
+                                    <div className="glass-popover absolute left-0 top-full z-20 mt-2 min-w-[180px] overflow-hidden rounded-[var(--radius-control)]" role="listbox" aria-label={t("다운로드 플랫폼")}>
                                         {sourceOptions.map((option) => (
                                             <button
                                                 key={option.id}
@@ -246,7 +258,7 @@ export default function VodDownload() {
                                 onChange={(event) => setUrl(event.target.value)}
                                 autoComplete="off"
                             />
-                                <Button type="submit" icon={Plus} loading={loading} disabled={!url} variant="primary" className="sm:px-5">
+                                <Button type="submit" icon={Plus} loading={loading} disabled={!url} variant="primary" className="shrink-0 px-3 sm:px-5">
                                 {t("추가")}
                             </Button>
                         </div>

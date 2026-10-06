@@ -1,4 +1,4 @@
-import { LayoutGrid, List, RefreshCw, Square } from "lucide-react";
+import { ChevronDown, LayoutGrid, List, RefreshCw, SlidersHorizontal, Square } from "lucide-react";
 import type { ReactNode } from "react";
 import { TagManager } from "../ui/TagManager";
 import { Button } from "../ui/primitives";
@@ -91,18 +91,27 @@ export function DashboardFilters({
                 </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-y-2 pt-3 border-t border-line/80">
-                <span className="text-[10px] font-bold tracking-[0.14em] text-ink-faint mr-3 shrink-0">{t("채널 태그")}</span>
-                <TagManager
-                    availableTags={globalTags}
-                    selectedTags={selectedTags}
-                    onAddTag={(tag) => onSelectedTagsChange([...selectedTags, tag])}
-                    onRemoveTag={(tag) => onSelectedTagsChange(selectedTags.filter((item) => item !== tag))}
-                    onCreateTag={onCreateTag}
-                    onDeleteTag={onDeleteTag}
-                />
-            </div>
-            {children}
+            <details className="dashboard-options border-t border-line/80 pt-2">
+                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium text-ink-muted hover:bg-surface-3 hover:text-ink">
+                    <SlidersHorizontal className="size-4 text-ink-faint" />{t("채널 태그")} · {t("기본 다운로드 조건")}
+                    {selectedTags.length > 0 && <span className="rounded-full bg-[var(--primary-dim)] px-1.5 text-[10px] text-[var(--primary)]">{selectedTags.length}</span>}
+                    <ChevronDown className="ml-auto size-4 text-ink-faint transition-transform" />
+                </summary>
+                <div className="space-y-3 px-2 pt-3">
+                    <div className="flex flex-wrap items-center gap-y-2">
+                        <span className="text-[10px] font-bold tracking-[0.14em] text-ink-faint mr-3 shrink-0">{t("채널 태그")}</span>
+                        <TagManager
+                            availableTags={globalTags}
+                            selectedTags={selectedTags}
+                            onAddTag={(tag) => onSelectedTagsChange([...selectedTags, tag])}
+                            onRemoveTag={(tag) => onSelectedTagsChange(selectedTags.filter((item) => item !== tag))}
+                            onCreateTag={onCreateTag}
+                            onDeleteTag={onDeleteTag}
+                        />
+                    </div>
+                    {children}
+                </div>
+            </details>
         </div>
     );
 }

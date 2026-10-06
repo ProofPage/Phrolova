@@ -8,6 +8,17 @@
 
 ## [Unreleased]
 
+## [2.0.40] - 2026-10-06
+
+### Changed
+- **대시보드 화면 구조** — 고정 사이드바를 가로 탐색으로 바꾸고, 제목·상태·작업 패널의 간격과 정보 밀도를 정리했습니다.
+- **시각 테마** — 새 설치의 기본 강조색을 블루로 바꾸고, 탐색·검색·팝오버에 반투명 유리 효과를 적용했습니다. 정보 패널은 선명도를 위해 불투명하게 유지합니다.
+- **라이브 필터** — 태그와 기본 다운로드 조건을 필요할 때 펼칠 수 있도록 정리했습니다.
+- **다시보기 입력** — 좁은 화면에서도 플랫폼·주소·추가 버튼을 한 줄에 배치했습니다.
+
+### Fixed
+- **플랫폼 선택 메뉴** — 메뉴 밖 클릭과 Esc 키로 닫히도록 수정했습니다.
+
 ## [2.0.39] - 2026-10-06
 
 ### Fixed
@@ -574,7 +585,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.39...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.40...HEAD
+[2.0.40]: https://github.com/ProofPage/Phrolova/compare/v2.0.39...v2.0.40
 [2.0.39]: https://github.com/ProofPage/Phrolova/compare/v2.0.38...v2.0.39
 [2.0.38]: https://github.com/ProofPage/Phrolova/compare/v2.0.37...v2.0.38
 [2.0.37]: https://github.com/ProofPage/Phrolova/compare/v2.0.36...v2.0.37

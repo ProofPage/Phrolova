@@ -36,7 +36,7 @@ export function CommandPalette() {
             className="fixed inset-0 z-[100] flex items-start justify-center pt-[18vh] bg-surface-0/75 backdrop-blur-md"
             label={t("Global Command Palette")}
         >
-            <div className="w-[calc(100%-2rem)] max-w-lg bg-surface-2 border border-line-strong shadow-[var(--shadow-pop)] rounded-[calc(var(--radius-card)+4px)] overflow-hidden pointer-events-auto">
+            <div className="glass-popover w-[calc(100%-2rem)] max-w-lg shadow-[var(--shadow-pop)] rounded-[calc(var(--radius-card)+4px)] overflow-hidden pointer-events-auto">
                 <Command.Input
                     placeholder={t("검색하거나 명령어를 입력하세요...")}
                     className="w-full px-5 py-4 bg-transparent text-ink placeholder:text-ink-faint border-b border-line focus:outline-none focus:ring-0"
