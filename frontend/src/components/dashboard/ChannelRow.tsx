@@ -4,7 +4,8 @@ import { getChannelKey } from "../../utils/channel";
 import { formatBytes, formatDuration } from "../../utils/format";
 import { TagManager } from "../ui/TagManager";
 import { Badge, Button, Card, Switch } from "../ui/primitives";
-import { ChannelThumbnail, PlatformBadge, type ChannelItemProps, useRecordingDuration } from "./ChannelCard";
+import { PlatformBadge, type ChannelItemProps, useRecordingDuration } from "./ChannelCard";
+import { LivePreview } from "./LivePreview";
 import { DownloadHoldStatus } from "./DownloadHoldStatus";
 import { useLanguage } from "../../contexts/LanguageContext";
 
@@ -18,7 +19,7 @@ export function ChannelRow(props: ChannelItemProps) {
     const recording = channel.recording?.is_recording === true;
     return <Card padded={false} className={clsx("channel-row-card overflow-hidden", isSelected && "is-selected", isDragging && "opacity-45", isDropTarget && "ring-2 ring-[var(--primary)]")} data-channel-key={getChannelKey(channel)}>
         <div className="flex min-w-0 items-start gap-1 pr-2">
-            <button type="button" onClick={onSelect} className="channel-summary flex-1" aria-pressed={isSelected} title={t("채널 상세 보기")}>
+            <button type="button" onClick={onSelect} className="channel-summary flex-1" aria-expanded={isSelected} title={t("채널 상세 보기")}>
                 {channel.profile_image_url ? <img src={channel.profile_image_url} alt="" className="size-8 shrink-0 rounded-full object-cover" /> : <span className="grid size-8 shrink-0 place-items-center rounded-full bg-surface-3 text-ink-faint"><Users className="size-4" /></span>}
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><h3 className={clsx("min-w-0 max-w-full text-[13px] font-semibold text-ink", isSelected ? "line-clamp-2 break-words" : "truncate")}>{displayName}</h3><PlatformBadge platform={channel.platform || "chzzk"} />{channel.last_error && <AlertTriangle className="size-3.5 text-danger" />}</div>
@@ -51,6 +52,6 @@ export function ChannelRow(props: ChannelItemProps) {
             </div>}
             {isSelected && channel.last_error && <p role="status" className="break-words text-xs text-danger">{channel.last_error}</p>}
         </div>
-        {isSelected && channel.is_live && <ChannelThumbnail channel={channel} className="mx-auto aspect-video w-full max-w-[1200px]" />}
+        {isSelected && <LivePreview channelKey={getChannelKey(channel)} isLive={channel.is_live} name={displayName} />}
     </Card>;
 }

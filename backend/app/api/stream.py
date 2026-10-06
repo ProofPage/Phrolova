@@ -109,6 +109,27 @@ async def toggle_auto_record(channel_id: str):
 
 # ── 녹화 제어 ────────────────────────────────────────────
 
+@router.get("/preview/{channel_id:path}", summary="라이브 미리보기 주소 조회")
+async def live_preview(channel_id: str):
+    from app.main import get_recorder_service
+    from fastapi.responses import JSONResponse
+
+    platform, identifier = Conductor.parse_composite_key(channel_id)
+    key = Conductor.make_composite_key(platform, identifier)
+    try:
+        url = await get_recorder_service().get_live_preview_url(key)
+    except KeyError:
+        raise HTTPException(404, "채널을 찾을 수 없습니다.") from None
+    except ValueError as exc:
+        message = str(exc)
+        if message not in ("오프라인", "이 채널은 영상 미리보기를 지원하지 않습니다."):
+            message = "미리보기를 불러올 수 없습니다."
+        raise HTTPException(409, message) from None
+    except Exception:
+        # Resolver errors may contain signed URLs or upstream credentials.
+        raise HTTPException(502, "미리보기를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.") from None
+    return JSONResponse({"url": url}, headers={"Cache-Control": "no-store"})
+
 @router.post("/record/{channel_id:path}/start", summary="수동 녹화 시작")
 async def start_recording(channel_id: str):
     """특정 채널의 녹화를 수동으로 시작합니다."""

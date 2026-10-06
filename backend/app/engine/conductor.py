@@ -128,6 +128,29 @@ class Conductor:
         else:
             raise ValueError(f"지원하지 않는 플랫폼: {platform}")
 
+    async def get_live_preview_url(self, composite_key: str) -> str:
+        """Resolve playback independently of the channel's recording pipeline."""
+        task = self._channels.get(composite_key)
+        if task is None:
+            raise KeyError(composite_key)
+        if not task.is_live:
+            raise ValueError("오프라인")
+        if task.platform == Platform.X_SPACES:
+            raise ValueError("이 채널은 영상 미리보기를 지원하지 않습니다.")
+        engine = self._get_engine(task.platform)
+        if task.platform == Platform.CHZZK:
+            return await engine.get_preview_url(task.channel_id)
+        page_url = engine.get_stream_url(task.channel_id)
+        pipeline = YtdlpLivePipeline(task.channel_id)
+        from app.engine.youtube_support import youtube_cookies
+        cookie_context = youtube_cookies() if task.platform == Platform.YOUTUBE else borrow_cookie_file(page_url)
+        with cookie_context as cookie_file:
+            url, _, _ = await asyncio.wait_for(
+                pipeline._extract_hls_url(page_url, "720p", None, cookie_file=cookie_file),
+                timeout=30,
+            )
+        return url
+
     @staticmethod
     def make_composite_key(platform: Platform, channel_id: str) -> str:
         """복합 키를 생성한다."""

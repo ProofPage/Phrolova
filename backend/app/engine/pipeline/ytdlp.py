@@ -587,7 +587,13 @@ class YtdlpLivePipeline:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            stdout, stderr = await proc.communicate()
+            try:
+                stdout, stderr = await proc.communicate()
+            except asyncio.CancelledError:
+                if proc.returncode is None:
+                    proc.kill()
+                await proc.communicate()
+                raise
         finally:
             if cookie_file_path:
                 try:
@@ -616,7 +622,7 @@ class YtdlpLivePipeline:
         if not hls_url:
             raise RuntimeError("yt-dlp URL 추출 실패: HLS URL을 찾을 수 없음")
 
-        logger.debug(f"[{self._channel_id}] HLS URL 추출 완료: {hls_url[:100]}...")
+        logger.debug(f"[{self._channel_id}] HLS URL 추출 완료")
         return hls_url, http_headers, cookies
 
     @staticmethod

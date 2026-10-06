@@ -69,6 +69,7 @@ EXPECTED_API_ROUTES = {
     ("GET", "/api/stats"),
     ("GET", "/api/stats/"),
     ("GET", "/api/stream/channels"),
+    ("GET", "/api/stream/preview/{channel_id:path}"),
     ("POST", "/api/stream/channels"),
     ("DELETE", "/api/stream/channels/{channel_id:path}"),
     ("PATCH", "/api/stream/channels/{channel_id:path}/auto-record"),

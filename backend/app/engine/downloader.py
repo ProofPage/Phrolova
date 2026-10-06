@@ -6,6 +6,7 @@ Rookery: Chzzk 라이브 엔진
 
 from __future__ import annotations
 
+import json
 from typing import Optional
 
 from app.core.http import get_http_client
@@ -37,15 +38,7 @@ class ChzzkLiveEngine:
         Returns:
             라이브 상태 정보 딕셔너리 (status, title, thumbnail 등).
         """
-        url = CHZZK_LIVE_DETAIL.format(channel_id=channel_id)
-        headers = self._auth.get_http_headers()
-
-        # 공용 클라이언트를 써서 폴링마다 TLS 핸드셰이크를 반복하지 않는다.
-        resp = await get_http_client().get(url, headers=headers)
-        resp.raise_for_status()
-        data = resp.json()
-
-        content = data.get("content") or {}
+        content = await self.get_live_detail(channel_id)
         status = content.get("status", "CLOSE")
         channel = content.get("channel") or {}
 
@@ -83,6 +76,24 @@ class ChzzkLiveEngine:
             "thumbnail_url": thumbnail_url,
             "profile_image_url": channel.get("channelImageUrl", ""),
         }
+
+    async def get_live_detail(self, channel_id: str) -> dict:
+        response = await get_http_client().get(
+            CHZZK_LIVE_DETAIL.format(channel_id=channel_id),
+            headers=self._auth.get_http_headers(),
+        )
+        response.raise_for_status()
+        return response.json().get("content") or {}
+
+    async def get_preview_url(self, channel_id: str) -> str:
+        from app.engine.chzzk_time_machine import _media_path
+
+        content = await self.get_live_detail(channel_id)
+        if content.get("status") != "OPEN":
+            raise ValueError("오프라인")
+        playback = json.loads(content.get("livePlaybackJson") or "{}")
+        # Standard live playback, never the recording time-machine playlist.
+        return _media_path(playback.get("media") or [])
 
     def get_stream_url(self, channel_id: str) -> str:
         """치지직 라이브 URL을 반환한다.

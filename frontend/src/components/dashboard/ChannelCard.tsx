@@ -1,7 +1,7 @@
 import { DownloadHoldStatus } from "./DownloadHoldStatus";
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { AlertCircle, AlertTriangle, Eye, GripVertical, Maximize2, MessageSquare, Play, Square, Trash2, Users, Video, X } from "lucide-react";
+import { LivePreview } from "./LivePreview";
+import { useEffect, useState } from "react";
+import { AlertCircle, AlertTriangle, GripVertical, MessageSquare, Play, Square, Trash2, Users, Video } from "lucide-react";
 import { clsx } from "clsx";
 import { PLATFORM_LABELS, type Channel, type Platform } from "../../api/client";
 import type { ReorderProps } from "../../hooks/useChannelReorder";
@@ -59,66 +59,6 @@ export function PlatformBadge({ platform }: { platform: Platform }) {
         <span className={`text-[11px] font-medium ${PLATFORM_BADGE_STYLES[platform].split(" ")[1]}`}>
             {PLATFORM_LABELS[platform]}
         </span>
-    );
-}
-
-export function ChannelThumbnail({ channel, className }: { channel: Channel; className: string }) {
-    const { t } = useLanguage();
-    const displayName = channel.channel_name || channel.channel_id;
-    const [failed, setFailed] = useState(false);
-    const [loading, setLoading] = useState(Boolean(channel.thumbnail_url));
-    const [expanded, setExpanded] = useState(false);
-    const dialogRef = useRef<HTMLDialogElement>(null);
-    const imageRef = useRef<HTMLImageElement>(null);
-    const src = channel.is_live ? channel.thumbnail_url : null;
-
-    useEffect(() => {
-        setFailed(false);
-        setLoading(Boolean(src) && !imageRef.current?.complete);
-    }, [src]);
-    useEffect(() => {
-        const dialog = dialogRef.current;
-        if (expanded && dialog && !dialog.open) dialog.showModal();
-        return () => { if (dialog?.open) dialog.close(); };
-    }, [expanded]);
-
-    return (
-        <>
-        <div className={`channel-thumbnail relative min-w-0 overflow-hidden bg-surface-0 ${className}`}>
-            {src && !failed ? (
-                <img ref={imageRef} src={src} alt={`${displayName} 방송 미리보기`} onLoad={() => setLoading(false)} onError={() => { setFailed(true); setLoading(false); }} onClick={() => setExpanded(true)} className="size-full object-cover" loading="lazy" />
-            ) : (
-                <div className="flex size-full flex-col items-center justify-center gap-1.5 bg-surface-1 text-ink-faint">
-                    {loading ? <span className="size-6 animate-spin rounded-full border-2 border-line-strong border-t-info" aria-hidden="true" /> : <AlertCircle className="size-7 opacity-50" />}
-                    <span className="text-[11px] font-medium">{loading ? t("미리보기를 불러오는 중") : channel.is_live ? t("미리보기를 불러올 수 없습니다.") : t("오프라인")}</span>
-                </div>
-            )}
-            {src && !failed && loading && <div className="pointer-events-none absolute inset-0 grid place-items-center bg-surface-0/45 text-xs text-ink-muted " role="status">{t("미리보기를 불러오는 중")}</div>}
-            {channel.is_live && !!channel.viewer_count && (
-                <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-md bg-surface-0/85 px-2 py-1 text-[11px] font-medium text-ink ">
-                    <Eye className="size-3" /> {channel.viewer_count.toLocaleString()}
-                </span>
-            )}
-            {src && !failed && <button type="button" onClick={() => setExpanded(true)} className="preview-expand-button absolute right-2 top-2 grid size-10 place-items-center rounded-[var(--radius-control)] border border-white/15 bg-surface-0/75 text-white transition-colors hover:bg-surface-0/95" aria-label={`${displayName} ${t("미리보기 크게 보기")}`} title={t("크게 보기")}><Maximize2 className="size-4" /></button>}
-        </div>
-        {expanded && src && !failed && createPortal(
-            <dialog
-                ref={dialogRef}
-                aria-label={`${displayName} ${t("방송 미리보기")}`}
-                onCancel={(event) => { event.preventDefault(); setExpanded(false); }}
-                onClose={() => setExpanded(false)}
-                onClick={(event) => { if (event.target === event.currentTarget) setExpanded(false); }}
-                className="preview-dialog m-auto w-[min(96vw,1200px)] max-h-[94dvh] overflow-y-auto rounded-[var(--radius-card)] border border-line-strong bg-surface-2 p-0 text-ink shadow-2xl backdrop:bg-surface-0/85 "
-            >
-                <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
-                    <div className="min-w-0"><h2 className="truncate text-sm font-semibold">{displayName} · {t("방송 미리보기")}</h2>{channel.title && <p className="mt-0.5 line-clamp-2 text-xs text-ink-faint">{channel.title}</p>}</div>
-                    <button type="button" onClick={() => setExpanded(false)} className="icon-button grid shrink-0" aria-label={t("닫기")}><X className="size-4" /></button>
-                </div>
-                <div className="aspect-video w-full overflow-hidden bg-black"><img src={src} alt={`${displayName} 방송 미리보기`} className="size-full object-contain" /></div>
-            </dialog>,
-            document.body,
-        )}
-        </>
     );
 }
 
@@ -199,7 +139,7 @@ export function ChannelCard(props: ChannelItemProps) {
                 </div>
             </div>
             <Button variant="ghost" onClick={props.onSelect} aria-expanded={props.isSelected} className="mx-3 mb-3">{t("채널 상세 보기")}</Button>
-            {props.isSelected && channel.is_live && <ChannelThumbnail channel={channel} className="mx-auto aspect-video w-full max-w-[1200px]" />}
+            {props.isSelected && <LivePreview channelKey={getChannelKey(channel)} isLive={channel.is_live} name={channel.channel_name || channel.channel_id} />}
         </Card>
     );
 }

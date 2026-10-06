@@ -360,6 +360,8 @@ export interface SystemLogResponse {
 // ── API Functions ───────────────────────────────────────
 
 export const api = {
+    getLivePreview: async (key: string, signal: AbortSignal): Promise<{ url: string }> =>
+        (await client.get(`/stream/preview/${encodeURIComponent(key)}`, { signal })).data,
     // Channels
     addChannel: async (channel_id: string, auto_record: boolean = true, options?: ChannelDownloadOptions) => {
         const res = await client.post("/stream/channels", {

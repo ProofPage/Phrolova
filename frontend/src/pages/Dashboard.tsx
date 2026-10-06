@@ -214,8 +214,11 @@ export default function Dashboard() {
         return selectedFilterTags.length === 0 || selectedFilterTags.some((tag) => (channel.tags || []).includes(tag));
     });
 
-    const selectedChannel = filteredChannels.find(channel => getChannelKey(channel) === selectedChannelKey) || filteredChannels.find(channel => channel.recording?.is_recording) || filteredChannels.find(channel => channel.is_live) || filteredChannels[0];
-    const activeChannelKey = selectedChannel ? getChannelKey(selectedChannel) : null;
+    useEffect(() => {
+        if (!initialLoading && selectedChannelKey && !channels.some(channel => getChannelKey(channel) === selectedChannelKey)) {
+            setSelectedChannelKey(null);
+        }
+    }, [channels, initialLoading, selectedChannelKey]);
 
     const itemProps = {
         onStartRecord: handleStartRecord,
@@ -231,10 +234,9 @@ export default function Dashboard() {
 
     const renderChannel = (channel: Channel) => {
         const key = getChannelKey(channel);
-        const props = { ...itemProps, channel, isSelected: key === activeChannelKey, onSelect: () => setSelectedChannelKey(key), ...getReorderProps(key), isActionLoading: actionLoading === key };
+        const props = { ...itemProps, channel, isSelected: key === selectedChannelKey, onSelect: () => setSelectedChannelKey(current => current === key ? null : key), ...getReorderProps(key), isActionLoading: actionLoading === key };
         return viewMode === "grid" ? <ChannelCard key={key} {...props} /> : <ChannelRow key={key} {...props} />;
     };
-    const otherChannels = filteredChannels.filter(channel => getChannelKey(channel) !== activeChannelKey);
 
     return (
         <div className="product-page dashboard-page space-y-4">
@@ -285,10 +287,7 @@ export default function Dashboard() {
             {initialLoading ? <div className="space-y-2" aria-label={t("채널 정보를 불러오는 중")} aria-busy="true">{[1,2,3].map(item => <div key={item} className="flex items-center gap-3 border-b border-line py-3"><div className="skeleton size-8 rounded-full" /><div className="flex-1 space-y-2"><div className="skeleton h-3 w-1/3" /><div className="skeleton h-3 w-1/2" /></div></div>)}</div>
             : filteredChannels.length === 0 ? <EmptyState icon={Radio} title={channels.length === 0 ? "등록된 채널이 없습니다." : "필터 조건에 맞는 채널이 없습니다."} description={channels.length === 0 ? "채널을 추가하면 방송 상태를 확인하고 자동으로 녹화할 수 있습니다." : "상태 또는 태그 필터를 변경해 보세요."} action={channels.length > 0 ? <Button onClick={() => { setFilter("all"); setSelectedFilterTags([]); }}>필터 초기화</Button> : undefined} />
             : viewMode === "grid" ? <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">{filteredChannels.map(renderChannel)}</div>
-            : <div className={otherChannels.length ? "live-workspace" : "min-w-0"}>
-                <div className="min-w-0">{selectedChannel && renderChannel(selectedChannel)}</div>
-                {otherChannels.length > 0 && <aside className="min-w-0 space-y-2" aria-label={t("다른 채널")}><h2 className="mb-2 flex items-center gap-2 text-xs font-medium text-ink-faint">{t("다른 채널")} <span>{otherChannels.length}</span></h2>{otherChannels.map(renderChannel)}</aside>}
-            </div>}
+            : <div className="min-w-0 space-y-2">{filteredChannels.map(renderChannel)}</div>}
             {editingChannel && <ChannelDownloadModal
                 platform={editingChannel.platform || "chzzk"}
                 name={editingChannel.channel_name || editingChannel.channel_id}

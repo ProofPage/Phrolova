@@ -81,6 +81,9 @@ class RecorderService:
             "message": f"채널 '{composite_key}' 제거 완료.",
         }
 
+    async def get_live_preview_url(self, composite_key: str) -> str:
+        return await self._conductor.get_live_preview_url(composite_key)
+
     def get_channels(self) -> list[dict]:
         """모든 채널 상태를 반환한다."""
         return self._conductor.get_all_status()
