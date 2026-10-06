@@ -10,12 +10,14 @@ import uuid
 import yt_dlp
 
 from app.engine.youtube_support import youtube_cookies
+from app.core.logger import get_media_logger
 
 
 def channel_entries(url, stopped):
     # process=False keeps playlist generators lazy, including nested channel tabs.
     # Processing the result normally enumerates the entire channel before returning.
     options = {
+        "logger": get_media_logger(url),
         "ignoreconfig": True, "extract_flat": True, "skip_download": True,
         "quiet": True, "no_warnings": True, "socket_timeout": 10,
         "retries": 1, "extractor_retries": 1,

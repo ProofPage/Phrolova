@@ -9,7 +9,9 @@ from __future__ import annotations
 from typing import Optional
 
 from app.core.http import get_http_client
-from app.core.logger import logger
+from app.core.logger import logger as app_logger
+
+logger = app_logger.getChild("chzzk")
 from app.engine.auth import AuthManager
 from app.engine.base import LiveStatus
 

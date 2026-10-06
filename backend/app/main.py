@@ -201,7 +201,7 @@ STATIC_DIR = _resolve_static_dir()
 
 # ── FastAPI 앱 ───────────────────────────────────────────
 app = FastAPI(
-    title="Rookery",
+    title="Phrolova",
     description="다중 플랫폼 스트리밍 및 VOD 전문 녹화 솔루션",
     version=__version__,
     lifespan=lifespan,
@@ -234,7 +234,7 @@ app.include_router(system_router)
 @app.get("/health", tags=["Health"])
 async def health_check_root():
     """헬스 체크 엔드포인트."""
-    return {"message": "Rookery Engine Started"}
+    return {"message": "Phrolova Engine Started"}
 
 
 @app.get("/health/detail", tags=["Health"])

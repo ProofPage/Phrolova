@@ -14,7 +14,9 @@ from typing import Optional
 from chzzkpy.unofficial.chat import ChatClient, ChatMessage
 
 from app.core.config import get_settings
-from app.core.logger import logger
+from app.core.logger import logger as app_logger
+
+logger = app_logger.getChild("chzzk")
 from app.engine.auth import AuthManager
 
 

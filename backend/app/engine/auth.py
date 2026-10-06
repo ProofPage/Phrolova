@@ -10,7 +10,9 @@ from typing import Optional
 
 from app.core.config import get_settings
 from app.core.http import USER_AGENT
-from app.core.logger import logger
+from app.core.logger import logger as app_logger
+
+logger = app_logger.getChild("chzzk")
 
 
 @dataclass(frozen=True)

@@ -9,7 +9,9 @@ from __future__ import annotations
 import re
 import asyncio
 import httpx
-from app.core.logger import logger
+from app.core.logger import logger as app_logger
+
+logger = app_logger.getChild("youtube")
 from app.core.config import get_settings
 from app.core.http import get_http_client
 from app.engine.base import LiveStatus

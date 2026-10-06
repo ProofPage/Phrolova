@@ -143,7 +143,7 @@ def get_log_dir(log_dir: str = "logs") -> Path:
 
 
 def setup_logger(
-    name: str = "chzzk",
+    name: str = "phrolova",
     *,
     level: int = logging.INFO,
     log_dir: str | None = None,
@@ -247,3 +247,21 @@ def _get_default_logger():
     return _logger
 
 logger = _get_default_logger()
+
+
+def get_media_logger(url: str) -> logging.Logger:
+    """플랫폼 로그를 공용 핸들러로 전달한다. 파일 핸들러는 공유한다."""
+    from urllib.parse import urlsplit
+
+    host = (urlsplit(url).hostname or "").lower()
+    if host == "youtu.be" or host == "youtube.com" or host.endswith(".youtube.com"):
+        platform = "youtube"
+    elif host == "chzzk.naver.com" or host.endswith(".chzzk.naver.com"):
+        platform = "chzzk"
+    elif host == "twitcasting.tv" or host.endswith(".twitcasting.tv"):
+        platform = "twitcasting"
+    elif host in {"x.com", "twitter.com", "pscp.tv"} or host.endswith(".pscp.tv"):
+        platform = "x_spaces"
+    else:
+        platform = "external"
+    return logger.getChild(platform)

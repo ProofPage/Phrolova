@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+## [2.0.39] - 2026-10-06
+
+### Fixed
+- **플랫폼 로그 구분** — 공통 로그는 `phrolova`, 플랫폼 로그는 `phrolova.youtube`, `phrolova.chzzk` 등으로 기록합니다. 다운로드 도구의 로그와 로그 초기화 기능도 함께 정리했습니다.
+- **다운로드·알림 문구** — 여러 플랫폼에 공통으로 사용되던 치지직·외부 다시보기 전용 표현과 남아 있던 Rookery 브랜드 표기를 수정했습니다.
+- **API 계약 검사** — v2.0.38에서 추가한 유튜브 쿠키 및 채널 수집 취소 API를 검사 목록에 반영했습니다.
+
 ## [2.0.38] - 2026-10-06
 
 ### Fixed
@@ -567,7 +574,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.38...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.39...HEAD
+[2.0.39]: https://github.com/ProofPage/Phrolova/compare/v2.0.38...v2.0.39
 [2.0.38]: https://github.com/ProofPage/Phrolova/compare/v2.0.37...v2.0.38
 [2.0.37]: https://github.com/ProofPage/Phrolova/compare/v2.0.36...v2.0.37
 [2.0.36]: https://github.com/ProofPage/Phrolova/compare/v2.0.35...v2.0.36

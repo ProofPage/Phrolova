@@ -97,7 +97,7 @@ def _make_embed(
 class DiscordBotService:
     """Discord Bot 서비스.
 
-    치지직 녹화 상태를 외부에서 확인하고 제어한다.
+    등록된 채널의 녹화 상태를 외부에서 확인하고 제어한다.
     사용자가 직접 발급받은 BOT_TOKEN으로 구동한다.
 
     Commands (프리픽스 & 슬래시 동시 지원):
@@ -415,7 +415,7 @@ class DiscordBotService:
                 sys_info = f"OS: {platform.system()} {platform.release()}"
 
             embed = discord.Embed(
-                title="📊 Rookery 상태",
+                title="📊 Phrolova 상태",
                 color=discord.Color.green() if recording_count > 0 else discord.Color.grey(),
             )
             embed.add_field(name="감시 채널", value=str(len(channels)), inline=True)

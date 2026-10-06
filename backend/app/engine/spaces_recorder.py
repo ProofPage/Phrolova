@@ -14,7 +14,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from app.core.config import get_settings
-from app.core.logger import logger
+from app.core.logger import logger as app_logger
+
+logger = app_logger.getChild("x_spaces")
 
 if TYPE_CHECKING:
     from app.engine.channel import ChannelTask

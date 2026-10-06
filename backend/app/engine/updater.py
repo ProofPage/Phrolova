@@ -115,7 +115,7 @@ class UpdaterService:
             kind=NotificationKind.UPDATE_AVAILABLE,
             title=f"🚀 신규 버전 업데이트 (v{latest_version})",
             description=(
-                f"**Rookery**의 새로운 버전이 출시되었습니다!\n"
+                f"**Phrolova**의 새로운 버전이 출시되었습니다!\n"
                 f"현재 버전: `v{__version__}` → 최신 버전: `v{latest_version}`\n\n"
                 f"대시보드의 설정 메뉴나 아래 링크에서 업데이트 하세요.\n"
                 f"[GitHub 릴리즈 페이지 이동]({html_url})"

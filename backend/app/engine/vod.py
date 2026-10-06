@@ -1,6 +1,6 @@
 """
 Rookery: VOD Engine (yt-dlp 래퍼)
-yt-dlp를 사용하여 치지직 VOD/클립을 다운로드한다.
+yt-dlp를 사용하여 여러 플랫폼의 영상과 오디오를 다운로드한다.
 취소, 일시정지, 재개 기능을 지원한다.
 """
 
@@ -25,7 +25,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from app.core.vod_filename import build_vod_outtmpl
 from app.core.config import get_settings
-from app.core.logger import logger
+from app.core.logger import logger, get_media_logger
 from app.engine.auth import AuthManager
 from app.engine.youtube_channel import ChannelImports
 from app.engine.youtube_support import is_youtube_url, runtime_options, youtube_cookies
@@ -126,7 +126,7 @@ class VodDownloadTask:
 class VodEngine:
     """yt-dlp 기반 VOD/클립 다운로드 엔진.
 
-    치지직 다시보기 및 클립 URL을 파싱하여 고속 다운로드한다.
+    치지직, 유튜브 및 지원 사이트의 영상 주소를 처리한다.
     인증 쿠키를 통해 성인 인증 영상에도 접근 가능하다.
     취소, 일시정지, 재개 기능을 제공한다.
 
@@ -188,6 +188,10 @@ class VodEngine:
         first_task = next(iter(self._tasks.values()))
         return first_task.progress
 
+    def _task_logger(self, task_id: str):
+        task = self._tasks.get(task_id)
+        return get_media_logger(task.url) if task else logger
+
     def _is_chzzk_url(self, url: str) -> bool:
         """치지직 URL인지 확인."""
         return "chzzk.naver.com" in url
@@ -206,6 +210,7 @@ class VodEngine:
 
         cookie_file은 빌려받은 임시 사본이어야 한다. yt-dlp가 끝날 때 이 파일을 다시 쓴다.
         """
+        logger = get_media_logger(task.url)
         settings = get_settings()
         if not getattr(task, "filename_template", None):
             task.filename_template = settings.vod_filename_template
@@ -218,6 +223,7 @@ class VodEngine:
             # yt-dlp config may inject `--add-header Cookie`, which is deprecated
             # and can leak credentials to CDN hosts.
             "ignoreconfig": True,
+            "logger": get_media_logger(task.url),
             "format": task.quality,
             # 제목이 같아도 다른 영상이면 기존 파일로 오인해 건너뛰지 않도록 구분한다.
             "outtmpl": str(
@@ -322,6 +328,7 @@ class VodEngine:
         """
         opts: dict[str, Any] = {
             "ignoreconfig": True,
+            "logger": get_media_logger(url),
             "quiet": True,
             "no_warnings": True,
             "extract_flat": False,
@@ -374,6 +381,7 @@ class VodEngine:
         Returns:
             task_id (작업 추적용 UUID).
         """
+        logger = get_media_logger(url)
         settings = get_settings()
 
         if output_dir is not None:
@@ -402,7 +410,7 @@ class VodEngine:
         # 백그라운드에서 다운로드 시작
         task.download_task = asyncio.create_task(self._run_download(task.task_id))
 
-        logger.info(f"[{task.task_id}] 다시보기 다운로드 작업 추가: {url} (화질: {quality})")
+        logger.info(f"[{task.task_id}] 다운로드 작업 추가: {url} (화질: {quality})")
         return task.task_id
 
     @staticmethod
@@ -440,6 +448,7 @@ class VodEngine:
         1일 때는 첫 재시도가 자기 자신을 기다리며 멈추고, 여러 작업이 한꺼번에 실패하면
         서로의 슬롯을 기다리며 교착된다.
         """
+        logger = self._task_logger(task_id)
         while True:
             async with self._semaphore:  # 동시 다운로드 제한
                 should_retry = await self._attempt_download(task_id)
@@ -472,6 +481,7 @@ class VodEngine:
 
     async def _attempt_download(self, task_id: str) -> bool:
         """슬롯을 쥔 상태에서 한 번 시도한다. 다시 시도해야 하면 True를 돌려준다."""
+        logger = self._task_logger(task_id)
         task = self._tasks.get(task_id)
         if not task:
             logger.error(f"[{task_id}] 작업을 찾을 수 없습니다.")
@@ -500,7 +510,7 @@ class VodEngine:
             # 서버 종료(Ctrl+C) 등으로 태스크가 취소됨 → 재시도하지 않음
             task.state = VodDownloadState.IDLE
             task.progress = 0.0
-            logger.info(f"[{task_id}] 다운로드 태스크 취소됨 (서버 종료): {task.url}")
+            logger.info(f"[{task_id}] 다운로드 작업 취소됨 (서버 종료): {task.url}")
             raise  # CancelledError는 반드시 재전파
 
         except Exception as e:
@@ -566,6 +576,7 @@ class VodEngine:
         1. ABR_HLS: videoId(해시) + inKey → MPD URL → yt-dlp
         2. HLS: liveRewindPlaybackJson → HLS path → yt-dlp
         """
+        logger = get_media_logger(task.url)
         import re
         import json as _json
         import httpx
@@ -669,6 +680,7 @@ class VodEngine:
         self, task_id: str, task: VodDownloadTask, channel: str, title: str
     ) -> None:
         """_download_external이 덮어쓴 task.title·output_path를 클립 메타 기반으로 복원한다."""
+        logger = get_media_logger(task.url)
         proper_title = f"[{channel}] {title}"
         task.title = proper_title
 
@@ -701,6 +713,7 @@ class VodEngine:
         yt-dlp 대신 Colab 방식(playlist 파싱 → chunk URL 절대경로 재작성 → ffmpeg)을 사용.
         pscp.tv CDN의 상대경로 chunk URL 구조 때문에 yt-dlp generic HLS extractor가 실패하는 문제 해결.
         """
+        logger = get_media_logger(task.url)
         import re
         import httpx
         from urllib.parse import urlparse
@@ -855,6 +868,7 @@ class VodEngine:
     async def _download_with_ytdlp(
         self, task_id: str, task: VodDownloadTask, cookie_file: Optional[str]
     ) -> None:
+        logger = get_media_logger(task.url)
         import yt_dlp
 
         # 1. 메타데이터 추출
@@ -887,7 +901,7 @@ class VodEngine:
         vod_title = info.get("title", "Unknown")
         uploader = info.get("uploader") or info.get("channel") or "Unknown Channel"
         task.title = f"[{uploader}] {vod_title}"
-        logger.info(f"[{task_id}] 외부 VOD 메타데이터: {task.title}")
+        logger.info(f"[{task_id}] 미디어 정보: {task.title}")
 
         # 예상 파일명 저장
         with yt_dlp.YoutubeDL(opts_info) as ydl:
@@ -967,7 +981,7 @@ class VodEngine:
             task.completed_at = datetime.now()
             task.output_path = filepath
             task.progress = 100.0
-            logger.info(f"[{task_id}] 외부 다시보기 다운로드 완료: {filepath}")
+            logger.info(f"[{task_id}] 다운로드 완료: {filepath}")
             self._save_history()
 
             try:
@@ -981,7 +995,7 @@ class VodEngine:
             )
             self._notify(
                 NotificationKind.VOD_COMPLETED,
-                title="📥 다시보기 다운로드 완료",
+                title="📥 미디어 다운로드 완료",
                 description=f"제목: **{task.title}**",
                 color="green",
                 fields={
@@ -1002,7 +1016,7 @@ class VodEngine:
             self._save_history()
             self._notify(
                 NotificationKind.VOD_FAILED,
-                title="❌ 다시보기 다운로드 실패",
+                title="❌ 미디어 다운로드 실패",
                 description=f"제목: **{task.title or task.url}**",
                 color="red",
                 fields={"오류": task.error_message},
@@ -1041,6 +1055,7 @@ class VodEngine:
     @staticmethod
     async def _cleanup_partial_files(task: VodDownloadTask) -> bool:
         """Remove partial files before retrying, including transient Windows locks."""
+        logger = get_media_logger(task.url)
         if not task.expected_part_file:
             return True
         expected_part = Path(task.expected_part_file)
@@ -1054,7 +1069,7 @@ class VodEngine:
                     or candidate.name.startswith(expected_part.name + ".")
                 )
         except OSError as exc:
-            logger.warning(f"[{task.task_id}] 임시 다시보기 조각 파일 정리 실패: {exc}")
+            logger.warning(f"[{task.task_id}] 임시 다운로드 조각 파일 정리 실패: {exc}")
             return False
 
         cleanup_succeeded = True
@@ -1069,14 +1084,14 @@ class VodEngine:
                     if attempt == 9:
                         cleanup_succeeded = False
                         logger.warning(
-                            f"[{task.task_id}] 임시 다시보기 조각 파일 정리 실패 "
+                            f"[{task.task_id}] 임시 다운로드 조각 파일 정리 실패 "
                             f"(파일 잠금이 해제되지 않음): {exc}"
                         )
                     else:
                         await asyncio.sleep(min(0.25 * (2 ** attempt), 1.5))
                 except OSError as exc:
                     cleanup_succeeded = False
-                    logger.warning(f"[{task.task_id}] 임시 다시보기 조각 파일 정리 실패: {exc}")
+                    logger.warning(f"[{task.task_id}] 임시 다운로드 조각 파일 정리 실패: {exc}")
                     break
         return cleanup_succeeded
 
@@ -1116,6 +1131,7 @@ class VodEngine:
 
     def cancel_download(self, task_id: str) -> dict[str, Any]:
         """특정 다운로드를 취소한다."""
+        logger = self._task_logger(task_id)
         task = self._tasks.get(task_id)
         if not task:
             return {"error": "작업을 찾을 수 없습니다.", "task_id": task_id}
@@ -1140,6 +1156,7 @@ class VodEngine:
 
     def pause_download(self, task_id: str) -> dict[str, Any]:
         """특정 다운로드를 일시정지한다."""
+        logger = self._task_logger(task_id)
         task = self._tasks.get(task_id)
         if not task:
             return {"error": "작업을 찾을 수 없습니다.", "task_id": task_id}
@@ -1162,6 +1179,7 @@ class VodEngine:
 
     def resume_download(self, task_id: str) -> dict[str, Any]:
         """일시정지된 다운로드를 재개한다."""
+        logger = self._task_logger(task_id)
         task = self._tasks.get(task_id)
         if not task:
             return {"error": "작업을 찾을 수 없습니다.", "task_id": task_id}
@@ -1185,6 +1203,7 @@ class VodEngine:
 
     async def retry_download(self, task_id: str) -> str:
         """완료/에러 상태의 작업을 재다운로드한다."""
+        logger = self._task_logger(task_id)
         old_task = self._tasks.get(task_id)
         if not old_task:
             raise ValueError("작업을 찾을 수 없습니다.")
@@ -1297,7 +1316,7 @@ class VodEngine:
         # Persist the removal as well as updating the UI's in-memory task list.
         self._save_history()
 
-        logger.info(f"다시보기 작업 정리: {deleted_count}개 삭제됨")
+        logger.info(f"다운로드 작업 정리: {deleted_count}개 삭제됨")
 
         return {
             "message": f"{deleted_count}개의 대기/완료/오류 작업이 삭제되었습니다.",
@@ -1314,6 +1333,7 @@ class VodEngine:
         Returns:
             성공/실패 메시지
         """
+        logger = self._task_logger(task_id)
         task = self._tasks.get(task_id)
         if not task:
             return {"error": "작업을 찾을 수 없습니다."}
@@ -1379,7 +1399,7 @@ class VodEngine:
         try:
             records = self._repo.list_all()
         except Exception as e:
-            logger.warning(f"VOD 이력 로드 실패: {e}")
+            logger.warning(f"다운로드 이력 로드 실패: {e}")
             return
 
         restored = 0
@@ -1403,13 +1423,13 @@ class VodEngine:
                 )
             except Exception as e:
                 # 한 건이 깨져도 나머지 이력은 살린다.
-                logger.warning(f"VOD 이력 항목 복원 실패 ({record.get('task_id')}): {e}")
+                logger.warning(f"다운로드 이력 항목 복원 실패 ({record.get('task_id')}): {e}")
                 continue
             self._tasks[task.task_id] = task
             restored += 1
 
         if restored:
-            logger.info(f"VOD 다운로드 이력 로드 완료: {restored}개")
+            logger.info(f"다운로드 이력 로드 완료: {restored}개")
 
     def _save_history(self) -> None:
         """완료/에러 상태의 작업을 저장소에 반영한다."""
@@ -1434,6 +1454,6 @@ class VodEngine:
             # 취소/삭제된 작업까지 반영해야 하므로 전체 교체한다.
             # 완료 작업은 보통 수십 건 수준이라 비용이 문제되지 않는다.
             self._repo.replace_all(records)
-            logger.debug(f"VOD 다운로드 이력 저장 완료: {len(records)}개")
+            logger.debug(f"다운로드 이력 저장 완료: {len(records)}개")
         except Exception as e:
-            logger.warning(f"VOD 이력 저장 실패: {e}")
+            logger.warning(f"다운로드 이력 저장 실패: {e}")
