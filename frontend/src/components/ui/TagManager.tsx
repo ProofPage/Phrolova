@@ -18,6 +18,7 @@ interface TagManagerProps {
      */
     onDeleteTag?: (tag: string) => void;
     disabled?: boolean;
+    triggerLabel?: string;
 }
 
 export function TagManager({
@@ -28,6 +29,7 @@ export function TagManager({
     onCreateTag,
     onDeleteTag,
     disabled = false,
+    triggerLabel,
 }: TagManagerProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState("");
@@ -98,7 +100,7 @@ export function TagManager({
                     {!disabled && (
                         <button
                             onClick={() => onRemoveTag(tag)}
-                            aria-label={`${tag} 태그 제거`} title={`${tag} 태그 제거`} className="icon-button !size-6"
+                            aria-label={`${tag} 태그 제거`} title={`${tag} 태그 제거`} className="tag-remove icon-button !size-6"
                         >
                             <X className="w-2.5 h-2.5" />
                         </button>
@@ -111,10 +113,11 @@ export function TagManager({
                 <button
                     onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); setPosition({left: Math.max(8,Math.min(rect.left,window.innerWidth - 216)), top: Math.max(8,Math.min(rect.bottom + 6,window.innerHeight - 270))}); setIsOpen(true); }}
                     aria-label="태그 관리" aria-expanded={isOpen}
-                    className="icon-button"
+                    className={clsx("icon-button", triggerLabel && "tag-manager-labeled")}
                     title="태그 관리"
                 >
                     <Plus className="w-3 h-3" />
+                    {triggerLabel && <span className="hidden lg:inline">{triggerLabel}</span>}
                 </button>
             )}
 

@@ -84,7 +84,7 @@ export function Card({
         <section
             className={clsx(
                 "ui-panel",
-                padded && "p-4",
+                padded && "p-4 max-sm:p-3",
                 className,
             )}
             {...props}

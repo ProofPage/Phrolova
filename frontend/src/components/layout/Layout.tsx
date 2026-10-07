@@ -6,7 +6,7 @@ import { VodProvider } from "../../contexts/VodContext";
 export function Layout() {
     return (
         <VodProvider>
-            <div className="app-canvas app-shell flex h-dvh min-h-[100svh] overflow-hidden text-ink font-sans">
+            <div className="app-canvas app-shell flex h-dvh min-h-[100svh] max-lg:min-h-0 overflow-hidden text-ink font-sans">
                 <Sidebar />
                 <div className="app-main flex min-h-0 min-w-0 flex-1 flex-col">
                     <Topbar />

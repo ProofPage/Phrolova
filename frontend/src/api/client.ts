@@ -11,7 +11,7 @@ export const client = axios.create({
 
 // ── Types ───────────────────────────────────────────────
 
-export type Platform = "chzzk" | "twitcasting" | "x_spaces" | "youtube";
+export type Platform = "chzzk" | "x_spaces" | "youtube";
 export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
 export interface ChannelDownloadOptions {
     auto_record: boolean;
@@ -20,8 +20,7 @@ export interface ChannelDownloadOptions {
 }
 
 export const PLATFORM_LABELS: Record<Platform, string> = {
-    chzzk: "치지직",
-    twitcasting: "TwitCasting",
+    chzzk: "Chzzk",
     x_spaces: "X Spaces",
     youtube: "YouTube",
 };
@@ -165,25 +164,16 @@ export interface Settings {
     vod_chzzk_dir: string;
     vod_external_dir: string;
 
-    // TwitCasting 인증
-    twitcasting_client_id?: string;
-    twitcasting_client_secret?: string;
-
     // X Spaces 인증
     x_cookie_file?: string;
 }
 
 export interface PlatformStatus {
     chzzk: { enabled: boolean; authenticated: boolean };
-    twitcasting: { enabled: boolean; authenticated: boolean };
     x_spaces: { enabled: boolean; authenticated: boolean; cookie_file_set: boolean };
     youtube: { enabled: boolean; authenticated: boolean };
 }
 
-export interface TwitcastingSettingsUpdate {
-    client_id: string;
-    client_secret: string;
-}
 
 export interface GeneralSettingsUpdate {
     download_dir?: string;
@@ -534,10 +524,6 @@ export const api = {
     },
     getPlatformStatus: async (): Promise<PlatformStatus> => {
         const res = await client.get<PlatformStatus>("/platforms/status");
-        return res.data;
-    },
-    updateTwitcastingSettings: async (data: TwitcastingSettingsUpdate) => {
-        const res = await client.put("/platforms/settings/twitcasting", data);
         return res.data;
     },
     uploadXCookie: async (file: File) => {

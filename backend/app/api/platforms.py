@@ -13,11 +13,10 @@ from typing import Optional
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, UploadFile, File
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from app.core.config import get_settings
 from app.core.utils import (
-    extract_twitcasting_id,
     extract_x_id,
     extract_youtube_id,
     update_env_file as _update_env_file,
@@ -33,16 +32,11 @@ router = APIRouter(prefix="/api/platforms", tags=["Platforms"])
 class AddPlatformChannelRequest(ChannelDownloadOptions):
     """멀티 플랫폼 채널 추가 요청."""
 
-    platform: str = Field(..., description="플랫폼 (chzzk, twitcasting, x_spaces, youtube)")
+    platform: str = Field(..., description="플랫폼 (chzzk, x_spaces, youtube)")
     channel_id: str = Field(..., description="채널 ID (플랫폼별 사용자 ID)")
     auto_record: bool = Field(True, description="방송 시작 시 자동 녹화 여부")
 
 
-class TwitcastingSettingsRequest(BaseModel):
-    """TwitCasting 인증 설정 업데이트 요청."""
-
-    client_id: str = Field(..., description="TwitCasting Client ID")
-    client_secret: str = Field(..., description="TwitCasting Client Secret")
 
 
 # ── 채널 관리 ────────────────────────────────────────────
@@ -57,22 +51,12 @@ async def add_platform_channel(req: AddPlatformChannelRequest):
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail=f"지원하지 않는 플랫폼: '{req.platform}'. 사용 가능: chzzk, twitcasting, x_spaces, youtube",
+            detail=f"지원하지 않는 플랫폼: '{req.platform}'. 사용 가능: chzzk, x_spaces, youtube",
         )
 
-    # 플랫폼 인증 설정 확인
-    settings = get_settings()
-    if platform == Platform.TWITCASTING:
-        if not settings.twitcasting_client_id or not settings.twitcasting_client_secret:
-            raise HTTPException(
-                status_code=400,
-                detail="TwitCasting 채널을 추가하려면 먼저 설정에서 Client ID와 Client Secret을 입력해주세요.",
-            )
     # URL로 입력해도 ID만 추출
     channel_id = req.channel_id
-    if platform == Platform.TWITCASTING:
-        channel_id = extract_twitcasting_id(channel_id)
-    elif platform == Platform.X_SPACES:
+    if platform == Platform.X_SPACES:
         channel_id = extract_x_id(channel_id)
     elif platform == Platform.YOUTUBE:
         channel_id = extract_youtube_id(channel_id)
@@ -169,10 +153,6 @@ async def get_platform_status():
             "enabled": True,
             "authenticated": bool(settings.nid_aut and settings.nid_ses),
         },
-        "twitcasting": {
-            "enabled": bool(settings.twitcasting_client_id and settings.twitcasting_client_secret),
-            "authenticated": bool(settings.twitcasting_client_id and settings.twitcasting_client_secret),
-        },
         "x_spaces": {
             "enabled": True,
             "authenticated": bool(settings.x_cookie_file),
@@ -187,16 +167,6 @@ async def get_platform_status():
 
 # ── 플랫폼 인증 설정 ─────────────────────────────────────
 
-@router.put("/settings/twitcasting", summary="TwitCasting 인증 설정 업데이트")
-async def update_twitcasting_settings(req: TwitcastingSettingsRequest):
-    """TwitCasting Client ID/Secret을 .env 파일에 저장합니다."""
-    _update_env_file({
-        "TWITCASTING_CLIENT_ID": req.client_id,
-        "TWITCASTING_CLIENT_SECRET": req.client_secret,
-    })
-    # 캐시 무효화
-    get_settings.cache_clear()
-    return {"message": "TwitCasting 인증 설정 저장 완료."}
 
 
 import sys as _sys

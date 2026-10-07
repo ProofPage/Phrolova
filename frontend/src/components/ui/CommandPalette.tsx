@@ -33,7 +33,7 @@ export function CommandPalette() {
         <Command.Dialog
             open={open}
             onOpenChange={setOpen}
-            className="fixed inset-0 z-[100] flex items-start justify-center pt-[18vh] bg-surface-0/75 "
+            className="command-palette fixed inset-0 z-[100] flex items-start justify-center pt-[18vh] bg-surface-0/75 "
             label={t("빠른 이동")}
         >
             <div className="ui-popover w-[calc(100vw_-_2rem)] max-w-lg shadow-[var(--shadow-pop)] rounded-[var(--radius-card)] overflow-hidden pointer-events-auto">

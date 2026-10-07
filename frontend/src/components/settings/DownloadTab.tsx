@@ -164,8 +164,8 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                     <Input type="number" min={0} max={100} value={maxRetries} onChange={(event) => setMaxRetries(parseInt(event.target.value) || 0)} />
                 </Field>
                 <Field
-                    label="치지직 녹화 방식"
-                    hint={streamMode === "force-timemachine" ? "타임머신을 강제 사용하며, 사용할 수 없으면 녹화 요청을 실패 처리합니다." : streamMode === "request-timemachine" ? "타임머신 API를 먼저 요청하고, 사용할 수 없으면 기본 스트림으로 자동 전환합니다." : "치지직 기본 API에서 yt-dlp가 선택한 라이브 스트림을 사용합니다."}
+                    label="Chzzk 녹화 방식"
+                    hint={streamMode === "force-timemachine" ? "타임머신을 강제 사용하며, 사용할 수 없으면 녹화 요청을 실패 처리합니다." : streamMode === "request-timemachine" ? "타임머신 API를 먼저 요청하고, 사용할 수 없으면 기본 스트림으로 자동 전환합니다." : "Chzzk 기본 API에서 yt-dlp가 선택한 라이브 스트림을 사용합니다."}
                 >
                     <Select
                         value={streamMode}
@@ -184,7 +184,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                 )}
                 <SettingRow
                     label="라이브 미리보기 이미지 저장"
-                    hint={saveLivePreview ? "치지직 라이브 썸네일을 녹화 파일 옆에 저장합니다." : "미리보기 이미지를 별도 파일로 저장하지 않습니다."}
+                    hint={saveLivePreview ? "Chzzk 라이브 썸네일을 녹화 파일 옆에 저장합니다." : "미리보기 이미지를 별도 파일로 저장하지 않습니다."}
                     control={<Switch checked={saveLivePreview} onChange={setSaveLivePreview} label="라이브 미리보기 이미지 저장" />}
                 />
                 <Field label="라이브 파일명 형식" hint="{name}/{channel_name}, {title}/{live_title}, {channel_uid}, {category}, {date_year}, {live_date_year}, {download_date_year}, {live_date_month}, {live_date_day}, {live_date_hour}, {live_date_minute}, {live_date_second}, {quality}, {extension} 사용 가능. 확장자는 자동 추가됩니다.">

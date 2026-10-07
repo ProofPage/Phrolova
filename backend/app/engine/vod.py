@@ -30,7 +30,6 @@ from app.engine.auth import AuthManager
 from app.engine.youtube_channel import ChannelImports
 from app.engine.youtube_support import (is_youtube_url, runtime_options, youtube_cookies,
                                        with_youtube_cookie_fallback, YouTubeAuthenticationError)
-from app.engine.twitcasting import borrow_cookie_file, explain_unplayable, is_twitcasting_url
 
 # ── yt-dlp DASH MPD 파서 멍키패치 ──────────────────────────────
 # 치지직 VOD(ABR_HLS 방식) 다운로드 시 Initialization의 sourceURL 및 SegmentURL의 media 속성이
@@ -321,12 +320,20 @@ class VodEngine:
 
         return _on_progress
 
+    @staticmethod
+    def _validate_media_url(url: str) -> None:
+        # Reject a removed service even when the shared extractor supports it.
+        host = (urlsplit(url.strip()).hostname or "").lower()
+        if host == "twitcasting.tv" or host.endswith(".twitcasting.tv"):
+            raise NonRetryableDownloadError("지원하지 않는 영상 플랫폼입니다.")
+
     async def get_video_info(self, url: str) -> dict:
         """VOD/클립의 메타데이터를 조회한다.
 
         Returns:
             title, duration, thumbnail, formats 등.
         """
+        self._validate_media_url(url)
         opts: dict[str, Any] = {
             "ignoreconfig": True,
             "logger": get_media_logger(url),
@@ -389,6 +396,7 @@ class VodEngine:
         Returns:
             task_id (작업 추적용 UUID).
         """
+        self._validate_media_url(url)
         logger = get_media_logger(url)
         settings = get_settings()
 
@@ -842,6 +850,7 @@ class VodEngine:
 
     async def _download_external(self, task_id: str, task: VodDownloadTask) -> None:
         """yt-dlp를 사용한 외부 URL(유튜브 등) 다운로드."""
+        self._validate_media_url(task.url)
         if is_youtube_url(task.url):
             try:
                 await with_youtube_cookie_fallback(
@@ -878,8 +887,7 @@ class VodEngine:
                 yield cookie_file
             return
 
-        with borrow_cookie_file(url) as cookie_file:
-            yield cookie_file
+        yield None
 
     async def _download_with_ytdlp(
         self, task_id: str, task: VodDownloadTask, cookie_file: Optional[str]
@@ -894,16 +902,7 @@ class VodEngine:
             with yt_dlp.YoutubeDL(opts_info) as ydl:
                 return ydl.extract_info(task.url, download=False)
 
-        try:
-            info: dict[str, Any] | None = await asyncio.to_thread(lambda: _extract_info())  # type: ignore[arg-type]
-        except Exception as e:
-            if is_twitcasting_url(task.url):
-                reason = await explain_unplayable(
-                    task.url, str(e), has_cookies=cookie_file is not None
-                )
-                if reason:
-                    raise NonRetryableDownloadError(reason) from e
-            raise
+        info: dict[str, Any] | None = await asyncio.to_thread(lambda: _extract_info())  # type: ignore[arg-type]
 
         if not info:
             raise RuntimeError("영상 정보를 가져올 수 없습니다.")

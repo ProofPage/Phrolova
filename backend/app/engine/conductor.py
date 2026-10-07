@@ -1,7 +1,7 @@
 """
 Rookery: Conductor (비동기 오케스트레이터)
 다중 채널 감시 루프를 관리하고, 방송 시작 시 자동 녹화를 트리거한다.
-멀티 플랫폼(Chzzk, TwitCasting, X Spaces)을 단일 Conductor로 통합 관리한다.
+멀티 플랫폼(Chzzk, YouTube, X Spaces)을 단일 Conductor로 통합 관리한다.
 """
 
 from __future__ import annotations
@@ -22,13 +22,11 @@ from app.engine.download_condition import matches_download_condition
 from app.engine.events import EventBus
 from app.engine.pipeline import YtdlpLivePipeline, RecordingState
 from app.engine.spaces_recorder import SpacesRecorder
-from app.engine.twitcasting import borrow_cookie_file
 from app.services.notifications import NotificationKind
 from app.store.repositories import ChannelRepository, LiveHistoryRepository
 
 if TYPE_CHECKING:
     from app.services.notifications import NotificationService
-    from app.engine.twitcasting import TwitcastingEngine
     from app.engine.x_spaces import XSpacesEngine
     from app.engine.youtube import YoutubeLiveEngine
 
@@ -37,9 +35,9 @@ class Conductor:
     """비동기 오케스트레이터.
 
     Python asyncio를 활용하여 단일 스레드로 수십 개의 채널을 동시 감시한다.
-    Chzzk, TwitCasting, X Spaces를 통합 관리한다.
+    Chzzk, YouTube, X Spaces를 통합 관리한다.
 
-    채널 키 형식: "platform:channel_id" (예: "chzzk:abc123", "twitcasting:someuser")
+    채널 키 형식: "platform:channel_id" (예: "chzzk:abc123", "youtube:someuser")
     기존 Chzzk 전용 키("abc123")는 자동으로 "chzzk:abc123"으로 마이그레이션된다.
 
     주요 기능:
@@ -64,7 +62,6 @@ class Conductor:
         settings = get_settings()
         self._auth = auth or AuthManager()
         self._chzzk_engine = ChzzkLiveEngine(auth=self._auth)
-        self._twitcasting_engine: Optional[TwitcastingEngine] = None
         self._x_spaces_engine: Optional[XSpacesEngine] = None
         self._youtube_engine: Optional[YoutubeLiveEngine] = None
         self._channels: dict[str, ChannelTask] = {}
@@ -110,11 +107,6 @@ class Conductor:
         """플랫폼에 맞는 엔진 인스턴스를 반환한다."""
         if platform == Platform.CHZZK:
             return self._chzzk_engine
-        elif platform == Platform.TWITCASTING:
-            if self._twitcasting_engine is None:
-                from app.engine.twitcasting import TwitcastingEngine
-                self._twitcasting_engine = TwitcastingEngine()
-            return self._twitcasting_engine
         elif platform == Platform.X_SPACES:
             if self._x_spaces_engine is None:
                 from app.engine.x_spaces import XSpacesEngine
@@ -143,8 +135,7 @@ class Conductor:
         page_url = engine.get_stream_url(task.channel_id)
         pipeline = YtdlpLivePipeline(task.channel_id)
         from app.engine.youtube_support import youtube_cookies
-        cookie_context = youtube_cookies() if task.platform == Platform.YOUTUBE else borrow_cookie_file(page_url)
-        with cookie_context as cookie_file:
+        with youtube_cookies() as cookie_file:
             url, _, _ = await asyncio.wait_for(
                 pipeline._extract_hls_url(page_url, "720p", None, cookie_file=cookie_file),
                 timeout=30,
@@ -630,9 +621,9 @@ class Conductor:
                 platform = Platform(record["platform"])
             except ValueError:
                 logger.warning(
-                    f"알 수 없는 플랫폼 '{record['platform']}', Chzzk으로 처리합니다."
+                    "지원하지 않는 플랫폼의 저장 채널을 감시 목록에서 제외합니다."
                 )
-                platform = Platform.CHZZK
+                continue
 
             composite_key = self.make_composite_key(platform, record["channel_id"])
             task = ChannelTask(
@@ -910,7 +901,7 @@ class Conductor:
                 ):
                     await self._start_chat_archiver(composite_key, task, reason="동적 시작")
 
-                # ── 녹화 오류 시 자동 재시작 (Chzzk/TwitCasting 전용) ──
+                # ── 녹화 오류 시 자동 재시작 (라이브 전용) ──
                 elif status["is_live"] and self._can_auto_record(task) and task.platform != Platform.X_SPACES:
                     if task.pipeline is None:
                         await self._start_recording(
@@ -984,7 +975,7 @@ class Conductor:
             await self._stop_spaces_recording(composite_key)
             return
 
-        # Chzzk/TwitCasting 파이프라인 중지
+        # 라이브 파이프라인 중지
         pipe = task.pipeline
         if pipe is not None and pipe.state == RecordingState.RECORDING:
             await pipe.stop_recording()
@@ -1066,19 +1057,16 @@ class Conductor:
             pipeline = YtdlpLivePipeline(channel_id=task.channel_id)
             task.pipeline = pipeline
 
-            # URL 추출이 끝나면 사본은 필요 없다. 녹화 중인 ffmpeg는 쿠키 파일을 읽지 않는다.
-            with borrow_cookie_file(live_url) as fallback_cookie_file:
-                await pipeline.start_recording(
-                    stream_obj=live_url,
-                    streamer_name=channel_name or task.channel_name,
-                    title=title or task.title,
-                    category=task.category,
-                    live_started_at=task.live_started_at,
-                    quality=quality,
-                    cookie_str=cookie_str,
-                    fallback_cookie_file=fallback_cookie_file,
-                    thumbnail_url=task.thumbnail_url,
-                )
+            await pipeline.start_recording(
+                stream_obj=live_url,
+                streamer_name=channel_name or task.channel_name,
+                title=title or task.title,
+                category=task.category,
+                live_started_at=task.live_started_at,
+                quality=quality,
+                cookie_str=cookie_str,
+                thumbnail_url=task.thumbnail_url,
+            )
             logger.info(f"[{composite_key}] 자동 라이브 녹화 시작 (quality={quality}).")
 
             # ── 알림: 녹화 시작 (재시도 시엔 생략) ──

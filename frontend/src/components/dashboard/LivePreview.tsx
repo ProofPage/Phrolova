@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
+import { VideoOff } from "lucide-react";
 import { api } from "../../api/client";
 import { Button } from "../ui/primitives";
 import { useLanguage } from "../../contexts/LanguageContext";
 
-export function LivePreview({ channelKey, isLive, name }: { channelKey: string; isLive: boolean; name: string }) {
+export function LivePreview({ channelKey, isLive, name, poster }: { channelKey: string; isLive: boolean; name: string; poster?: string }) {
     const { t } = useLanguage();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [attempt, setAttempt] = useState(0);
@@ -127,11 +128,14 @@ export function LivePreview({ channelKey, isLive, name }: { channelKey: string; 
         };
     }, [channelKey, isLive, attempt]);
 
-    return <div className="relative mx-auto aspect-video w-full min-w-0 overflow-hidden bg-surface-0" aria-label={`${name} ${t("방송 미리보기")}`}>
+    return <div className="channel-live-preview relative mx-auto aspect-video w-full min-w-0 overflow-hidden bg-surface-0" aria-label={`${name} ${t("방송 미리보기")}`}>
+        {poster && (!isLive || state !== "ready") && <div className="channel-preview-poster hidden lg:block absolute inset-0" style={{ backgroundImage: `url(${JSON.stringify(poster)})`, backgroundSize: "cover", backgroundPosition: "center" }} aria-hidden="true"><div className="absolute inset-0 bg-surface-0/90" /></div>}
         {isLive && <video ref={videoRef} controls autoPlay muted playsInline className="size-full object-contain" aria-label={`${name} LIVE`} />}
         {(!isLive || state !== "ready") && <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center text-xs text-ink-muted" role="status">
             {isLive && state === "loading" && <span className="size-6 animate-spin rounded-full border-2 border-line-strong border-t-info" aria-hidden="true" />}
+            {isLive && state === "error" && <VideoOff className="hidden lg:block size-5 text-ink-faint" aria-hidden="true" />}
             <span>{t(!isLive ? "오프라인" : state === "loading" ? "미리보기를 불러오는 중" : message)}</span>
+            {isLive && state === "error" && <p className="hidden lg:block text-ink-faint">미리보기만 사용할 수 없습니다. 녹화 상태는 별도로 확인하세요.</p>}
             {isLive && state === "error" && <Button onClick={() => setAttempt(value => value + 1)}>{t("다시 시도")}</Button>}
         </div>}
     </div>;

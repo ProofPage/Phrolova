@@ -112,7 +112,7 @@ class YtdlpLivePipeline:
             quality: 화질 ("best", "1080p", "720p", "480p").
             cookie_str: Chzzk 쿠키 문자열 (NID_AUT=...; NID_SES=...).
             fallback_cookie_file: 쿠키 없이 URL 추출에 실패했을 때만 쓰는 로그인 쿠키
-                파일(TwitCasting). 빌려받은 사본이며 지우는 건 빌려준 쪽 몫이다.
+                파일. 빌려받은 사본이며 지우는 건 빌려준 쪽 몫이다.
 
         Returns:
             출력 파일 경로.

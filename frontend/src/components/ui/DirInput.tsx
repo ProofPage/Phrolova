@@ -56,9 +56,8 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
             <div className="absolute inset-0 bg-black/60 " />
 
             <div
-                ref={dialogRootRef} role="dialog" aria-modal="true" aria-label={t("폴더 선택")} tabIndex={-1} className="relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-2xl surface-raise animate-modal-in
-                           w-full max-w-lg mx-4 flex flex-col"
-                style={{ maxHeight: "70vh" }}
+                ref={dialogRootRef} role="dialog" aria-modal="true" aria-label={t("폴더 선택")} tabIndex={-1} className="dir-browser relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-2xl surface-raise animate-modal-in
+                           w-full max-w-lg mx-4 flex flex-col max-h-[70vh] max-lg:max-h-[70dvh]"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}

@@ -8,6 +8,17 @@
 
 ## [Unreleased]
 
+## [2.0.46] - 2026-10-07
+
+### Changed
+- Improve live channel card alignment in grid and list views, with tags below broadcast titles and detail actions in the header.
+- Let unpaired compact channel cards fill the row without changing channel order or restarting open previews.
+- Improve mobile controls, dialogs, navigation, and long-text handling.
+- Use Chzzk consistently as the platform display name and list available platforms before those requiring setup.
+
+### Removed
+- Removed TwitCasting support, including channel monitoring, dedicated downloads, authentication settings, and platform selection. Existing channel and download records are retained.
+
 ## [2.0.45] - 2026-10-07
 
 ### Changed

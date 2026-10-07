@@ -14,7 +14,6 @@ class Platform(str, Enum):
     """지원 플랫폼 열거형."""
 
     CHZZK = "chzzk"
-    TWITCASTING = "twitcasting"
     X_SPACES = "x_spaces"
     YOUTUBE = "youtube"
 
@@ -45,7 +44,7 @@ class LiveStatus(TypedDict, total=False):
 class PlatformEngine(Protocol):
     """플랫폼 엔진 프로토콜.
 
-    ChzzkLiveEngine, TwitcastingEngine, YoutubeLiveEngine이 이를 구현한다.
+    ChzzkLiveEngine, YoutubeLiveEngine이 이를 구현한다.
     X Spaces는 스트림 URL이 아니라 space_id로 녹화하므로 이 프로토콜을 따르지
     않고 Conductor가 별도 경로로 처리한다.
 

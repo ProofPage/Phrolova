@@ -8,7 +8,6 @@ import { Button, Input } from "../ui/primitives";
 
 const PLATFORM_DOT_STYLES: Record<Platform, string> = {
     chzzk: "bg-chzzk",
-    twitcasting: "bg-twitcasting",
     x_spaces: "bg-xspaces",
     youtube: "bg-youtube",
 };
@@ -41,9 +40,11 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
     const isPlatformEnabled = (platform: Platform): boolean => {
         if (platform === "chzzk" || platform === "youtube") return true;
         if (!platformStatus) return false;
-        if (platform === "twitcasting") return platformStatus.twitcasting.authenticated;
         return platformStatus.x_spaces.authenticated;
     };
+
+    const sortedPlatforms = (Object.keys(PLATFORM_LABELS) as Platform[])
+        .sort((a, b) => Number(isPlatformEnabled(b)) - Number(isPlatformEnabled(a)));
 
     useListboxKeyboard(dropdownOpen, dropdownRef, () => setDropdownOpen(false));
 
@@ -70,7 +71,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
         }
     };
 
-    const placeholder = selectedPlatform === "chzzk" ? "치지직 채널 ID"
+    const placeholder = selectedPlatform === "chzzk" ? "Chzzk 채널 ID"
         : selectedPlatform === "youtube" ? "핸들(@username) 또는 채널 ID"
         : selectedPlatform === "x_spaces" ? "X 유저네임 입력"
         : "채널 ID";
@@ -95,7 +96,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
 
                 {dropdownOpen && (
                     <div className="ui-popover absolute top-full mt-2 left-0 z-20 rounded-[var(--radius-control)] min-w-[180px] max-h-[50dvh] overflow-y-auto" role="listbox">
-                        {(Object.keys(PLATFORM_LABELS) as Platform[]).map((platform) => {
+                        {sortedPlatforms.map((platform) => {
                             const enabled = isPlatformEnabled(platform);
                             return (
                                 <button

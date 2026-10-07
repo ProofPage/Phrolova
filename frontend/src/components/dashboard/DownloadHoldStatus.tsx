@@ -19,7 +19,7 @@ export function DownloadHoldStatus({ channel }: { channel: Channel }) {
                         ? t("방송 태그가 설정한 녹화 조건과 일치하지 않습니다.")
                         : t(rawReason);
     return (
-        <div role="status" className={`rounded-[var(--radius-control)] border p-2.5 text-xs ${channel.auto_record ? "border-warn/25 bg-warn/10" : "border-line bg-surface-3"}`}>
+        <div role="status" className={`channel-download-hold rounded-[var(--radius-control)] border p-2.5 text-xs ${channel.auto_record ? "border-warn/25 bg-warn/10" : "border-line bg-surface-3"}`}>
             <p className={`flex items-center gap-1.5 font-medium ${channel.auto_record ? "text-warn" : "text-ink-muted"}`}>
                 {channel.auto_record ? <PauseCircle className="w-3.5 h-3.5 shrink-0" /> : <Info className="w-3.5 h-3.5 shrink-0" />}
                 {channel.auto_record ? t("자동 녹화 보류") : t("자동 녹화 꺼짐")}

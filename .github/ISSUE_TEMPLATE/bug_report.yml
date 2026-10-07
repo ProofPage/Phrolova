@@ -42,7 +42,6 @@ body:
       multiple: true
       options:
         - 치지직
-        - TwitCasting
         - X Spaces
         - YouTube
         - 플랫폼과 무관 (UI, 설정, 알림 등)

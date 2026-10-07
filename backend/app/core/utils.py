@@ -34,20 +34,6 @@ def extract_channel_id(channel_id: str) -> str:
     return channel_id
 
 
-def extract_twitcasting_id(value: str) -> str:
-    """TwitCasting URL 또는 순수 유저 ID에서 유저 ID만 추출한다.
-
-    지원 형식:
-        - https://twitcasting.tv/someuser
-        - https://twitcasting.tv/someuser/movie/123456
-        - someuser (순수 ID)
-    """
-    value = value.strip().rstrip("/")
-    if "twitcasting.tv/" in value:
-        # path의 첫 번째 세그먼트가 유저 ID
-        path = value.split("twitcasting.tv/", 1)[1]
-        value = path.split("/")[0].split("?")[0]
-    return value
 
 
 def extract_x_id(value: str) -> str:

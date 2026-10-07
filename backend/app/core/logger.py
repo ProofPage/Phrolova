@@ -258,8 +258,6 @@ def get_media_logger(url: str) -> logging.Logger:
         platform = "youtube"
     elif host == "chzzk.naver.com" or host.endswith(".chzzk.naver.com"):
         platform = "chzzk"
-    elif host == "twitcasting.tv" or host.endswith(".twitcasting.tv"):
-        platform = "twitcasting"
     elif host in {"x.com", "twitter.com", "pscp.tv"} or host.endswith(".pscp.tv"):
         platform = "x_spaces"
     else:

@@ -3,7 +3,6 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { AlertCircle, CheckCircle2, KeyRound, Save, Shield, Trash2, Upload } from "lucide-react";
 import { api, type Settings as SettingsType } from "../../api/client";
 import { getErrorMessage } from "../../utils/error";
-import { useSettingsSave } from "../../hooks/useSettingsSave";
 import { useConfirm } from "../ui/ConfirmModal";
 import { useToast } from "../ui/Toast";
 import { Badge, Button, Card, CardHeader, Field, Input, StatusDot } from "../ui/primitives";
@@ -28,9 +27,6 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
     const [nidSes, setNidSes] = useState("");
     const [cookieStatus, setCookieStatus] = useState<CookieStatus>("unknown");
     const [nickname, setNickname] = useState<string | null>(null);
-    const [twitcastingClientId, setTwitcastingClientId] = useState("");
-    const [twitcastingClientSecret, setTwitcastingClientSecret] = useState("");
-    const { saving: twitcastingSaving, save: saveTwitcasting } = useSettingsSave(onSaved);
     const [xCookieFileSet, setXCookieFileSet] = useState(false);
     const [xCookieUploading, setXCookieUploading] = useState(false);
 
@@ -38,7 +34,7 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
         if (settings) setXCookieFileSet(!!settings.x_cookie_file);
     }, [settings]);
 
-    const dirty = nidAut !== "" || nidSes !== "" || twitcastingClientId !== "" || twitcastingClientSecret !== "";
+    const dirty = nidAut !== "" || nidSes !== "";
     useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
 
     const checkCookieStatus = async (showToast = false) => {
@@ -73,26 +69,6 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
         } catch {
             toast.error("쿠키 저장에 실패했습니다.");
         }
-    };
-
-    const handleSaveTwitcasting = () => {
-        if (!twitcastingClientId || !twitcastingClientSecret) {
-            toast.error("Client ID와 Client Secret을 모두 입력하세요.");
-            return;
-        }
-        saveTwitcasting({
-            request: () => api.updateTwitcastingSettings({
-                client_id: twitcastingClientId,
-                client_secret: twitcastingClientSecret,
-            }),
-            success: "TwitCasting 인증 설정이 저장되었습니다.",
-            failure: "TwitCasting 설정 저장에 실패했습니다.",
-            // 성공했을 때만 비운다. 실패하면 다시 입력하지 않아도 되도록.
-            afterSuccess: () => {
-                setTwitcastingClientId("");
-                setTwitcastingClientSecret("");
-            },
-        });
     };
 
     const handleUploadXCookie = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -143,7 +119,7 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
     return (
         <div className="space-y-6">
             <Card className="space-y-5">
-                <CardHeader icon={KeyRound} title="치지직 (Chzzk)" action={cookieBadge} />
+                <CardHeader icon={KeyRound} title="Chzzk" action={cookieBadge} />
                 <Field label="NID_AUT">
                     <Input type="password" value={nidAut} onChange={(event) => setNidAut(event.target.value)} placeholder="NID_AUT 쿠키 값 입력..." />
                 </Field>
@@ -156,22 +132,7 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
                 </div>
             </Card>
 
-            <Card className="space-y-5">
-                <CardHeader
-                    icon={KeyRound}
-                    title="TwitCasting"
-                    description={<><a href="https://twitcasting.tv/developer.php" target="_blank" rel="noopener noreferrer" className="text-twitcasting hover:underline">{t("개발자 페이지")}</a>{t("에서 앱을 등록하고 발급받은 API v2 인증 정보를 입력하세요.")}</>}
-                />
-                <Field label="Client ID">
-                    <Input value={twitcastingClientId} onChange={(event) => setTwitcastingClientId(event.target.value)} placeholder="TwitCasting Client ID..." />
-                </Field>
-                <Field label="Client Secret">
-                    <Input type="password" value={twitcastingClientSecret} onChange={(event) => setTwitcastingClientSecret(event.target.value)} placeholder="TwitCasting Client Secret..." />
-                </Field>
-                <Button variant="primary" icon={Save} loading={twitcastingSaving} onClick={handleSaveTwitcasting} className="w-full">
-                    {twitcastingSaving ? "저장 중..." : "TwitCasting 설정 저장"}
-                </Button>
-            </Card>
+
 
             <YouTubeAuth />
 

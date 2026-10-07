@@ -12,7 +12,7 @@ import { Button, EmptyState, PageHeader } from "../components/ui/primitives";
 import { useToast } from "../components/ui/Toast";
 import { useChannelReorder } from "../hooks/useChannelReorder";
 import { useChannelStream } from "../hooks/useChannelStream";
-import { getChannelKey } from "../utils/channel";
+import { getChannelKey, getUnpairedCompactKeys } from "../utils/channel";
 import { getErrorMessage } from "../utils/error";
 import { useLanguage } from "../contexts/LanguageContext";
 
@@ -213,6 +213,7 @@ export default function Dashboard() {
         if (filter === "offline" && channel.is_live) return false;
         return selectedFilterTags.length === 0 || selectedFilterTags.some((tag) => (channel.tags || []).includes(tag));
     });
+    const unpairedCompactKeys = getUnpairedCompactKeys(filteredChannels.map(getChannelKey), expandedChannelKeys);
 
     useEffect(() => {
         if (initialLoading) return;
@@ -243,7 +244,7 @@ export default function Dashboard() {
             else next.add(key);
             return next;
         }), ...getReorderProps(key), isActionLoading: actionLoading === key };
-        return viewMode === "grid" ? <ChannelCard key={key} {...props} /> : <ChannelRow key={key} {...props} />;
+        return viewMode === "grid" ? <ChannelCard key={key} {...props} isFullWidth={unpairedCompactKeys.has(key)} /> : <ChannelRow key={key} {...props} />;
     };
 
     return (
@@ -294,7 +295,7 @@ export default function Dashboard() {
 
             {initialLoading ? <div className="space-y-2" aria-label={t("채널 정보를 불러오는 중")} aria-busy="true">{[1,2,3].map(item => <div key={item} className="flex items-center gap-3 border-b border-line py-3"><div className="skeleton size-8 rounded-full" /><div className="flex-1 space-y-2"><div className="skeleton h-3 w-1/3" /><div className="skeleton h-3 w-1/2" /></div></div>)}</div>
             : filteredChannels.length === 0 ? <EmptyState icon={Radio} title={channels.length === 0 ? "등록된 채널이 없습니다." : "필터 조건에 맞는 채널이 없습니다."} description={channels.length === 0 ? "채널을 추가하면 방송 상태를 확인하고 자동으로 녹화할 수 있습니다." : "상태 또는 태그 필터를 변경해 보세요."} action={channels.length > 0 ? <Button onClick={() => { setFilter("all"); setSelectedFilterTags([]); }}>필터 초기화</Button> : undefined} />
-            : viewMode === "grid" ? <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">{filteredChannels.map(renderChannel)}</div>
+            : viewMode === "grid" ? <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">{filteredChannels.map(renderChannel)}</div>
             : <div className="min-w-0 space-y-2">{filteredChannels.map(renderChannel)}</div>}
             {editingChannel && <ChannelDownloadModal
                 platform={editingChannel.platform || "chzzk"}

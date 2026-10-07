@@ -55,7 +55,7 @@ export default function SystemLogs() {
     };
 
     return (
-        <div className="product-page flex flex-col gap-4 lg:h-[calc(100dvh-6.5rem)]">
+        <div className="product-page logs-page flex flex-col gap-4 lg:h-[calc(100dvh-6.5rem)]">
             <PageHeader
                 icon={Terminal}
                 eyebrow={t("서비스 상태 확인")}
@@ -73,8 +73,8 @@ export default function SystemLogs() {
                 )}
             />
 
-            <div className="flex flex-col lg:flex-row flex-1 gap-4 min-h-[440px] lg:min-h-0">
-                <div className={clsx("shrink-0 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[178px] max-h-[290px] lg:w-[260px] lg:min-h-0 lg:max-h-none", selectedFile && "hidden lg:flex")}>
+            <div className="flex flex-col lg:flex-row flex-1 gap-4 min-h-[440px] max-lg:min-h-0 max-sm:gap-3 lg:min-h-0">
+                <div className={clsx("shrink-0 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[178px] max-sm:min-h-0 max-h-[290px] lg:w-[260px] lg:min-h-0 lg:max-h-none", selectedFile && "hidden lg:flex")}>
                     <LogFileListView 
                         selectedFile={selectedFile} 
                         onSelect={setSelectedFile} 

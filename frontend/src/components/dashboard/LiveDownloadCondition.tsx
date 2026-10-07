@@ -64,7 +64,7 @@ export function LiveDownloadCondition() {
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="text-xs text-ink-faint leading-relaxed">
-                    <p>{t("치지직의 같이보기 정보와 방송 태그를 기준으로 판단합니다. 채널별 설정이 기본값보다 우선합니다.")}</p>
+                    <p>{t("Chzzk의 같이보기 정보와 방송 태그를 기준으로 판단합니다. 채널별 설정이 기본값보다 우선합니다.")}</p>
                     {dirty && <p className="text-[var(--primary)] mt-1" role="status">{t("저장하지 않은 변경사항이 있습니다.")}</p>}
                 </div>
                 <Button icon={Save} loading={saving} disabled={!loaded || !dirty || (condition === "watchalong" && !tags.trim())} onClick={() => void save()} className="shrink-0">{t("기본 조건 저장")}</Button>

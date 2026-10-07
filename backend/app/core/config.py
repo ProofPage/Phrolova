@@ -206,12 +206,6 @@ class Settings(BaseSettings):
     # ── 채팅 아카이빙 ────────────────────────────────────
     chat_archive_enabled: bool = False  # 녹화 시 채팅 자동 아카이빙 여부
 
-    # ── TwitCasting 인증 ──────────────────────────────────
-    twitcasting_client_id: Optional[str] = None
-    twitcasting_client_secret: Optional[str] = None
-    # 로그인한 사용자만 볼 수 있는 아카이브·라이브용 Netscape 쿠키 파일 경로.
-    # 계정 세션 그 자체라 .env로만 지정하고 설정 API·UI로는 내보내지 않는다.
-    twitcasting_cookie_file: Optional[str] = None
     youtube_cookie_file: Optional[str] = None
 
     # ── X Spaces 인증 ────────────────────────────────────

@@ -49,7 +49,7 @@ export default function VodDownload() {
     const errorCount = tasks.filter((task) => task.state === "error").length;
     const filteredTasks = tasks.filter(task => taskFilter === "all" || task.state === taskFilter);
     const sourceOptions = [
-        { id: "chzzk", label: t("치지직"), dot: "bg-chzzk" },
+        { id: "chzzk", label: t("Chzzk"), dot: "bg-chzzk" },
         { id: "youtube", label: t("YouTube"), dot: "bg-youtube" },
     ] as const;
     const selectedSourceOption = sourceOptions.find((option) => option.id === selectedSource)!;
@@ -104,7 +104,7 @@ export default function VodDownload() {
 
         if (!matchesSource) {
             toast.error(selectedSource === "chzzk"
-                ? t("치지직 다시보기 또는 클립 주소를 입력해 주세요.")
+                ? t("Chzzk 다시보기 또는 클립 주소를 입력해 주세요.")
                 : t("YouTube 링크, @핸들 또는 동영상 ID를 입력해 주세요."));
             return;
         }
@@ -402,14 +402,14 @@ function TaskCard({ task, onCancel, onPause, onResume, onRetry, onOpenLocation }
     const { t } = useLanguage();
     const statusLabels: Record<string,string> = { idle: "대기 중", downloading: "다운로드 중", paused: "일시정지", completed: "완료", error: "실패", cancelling: "취소 중" };
     const tone = task.state === "error" ? "danger" : task.state === "completed" ? "ok" : task.state === "paused" ? "warn" : task.state === "downloading" ? "info" : "neutral";
-    const source = (() => { try { const host = new URL(task.url).hostname; return host.includes("youtube") || host === "youtu.be" ? "YouTube" : host.includes("chzzk") ? t("치지직") : host.includes("x.com") || host.includes("twitter.com") ? "X Spaces" : host; } catch { return t("외부 영상"); } })();
+    const source = (() => { try { const host = new URL(task.url).hostname; return host.includes("youtube") || host === "youtu.be" ? "YouTube" : host.includes("chzzk") ? t("Chzzk") : host.includes("x.com") || host.includes("twitter.com") ? "X Spaces" : host; } catch { return t("외부 영상"); } })();
     return <div className="download-row">
         <span className="flex items-center pt-1 text-ink-faint" title={t("작업 순서 변경")}><GripVertical className="size-4" /></span>
         <span className="download-state-icon grid size-8 place-items-center text-ink-faint">
             {task.state === "downloading" || task.state === "cancelling" ? <Loader2 className="size-4 animate-spin" /> : task.state === "completed" ? <CheckCircle className="size-4 text-ok" /> : task.state === "error" ? <AlertCircle className="size-4 text-danger" /> : task.state === "paused" ? <Pause className="size-4 text-warn" /> : <Clock className="size-4" />}
         </span>
         <div className="min-w-0 space-y-1.5">
-            <div className="flex min-w-0 flex-wrap items-start justify-between gap-2"><h3 className="min-w-0 flex-1 break-words text-[13px] font-medium text-ink" title={task.title}>{task.title}</h3><Badge tone={tone}>{t(statusLabels[task.state] || task.state)}</Badge></div>
+            <div className="flex min-w-0 flex-wrap items-start justify-between gap-2"><h3 className="download-title min-w-0 flex-1 break-words text-[13px] font-medium text-ink" title={task.title}>{task.title}</h3><Badge tone={tone}>{t(statusLabels[task.state] || task.state)}</Badge></div>
             <p className="text-xs text-ink-faint">{source} · {task.quality === "best" ? t("최고 화질") : task.quality}</p>
             {(task.state === "downloading" || task.state === "paused" || task.state === "cancelling") && <>
                 <div className="flex items-center gap-3"><div className="h-1 flex-1 overflow-hidden rounded bg-surface-4" role="progressbar" aria-label={t("다운로드 진행률")} aria-valuenow={Math.round(task.progress)} aria-valuemin={0} aria-valuemax={100}><div className="h-full bg-info transition-[width]" style={{width:`${task.progress}%`}} /></div><span className="text-xs text-ink-muted tabular-nums">{Math.round(task.progress)}%</span></div>

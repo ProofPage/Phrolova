@@ -117,7 +117,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <ToastHistoryContext.Provider value={historyValue}>
                 {children}
                 {/* 토스트 컨테이너 */}
-                <div className="fixed bottom-4 right-3 left-3 sm:left-auto sm:right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+                <div className="fixed bottom-4 max-sm:bottom-[max(1rem,env(safe-area-inset-bottom))] right-3 left-3 sm:left-auto sm:right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
                     {toasts.map((t) => (
                         <ToastItem key={t.id} toast={t} onClose={() => removeToast(t.id)} />
                     ))}
@@ -154,7 +154,7 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
             )}
         >
             <Icon className="w-5 h-5 shrink-0" />
-            <span className="min-w-0 flex-1 break-words text-[13px] text-ink-muted">{toast.message}</span>
+            <span className="min-w-0 flex-1 break-words max-sm:[overflow-wrap:anywhere] text-[13px] text-ink-muted">{toast.message}</span>
             <button
                 onClick={onClose}
                 className="icon-button" aria-label="알림 닫기"

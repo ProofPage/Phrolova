@@ -30,7 +30,7 @@ export default function ChatLogs() {
     const [refreshKey, setRefreshKey] = useState(0);
 
     return (
-        <div className="product-page flex flex-col gap-4 lg:h-[calc(100dvh-6.5rem)]">
+        <div className="product-page chat-page flex flex-col gap-4 lg:h-[calc(100dvh-6.5rem)]">
             <PageHeader
                 icon={MessageSquare}
                 eyebrow={t("라이브 채팅 아카이브")}
@@ -39,8 +39,8 @@ export default function ChatLogs() {
                 actions={<Button icon={RefreshCw} onClick={() => setRefreshKey((value) => value + 1)}>{t("새로고침")}</Button>}
             />
 
-            <div className="flex flex-col lg:flex-row flex-1 gap-4 min-h-[480px] xl:min-h-0">
-                <div className={clsx("lg:w-[280px] lg:shrink-0 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[260px]", selectedFile && "hidden lg:flex")}>
+            <div className="flex flex-col lg:flex-row flex-1 gap-4 min-h-[480px] max-lg:min-h-0 max-sm:gap-3 xl:min-h-0">
+                <div className={clsx("lg:w-[280px] lg:shrink-0 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[260px] max-sm:min-h-0", selectedFile && "hidden lg:flex")}>
                     <div className="px-4 py-3 border-b border-line text-xs font-semibold text-ink-muted">{t("로그 파일")}</div>
                     <FileListView 
                         refreshKey={refreshKey}
@@ -260,7 +260,7 @@ function MessageViewer({ file }: MessageViewerProps) {
                 <a
                     href={api.getChatDownloadUrl(file.file_id)}
                     download={file.filename}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-control)] text-xs text-ink-muted hover:text-ink hover:bg-surface-3 border border-line transition-colors shrink-0"
+                    className="chat-download-link flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-control)] text-xs text-ink-muted hover:text-ink hover:bg-surface-3 border border-line transition-colors shrink-0"
                     title="JSONL 파일 다운로드"
                 >
                     <Download className="w-3.5 h-3.5" />
@@ -270,7 +270,7 @@ function MessageViewer({ file }: MessageViewerProps) {
 
             <div className="p-3 border-b border-line bg-surface-1 shrink-0 flex flex-wrap gap-2">
                 <div className="flex flex-wrap items-center gap-2 w-full min-w-0 flex-1">
-                    <div className="relative flex-1">
+                    <div className="relative max-lg:min-w-0 flex-1">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-faint" />
                         <Input
                             type="text"
@@ -281,7 +281,7 @@ function MessageViewer({ file }: MessageViewerProps) {
                             className="w-full pl-8 pr-3 py-1.5 text-xs"
                         />
                     </div>
-                    <div className="w-1/3 min-w-[100px]">
+                    <div className="w-1/3 min-w-[100px] max-sm:min-w-0">
                         <Input
                             type="text"
                             value={pendingNickname}
@@ -295,7 +295,7 @@ function MessageViewer({ file }: MessageViewerProps) {
                     {hasFilter && (
                         <button
                             onClick={handleClearSearch}
-                            className="p-1.5 text-ink-faint hover:text-ink bg-surface-3 hover:bg-surface-4 rounded-md transition-colors shrink-0"
+                            className="chat-clear-search p-1.5 text-ink-faint hover:text-ink bg-surface-3 hover:bg-surface-4 rounded-md transition-colors shrink-0"
                             title="검색 초기화"
                         >
                             <X className="w-3.5 h-3.5" />
@@ -366,13 +366,13 @@ function MessageViewer({ file }: MessageViewerProps) {
 
 function MessageRow({ msg }: { msg: ChatMessageItem }) {
     return (
-        <div className="flex items-start gap-3 px-4 py-1.5 hover:bg-surface-3/50 transition-colors">
+        <div className="chat-message-row flex items-start gap-3 px-4 py-1.5 hover:bg-surface-3/50 transition-colors">
             <span className="text-[10px] text-ink-faint font-mono shrink-0 pt-[3px] w-[64px]">
                 {formatTime(msg.timestamp)}
             </span>
 
             <div className="flex-1 min-w-0 flex flex-wrap items-baseline gap-1.5 leading-snug">
-                <span className="min-w-0 max-w-full break-all text-xs font-semibold text-ink-muted">{msg.nickname}</span>
+                <span title={msg.nickname} className="min-w-0 max-w-full break-all text-xs font-semibold text-ink-muted">{msg.nickname}</span>
                 <span className="chat-message-text min-w-0 max-w-full text-[13px] text-ink-muted">{msg.message}</span>
             </div>
         </div>

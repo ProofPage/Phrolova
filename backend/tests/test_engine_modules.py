@@ -281,10 +281,6 @@ class TestPlatformEngineProtocol:
 
         assert issubclass(ChzzkLiveEngine, PlatformEngine)
 
-    def test_twitcasting_engine_satisfies_protocol(self):
-        from app.engine.twitcasting import TwitcastingEngine
-
-        assert issubclass(TwitcastingEngine, PlatformEngine)
 
     def test_youtube_engine_satisfies_protocol(self):
         from app.engine.youtube import YoutubeLiveEngine

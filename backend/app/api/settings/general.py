@@ -144,9 +144,6 @@ async def get_current_settings():
         "split_download_dirs": settings.split_download_dirs,
         "vod_chzzk_dir": settings.vod_chzzk_dir,
         "vod_external_dir": settings.vod_external_dir,
-        # TwitCasting 인증 (설정 여부만 — 실제 값은 노출 안 함)
-        "twitcasting_client_id": "***" if settings.twitcasting_client_id else None,
-        "twitcasting_client_secret": None,
         # X Spaces 인증
         "x_cookie_file": settings.x_cookie_file,
     }

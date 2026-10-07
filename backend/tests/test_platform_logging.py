@@ -12,7 +12,6 @@ from app.core.logger import get_media_logger, logger
     ("https://www.youtube.com/watch?v=TFZx21dqXP8", "youtube"),
     ("https://youtu.be/TFZx21dqXP8", "youtube"),
     ("https://chzzk.naver.com/video/123", "chzzk"),
-    ("https://twitcasting.tv/user/movie/123", "twitcasting"),
     ("https://x.com/i/spaces/123", "x_spaces"),
     ("https://example.com/video", "external"),
     ("https://youtube.com.example.com/video", "external"),

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useDialogKeyboard } from "../hooks/useDialogKeyboard";
 import {
     FolderOpen, CheckCircle2,
     ChevronRight, ChevronLeft, Loader2,
@@ -50,7 +51,7 @@ async function completeSetup(data: FormData): Promise<void> {
 
 function StepIndicator({ current, total }: { current: Step; total: number }) {
     return (
-        <div className="flex items-center gap-2 mb-8">
+        <div className="flex items-center gap-2 mb-8 max-sm:mb-4">
             {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
                 <div key={n} className="flex items-center gap-2">
                     <div
@@ -82,14 +83,15 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
     const formats = ["ts", "mp4", "mkv"];
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-sm:space-y-4">
             {/* 라이브 저장 경로 */}
             <div>
-                <label className="block text-sm font-medium text-ink-muted mb-2">
+                <label htmlFor="setup-live-dir" className="block text-sm font-medium text-ink-muted mb-2">
                     <FolderOpen className="inline w-4 h-4 mr-1 text-[var(--primary)]" />
                     라이브 저장 위치 <span className="text-danger">*</span>
                 </label>
                 <DirInput
+                    id="setup-live-dir"
                     value={data.live_download_dir}
                     onChange={(val) => onChange("live_download_dir", val)}
                     placeholder="예: C:\\Recordings\\Live 또는 /home/user/recordings/live"
@@ -101,17 +103,18 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
 
             {/* 영상 다운로드 저장 경로 */}
             <div>
-                <label className="block text-sm font-medium text-ink-muted mb-2">
+                <label htmlFor="setup-vod-dir" className="block text-sm font-medium text-ink-muted mb-2">
                     <FolderOpen className="inline w-4 h-4 mr-1 text-[var(--primary)]" />
                     영상 저장 위치 <span className="text-danger">*</span>
                 </label>
                 <DirInput
+                    id="setup-vod-dir"
                     value={data.vod_download_dir}
                     onChange={(val) => onChange("vod_download_dir", val)}
                     placeholder="예: C:\\Recordings\\Video 또는 /home/user/recordings/video"
                 />
                 <p className="text-xs text-ink-faint mt-1.5 flex items-start gap-1">
-                    치지직 다시보기·클립, YouTube와 외부 영상이 이곳에 저장됩니다.
+                    Chzzk 다시보기·클립, YouTube와 외부 영상이 이곳에 저장됩니다.
                 </p>
             </div>
 
@@ -124,7 +127,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                             key={q}
                             type="button"
                             onClick={() => onChange("recording_quality", q)}
-                            className={`py-2 rounded-lg text-sm font-medium border transition-all ${data.recording_quality === q
+                            className={`max-sm:min-h-11 py-2 rounded-lg text-sm font-medium border transition-all ${data.recording_quality === q
                                 ? "bg-[var(--primary-dim)] border-[var(--primary)] text-[var(--primary)]"
                                 : "bg-surface-3 border-line-strong text-ink-faint hover:border-[var(--primary)]"
                                 }`}
@@ -144,7 +147,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                             key={f}
                             type="button"
                             onClick={() => onChange("output_format", f)}
-                            className={`py-2 rounded-lg text-sm font-medium border transition-all ${data.output_format === f
+                            className={`max-sm:min-h-11 py-2 rounded-lg text-sm font-medium border transition-all ${data.output_format === f
                                 ? "bg-[var(--primary-dim)] border-[var(--primary)] text-[var(--primary)]"
                                 : "bg-surface-3 border-line-strong text-ink-faint hover:border-[var(--primary)]"
                                 }`}
@@ -181,7 +184,7 @@ function Step2({ data }: { data: FormData }) {
                             }`}
                     >
                         <span className="text-ink-muted">{row.label}</span>
-                        <span className="text-ink font-medium text-right max-w-[60%] truncate">{row.value}</span>
+                        <span className="text-ink font-medium text-right max-w-[60%] truncate max-sm:whitespace-normal max-sm:break-all">{row.value}</span>
                     </div>
                 ))}
             </div>
@@ -195,6 +198,8 @@ function Step2({ data }: { data: FormData }) {
 // ── Main SetupWizard ─────────────────────────────────
 
 export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps) {
+    const dialogRef = useRef<HTMLDivElement>(null);
+    useDialogKeyboard(dialogRef, () => {});
     const [step, setStep] = useState<Step>(1);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -244,18 +249,18 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
             <div className="absolute inset-0 bg-black/80 " />
 
             {/* 카드 */}
-            <div className="relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-2xl surface-raise w-full max-w-lg mx-4 max-h-[calc(100vh-2rem)] animate-modal-in overflow-y-auto">
+            <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="setup-title" tabIndex={-1} className="setup-dialog relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-2xl surface-raise w-full max-w-lg mx-4 max-h-[calc(100vh-2rem)] max-lg:max-h-[calc(100dvh-2rem)] animate-modal-in overflow-y-auto">
 
 
-                <div className="p-8">
+                <div className="p-8 max-sm:p-4">
                     {/* 헤더 */}
-                    <div className="mb-6">
+                    <div className="mb-6 max-sm:mb-4">
                         <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-semibold text-[var(--primary)] uppercase tracking-widest">
                                 Phrolova
                             </span>
                         </div>
-                        <h2 className="text-2xl font-bold text-ink">
+                        <h2 id="setup-title" className="text-2xl font-bold text-ink">
                             {stepTitles[step].title}
                         </h2>
                         <p className="text-sm text-ink-muted mt-1">{stepTitles[step].subtitle}</p>
@@ -265,7 +270,7 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
                     <StepIndicator current={step} total={2} />
 
                     {/* Step 콘텐츠 */}
-                    <div className="min-h-[240px]">
+                    <div className="min-h-[240px] max-sm:min-h-0">
                         {step === 1 && <Step1 data={data} onChange={onChange} />}
                         {step === 2 && <Step2 data={data} />}
                     </div>
@@ -278,7 +283,7 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
                     )}
 
                     {/* 버튼 */}
-                    <div className="flex items-center justify-between mt-8">
+                    <div className="flex items-center justify-between mt-8 max-sm:mt-4">
                         <Button type="button" icon={ChevronLeft} onClick={handleBack} disabled={step === 1} variant="ghost">이전</Button>
 
                         {step < 2 ? (

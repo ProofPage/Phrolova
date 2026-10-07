@@ -20,7 +20,7 @@ The app uses **recording** for saving a live broadcast and **downloading** for r
 
 - Monitor supported channels and record live broadcasts automatically or manually.
 - Apply recording conditions to CHZZK channels, including watch-along tags.
-- Download CHZZK VODs and clips, YouTube videos and channel uploads, TwitCasting archives, and other yt-dlp-supported media URLs.
+- Download CHZZK VODs and clips, YouTube videos and channel uploads, and other supported media URLs.
 - Reorder queued downloads, pause and resume them, cancel tasks, and retry failures.
 - Configure recording and download quality, file formats, filename rules, and separate save locations.
 - Optionally save CHZZK live chat as JSONL beside a recording.
@@ -35,7 +35,6 @@ Access to content and quality options depends on the service and your account pe
 | --- | --- | --- | --- |
 | CHZZK | Yes | VODs and clips | Optional chat archiving. Cookies may be needed for age checks or some quality levels. |
 | YouTube | Yes | Videos and channel uploads | Add a channel by handle or ID. Cookies may be needed for restricted videos. |
-| TwitCasting | Yes | Archives supported by yt-dlp | Client ID and Client Secret are required to add a channel. Login-only archives may need cookies. |
 | X Spaces | Detects Spaces and records live audio | Replay audio captured by Phrolova | Requires an X cookie file. Captured replay links are temporary. |
 | Other yt-dlp sites | No | Supported media URLs | Downloads depend on site and video availability; these URLs do not enable live monitoring. |
 
@@ -97,7 +96,6 @@ Credentials are needed only for services or content that require them:
 
 - **CHZZK:** NID_AUT and NID_SES cookies for age-restricted access or some quality levels.
 - **YouTube:** a Netscape-format cookie file for videos requiring an authenticated account.
-- **TwitCasting:** Client ID and Client Secret to add channels; a Netscape-format cookie file for some restricted archives.
 - **X Spaces:** a Netscape-format X cookie file to monitor and capture Spaces.
 - **Discord notifications:** a bot token and channel ID, or a webhook URL.
 
@@ -108,7 +106,6 @@ Phrolova has no user accounts or access control. By default, the server listens 
 - **Recording does not start:** Check the channel's automatic-recording setting, conditions, and status in the dashboard.
 - **FFmpeg is missing:** Install FFmpeg or set <code>FFMPEG_PATH</code> to its executable. The Windows executable does not include FFmpeg.
 - **A video cannot be inspected or downloaded:** Confirm that the video is available to your account and supported by the downloader. Add cookies for restricted content, then check the application logs.
-- **A TwitCasting channel cannot be added:** Verify the Client ID and Client Secret in Settings.
 - **An X Spaces replay is unavailable:** Only replays captured by Phrolova can be downloaded, and captured replay links expire.
 
 When reporting an issue, include the app version, service, reproduction steps, and relevant logs with credentials removed. Use the [issue tracker](https://github.com/ProofPage/Phrolova/issues).
@@ -165,4 +162,4 @@ The executable is created at <code>dist/Rookery.exe</code>. FFmpeg is not bundle
 
 Phrolova is distributed under the [MIT License](LICENSE). FFmpeg is distributed separately; see the [FFmpeg legal information](https://ffmpeg.org/legal.html) for licensing terms.
 
-Phrolova is an independent project and is not affiliated with or endorsed by CHZZK, Naver, TwitCasting, YouTube, X, or Discord. Follow the applicable service terms and copyright law.
+Phrolova is an independent project and is not affiliated with or endorsed by CHZZK, Naver, YouTube, X, or Discord. Follow the applicable service terms and copyright law.

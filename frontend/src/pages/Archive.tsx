@@ -29,7 +29,7 @@ export default function ArchivePage() {
     };
 
     return (
-        <div className="product-page  space-y-4">
+        <div className="product-page spaces-page space-y-4">
             <PageHeader
                 icon={Radio}
                 eyebrow={t("오디오 보관함")}
@@ -40,7 +40,7 @@ export default function ArchivePage() {
             <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.7fr)] gap-4">
                 <Card className="relative overflow-hidden">
 
-                    <div className="flex items-start gap-3 mb-6">
+                    <div className="flex items-start gap-3 mb-6 max-sm:mb-3">
                         <span className="w-9 h-9 rounded-[var(--radius-control)] grid place-items-center bg-xspaces/10 text-xspaces"><Link2 className="w-4 h-4" /></span>
                         <div>
                             <h2 className="text-sm font-semibold text-ink">{t("다운로드 소스")}</h2>

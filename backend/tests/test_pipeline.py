@@ -168,13 +168,13 @@ class TestFFmpegPipeline:
 
 
 class TestYtdlpLiveCookieFallback:
-    """TwitCasting 로그인 쿠키는 쿠키 없이 URL 추출에 실패했을 때만 쓴다.
+    """라이브 로그인 쿠키는 쿠키 없이 URL 추출에 실패했을 때만 쓴다.
 
     지금 잘 되는 녹화 경로를 그대로 두면서, 로그인 전용 라이브만 한 번 더 시도한다.
     """
 
-    LIVE_URL = "https://twitcasting.tv/someone"
-    LENT = "/tmp/tc_cookie_lent.txt"
+    LIVE_URL = "https://example.com/someone"
+    LENT = "/tmp/live_cookie_lent.txt"
 
     @pytest.fixture
     def pipeline(self, monkeypatch):
@@ -231,9 +231,9 @@ class TestYtdlpLiveCookieFallback:
         extract = AsyncMock(side_effect=[
             RuntimeError("yt-dlp URL 추출 실패 (code=1): ERROR: This video is only available for registered users"),
             (
-                "https://hls.twitcasting.tv/live.m3u8",
-                {"Origin": "https://twitcasting.tv"},
-                "tc_ss=abc; Domain=.twitcasting.tv; Path=/; Secure; Expires=1790000000",
+                "https://hls.example.com/live.m3u8",
+                {"Origin": "https://example.com"},
+                "session=abc; Domain=.example.com; Path=/; Secure; Expires=1790000000",
             ),
         ])
         monkeypatch.setattr(pipeline, "_extract_hls_url", extract)
@@ -247,7 +247,7 @@ class TestYtdlpLiveCookieFallback:
         assert "-cookies" not in cmd
         assert cmd[cmd.index("-i") + 1] == "pipe:0"
         assert pipeline._run_streamlink_feeder.call_args.kwargs["cookies"] == (
-            "tc_ss=abc; Domain=.twitcasting.tv; Path=/; Secure; Expires=1790000000"
+            "session=abc; Domain=.example.com; Path=/; Secure; Expires=1790000000"
         )
 
     @pytest.mark.asyncio
@@ -289,9 +289,9 @@ class TestYtdlpLiveCookieFallback:
         )
         cmds = []
         payload = {
-            "url": "https://hls.twitcasting.tv/live.m3u8",
-            "http_headers": {"Origin": "https://twitcasting.tv"},
-            "cookies": "tc_ss=abc; Domain=.twitcasting.tv; Path=/",
+            "url": "https://hls.example.com/live.m3u8",
+            "http_headers": {"Origin": "https://example.com"},
+            "cookies": "session=abc; Domain=.example.com; Path=/",
         }
 
         class FakeProc:

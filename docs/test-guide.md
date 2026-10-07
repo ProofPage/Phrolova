@@ -162,25 +162,6 @@ sudo journalctl -u rookery -f
 
 ## 4. 멀티 플랫폼 기능 테스트
 
-### TwitCasting 채널 감시 테스트
-
-**사전 준비:**
-- TwitCasting Developer 앱 등록 → `ClientID` / `ClientSecret` 획득
-- 설정 페이지 → 인증 탭 → TwitCasting 섹션에 입력
-
-**테스트 절차:**
-1. Dashboard → 채널 추가 드롭다운에서 `TwitCasting` 선택
-2. TwitCasting 사용자 ID(예: `someuser`) 입력 후 추가
-3. 대상 채널이 라이브 중이면 자동 녹화 시작 확인
-4. `GET /api/stream/channels` 응답에 `platform: "twitcasting"` 포함 확인
-
-### TwitCasting 아카이브 다운로드 테스트
-
-1. 사이드바 → Archive 페이지 이동
-2. TwitCasting 탭에서 채널 ID 입력 후 조회
-3. 과거 방송 목록 표시 확인
-4. 원하는 방송 선택 → 다운로드 시작 확인
-
 ### Twitter Spaces 수동 캡처 테스트
 
 > [!NOTE]

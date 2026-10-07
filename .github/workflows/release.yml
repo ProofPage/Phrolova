@@ -74,13 +74,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## Playback and setup improvements
+          ## Live channel layout and mobile improvements
 
-          - Keep multiple live channel details open and play their live previews simultaneously.
-          - Complete first-run setup in two steps without entering CHZZK cookies. Cookie settings remain available in Settings.
-          - Save the recording file format selected during first-run setup correctly.
-          - Try YouTube downloads without cookies first, and use uploaded cookies only when YouTube requires authentication.
-          - Clarify guidance for YouTube downloads that require sign-in or viewing permissions.
+          - Improve live channel card alignment in grid and list views, with tags below broadcast titles and detail actions in the header.
+          - Let unpaired compact channel cards fill the row without changing channel order or restarting open previews.
+          - Improve mobile controls, dialogs, navigation, and long-text handling.
+          - Use Chzzk consistently as the platform display name and list available platforms before those requiring setup.
+          - Remove TwitCasting support. Existing channel and download records are retained.
 
           Replace your existing executable with the Windows x64 release build.
           '@

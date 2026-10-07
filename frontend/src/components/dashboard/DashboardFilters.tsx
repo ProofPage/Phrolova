@@ -74,9 +74,9 @@ export function DashboardFilters({
                 </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                    <Button icon={RefreshCw} onClick={onScanNow} title={t("등록한 채널의 방송 상태를 다시 확인합니다.")} className="px-3 py-2 whitespace-nowrap shrink-0">{t("방송 상태 확인")}</Button>
-                    <Button variant="danger" icon={Square} onClick={onStopAll} disabled={recordingCount === 0} className="px-3 py-2 whitespace-nowrap shrink-0">{t("전체 녹화 중지")}</Button>
+                <div className="dashboard-toolbar-actions flex flex-wrap items-center gap-2">
+                    <Button icon={RefreshCw} onClick={onScanNow} title={t("등록한 채널의 방송 상태를 다시 확인합니다.")} aria-label={t("방송 상태 확인")} className="dashboard-scan px-3 py-2 whitespace-nowrap shrink-0"><span>{t("방송 상태 확인")}</span></Button>
+                    <Button variant="danger" icon={Square} onClick={onStopAll} disabled={recordingCount === 0} aria-label={t("전체 녹화 중지")} className="px-3 py-2 whitespace-nowrap shrink-0"><span className="hidden sm:inline">{t("전체 녹화 중지")}</span><span className="sm:hidden">{t("전체 중지")}</span></Button>
                     <div role="group" aria-label={t("채널 보기 방식")} className="flex bg-surface-3/80 rounded-[var(--radius-control)] p-1 ml-auto">
                         <button
                             type="button"

@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { client, type Channel } from "../api/client";
+import { client, PLATFORM_LABELS, type Channel } from "../api/client";
+
+const supportedChannels = (channels: Channel[]) => channels.filter(channel =>
+    !channel.platform || Object.hasOwn(PLATFORM_LABELS, channel.platform));
 
 interface ChannelStreamState {
     channels: Channel[];
@@ -17,7 +20,7 @@ export function useChannelStream(): ChannelStreamState {
     const fetchChannels = useCallback(async () => {
         try {
             const response = await client.get<Channel[]>("/platforms/channels");
-            setChannels(response.data);
+            setChannels(supportedChannels(response.data));
             setConnectionError(false);
         } catch {
             setConnectionError(true);
@@ -39,7 +42,7 @@ export function useChannelStream(): ChannelStreamState {
                 try {
                     const message = JSON.parse(event.data) as { type?: string; data?: Channel[] };
                     if (message.type === "status_update" && message.data) {
-                        setChannels(message.data);
+                        setChannels(supportedChannels(message.data));
                         setConnectionError(false);
                         setInitialLoading(false);
                     }
