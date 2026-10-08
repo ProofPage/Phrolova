@@ -121,13 +121,14 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
             {/* 라이브 품질 */}
             <div>
                 <label className="block text-sm font-medium text-ink-muted mb-2">라이브 녹화 화질</label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {qualities.map((q) => (
                         <button
                             key={q}
                             type="button"
                             onClick={() => onChange("recording_quality", q)}
-                            className={`max-sm:min-h-11 py-2 rounded-lg text-sm font-medium border transition-all ${data.recording_quality === q
+                            aria-pressed={data.recording_quality === q}
+                            className={`ui-chip max-sm:min-h-11 py-2 rounded-lg text-sm font-medium border transition-all ${data.recording_quality === q
                                 ? "bg-[var(--primary-dim)] border-[var(--primary)] text-[var(--primary)]"
                                 : "bg-surface-3 border-line-strong text-ink-faint hover:border-[var(--primary)]"
                                 }`}
@@ -141,13 +142,14 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
             {/* 파일 형식 */}
             <div>
                 <label className="block text-sm font-medium text-ink-muted mb-2">라이브 녹화 파일 형식</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {formats.map((f) => (
                         <button
                             key={f}
                             type="button"
                             onClick={() => onChange("output_format", f)}
-                            className={`max-sm:min-h-11 py-2 rounded-lg text-sm font-medium border transition-all ${data.output_format === f
+                            aria-pressed={data.output_format === f}
+                            className={`ui-chip max-sm:min-h-11 py-2 rounded-lg text-sm font-medium border transition-all ${data.output_format === f
                                 ? "bg-[var(--primary-dim)] border-[var(--primary)] text-[var(--primary)]"
                                 : "bg-surface-3 border-line-strong text-ink-faint hover:border-[var(--primary)]"
                                 }`}
@@ -244,12 +246,12 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
     };
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center animate-backdrop">
+        <div className="ui-overlay fixed inset-0 z-[9998] flex items-center justify-center animate-backdrop">
             {/* 배경 블러 */}
             <div className="absolute inset-0 bg-black/80 " />
 
             {/* 카드 */}
-            <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="setup-title" tabIndex={-1} className="setup-dialog relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-2xl surface-raise w-full max-w-lg mx-4 max-h-[calc(100vh-2rem)] max-lg:max-h-[calc(100dvh-2rem)] animate-modal-in overflow-y-auto">
+            <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="setup-title" tabIndex={-1} className="setup-dialog ui-dialog relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-2xl surface-raise w-full max-w-lg mx-4 max-h-[calc(100vh-2rem)] max-lg:max-h-[calc(100dvh-2rem)] animate-modal-in overflow-y-auto">
 
 
                 <div className="p-8 max-sm:p-4">
@@ -277,13 +279,13 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
 
                     {/* 에러 */}
                     {error && (
-                        <p className="mt-4 text-sm text-danger bg-danger/10 border border-danger/20 rounded-[var(--radius-control)] px-4 py-2">
+                        <p role="alert" className="mt-4 text-sm text-danger bg-danger/10 border border-danger/20 rounded-[var(--radius-control)] px-4 py-2">
                             {error}
                         </p>
                     )}
 
                     {/* 버튼 */}
-                    <div className="flex items-center justify-between mt-8 max-sm:mt-4">
+                    <div className="dialog-actions flex flex-wrap gap-2 items-center justify-between mt-8 max-sm:mt-4">
                         <Button type="button" icon={ChevronLeft} onClick={handleBack} disabled={step === 1} variant="ghost">이전</Button>
 
                         {step < 2 ? (

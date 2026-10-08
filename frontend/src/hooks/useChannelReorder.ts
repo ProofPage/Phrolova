@@ -6,6 +6,9 @@ const STORAGE_KEY = "dashboardChannelOrder";
 
 /** 채널 카드·행에 그대로 펼쳐 넣는 재정렬 props. 훅과 컴포넌트가 이 타입 하나를 공유한다. */
 export interface ReorderProps {
+    canMoveUp: boolean;
+    canMoveDown: boolean;
+    onMoveChannel: (direction: number) => void;
     isDragging: boolean;
     isDropTarget: boolean;
     onReorderPointerDown: (event: PointerEvent<HTMLElement>) => void;
@@ -63,9 +66,12 @@ export function useChannelReorder(channels: Channel[]) {
 
     const moveChannel = (sourceKey: string, targetKey: string) => {
         setOrder((previous) => {
+            const sourceIndex = previous.indexOf(sourceKey);
+            const targetIndex = previous.indexOf(targetKey);
+            if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return previous;
+            // 원래 대상 위치에 넣어야 아래쪽 이웃으로 드래그해도 실제 순서가 바뀐다.
             const next = previous.filter((key) => key !== sourceKey);
-            const targetIndex = next.indexOf(targetKey);
-            next.splice(targetIndex < 0 ? next.length : targetIndex, 0, sourceKey);
+            next.splice(targetIndex, 0, sourceKey);
             writeStoredOrder(next);
             return next;
         });
@@ -127,21 +133,29 @@ export function useChannelReorder(channels: Channel[]) {
         updateDropTarget(event.clientX, event.clientY);
     };
 
-    const handleKeyDown = (event: KeyboardEvent<HTMLElement>, channelKey: string) => {
-        const direction = event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1
-            : event.key === "ArrowRight" || event.key === "ArrowDown" ? 1
-            : 0;
-        if (direction === 0) return;
-        event.preventDefault();
+    const moveBy = (channelKey: string, direction: number, visibleKeys?: string[]) => {
         setOrder((previous) => {
             const currentIndex = previous.indexOf(channelKey);
-            const targetIndex = Math.min(previous.length - 1, Math.max(0, currentIndex + direction));
+            // 숨긴 채널의 위치는 유지하고 현재 보이는 이웃끼리만 교환한다.
+            const visible = visibleKeys ? previous.filter(key => visibleKeys.includes(key)) : previous;
+            const visibleIndex = visible.indexOf(channelKey);
+            const targetKey = visible[visibleIndex + direction];
+            const targetIndex = targetKey ? previous.indexOf(targetKey) : currentIndex;
             if (currentIndex < 0 || currentIndex === targetIndex) return previous;
             const next = [...previous];
             [next[currentIndex], next[targetIndex]] = [next[targetIndex], next[currentIndex]];
             writeStoredOrder(next);
             return next;
         });
+    };
+
+    const handleKeyDown = (event: KeyboardEvent<HTMLElement>, channelKey: string, visibleKeys?: string[]) => {
+        const direction = event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1
+            : event.key === "ArrowRight" || event.key === "ArrowDown" ? 1
+            : 0;
+        if (direction === 0) return;
+        event.preventDefault();
+        moveBy(channelKey, direction, visibleKeys);
     };
 
     // 저장된 순서에 없는 채널(방금 추가된 것)은 뒤로 보낸다.
@@ -151,7 +165,10 @@ export function useChannelReorder(channels: Channel[]) {
         - (orderIndex.get(getChannelKey(right)) ?? Number.MAX_SAFE_INTEGER)
     ));
 
-    const getReorderProps = (channelKey: string): ReorderProps => ({
+    const getReorderProps = (channelKey: string, visibleKeys = orderedChannels.map(getChannelKey)): ReorderProps => ({
+        canMoveUp: visibleKeys.indexOf(channelKey) > 0,
+        canMoveDown: visibleKeys.indexOf(channelKey) >= 0 && visibleKeys.indexOf(channelKey) < visibleKeys.length - 1,
+        onMoveChannel: (direction) => moveBy(channelKey, direction, visibleKeys),
         isDragging: draggedKey === channelKey,
         isDropTarget: dropTargetKey === channelKey,
         onReorderPointerDown: (event) => handlePointerDown(event, channelKey),
@@ -159,7 +176,7 @@ export function useChannelReorder(channels: Channel[]) {
         onReorderPointerUp: handlePointerUp,
         onReorderMouseMove: handleMouseMove,
         onReorderMouseUp: finishDrag,
-        onReorderKeyDown: (event) => handleKeyDown(event, channelKey),
+        onReorderKeyDown: (event) => handleKeyDown(event, channelKey, visibleKeys),
     });
 
     return { orderedChannels, getReorderProps };

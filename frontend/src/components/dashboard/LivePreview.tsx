@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
-import { VideoOff } from "lucide-react";
+import { CircleAlert, VideoOff } from "lucide-react";
 import { api } from "../../api/client";
 import { Button } from "../ui/primitives";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -128,15 +128,14 @@ export function LivePreview({ channelKey, isLive, name, poster }: { channelKey: 
         };
     }, [channelKey, isLive, attempt]);
 
-    return <div className="channel-live-preview relative mx-auto aspect-video w-full min-w-0 overflow-hidden bg-surface-0" aria-label={`${name} ${t("방송 미리보기")}`}>
-        {poster && (!isLive || state !== "ready") && <div className="channel-preview-poster hidden lg:block absolute inset-0" style={{ backgroundImage: `url(${JSON.stringify(poster)})`, backgroundSize: "cover", backgroundPosition: "center" }} aria-hidden="true"><div className="absolute inset-0 bg-surface-0/90" /></div>}
-        {isLive && <video ref={videoRef} controls autoPlay muted playsInline className="size-full object-contain" aria-label={`${name} LIVE`} />}
-        {(!isLive || state !== "ready") && <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center text-xs text-ink-muted" role="status">
-            {isLive && state === "loading" && <span className="size-6 animate-spin rounded-full border-2 border-line-strong border-t-info" aria-hidden="true" />}
-            {isLive && state === "error" && <VideoOff className="hidden lg:block size-5 text-ink-faint" aria-hidden="true" />}
-            <span>{t(!isLive ? "오프라인" : state === "loading" ? "미리보기를 불러오는 중" : message)}</span>
-            {isLive && state === "error" && <p className="hidden lg:block text-ink-faint">미리보기만 사용할 수 없습니다. 녹화 상태는 별도로 확인하세요.</p>}
-            {isLive && state === "error" && <Button onClick={() => setAttempt(value => value + 1)}>{t("다시 시도")}</Button>}
+    return <div className="channel-live-preview" aria-label={`${name} ${t("방송 미리보기")}`}>
+        {isLive && <div className="channel-preview-player" hidden={state !== "ready"}>
+            <video ref={videoRef} controls autoPlay muted playsInline poster={poster} className="size-full object-contain" aria-label={`${name} LIVE`} />
+        </div>}
+        {(!isLive || state !== "ready") && <div className="channel-preview-status" role="status" aria-busy={isLive && state === "loading"}>
+            {isLive && state === "loading" ? <span className="size-5 shrink-0 animate-spin rounded-full border-2 border-line-strong border-t-info" aria-hidden="true" /> : isLive ? <CircleAlert className="size-5 text-ink-faint" aria-hidden="true" /> : <VideoOff className="size-5 text-ink-faint" aria-hidden="true" />}
+            <span className="channel-preview-message">{t(!isLive ? "현재 방송 중이 아닙니다." : state === "loading" ? "미리보기를 불러오는 중" : message)}</span>
+            {isLive && state === "error" && <Button type="button" aria-label={t("다시 시도")} onClick={() => { setState("loading"); setAttempt(value => value + 1); }}>{t("다시 시도")}</Button>}
         </div>}
     </div>;
 }

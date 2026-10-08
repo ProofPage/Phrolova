@@ -156,7 +156,7 @@ export function CollapsibleCard({
                     onClick={() => setOpen((v) => !v)}
                     aria-expanded={open}
                     aria-controls={bodyId}
-                    className="flex items-center gap-3 min-w-0 flex-1 text-left group"
+                    className="ui-disclosure flex items-center gap-3 min-w-0 flex-1 text-left group"
                 >
                     {icon && (
                         <span
@@ -238,7 +238,7 @@ export function SettingRow({
     return (
         <div
             className={clsx(
-                "flex items-center justify-between gap-4 py-3 border-b border-line last:border-0",
+                "ui-setting-row py-3 border-b border-line last:border-0",
                 className,
             )}
         >
@@ -350,7 +350,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
     return (
         <button
             ref={ref}
-            className={clsx("ui-button", variants[variant], className)}
+            className={clsx("ui-button", !children && (icon || loading) && "ui-button-icon", variants[variant], className)}
             aria-busy={loading || undefined}
             disabled={disabled || loading}
             {...props}

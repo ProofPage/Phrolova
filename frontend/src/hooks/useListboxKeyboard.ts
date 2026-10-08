@@ -8,7 +8,7 @@ export function useListboxKeyboard(open: boolean, rootRef: RefObject<HTMLElement
         if (!open || !root) return;
         const options = () => Array.from(root.querySelectorAll<HTMLButtonElement>('[role="option"]:not(:disabled)'));
         const selected = root.querySelector<HTMLButtonElement>('[role="option"][aria-selected="true"]:not(:disabled)');
-        (selected || options()[0])?.focus();
+        (selected || options()[0])?.focus({ preventScroll: true });
         const keydown = (event: KeyboardEvent) => {
             const items = options();
             if (event.key === "Escape") { event.preventDefault(); closeRef.current(); root.querySelector<HTMLButtonElement>('[aria-expanded]')?.focus(); }

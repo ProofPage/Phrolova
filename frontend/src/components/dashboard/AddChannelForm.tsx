@@ -1,3 +1,4 @@
+import { useListboxPosition } from "../../hooks/useListboxPosition";
 import { useListboxKeyboard } from "../../hooks/useListboxKeyboard";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ChevronDown, Lock, Plus } from "lucide-react";
@@ -46,6 +47,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
     const sortedPlatforms = (Object.keys(PLATFORM_LABELS) as Platform[])
         .sort((a, b) => Number(isPlatformEnabled(b)) - Number(isPlatformEnabled(a)));
 
+    const listboxPosition = useListboxPosition(dropdownOpen, dropdownRef);
     useListboxKeyboard(dropdownOpen, dropdownRef, () => setDropdownOpen(false));
 
     const handleSubmit = (event: FormEvent) => {
@@ -95,7 +97,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
                 </button>
 
                 {dropdownOpen && (
-                    <div className="ui-popover absolute top-full mt-2 left-0 z-20 rounded-[var(--radius-control)] min-w-[180px] max-h-[50dvh] overflow-y-auto" role="listbox">
+                    <div style={listboxPosition} className="ui-popover absolute top-full mt-2 left-0 z-20 rounded-[var(--radius-control)] min-w-[180px] max-h-[50dvh] overflow-y-auto" role="listbox">
                         {sortedPlatforms.map((platform) => {
                             const enabled = isPlatformEnabled(platform);
                             return (

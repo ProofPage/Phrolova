@@ -65,7 +65,7 @@ export function InfoTab({ settings, onDirtyChange }: Props) {
                             href={REPOSITORY_URL}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[var(--primary)] hover:underline truncate max-w-[220px]"
+                            className="text-[var(--primary)] hover:underline"
                         >
                             github.com/ProofPage/Phrolova
                         </a>

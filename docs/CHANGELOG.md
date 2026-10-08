@@ -8,6 +8,15 @@
 
 ## [Unreleased]
 
+## [2.0.48] - 2026-10-08
+
+### Changed
+- Adapt responsive layouts to available content width on mobile, tablet, and desktop.
+- Refine Live channel cards, recording controls, and compact centered preview states.
+- Improve Downloads task layout and touch/keyboard queue reordering, including filtered lists.
+- Improve Settings, Stats, and Logs layouts on narrow and tablet screens.
+- Improve touch controls, keyboard focus, dialogs, safe areas, and long-text handling.
+
 ## [2.0.47] - 2026-10-07
 
 ### Fixed
@@ -644,7 +653,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.47...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.48...HEAD
+[2.0.48]: https://github.com/ProofPage/Phrolova/compare/v2.0.47...v2.0.48
 [2.0.47]: https://github.com/ProofPage/Phrolova/compare/v2.0.46...v2.0.47
 [2.0.46]: https://github.com/ProofPage/Phrolova/compare/v2.0.45...v2.0.46
 [2.0.45]: https://github.com/ProofPage/Phrolova/compare/v2.0.44...v2.0.45

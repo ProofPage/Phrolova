@@ -1,3 +1,4 @@
+import { useVisualViewport } from "./hooks/useVisualViewport";
 import { useState, useEffect } from "react";
 import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
 import { Radio } from "lucide-react";
@@ -95,6 +96,7 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
+    useVisualViewport();
     return (
         <LanguageProvider>
             <ThemeProvider>

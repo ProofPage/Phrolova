@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useBlocker } from "react-router-dom";
 import {
     Bell,
@@ -55,6 +55,17 @@ export default function Settings() {
     const [dirtyTabs, setDirtyTabs] = useState<Record<TabId, boolean>>(EMPTY_DIRTY);
     const [updateAvailable, setUpdateAvailable] = useState(false);
     const confirm = useConfirm();
+    const tabsRef = useRef<HTMLElement>(null);
+    useEffect(() => {
+        const tabs = tabsRef.current;
+        const active = tabs?.querySelector<HTMLElement>('[aria-current="page"]');
+        if (!tabs || !active) return;
+        const bounds = tabs.getBoundingClientRect();
+        const selected = active.getBoundingClientRect();
+        const left = selected.left < bounds.left ? selected.left - bounds.left : selected.right > bounds.right ? selected.right - bounds.right : 0;
+        // 탭 표시 때문에 폼의 세로 스크롤까지 바뀌지 않게 한다.
+        if (left) tabs.scrollBy({ left, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    }, [activeTab, settings]);
 
     const loadSettings = useCallback(async () => {
         setLoadError(false);
@@ -145,7 +156,7 @@ export default function Settings() {
                     {loadError && <Button icon={RefreshCw} onClick={() => void loadSettings()} variant="primary">다시 시도</Button>}
                 </Card>
             ) : <div className="space-y-4">
-            <nav className="settings-tabs flex min-w-0 items-center gap-1 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface-2 p-1.5" aria-label={t("설정 탭")}>
+            <nav ref={tabsRef} className="settings-tabs flex min-w-0 items-center gap-1 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface-2 p-1.5" aria-label={t("설정 탭")}>
                 {TABS.map((tab) => {
                     const Icon = tab.icon;
                     return (
@@ -158,8 +169,8 @@ export default function Settings() {
                         >
                             <Icon className="w-4 h-4" />
                             {t(tab.label)}
-                            {dirtyTabs[tab.id] && <span className="w-2 h-2 rounded-full bg-warn absolute top-2 right-2 animate-pulse" />}
-                            {tab.id === "system" && updateAvailable && <span className="w-2 h-2 rounded-full bg-ok absolute top-2 right-2 animate-pulse" />}
+                            {dirtyTabs[tab.id] && <span className="size-2 shrink-0 rounded-full bg-warn" />}
+                            {tab.id === "system" && updateAvailable && <span className="size-2 shrink-0 rounded-full bg-ok" />}
                         </button>
                     );
                 })}

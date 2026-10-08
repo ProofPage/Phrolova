@@ -342,12 +342,13 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                                 <button
                                     key={p.value}
                                     type="button"
+                                    aria-pressed={mentionTarget === p.value}
                                     onClick={() => {
                                         setMentionTarget(p.value);
                                         markDirty();
                                     }}
                                     className={
-                                        "px-3 py-1.5 rounded-[var(--radius-control)] text-[13px] font-medium border transition-colors " +
+                                        "ui-chip px-3 py-1.5 rounded-[var(--radius-control)] text-[13px] font-medium border transition-colors " +
                                         (mentionTarget === p.value
                                             ? "btn-ghost-primary border-transparent"
                                             : "bg-surface-3 border-line-strong text-ink-faint hover:text-ink-muted")
@@ -386,12 +387,13 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                                         key={kind.value}
                                         type="button"
                                         disabled={disabled}
+                                        aria-pressed={on}
                                         title={disabled ? "이 알림이 꺼져 있습니다" : undefined}
                                         onClick={() =>
                                             toggleKind(kind.value, mentionKinds, setMentionKinds)
                                         }
                                         className={
-                                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium border transition-colors disabled:opacity-35 disabled:cursor-not-allowed " +
+                                            "ui-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium border transition-colors disabled:opacity-35 disabled:cursor-not-allowed " +
                                             (on
                                                 ? "btn-ghost-primary border-transparent"
                                                 : "bg-surface-3 border-line-strong text-ink-faint hover:text-ink-muted")
@@ -436,7 +438,7 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
             </Card>
 
             {/* ══ 저장 ══════════════════════════════════ */}
-            <div className="sticky bottom-0 -mx-1 px-1 pb-1 pt-3 bg-surface-0">
+            <div className="settings-save sticky bottom-0 -mx-1 px-1 pb-1 pt-3 bg-surface-0">
                 <Button
                     variant="primary"
                     icon={Save}

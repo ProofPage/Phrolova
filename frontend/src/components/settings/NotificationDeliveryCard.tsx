@@ -136,7 +136,7 @@ export function NotificationDeliveryCard({ settings, refreshSignal }: Props) {
             {status?.available && (
                 <>
                     <Divider className="my-4" />
-                    <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <dl className="notification-delivery-summary">
                         {[
                             { label: "대기", value: status.pending ?? 0, tone: (status.pending ?? 0) > 0 ? "warn" : undefined },
                             { label: "전송됨", value: status.delivered ?? 0 },

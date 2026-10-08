@@ -16,11 +16,17 @@ export function Sidebar() {
 
     useEffect(() => {
         if (!mobileOpen) return;
+        const desktop = window.matchMedia("(min-width: 1024px)");
+        const closeOnDesktop = () => { if (desktop.matches) setMobileOpen(false); };
+        desktop.addEventListener("change", closeOnDesktop);
+        closeOnDesktop();
+        const main = document.querySelector<HTMLElement>(".app-main");
+        if (main) main.inert = true;
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key === "Escape") setMobileOpen(false);
         };
         document.addEventListener("keydown", onKeyDown);
-        return () => document.removeEventListener("keydown", onKeyDown);
+        return () => { document.removeEventListener("keydown", onKeyDown); desktop.removeEventListener("change", closeOnDesktop); if (main) main.inert = false; };
     }, [mobileOpen]);
 
     const navigation = (
@@ -64,7 +70,7 @@ export function Sidebar() {
             <aside className="app-sidebar hidden lg:flex" aria-label={t("주 메뉴")}>{navigation}</aside>
             <button
                 type="button"
-                onClick={() => setMobileOpen(true)}
+                onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setMobileOpen(true); }}
                 className="sidebar-mobile-trigger icon-button lg:hidden"
                 aria-label={t("메뉴 열기")}
                 aria-expanded={mobileOpen}

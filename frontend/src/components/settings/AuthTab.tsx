@@ -23,6 +23,7 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
     const toast = useToast();
     const confirm = useConfirm();
     const cookieFileInputRef = useRef<HTMLInputElement>(null);
+    const [savingCookies, setSavingCookies] = useState(false);
     const [nidAut, setNidAut] = useState("");
     const [nidSes, setNidSes] = useState("");
     const [cookieStatus, setCookieStatus] = useState<CookieStatus>("unknown");
@@ -60,6 +61,8 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
     }, []);
 
     const handleUpdateCookies = async () => {
+        if (savingCookies) return;
+        setSavingCookies(true);
         try {
             await api.updateCookies(nidAut, nidSes);
             toast.success("쿠키가 저장되었습니다!");
@@ -68,6 +71,8 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
             onSaved();
         } catch {
             toast.error("쿠키 저장에 실패했습니다.");
+        } finally {
+            setSavingCookies(false);
         }
     };
 
@@ -127,8 +132,8 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
                     <Input type="password" value={nidSes} onChange={(event) => setNidSes(event.target.value)} placeholder="NID_SES 쿠키 값 입력..." />
                 </Field>
                 <div className="flex gap-3">
-                    <Button icon={Save} onClick={handleUpdateCookies} className="flex-1">저장</Button>
-                    <Button variant="primary" icon={Shield} onClick={() => checkCookieStatus(true)} className="flex-1">검증</Button>
+                    <Button icon={Save} loading={savingCookies} onClick={handleUpdateCookies} className="flex-1">저장</Button>
+                    <Button variant="primary" icon={Shield} loading={cookieStatus === "checking"} onClick={() => checkCookieStatus(true)} className="flex-1">검증</Button>
                 </div>
             </Card>
 
