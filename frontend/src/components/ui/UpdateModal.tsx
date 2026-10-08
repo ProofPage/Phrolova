@@ -1,6 +1,7 @@
 import { useDialogKeyboard } from "../../hooks/useDialogKeyboard";
 import { useRef, useState } from "react";
 import { X, ExternalLink, Copy, CheckCircle2, Terminal } from "lucide-react";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { UpdateInfo } from "../../api/client";
 
 interface UpdateModalProps {
@@ -24,6 +25,7 @@ const INSTALL_ONE_LINER =
  * 모든 블록에 체크 표시가 떠서 무엇을 복사했는지 알 수 없다.
  */
 function CommandBlock({ command }: { command: string }) {
+    const { t } = useLanguage();
     const [copied, setCopied] = useState(false);
 
     const handleCopy = () => {
@@ -34,15 +36,15 @@ function CommandBlock({ command }: { command: string }) {
 
     return (
         <div className="relative group">
-            <div className="bg-surface-1 border border-line rounded-[var(--radius-control)] p-3 overflow-x-auto">
+            <div className="bg-surface-1 border border-line rounded-[var(--radius-control)] command-code p-3 pr-16 overflow-x-auto">
                 <code className="text-xs text-[var(--primary)] font-mono whitespace-nowrap">
                     {command}
                 </code>
             </div>
             <button
                 onClick={handleCopy}
-                aria-label="명령 복사"
-                className="absolute top-2 right-2 p-1.5 bg-surface-3 hover:bg-surface-4 text-ink-faint hover:text-ink rounded-md transition-colors"
+                aria-label={t("명령 복사")}
+                className="icon-button absolute top-2 right-2 bg-surface-3 hover:bg-surface-4 text-ink-faint hover:text-ink rounded-md transition-colors"
             >
                 {copied ? <CheckCircle2 className="w-4 h-4 text-ok" /> : <Copy className="w-4 h-4" />}
             </button>
@@ -51,6 +53,7 @@ function CommandBlock({ command }: { command: string }) {
 }
 
 export function UpdateModal({ info, onClose }: UpdateModalProps) {
+    const { t } = useLanguage();
     const dialogRootRef = useRef<HTMLDivElement>(null);
     useDialogKeyboard(dialogRootRef, onClose);
     const renderContent = () => {
@@ -85,7 +88,7 @@ export function UpdateModal({ info, onClose }: UpdateModalProps) {
                             href={info.download_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="w-full btn-primary py-2.5 rounded-[var(--radius-control)] font-bold transition-colors flex items-center justify-center gap-2"
+                            className="ui-button w-full btn-primary py-2.5 rounded-[var(--radius-control)] font-bold transition-colors flex items-center justify-center gap-2"
                         >
                             <ExternalLink className="w-4 h-4" />
                             GitHub 릴리즈에서 다운로드
@@ -127,23 +130,23 @@ export function UpdateModal({ info, onClose }: UpdateModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4">
+        <div className="ui-overlay fixed inset-0 z-[9998] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 " onClick={onClose} />
-            <div ref={dialogRootRef} role="dialog" aria-modal="true" aria-label="업데이트 안내" tabIndex={-1} className="relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] w-full max-w-lg shadow-2xl surface-raise animate-modal-in">
-                <div className="flex items-center justify-between p-5 border-b border-line">
+            <div ref={dialogRootRef} role="dialog" aria-modal="true" aria-label={t("업데이트 안내")} tabIndex={-1} className="relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] ui-dialog w-full min-w-0 max-w-lg flex flex-col overflow-hidden shadow-2xl surface-raise animate-modal-in">
+                <div className="flex items-center justify-between gap-2 p-4 shrink-0 border-b border-line">
                     <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                         <Terminal className="w-5 h-5 text-[var(--primary)]" />
                         업데이트 안내
                     </h3>
                     <button
                         onClick={onClose}
-                        className="text-ink-faint hover:text-ink transition-colors"
+                        aria-label={t("닫기")} className="icon-button"
                     >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="p-6">
+                <div className="min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 [overflow-wrap:anywhere]">
                     {renderContent()}
                 </div>
             </div>

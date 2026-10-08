@@ -50,18 +50,18 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
 
     return (
         <div
-            className="fixed inset-0 z-[9998] flex items-center justify-center"
+            className="ui-overlay fixed inset-0 z-[9998] flex items-center justify-center"
             onClick={onClose}
         >
             <div className="absolute inset-0 bg-black/60 " />
 
             <div
-                ref={dialogRootRef} role="dialog" aria-modal="true" aria-label={t("폴더 선택")} tabIndex={-1} className="dir-browser relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-2xl surface-raise animate-modal-in
-                           w-full max-w-lg mx-4 flex flex-col max-h-[70vh] max-lg:max-h-[70dvh]"
+                ref={dialogRootRef} role="dialog" aria-modal="true" aria-label={t("폴더 선택")} tabIndex={-1} className="dir-browser ui-dialog relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-2xl surface-raise animate-modal-in
+                           w-full max-w-lg mx-4 flex flex-col max-h-[70dvh]"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-line">
+                <div className="flex items-center justify-between gap-2 shrink-0 px-4 py-3 border-b border-line">
                     <h3 className="text-ink font-semibold text-base flex items-center gap-2">
                         <Folder className="w-4 h-4 text-[var(--primary)]" />
                         {t("폴더 선택")}
@@ -70,15 +70,15 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
                         {/* 드라이브 리스트로 이동 버튼 */}
                         <button
                             onClick={() => navigate(undefined)}
-                            title={t("드라이브 목록으로")}
-                            className="p-1.5 rounded-lg text-ink-faint hover:text-[var(--primary)] hover:bg-surface-3 transition-colors"
+                            title={t("드라이브 목록으로")} aria-label={t("드라이브 목록으로")}
+                            className="icon-button rounded-lg text-ink-faint hover:text-[var(--primary)] hover:bg-surface-3 transition-colors"
                         >
                             <HardDrive className="w-4 h-4" />
                         </button>
                         <button
                             onClick={onClose}
                             aria-label={t("닫기")}
-                            className="p-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-surface-3 transition-colors"
+                            className="icon-button rounded-lg text-ink-faint hover:text-ink hover:bg-surface-3 transition-colors"
                         >
                             <X className="w-4 h-4" />
                         </button>
@@ -86,7 +86,7 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
                 </div>
 
                 {/* Current Path */}
-                <div className="px-5 py-2 bg-surface-1 border-b border-line">
+                <div className="px-4 py-2 max-h-20 shrink-0 overflow-y-auto bg-surface-1 border-b border-line">
                     <p className="text-xs text-ink-faint font-mono break-all">
                         {data?.current || t("드라이브 선택")}
                     </p>
@@ -147,7 +147,7 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
                 </div>
 
                 {/* Footer */}
-                <div className="px-5 py-4 border-t border-line flex gap-3">
+                <div className="dialog-actions shrink-0 px-4 py-3 border-t border-line flex flex-wrap gap-3">
                     <Button onClick={onClose} className="flex-1">{t("취소")}</Button>
                     <Button
                         onClick={() => {
@@ -199,7 +199,7 @@ export function DirInput({
                     className={`flex-1 font-mono text-sm ${focusBorderColor}`}
                     placeholder={t(placeholder)}
                 />
-                <Button type="button" icon={FolderOpen} onClick={() => setShowBrowser(true)} className="px-3 shrink-0" title={t("폴더 찾아보기")} aria-label={t("폴더 찾아보기")}>
+                <Button type="button" icon={FolderOpen} onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setShowBrowser(true); }} className="px-3 shrink-0" title={t("폴더 찾아보기")} aria-label={t("폴더 찾아보기")}>
                     <span className="hidden sm:inline">{t("찾아보기")}</span>
                 </Button>
             </div>

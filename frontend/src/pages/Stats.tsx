@@ -98,7 +98,7 @@ export default function Stats() {
     }, [loadStats]);
 
     return (
-        <div className="product-page  space-y-4">
+        <div className="product-page stats-page space-y-4">
             <PageHeader
                 icon={BarChart2}
                 eyebrow={t("녹화 현황 분석")}
@@ -139,7 +139,7 @@ export default function Stats() {
                 const { live, vod, storage, recent_sessions: recentSessions } = data;
                 return (
                     <>
-                        <div className="stats-summary grid grid-cols-1 sm:grid-cols-3 gap-0">
+                        <div className="stats-summary gap-0">
                             <MetricCard icon={Clock} label={t("완료된 라이브 녹화 시간")} value={formatDuration(live.total_duration_seconds, language)} detail={`${formatCount(live.total_sessions, language, "session")} · ${live.active_recordings} ${t("활성 녹화")}`} tone="ok" />
                             <MetricCard icon={Video} label={t("완료된 녹화 용량")} value={formatBytes(live.total_size_bytes)} detail={t("완료된 라이브 파일 합계")} tone="live" />
                             <MetricCard icon={Download} label={t("영상 다운로드")} value={formatCount(vod.total_completed, language, "item")} detail={`${t("Chzzk")} ${vod.by_type.chzzk} · ${t("외부")} ${vod.by_type.external}`} tone="primary" />
@@ -147,8 +147,8 @@ export default function Stats() {
                         </div>
 
                         <StorageCard used={storage.used_bytes} total={storage.total_bytes} free={storage.free_bytes} dir={storage.download_dir} t={t} />
-                        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.75fr)] gap-4">
-                            <Card padded={false} className="overflow-hidden">
+                        <div className="grid grid-cols-1 gap-4">
+                            <Card padded={false} className="stats-history overflow-hidden">
                                 <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-b border-line">
                                     <div className="flex items-center gap-2">
                                         <span className="w-8 h-8 rounded-[var(--radius-control)] bg-ok/10 text-ok grid place-items-center"><Radio className="w-4 h-4" /></span>
@@ -164,8 +164,8 @@ export default function Stats() {
                                     <EmptyState compact icon={Database} title={t("아직 집계할 녹화가 없습니다")} description={t("첫 녹화가 완료되면 채널별 통계가 표시됩니다.")} />
                                 ) : (
                                     <div>
-                                    <div className="divide-y divide-line md:hidden">{live.by_channel.map(channel => <div key={channel.channel_id} className="px-4 py-3"><p className="break-all text-sm max-w-64 break-words font-medium text-ink">{channel.channel_name}</p><p className="mt-0.5 break-all text-xs text-ink-faint">{channel.channel_id}</p><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted"><span>{t("녹화")} {channel.session_count}</span><span>{t("라이브 감지")} {channel.live_detected_count}{t("일")}</span><span>{formatDuration(channel.total_duration_seconds, language)}</span><span>{formatBytes(channel.total_size_bytes)}</span></div></div>)}</div>
-                                    <div className="hidden overflow-x-auto md:block">
+                                    <div className="stats-history-list divide-y divide-line">{live.by_channel.map(channel => <div key={channel.channel_id} className="px-4 py-3"><p className="break-all text-sm max-w-64 break-words font-medium text-ink">{channel.channel_name}</p><p className="mt-0.5 break-all text-xs text-ink-faint">{channel.channel_id}</p><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted"><span>{t("녹화")} {channel.session_count}</span><span>{t("라이브 감지")} {channel.live_detected_count}{t("일")}</span><span>{formatDuration(channel.total_duration_seconds, language)}</span><span>{formatBytes(channel.total_size_bytes)}</span></div></div>)}</div>
+                                    <div className="stats-history-table">
                                         <table className="w-full min-w-[680px] text-sm">
                                             <thead>
                                                 <tr className="bg-surface-3/60 border-b border-line">
@@ -195,7 +195,7 @@ export default function Stats() {
                                 )}
                             </Card>
 
-                            <Card padded={false} className="overflow-hidden">
+                            <Card padded={false} className="stats-history overflow-hidden">
                                 <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-line">
                                     <div className="flex items-center gap-2">
                                         <span className="w-8 h-8 rounded-[var(--radius-control)] bg-surface-4 text-ink-muted grid place-items-center"><Calendar className="w-4 h-4" /></span>

@@ -74,13 +74,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## Live channel layout and mobile improvements
+          ## Responsive UI and accessibility improvements
 
-          - Improve live channel card alignment in grid and list views, with tags below broadcast titles and detail actions in the header.
-          - Let unpaired compact channel cards fill the row without changing channel order or restarting open previews.
-          - Improve mobile controls, dialogs, navigation, and long-text handling.
-          - Use Chzzk consistently as the platform display name and list available platforms before those requiring setup.
-          - Remove TwitCasting support. Existing channel and download records are retained.
+          - Adapt mobile, tablet, and desktop layouts to available content width.
+          - Refine Live channel cards and compact centered offline, loading, and error preview states.
+          - Improve Downloads layouts and touch/keyboard reordering in filtered lists.
+          - Improve Settings, Stats, and Logs layouts on narrow and tablet screens.
+          - Improve touch controls, keyboard focus, dialogs, safe areas, and long-text handling.
 
           Replace your existing executable with the Windows x64 release build.
           '@

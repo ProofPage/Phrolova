@@ -1,4 +1,4 @@
-import { createElement, useEffect, useState } from "react";
+import { createElement, useEffect, useRef, useState } from "react";
 import { Command } from "cmdk";
 import { useNavigate } from "react-router-dom";
 import { NAV_ITEMS } from "../../config/navigation";
@@ -8,19 +8,29 @@ export function CommandPalette() {
     const { t } = useLanguage();
     const [open, setOpen] = useState(false);
     const navigate = useNavigate();
+    const triggerRef = useRef<HTMLElement | null>(null);
+    useEffect(() => {
+        if (open || !triggerRef.current) return;
+        const timer = window.setTimeout(() => {
+            if (triggerRef.current?.isConnected) triggerRef.current.focus({ preventScroll: true });
+        }, 0);
+        return () => window.clearTimeout(timer);
+    }, [open]);
 
     // 토글 단축키: Ctrl+K 또는 Cmd+K
     useEffect(() => {
         const down = (e: KeyboardEvent) => {
             if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+                if (!open && document.querySelector('[aria-modal="true"], dialog[open]')) return;
                 e.preventDefault();
+                if (!open) triggerRef.current = document.activeElement as HTMLElement;
                 setOpen((open) => !open);
             }
         };
 
         document.addEventListener("keydown", down);
         return () => document.removeEventListener("keydown", down);
-    }, []);
+    }, [open]);
 
     const runCommand = (command: () => void) => {
         setOpen(false);

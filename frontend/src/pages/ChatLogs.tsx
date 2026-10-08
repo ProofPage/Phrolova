@@ -49,7 +49,7 @@ export default function ChatLogs() {
                     />
                 </div>
 
-                <div className={clsx("flex-1 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[320px]", !selectedFile && "hidden lg:flex")}>
+                <div className={clsx("min-w-0 flex-1 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-h-[320px]", !selectedFile && "hidden lg:flex")}>
                     <div className="flex min-h-12 items-center gap-3 px-4 py-2 border-b border-line text-xs font-semibold text-ink-muted">
                         {selectedFile && <button type="button" onClick={() => setSelectedFile(null)} className="inline-flex min-h-11 items-center gap-1.5 text-ink-muted hover:text-ink lg:hidden"><ChevronLeft className="size-4" />{t("로그 파일")}</button>}
                         <span className={selectedFile ? "hidden lg:inline" : ""}>{t("채팅 내용")}</span>
@@ -269,7 +269,7 @@ function MessageViewer({ file }: MessageViewerProps) {
             </div>
 
             <div className="p-3 border-b border-line bg-surface-1 shrink-0 flex flex-wrap gap-2">
-                <div className="flex flex-wrap items-center gap-2 w-full min-w-0 flex-1">
+                <div className="chat-search-grid flex flex-wrap items-center gap-2 w-full min-w-0 flex-1">
                     <div className="relative max-lg:min-w-0 flex-1">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-faint" />
                         <Input
@@ -295,7 +295,7 @@ function MessageViewer({ file }: MessageViewerProps) {
                     {hasFilter && (
                         <button
                             onClick={handleClearSearch}
-                            className="chat-clear-search p-1.5 text-ink-faint hover:text-ink bg-surface-3 hover:bg-surface-4 rounded-md transition-colors shrink-0"
+                            aria-label={t("검색 초기화")} className="chat-clear-search icon-button p-1.5 text-ink-faint hover:text-ink bg-surface-3 hover:bg-surface-4 rounded-md transition-colors shrink-0"
                             title="검색 초기화"
                         >
                             <X className="w-3.5 h-3.5" />
@@ -304,6 +304,7 @@ function MessageViewer({ file }: MessageViewerProps) {
                 </div>
             </div>
 
+            {loadError && data && <div role="status" className="flex flex-wrap gap-2 items-center justify-between border-b border-line px-3 py-2 text-xs text-ink-muted"><span>{t("메시지 갱신에 실패했습니다. 이전 내용을 표시합니다.")}</span><Button onClick={() => void loadMessages(page, appliedSearch, appliedNickname)}>{t("다시 시도")}</Button></div>}
             <div className="flex-1 overflow-y-auto bg-surface-0/45 relative min-h-0">
                 {loading && !data && (
                     <div className="absolute inset-0 z-10 bg-surface-0/65 flex items-center justify-center text-ink-faint">

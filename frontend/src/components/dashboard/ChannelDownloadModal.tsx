@@ -26,6 +26,7 @@ export function ChannelDownloadModal({ platform, name, channel, onClose, onSave 
     const [initialTags, setInitialTags] = useState(channel?.watchalong_tags ?? "같이보기");
     const [defaultLabel, setDefaultLabel] = useState("확인 중...");
     const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
     const dirty = !channel || autoRecord !== channel.auto_record ||
         condition !== (channel.download_condition ?? "inherit") ||
         (condition === "watchalong" && tags !== initialTags);
@@ -47,7 +48,9 @@ export function ChannelDownloadModal({ platform, name, channel, onClose, onSave 
     }, [channel]);
 
     const save = async () => {
+        if (saving) return;
         setSaving(true);
+        setSaveError(null);
         try {
             await onSave({
                 auto_record: autoRecord,
@@ -56,7 +59,9 @@ export function ChannelDownloadModal({ platform, name, channel, onClose, onSave 
             });
             onClose();
         } catch (error) {
-            toast.error(getErrorMessage(error, "채널 설정 저장에 실패했습니다."));
+            const message = getErrorMessage(error, t("채널 설정 저장에 실패했습니다."));
+            setSaveError(message);
+            toast.error(message);
         } finally {
             setSaving(false);
         }
@@ -64,7 +69,7 @@ export function ChannelDownloadModal({ platform, name, channel, onClose, onSave 
 
     return createPortal(
         <dialog ref={dialog} aria-labelledby="channel-download-title" onCancel={(event) => { event.preventDefault(); if (!saving) onClose(); }}
-            className="m-auto w-[calc(100%_-_2rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-[var(--radius-card)] border border-line bg-surface-2 text-ink p-0 shadow-2xl backdrop:bg-black/70">
+            className="ui-dialog m-auto w-[calc(100%_-_2rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-[var(--radius-card)] border border-line bg-surface-2 text-ink p-0 shadow-2xl backdrop:bg-black/70">
             <form onSubmit={(event) => { event.preventDefault(); void save(); }} className="p-5 sm:p-6 space-y-5 max-sm:p-3 max-sm:space-y-3">
                 <div className="flex items-start gap-3">
                     <SlidersHorizontal className="w-5 h-5 text-[var(--primary)] shrink-0 mt-1" />
@@ -72,7 +77,7 @@ export function ChannelDownloadModal({ platform, name, channel, onClose, onSave 
                         <h2 id="channel-download-title" className="font-bold text-lg">{channel ? t("채널 녹화 설정") : t("라이브 채널 추가")}</h2>
                         <p className="text-xs text-ink-muted mt-1 truncate" title={name}>{PLATFORM_LABELS[platform]} · {name}</p>
                     </div>
-                    <button type="button" onClick={onClose} disabled={saving} aria-label="설정 닫기" className="channel-settings-close p-1 text-ink-faint hover:text-ink"><X className="w-5 h-5" /></button>
+                    <button type="button" onClick={onClose} disabled={saving} aria-label="설정 닫기" className="channel-settings-close icon-button p-1 text-ink-faint hover:text-ink"><X className="w-5 h-5" /></button>
                 </div>
                 <SettingRow label={t("자동 녹화")} hint={t("방송이 시작되고 녹화 조건에 맞으면 자동으로 저장합니다.")}
                     control={<Switch checked={autoRecord} disabled={saving} onChange={setAutoRecord} label={`${name} ${t("자동 녹화")}`} />} />
@@ -88,7 +93,8 @@ export function ChannelDownloadModal({ platform, name, channel, onClose, onSave 
                     </Field>}
                     <p className="text-xs text-ink-faint leading-relaxed">{t("Chzzk의 같이보기 정보와 방송 태그를 확인합니다. 변경 사항은 다음 자동 녹화부터 적용되며, 진행 중인 녹화와 수동 녹화에는 영향을 주지 않습니다.")}</p>
                 </>}
-                <div className="flex justify-end gap-2 border-t border-line pt-4">
+                {saveError && <p role="alert" className="text-xs text-danger [overflow-wrap:anywhere]">{saveError}</p>}
+                <div className="dialog-actions flex flex-wrap justify-end gap-2 border-t border-line pt-4">
                     <Button type="button" disabled={saving} onClick={onClose}>취소</Button>
                     <Button type="submit" variant="primary" loading={saving} disabled={!dirty || (platform === "chzzk" && condition === "watchalong" && !tags.trim())}>{channel ? "설정 저장" : "채널 추가"}</Button>
                 </div>

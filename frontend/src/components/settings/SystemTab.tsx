@@ -52,12 +52,12 @@ export function SystemTab({ onDirtyChange, onUpdateAvailabilityChange }: Props) 
         <>
             <Card className="space-y-5">
                 <CardHeader icon={Terminal} title="프로그램 업데이트" />
-                <div className="bg-surface-3 p-4 rounded-[var(--radius-control)] border border-line flex items-center justify-between">
-                    <div>
+                <div className="bg-surface-3 p-4 rounded-[var(--radius-control)] border border-line flex flex-col items-start sm:flex-row sm:items-center justify-between gap-4 [overflow-wrap:anywhere]">
+                    <div className="min-w-0">
                         <h4 className="text-sm font-medium text-ink mb-1">{t("현재 버전")}</h4>
                         <p className="text-xs text-ink-faint font-mono">v{updateInfo?.current_version || "..."}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="min-w-0 sm:text-right">
                         <h4 className="text-sm font-medium text-ink mb-1">{t("최신 릴리즈")}</h4>
                         <p className="text-xs text-ink-faint font-mono">{updateInfo?.latest_version ? `v${updateInfo.latest_version}` : t("확인 중...")}</p>
                     </div>
@@ -77,7 +77,7 @@ export function SystemTab({ onDirtyChange, onUpdateAvailabilityChange }: Props) 
                 {updateInfo?.has_update && updateInfo.release_notes && (
                     <div className="mt-6">
                         <h4 className="text-sm font-medium text-ok mb-2 flex items-center gap-2"><Gift className="w-4 h-4" /> {t("릴리즈 노트")}</h4>
-                        <div className="bg-surface-3 border border-line p-4 rounded-[var(--radius-control)] overflow-y-auto max-h-60 whitespace-pre-wrap text-sm text-ink-muted font-mono leading-relaxed">
+                        <div className="bg-surface-3 border border-line p-4 rounded-[var(--radius-control)] overflow-y-auto max-h-60 whitespace-pre-wrap [overflow-wrap:anywhere] text-sm text-ink-muted font-mono leading-relaxed">
                             {updateInfo.release_notes}
                         </div>
                     </div>

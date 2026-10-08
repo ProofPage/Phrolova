@@ -61,17 +61,19 @@ export function AppearanceTab({ onDirtyChange }: Props) {
                             onClick={() => setTheme(theme.id as ThemeId)}
                             title={t(theme.label)}
                             aria-label={`${t(theme.label)} ${t("컬러 테마")}`}
-                            className={`w-10 h-10 rounded-full border-4 transition-all  ${themeId === theme.id ? "border-ink " : "border-transparent"}`}
+                            aria-pressed={themeId === theme.id}
+                            className={`theme-swatch w-10 h-10 rounded-full border-4 transition-all  ${themeId === theme.id ? "border-ink " : "border-transparent"}`}
                             style={{ backgroundColor: theme.primary }}
                         />
                     ))}
                     <div className="relative">
-                        <input ref={colorPickerRef} type="color" className="absolute opacity-0 w-0 h-0" value={customColor} onChange={(event) => setCustomColor(event.target.value)} />
+                        <input ref={colorPickerRef} tabIndex={-1} aria-hidden="true" type="color" className="absolute opacity-0 w-0 h-0" value={customColor} onChange={(event) => setCustomColor(event.target.value)} />
                         <button
                             onClick={() => colorPickerRef.current?.click()}
                             title={`${t("사용자 지정")} ${t("컬러 테마")}`}
                             aria-label={`${t("사용자 지정")} ${t("컬러 테마")}`}
-                            className={`w-10 h-10 rounded-full border-4 transition-all  overflow-hidden ${themeId === "custom" ? "border-ink " : "border-transparent"}`}
+                            aria-pressed={themeId === "custom"}
+                            className={`theme-swatch w-10 h-10 rounded-full border-4 transition-all  overflow-hidden ${themeId === "custom" ? "border-ink " : "border-transparent"}`}
                             style={{ background: themeId === "custom" ? customColor : "conic-gradient(red, yellow, lime, cyan, blue, magenta, red)" }}
                         />
                     </div>

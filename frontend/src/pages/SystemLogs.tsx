@@ -111,6 +111,7 @@ interface LogFileListViewProps {
 function LogFileListView({ selectedFile, onSelect, refreshKey }: LogFileListViewProps) {
     const { t } = useLanguage();
     const [files, setFiles] = useState<SystemLogFile[]>([]);
+    const autoSelected = useRef(false);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
 
@@ -121,7 +122,8 @@ function LogFileListView({ selectedFile, onSelect, refreshKey }: LogFileListView
             setFiles(data);
             setLoadError(false);
             // 만약 선택된 파일이 없고 파일 목록이 존재하면 자동으로 가장 첫번째 파일(보통 실시간 로그인 service.log)을 선택
-            if (!selectedFile && data.length > 0) {
+            if (!selectedFile && data.length > 0 && !autoSelected.current) {
+                autoSelected.current = true;
                 onSelect(data[0]);
             }
         } catch {
@@ -159,7 +161,7 @@ function LogFileListView({ selectedFile, onSelect, refreshKey }: LogFileListView
                 <span className="text-xs font-semibold text-ink-muted">로그 파일 목록</span>
                 <button 
                     onClick={() => loadFiles(false)} 
-                    className="p-1.5 hover:bg-surface-3 rounded transition-colors text-ink-faint hover:text-ink"
+                    disabled={loading} aria-label={t("목록 새로고침")} className="icon-button disabled:opacity-50 hover:bg-surface-3 rounded transition-colors text-ink-faint hover:text-ink"
                     title="목록 새로고침"
                 >
                     <RefreshCw className="w-3.5 h-3.5" />
@@ -365,6 +367,7 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                             <button
                                 key={val}
                                 onClick={() => setLinesLimit(val)}
+                                aria-pressed={linesLimit === val}
                                 className={clsx(
                                     "px-2 py-1 text-[10px] font-bold rounded transition-colors",
                                     linesLimit === val
@@ -380,7 +383,7 @@ function LogContentViewer({ file }: LogContentViewerProps) {
 
                 <div className="log-toolbar-row w-full justify-between">
                     {/* 검색 바 */}
-                    <div className="relative">
+                    <div className="relative min-w-0 flex-1 max-sm:basis-full">
                         <Search className="w-3.5 h-3.5 text-ink-faint absolute left-2.5 top-1/2 -translate-y-1/2" />
                         <Input
                             type="text"
@@ -388,7 +391,7 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                             aria-label="로그 검색"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="text-xs pl-8 pr-3 py-1.5 w-40"
+                            className="text-xs pl-8 pr-3 py-1.5 w-full sm:min-w-40"
                         />
                     </div>
 
@@ -396,6 +399,7 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                         {/* 실시간 갱신 */}
                         <button
                         onClick={() => setAutoRefresh(!autoRefresh)}
+                        aria-pressed={autoRefresh}
                         className={clsx(
                             "flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg border transition-all",
                             autoRefresh
@@ -423,7 +427,7 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                         <button
                         onClick={() => setAutoScroll(!autoScroll)}
                         className={clsx(
-                            "p-1.5 rounded-lg border transition-colors",
+                            "icon-button rounded-lg border transition-colors",
                             autoScroll
                                 ? "bg-ok/10 text-ok border-ok/30"
                                 : "bg-surface-3 text-ink-muted border-line hover:bg-surface-4 hover:text-ink"
@@ -439,7 +443,7 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                         <button
                         onClick={() => loadContent(false)}
                         disabled={loading}
-                        className="p-1.5 bg-surface-3 border border-line hover:bg-surface-4 text-ink-muted hover:text-ink rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label={t("새로고침")} className="icon-button bg-surface-3 border border-line hover:bg-surface-4 text-ink-muted hover:text-ink rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="새로고침"
                         >
                         <RefreshCw className={clsx("w-3.5 h-3.5", loading && "animate-spin")} />
