@@ -13,7 +13,6 @@ Run it on your own computer or server to keep media, channel settings, and recor
 ## Contents
 
 - [Features](#features)
-- [Screenshots](#screenshots)
 - [Supported platforms](#supported-platforms)
 - [Requirements](#requirements)
 - [Installation](#installation)
@@ -67,26 +66,6 @@ X Spaces has a separate recording path and stricter API constraints. See [X Spac
 - Color presets, a custom accent color, and browser-local title and favicon preferences.
 - Discord slash commands, bot notifications, and webhook delivery with fallback, retry handling, and a persistent pending-notification queue.
 - Automatic release checks after startup and every 24 hours, plus a manual update check. Installation updates remain a separate operation.
-
-## Screenshots
-
-### Live monitoring
-
-![Phrolova live dashboard with channel monitoring and recording controls](assets/screenshots/dashboard-latest.jpg)
-
-Monitor channels and inspect recording activity from the Live dashboard.
-
-### Downloads
-
-![Phrolova video download management screen](assets/screenshots/vod-downloader-latest.jpg)
-
-Add media links and review download tasks and their status.
-
-### Notifications
-
-![Phrolova Discord notification settings](assets/screenshots/notifications-latest.jpg)
-
-Configure Discord delivery, event selection, and command access.
 
 ## Supported platforms
 
