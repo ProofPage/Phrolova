@@ -2,7 +2,7 @@
 
 **Self-hosted live recording, video downloads, and X Spaces archiving.**
 
-[![CI](https://github.com/ProofPage/Phrolova/actions/workflows/ci.yml/badge.svg)](https://github.com/ProofPage/Phrolova/actions/workflows/ci.yml)
+[![CI](https://github.com/ProofPage/Phrolova/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/ProofPage/Phrolova/actions/workflows/ci.yml)
 
 [Repository](https://github.com/ProofPage/Phrolova) · [Releases](https://github.com/ProofPage/Phrolova/releases) · [Changelog](docs/CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [MIT License](LICENSE)
 
