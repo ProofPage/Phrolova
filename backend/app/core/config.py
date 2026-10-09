@@ -88,6 +88,8 @@ class Settings(BaseSettings):
     # ── 앱 메타 ──────────────────────────────────────────
     app_name: str = "Phrolova"
     debug: bool = False
+    # 다른 출처의 개발 UI를 쓸 때만 명시적으로 허용한다. 동일 출처 UI는 항상 동작한다.
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
 
     # ── FFmpeg ───────────────────────────────────────────
     ffmpeg_path: str = "ffmpeg"

@@ -6,6 +6,12 @@ Rookery: 공통 유틸리티
 from __future__ import annotations
 
 import re
+import json
+import io
+from dotenv.parser import parse_stream
+import os
+import tempfile
+import threading
 import sys
 from pathlib import Path
 
@@ -100,7 +106,7 @@ def clean_filename(name: str, max_length: int = 150) -> str:
         정제된 파일명.
     """
     # Windows 파일명 금지 문자: \ / : * ? " < > |
-    cleaned = re.sub(r'[\\/:*?"<>|]', "_", name)
+    cleaned = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "_", name)
     cleaned = cleaned.strip()
     suffix = Path(cleaned).suffix
     if suffix.lower() not in {".ts", ".mp4", ".mkv", ".m4a", ".part"}:
@@ -113,19 +119,37 @@ def clean_filename(name: str, max_length: int = 150) -> str:
     return stem + suffix
 
 
+_env_write_lock = threading.RLock()
+
 def update_env_file(updates: dict[str, str], *, raise_on_error: bool = False) -> None:
     """updates 딕셔너리의 키-값을 .env 파일에 반영한다.
 
     기존 키는 덮어쓰고, 없는 키는 끝에 추가한다.
     """
-    env_path = _get_env_path()
-    if not env_path.exists():
-        env_path.parent.mkdir(parents=True, exist_ok=True)
-        env_path.touch(exist_ok=True)
+    # 읽기-수정-교체를 직렬화하고 같은 디렉터리에서 원자 교체하여 손실/잘림을 막는다.
+    with _env_write_lock:
+        _write_env_file(updates, raise_on_error=raise_on_error)
 
+
+def _write_env_file(updates: dict[str, str], *, raise_on_error: bool) -> None:
+    temporary = None
     try:
-        lines = env_path.read_text(encoding="utf-8").splitlines()
-        remaining = dict(updates)
+        env_path = _get_env_path().resolve()
+        env_path.parent.mkdir(parents=True, exist_ok=True)
+        original = env_path.read_bytes() if env_path.exists() else b""
+        newline = "\r\n" if b"\r\n" in original else "\n"
+        # 기존 사용자가 작성한 여러 줄 인용 값도 하나의 항목으로 갱신한다.
+        lines = [binding.original.string.rstrip("\r\n") for binding in parse_stream(io.StringIO(original.decode("utf-8")))]
+        encoded = {}
+        for key, value in updates.items():
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+                raise ValueError("유효하지 않은 설정 키입니다.")
+            # 개행은 한 물리적 줄 안에 이스케이프해 후속 갱신에서도 키 주입을 막는다.
+            value = str(value)
+            if any(c in value for c in "\r\n#'\"") or value != value.strip():
+                value = json.dumps(value, ensure_ascii=False)
+            encoded[key.upper()] = value
+        remaining = dict(encoded)
         new_lines: list[str] = []
 
         for line in lines:
@@ -133,10 +157,11 @@ def update_env_file(updates: dict[str, str], *, raise_on_error: bool = False) ->
                 new_lines.append(line)
                 continue
 
-            key = line.split("=", 1)[0].strip().upper()
+            key = line.split("=", 1)[0].strip().removeprefix("export ").upper()
 
-            if key in remaining:
-                new_lines.append(f"{key}={remaining.pop(key)}")
+            if key in encoded:
+                new_lines.append(f"{key}={encoded[key]}")
+                remaining.pop(key, None)
             else:
                 new_lines.append(line)
 
@@ -144,9 +169,19 @@ def update_env_file(updates: dict[str, str], *, raise_on_error: bool = False) ->
         for key, val in remaining.items():
             new_lines.append(f"{key}={val}")
 
-        env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+        with tempfile.NamedTemporaryFile(mode="wb", dir=env_path.parent, prefix=".env-", delete=False) as handle:
+            temporary = Path(handle.name)
+            handle.write((newline.join(new_lines) + newline).encode("utf-8"))
+            handle.flush()
+            os.fsync(handle.fileno())
+        if env_path.exists():
+            temporary.chmod(env_path.stat().st_mode & 0o777)
+        os.replace(temporary, env_path)
     except Exception as e:
         logger.error(f".env 파일 업데이트 실패: {e}")
         if raise_on_error:
             raise
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 

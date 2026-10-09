@@ -286,6 +286,9 @@ class VodRepository:
         self._db = db or get_database()
 
     def upsert(self, task_id: str, record: dict) -> None:
+        self._upsert(task_id, record)
+
+    def _upsert(self, task_id: str, record: dict, conn=None) -> None:
         """작업 상태를 저장한다. 스키마에 없는 필드는 payload에 JSON으로 담는다."""
         known = {
             "url",
@@ -301,7 +304,8 @@ class VodRepository:
         }
         payload = {k: v for k, v in record.items() if k not in known and k != "task_id"}
 
-        self._db.execute(
+        execute = conn.execute if conn is not None else self._db.execute
+        execute(
             """
             INSERT INTO vod_tasks (
                 task_id, url, title, quality, state, progress,
@@ -337,10 +341,10 @@ class VodRepository:
 
     def replace_all(self, records: dict[str, dict]) -> None:
         """전체 작업 목록을 교체한다 (완료 작업 일괄 삭제 등에 사용)."""
-        # Write first: an interruption must not empty all existing history.
-        for task_id, record in records.items():
-            self.upsert(task_id, record)
+        # 전체 목록이 한 번에 반영되어야 실패/동시 조회에서도 이전 이력이 유지된다.
         with self._db.transaction() as conn:
+            for task_id, record in records.items():
+                self._upsert(task_id, record, conn)
             if records:
                 placeholders = ",".join("?" for _ in records)
                 conn.execute(f"DELETE FROM vod_tasks WHERE task_id NOT IN ({placeholders})", tuple(records))

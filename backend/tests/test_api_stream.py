@@ -6,10 +6,10 @@ test_api_stream.py
 import pytest
 from fastapi.testclient import TestClient
 
-# NOTE: FastAPI lifespan과 TestClient 호환성 문제로 skip
-# 실제 환경에서는 정상 작동하지만, 테스트 환경에서는 RuntimeError 발생
-# 향후 httpx.AsyncClient 기반 테스트로 대체 필요
-pytestmark = pytest.mark.skip(reason="FastAPI lifespan with TestClient compatibility issue")
+@pytest.fixture(autouse=True)
+def bind_client(api_client):
+    global client
+    client = api_client
 
 
 class TestStreamAPI:
@@ -64,7 +64,7 @@ class TestStreamAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["channel_id"] == "test_channel_remove"
+        assert data["composite_key"] == "chzzk:test_channel_remove"
         assert "message" in data
 
     def test_toggle_auto_record(self):
@@ -77,7 +77,7 @@ class TestStreamAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["channel_id"] == "test_channel_toggle"
+        assert data["composite_key"] == "chzzk:test_channel_toggle"
         assert data["auto_record"] is False
         assert "message" in data
 

@@ -65,6 +65,8 @@ class SpacesRecorder:
             cookie_file=settings.x_cookie_file,
         )
         task.spaces_process = process
+        from app.engine.pipeline.ytdlp import YtdlpLivePipeline
+        task.spaces_stderr_task = asyncio.create_task(YtdlpLivePipeline._drain_process_stderr(process))
         task.spaces_output_path = output_path
 
     async def stop(self, task: "ChannelTask", label: str) -> None:
@@ -82,7 +84,11 @@ class SpacesRecorder:
                 except asyncio.TimeoutError:
                     logger.warning(f"[{label}] yt-dlp가 응답하지 않아 강제 종료합니다.")
                     proc.kill()
+                    await proc.wait()
 
+            if task.spaces_stderr_task is not None:
+                await task.spaces_stderr_task
+                task.spaces_stderr_task = None
             task.spaces_process = None
             task.spaces_output_path = None
             task._current_space_id = None

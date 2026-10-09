@@ -131,6 +131,7 @@ async def clear_captured_space(composite_key: str):
 
     task.captured_m3u8_url = None
     task.captured_m3u8_at = None
-    conductor._save_persistence()
+    conductor._save_capture_state(composite_key)
+    conductor._broadcast_status()
 
     return {"message": f"'{composite_key}' m3u8 URL 초기화 완료."}

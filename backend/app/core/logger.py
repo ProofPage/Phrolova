@@ -6,6 +6,8 @@ Rookery: 구조화된 로깅 모듈
 from __future__ import annotations
 
 import logging
+import re
+from urllib.parse import urlsplit, urlunsplit
 import sys
 import threading
 from pathlib import Path
@@ -98,9 +100,31 @@ class _StderrToLogger:
             return False
 
 
+def _redact_log_secrets(text: str) -> str:
+    # 라이브 CDN URL의 서명과 예외 트레이스에 포함된 쿠키를 최종 출력 단계에서 가린다.
+    def url(match):
+        try:
+            parsed = urlsplit(match.group(0))
+        except ValueError:
+            return "<invalid-url>"
+        host = parsed.netloc.rsplit("@", 1)[-1]
+        path = parsed.path
+        if "/webhooks/" in path:
+            path = path.split("/webhooks/", 1)[0] + "/webhooks/<redacted>"
+        return urlunsplit((parsed.scheme, host, path, "", ""))
+    text = re.sub(r'https?://[^\s\"\'<>]+', url, text)
+    text = re.sub(r'(?i)\b(NID_AUT|NID_SES|auth_token|ct0)=([^;\s]+)', r'\1=<redacted>', text)
+    return re.sub(r'(?im)\b(Authorization|Cookie|x-csrf-token):[^\r\n]+', r'\1: <redacted>', text)
+
+
+class _SecretSafeFormatter(logging.Formatter):
+    def format(self, record):
+        return _redact_log_secrets(super().format(record))
+
+
 def _make_formatter() -> logging.Formatter:
     """콘솔·파일·uvicorn 핸들러가 같은 줄 모양을 쓰도록 한곳에서 만든다."""
-    return logging.Formatter(
+    return _SecretSafeFormatter(
         fmt="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )

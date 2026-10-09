@@ -58,3 +58,35 @@ def restore_settings():
         except (AttributeError, ValueError):
             # 계산된 속성 등 되돌릴 수 없는 항목은 건너뛴다.
             pass
+
+
+@pytest.fixture
+def api_client(monkeypatch, tmp_path):
+    """외부 방송/봇 없이 실제 서비스와 라우터를 임시 저장소에 연결한다."""
+    from unittest.mock import AsyncMock
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from app.api.settings import router as settings_router
+    from app.api.stream import router as stream_router
+    from app.api.vod import router as vod_router
+    from app.engine.conductor import Conductor
+    from app.services.recorder import RecorderService
+    import app.main as main
+
+    settings = get_settings()
+    settings.nid_aut = settings.nid_ses = None
+    settings.download_dir = str(tmp_path / 'recordings')
+    settings.live_download_dir = settings.vod_download_dir = ''
+    conductor = Conductor()
+    service = RecorderService(conductor)
+    monkeypatch.setattr(main, 'get_recorder_service', lambda: service)
+    monkeypatch.setattr(conductor._chzzk_engine, 'check_live_status', AsyncMock(return_value={'is_live': False}))
+    monkeypatch.setattr(conductor, '_start_recording', AsyncMock())
+    monkeypatch.setattr(conductor, '_cookie_check_loop', AsyncMock())
+    test_app = FastAPI()
+    for router in (settings_router, stream_router, vod_router):
+        test_app.include_router(router)
+    with TestClient(test_app) as client:
+        yield client
+        client.portal.call(conductor.stop)
+        client.portal.call(service._vod_engine.shutdown)

@@ -396,7 +396,7 @@ export const api = {
         return res.data;
     },
     getAllVodStatus: async () => {
-        const res = await client.get<VodStatusResponse>("/vod/status");
+        const res = await client.get<VodStatusResponse>("/vod/status", { timeout: 10000 });
         return res.data;
     },
     cancelVodImport: async (id: string) => {

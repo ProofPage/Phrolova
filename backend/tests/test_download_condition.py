@@ -215,7 +215,7 @@ def test_default_condition_write_failure_does_not_change_runtime_settings(monkey
     def fail_write(*args, **kwargs):
         raise PermissionError("read only")
 
-    monkeypatch.setattr(Path, "write_text", fail_write)
+    monkeypatch.setattr("app.core.utils.os.replace", fail_write)
     client = TestClient(app, raise_server_exceptions=False)
     assert client.put("/api/settings/live-condition", json={
         "live_download_condition": "watchalong", "watchalong_tags": "같이보기",

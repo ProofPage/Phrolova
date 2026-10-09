@@ -221,19 +221,23 @@ class FFmpegPipeline:
         cmd.extend(["-y", str(output_file)])
 
         logger.info(f"[{self._channel_id}] FFmpeg 녹화 시작({'Hybrid' if is_hybrid else 'Direct'}): {output_file}")
-        logger.debug(f"[{self._channel_id}] FFmpeg CMD: {' '.join(cmd)}")
+        logger.debug(f"[{self._channel_id}] FFmpeg 실행 옵션 준비 완료 (입력 URL과 인증 헤더 생략)")
 
         try:
             self._process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE,
                 # Terminal Ctrl+C belongs to the server; it finalizes FFmpeg via EOF/q.
                 start_new_session=(os.name != "nt"),
             )
             self._state = RecordingState.RECORDING
             self._start_time = datetime.now()
+            self._intentional_stop = False
+            process = self._process
+            from app.engine.pipeline.ytdlp import YtdlpLivePipeline
+            stderr_task = asyncio.create_task(YtdlpLivePipeline._drain_process_stderr(process))
 
             # Hybrid Mode일 경우 데이터 피더 작동
             if is_hybrid and stream_obj:
@@ -242,7 +246,7 @@ class FFmpegPipeline:
                 )
 
             # 백그라운드에서 프로세스 종료 감시
-            asyncio.create_task(self._watch_process())
+            asyncio.create_task(self._watch_process(process, stderr_task))
 
             # 백그라운드에서 통계 업데이트
             asyncio.create_task(self._update_statistics_loop())
@@ -316,6 +320,7 @@ class FFmpegPipeline:
             logger.warning(f"[{self._channel_id}] 녹화 중이 아닙니다.")
             return
 
+        had_error = self._state == RecordingState.ERROR
         self._intentional_stop = True  # _watch_process에 에러 무시 신호
         self._state = RecordingState.STOPPING
         logger.info(f"[{self._channel_id}] FFmpeg 정상 종료 요청...")
@@ -347,8 +352,9 @@ class FFmpegPipeline:
                 stdin = proc.stdin
                 if stdin is not None and not stdin.is_closing():
                     try:
-                        stdin.write(b"q")
-                        await stdin.drain()
+                        if self._stream_fd is None and feeder is None:
+                            stdin.write(b"q")
+                            await stdin.drain()
                     except (BrokenPipeError, ConnectionResetError, OSError):
                         pass
                     try:
@@ -370,24 +376,23 @@ class FFmpegPipeline:
                 proc.kill()
                 await proc.wait()
 
-        self._state = RecordingState.COMPLETED
+        self._state = RecordingState.ERROR if had_error or proc.returncode != 0 else RecordingState.COMPLETED
         self._process = None
 
-    async def _watch_process(self) -> None:
+    async def _watch_process(self, proc=None, stderr_task=None) -> None:
         """FFmpeg 프로세스의 종료를 감시한다."""
-        proc = self._process
+        proc = proc or self._process
         if proc is None:
             return
-
         return_code = await proc.wait()
-
+        stderr_data = await stderr_task if stderr_task is not None else b""
+        if self._process is not proc:
+            return
         if self._state == RecordingState.RECORDING:
             # 예상치 못한 종료
             if return_code != 0:
-                stderr_data = b""
-                stderr_stream = proc.stderr
-                if stderr_stream is not None:
-                    stderr_data = await stderr_stream.read()
+                if stderr_task is None and proc.stderr is not None:
+                    stderr_data = await proc.stderr.read()
                 err_text: str = stderr_data.decode(errors="replace")
                 tail: str = err_text[len(err_text) - 500:]  # pyre-ignore[16]: Pyre2 str slice bug
                 logger.error(

@@ -339,14 +339,20 @@ class Conductor:
 
     async def remove_channel(self, composite_key: str) -> None:
         """채널을 감시 목록에서 제거한다."""
-        task = self._channels.pop(composite_key, None)
+        task = self._channels.get(composite_key)
         if task is None:
             logger.warning(f"채널 '{composite_key}'을(를) 찾을 수 없습니다.")
             return
 
+        # 정리 중 새 녹화가 생기지 않도록 감시를 먼저 종료하되 채널 참조는 유지한다.
+        mt = task.monitor_task
+        if mt is not None and not mt.done():
+            mt.cancel()
+            await asyncio.gather(mt, return_exceptions=True)
+
         # 녹화 중이면 파이프라인 정지
         pipe = task.pipeline
-        if pipe is not None and pipe.state in (RecordingState.RECORDING, RecordingState.ERROR):
+        if pipe is not None or task.chat_archiver is not None:
             logger.info(f"[{composite_key}] 채널 제거 전 녹화 정지 중...")
             await self._stop_recording(composite_key)
 
@@ -359,6 +365,7 @@ class Conductor:
         if mt is not None and not mt.done():
             mt.cancel()
 
+        self._channels.pop(composite_key, None)
         self._scan_events.pop(composite_key, None)
         logger.info(f"채널 제거: {composite_key}")
         self._channel_repo.delete(composite_key)
@@ -394,21 +401,25 @@ class Conductor:
         # ── 1단계: 모든 monitor task를 먼저 취소 ─────────────────
         # retry sleep 중이거나 _start_recording 대기 중인 task가
         # 새 녹화를 시작하지 못하도록 recording stop보다 먼저 처리한다.
+        pending = []
         for task in self._channels.values():
             mt = task.monitor_task
             if mt is not None and not mt.done():
                 mt.cancel()
+                pending.append(mt)
 
         if self._cookie_check_task is not None and not self._cookie_check_task.done():
             self._cookie_check_task.cancel()
+            pending.append(self._cookie_check_task)
 
         if self._stats_broadcast_task is not None and not self._stats_broadcast_task.done():
             self._stats_broadcast_task.cancel()
+            pending.append(self._stats_broadcast_task)
+        await asyncio.gather(*pending, return_exceptions=True)
 
         # ── 2단계: 실행 중인 녹화 및 Spaces 프로세스 중지 ────────
-        for composite_key, task in self._channels.items():
-            pipe = task.pipeline
-            if pipe is not None and pipe.state == RecordingState.RECORDING:
+        for composite_key, task in list(self._channels.items()):
+            if task.pipeline is not None or task.chat_archiver is not None:
                 await self._stop_recording(composite_key)
 
             if task.spaces_process is not None:
@@ -965,6 +976,14 @@ class Conductor:
             logger.error(f"[{composite_key}] 채팅 아카이빙 {reason} 실패: {e}")
 
     async def _stop_recording(self, composite_key: str) -> None:
+        task = self._channels.get(composite_key)
+        if task is None:
+            return
+        async with task.recording_lock:
+            if self._channels.get(composite_key) is task:
+                await self._stop_recording_locked(composite_key)
+
+    async def _stop_recording_locked(self, composite_key: str) -> None:
         """채널의 녹화 및 채팅 아카이빙을 중지한다."""
         task = self._channels.get(composite_key)
         if task is None:
@@ -972,33 +991,34 @@ class Conductor:
 
         # X Spaces 녹화 중지
         if task.platform == Platform.X_SPACES:
-            await self._stop_spaces_recording(composite_key)
+            await self._stop_spaces_recording_locked(composite_key)
             return
 
         # 라이브 파이프라인 중지
         pipe = task.pipeline
-        if pipe is not None and pipe.state == RecordingState.RECORDING:
+        if pipe is not None and pipe.state in (RecordingState.RECORDING, RecordingState.ERROR):
             await pipe.stop_recording()
 
-            # ── 알림: 녹화 완료 ──
-            status = pipe.get_status()
-            duration = status.get("duration_seconds", 0) or 0
-            output_file = status.get("output_file") or status.get("output_path") or "N/A"
-            file_size = status.get("file_size_bytes", 0) / (1024 * 1024)
-            duration_str = (
-                f"{duration // 60:.0f}분 {duration % 60:.0f}초" if duration > 0 else "N/A"
-            )
-            self._notify(
-                NotificationKind.RECORDING_COMPLETED,
-                title="⏹ 녹화 완료",
-                description=f"채널: **{task.channel_name or composite_key}**",
-                color="blue",
-                fields={
-                    "녹화 시간": duration_str,
-                    "파일 크기": f"{file_size:.1f} MB",
-                    "저장 경로": str(output_file),
-                },
-            )
+            if pipe.state == RecordingState.COMPLETED:
+                # ── 알림: 녹화 완료 ──
+                status = pipe.get_status()
+                duration = status.get("duration_seconds", 0) or 0
+                output_file = status.get("output_file") or status.get("output_path") or "N/A"
+                file_size = status.get("file_size_bytes", 0) / (1024 * 1024)
+                duration_str = (
+                    f"{duration // 60:.0f}분 {duration % 60:.0f}초" if duration > 0 else "N/A"
+                )
+                self._notify(
+                    NotificationKind.RECORDING_COMPLETED,
+                    title="⏹ 녹화 완료",
+                    description=f"채널: **{task.channel_name or composite_key}**",
+                    color="blue",
+                    fields={
+                        "녹화 시간": duration_str,
+                        "파일 크기": f"{file_size:.1f} MB",
+                        "저장 경로": str(output_file),
+                    },
+                )
 
         # 녹화 완료 이력 저장
         if pipe is not None and pipe.state == RecordingState.COMPLETED:
@@ -1018,7 +1038,15 @@ class Conductor:
         # 정지 후 프론트엔드에 즉시 상태 업데이트
         self._broadcast_status()
 
-    async def _start_recording(
+    async def _start_recording(self, composite_key: str, channel_name=None, title=None, is_retry=False, automatic=False) -> None:
+        task = self._channels.get(composite_key)
+        if task is None:
+            return
+        async with task.recording_lock:
+            if self._channels.get(composite_key) is task:
+                await self._start_recording_locked(composite_key, channel_name=channel_name, title=title, is_retry=is_retry, automatic=automatic)
+
+    async def _start_recording_locked(
         self,
         composite_key: str,
         channel_name: Optional[str] = None,
@@ -1033,9 +1061,14 @@ class Conductor:
         if (automatic or is_retry) and not self._can_auto_record(task):
             return
 
+        # 중복 시작 요청은 직렬화 후 다시 검사하고, 실패한 이전 프로세스를 먼저 정리한다.
+        if task.pipeline is not None:
+            if task.pipeline.state in (RecordingState.RECORDING, RecordingState.STOPPING):
+                return
+            await self._stop_recording_locked(composite_key)
         # X Spaces는 별도 경로
         if task.platform == Platform.X_SPACES:
-            await self._start_spaces_recording(composite_key, channel_name=channel_name, title=title)
+            await self._start_spaces_recording_locked(composite_key, channel_name=channel_name, title=title)
             return
 
         try:
@@ -1097,7 +1130,15 @@ class Conductor:
         # 녹화 시작/실패 후 프론트엔드에 즉시 상태 업데이트
         self._broadcast_status()
 
-    async def _start_spaces_recording(
+    async def _start_spaces_recording(self, composite_key: str, channel_name=None, title=None) -> None:
+        task = self._channels.get(composite_key)
+        if task is None:
+            return
+        async with task.recording_lock:
+            if self._channels.get(composite_key) is task:
+                await self._start_spaces_recording_locked(composite_key, channel_name=channel_name, title=title)
+
+    async def _start_spaces_recording_locked(
         self,
         composite_key: str,
         channel_name: Optional[str] = None,
@@ -1105,7 +1146,7 @@ class Conductor:
     ) -> None:
         """X Spaces 녹화를 시작한다 (프로세스 관리는 SpacesRecorder가 담당)."""
         task = self._channels.get(composite_key)
-        if task is None:
+        if task is None or task.spaces_process is not None:
             return
 
         display_name = channel_name or task.display_name
@@ -1136,6 +1177,14 @@ class Conductor:
         self._broadcast_status()
 
     async def _stop_spaces_recording(self, composite_key: str) -> None:
+        task = self._channels.get(composite_key)
+        if task is None:
+            return
+        async with task.recording_lock:
+            if self._channels.get(composite_key) is task:
+                await self._stop_spaces_recording_locked(composite_key)
+
+    async def _stop_spaces_recording_locked(self, composite_key: str) -> None:
         """X Spaces 녹화 프로세스를 종료한다."""
         task = self._channels.get(composite_key)
         if task is None or task.spaces_process is None:

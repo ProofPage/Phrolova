@@ -27,6 +27,8 @@ class ChannelTask:
     pipeline: Optional[YtdlpLivePipeline] = field(default=None, repr=False)
     chat_archiver: Optional[ChatArchiver] = field(default=None, repr=False)
     monitor_task: Optional[asyncio.Task] = field(default=None, repr=False)
+    # 수동 요청과 자동 감시가 동시에 같은 녹화 핸들을 덮어쓰지 않도록 보호한다.
+    recording_lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
     is_live: bool = False
     channel_name: Optional[str] = None
     title: Optional[str] = None
@@ -44,6 +46,7 @@ class ChannelTask:
     last_error: Optional[str] = None
     # X Spaces 전용
     spaces_process: Optional[asyncio.subprocess.Process] = field(default=None, repr=False)
+    spaces_stderr_task: Optional[asyncio.Task] = field(default=None, repr=False)
     spaces_output_path: Optional[str] = None
     _current_space_id: Optional[str] = None
     # X Spaces 전용: 라이브 중 캡처한 dynamic m3u8 URL

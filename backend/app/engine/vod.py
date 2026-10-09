@@ -36,19 +36,22 @@ from app.engine.youtube_support import (is_youtube_url, runtime_options, youtube
 # 누락되어 발생하는 KeyError를 방지하기 위해 동적으로 속성을 보완한다.
 try:
     import yt_dlp.extractor.common as common
-    original_parse_mpd_periods = common.InfoExtractor._parse_mpd_periods
+    def _patch_mpd_parser(original):
+        def patched(self, mpd_doc, *args, **kwargs):
+            for elem in mpd_doc.iter():
+                if not isinstance(elem.tag, str):
+                    continue
+                tag = elem.tag.rsplit('}', 1)[-1]
+                if tag == 'Initialization':
+                    elem.attrib.setdefault('sourceURL', '')
+                elif tag == 'SegmentURL':
+                    elem.attrib.setdefault('media', '')
+            return original(self, mpd_doc, *args, **kwargs)
+        patched._phrolova_mpd_patch = True
+        return patched
 
-    def patched_parse_mpd_periods(self, mpd_doc, *args, **kwargs):
-        for elem in mpd_doc.iter():
-            if elem.tag.endswith('}Initialization') or elem.tag == 'Initialization':
-                if 'sourceURL' not in elem.attrib:
-                    elem.attrib['sourceURL'] = ''
-            elif elem.tag.endswith('}SegmentURL') or elem.tag == 'SegmentURL':
-                if 'media' not in elem.attrib:
-                    elem.attrib['media'] = ''
-        return original_parse_mpd_periods(self, mpd_doc, *args, **kwargs)
-
-    common.InfoExtractor._parse_mpd_periods = patched_parse_mpd_periods
+    if not getattr(common.InfoExtractor._parse_mpd_periods, '_phrolova_mpd_patch', False):
+        common.InfoExtractor._parse_mpd_periods = _patch_mpd_parser(common.InfoExtractor._parse_mpd_periods)
     logger.info("✅ yt-dlp DASH MPD 파서 멍키패치 적용 완료")
 except Exception as e:
     logger.error(f"❌ yt-dlp DASH MPD 파서 멍키패치 적용 실패: {e}")
@@ -338,8 +341,13 @@ class VodEngine:
 
     @staticmethod
     def _validate_media_url(url: str) -> None:
-        # Reject a removed service even when the shared extractor supports it.
-        host = (urlsplit(url.strip()).hostname or "").lower()
+        # 다운로드 URL이 파일/FFmpeg 로컬 프로토콜로 해석되지 않도록 제한한다.
+        parsed = urlsplit(url.strip())
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise NonRetryableDownloadError("http/https 영상 URL을 입력해 주세요.")
+        if parsed.username or parsed.password:
+            raise NonRetryableDownloadError("인증 정보가 포함된 URL은 사용할 수 없습니다.")
+        host = parsed.hostname.lower()
         if host == "twitcasting.tv" or host.endswith(".twitcasting.tv"):
             raise NonRetryableDownloadError("지원하지 않는 영상 플랫폼입니다.")
 
@@ -482,6 +490,18 @@ class VodEngine:
         서로의 슬롯을 기다리며 교착된다.
         """
         logger = self._task_logger(task_id)
+        try:
+            await self._run_download_loop(task_id)
+        finally:
+            # 재시도 대기/슬롯 대기에서 취소되어도 CANCELLING 상태로 남기지 않는다.
+            task = self._tasks.get(task_id)
+            if task is not None and task.cancel_flag and task.state == VodDownloadState.CANCELLING:
+                task.state = VodDownloadState.IDLE
+                task.progress = 0.0
+                self._save_history()
+
+    async def _run_download_loop(self, task_id: str) -> None:
+        logger = self._task_logger(task_id)
         while True:
             async with self._semaphore:  # 동시 다운로드 제한
                 should_retry = await self._attempt_download(task_id)
@@ -523,6 +543,9 @@ class VodEngine:
             return False
 
         if task.cancel_flag:
+            task.state = VodDownloadState.IDLE
+            task.progress = 0.0
+            self._save_history()
             return False
         task.state = VodDownloadState.DOWNLOADING
         self._save_history()
@@ -602,6 +625,8 @@ class VodEngine:
                     # 에러 발생 시 이력 저장
                     self._save_history()
 
+        if task.cancel_flag:
+            self._save_history()
         return False
 
     async def _download_clip(self, task_id: str, task: VodDownloadTask) -> None:
@@ -777,12 +802,8 @@ class VodEngine:
         if not playlist_path:
             raise RuntimeError("master_playlist.m3u8에서 sub-playlist URL을 찾을 수 없습니다.")
 
-        if playlist_path.startswith('http'):
-            playlist_url = playlist_path
-        elif playlist_path.startswith('/'):
-            playlist_url = f"{parsed.scheme}://{parsed.netloc}{playlist_path}"
-        else:
-            playlist_url = master_url.rsplit('/', 1)[0] + '/' + playlist_path
+        from urllib.parse import urljoin
+        playlist_url = urljoin(master_url, playlist_path)
 
         # 2. sub-playlist 가져오기 → chunk URL 절대경로로 재작성
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -790,19 +811,18 @@ class VodEngine:
             resp.raise_for_status()
             playlist_text = resp.text
 
-        base_url = re.sub(r"master_playlist\.m3u8.*", "", master_url)
-
         def _abs(line: str) -> str:
-            s = line.strip()
-            if not s or s.startswith('#'):
+            stripped = line.strip()
+            if not stripped:
                 return line
-            if s.startswith('http'):
-                return line
-            if s.startswith('/'):
-                return f"{parsed.scheme}://{parsed.netloc}{s}"
-            return base_url + s
+            if stripped.startswith('#'):
+                # 암호화 키와 초기화 조각의 URI도 로컬 임시 파일이 아닌 원격 경로 기준이다.
+                return re.sub(r'URI="([^"]+)"', lambda match: 'URI="' + urljoin(playlist_url, match.group(1)) + '"', line)
+            return urljoin(playlist_url, stripped)
 
-        playlist_abs = '\n'.join(_abs(l) for l in playlist_text.splitlines())
+        playlist_abs = '\n'.join(_abs(line) for line in playlist_text.splitlines())
+        if task.cancel_flag:
+            raise DownloadCancelledError("다운로드가 취소되었습니다.")
 
         # 3. 임시 .m3u8 파일 저장
         tmp_m3u8 = Path(task.output_dir) / f"_tmp_{task_id}.m3u8"
@@ -810,7 +830,9 @@ class VodEngine:
 
         # 4. 출력 파일명
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_path = Path(task.output_dir) / f"[XSpaces] {timestamp}.m4a"
+        output_path = Path(task.output_dir) / f"[XSpaces] {timestamp} {task_id}.m4a"
+        task.resolved_filename = str(output_path)
+        task.expected_part_file = str(output_path)
         task.title = f"[X Spaces] {timestamp}"
         logger.info(f"[{task_id}] X Spaces ffmpeg 다운로드 시작: {output_path.name}")
 
@@ -934,6 +956,8 @@ class VodEngine:
                 return ydl.extract_info(task.url, download=False)
 
         info: dict[str, Any] | None = await asyncio.to_thread(lambda: _extract_info())  # type: ignore[arg-type]
+        if task.cancel_flag:
+            raise DownloadCancelledError("다운로드가 취소되었습니다.")
 
         if not info:
             raise RuntimeError("영상 정보를 가져올 수 없습니다.")
@@ -1303,6 +1327,9 @@ class VodEngine:
         Returns:
             성공 메시지 또는 에러
         """
+        # 중복 ID는 dict 구성 중 다른 작업을 조용히 버리므로 변경 전에 거부한다.
+        if len(set(task_ids)) != len(task_ids):
+            return {"error": "작업 ID를 중복해서 지정할 수 없습니다."}
         # 모든 task_id가 유효한지 확인
         for tid in task_ids:
             if tid not in self._tasks:
@@ -1320,6 +1347,7 @@ class VodEngine:
             new_tasks[tid] = self._tasks[tid]
 
         self._tasks = new_tasks
+        self._save_history()
         logger.info(f"작업 순서 재정렬 완료: {len(task_ids)}개")
 
         return {"message": "작업 순서가 변경되었습니다.", "count": len(task_ids)}

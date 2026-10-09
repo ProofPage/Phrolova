@@ -6,8 +6,10 @@ VOD API 엔드포인트 통합 테스트 (FastAPI TestClient)
 import pytest
 from fastapi.testclient import TestClient
 
-# NOTE: FastAPI lifespan with TestClient compatibility issue
-pytestmark = pytest.mark.skip(reason="FastAPI lifespan with TestClient compatibility issue")
+@pytest.fixture(autouse=True)
+def bind_client(api_client):
+    global client
+    client = api_client
 
 
 class TestVodAPI:
@@ -57,7 +59,7 @@ class TestVodAPI:
         """존재하지 않는 VOD 다운로드 재시도"""
         response = client.post("/api/vod/nonexistent_task_id/retry")
 
-        assert response.status_code in (200, 404)
+        assert response.status_code == 400
 
     def test_reorder_vod_tasks_empty(self):
         """빈 작업 목록 재정렬"""
@@ -70,7 +72,7 @@ class TestVodAPI:
         assert response.status_code == 200
         data = response.json()
         assert "message" in data
-        assert data["reordered_count"] == 0
+        assert data["count"] == 0
 
     def test_clear_completed_vod_tasks(self):
         """완료된 VOD 작업 일괄 삭제"""
@@ -91,18 +93,18 @@ class TestVodAPI:
     def test_vod_info_invalid_url(self):
         """잘못된 URL로 VOD 정보 조회"""
         payload = {
-            "url": "https://invalid-url.com",
+            "url": "file:///not-a-media-url",
         }
 
         response = client.post("/api/vod/info", json=payload)
 
         # 500 또는 200 + error
-        assert response.status_code in (200, 500)
+        assert response.status_code == 400
 
     def test_download_vod_invalid_url(self):
         """잘못된 URL로 VOD 다운로드 시도"""
         payload = {
-            "url": "https://invalid-url.com",
+            "url": "file:///not-a-media-url",
             "quality": "best",
         }
 
@@ -110,4 +112,4 @@ class TestVodAPI:
 
         # 백그라운드 작업이므로 200 반환 후 나중에 에러 상태로 전환
         # 또는 즉시 500 반환 가능
-        assert response.status_code in (200, 500)
+        assert response.status_code == 400

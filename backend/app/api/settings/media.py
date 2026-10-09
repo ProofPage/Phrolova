@@ -77,7 +77,7 @@ async def update_live_condition(req: DefaultDownloadOptions):
     settings = get_settings()
     _update_env_file({
         "LIVE_DOWNLOAD_CONDITION": req.live_download_condition,
-        "WATCHALONG_TAGS": json.dumps(req.watchalong_tags, ensure_ascii=False),
+        "WATCHALONG_TAGS": req.watchalong_tags,
     }, raise_on_error=True)
     settings.live_download_condition = req.live_download_condition
     settings.watchalong_tags = req.watchalong_tags
@@ -164,7 +164,7 @@ async def update_vod_settings(req: VodSettingsUpdateRequest):
         env_updates["KEEP_DOWNLOAD_PARTS"] = str(req.keep_download_parts).lower()
 
     if req.vod_filename_template is not None:
-        _update_env_file({"VOD_FILENAME_TEMPLATE": json.dumps(req.vod_filename_template, ensure_ascii=False)}, raise_on_error=True)
+        _update_env_file({"VOD_FILENAME_TEMPLATE": req.vod_filename_template}, raise_on_error=True)
         settings.vod_filename_template = req.vod_filename_template
 
     # ── vod_max_concurrent ──

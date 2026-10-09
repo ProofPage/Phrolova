@@ -15,7 +15,7 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings, resolve_data_dir
@@ -212,11 +212,23 @@ app = FastAPI(
 # CORS 설정 (개발 환경 프록시 연동용 — 프로덕션에서는 동일 오리진이므로 실질적 영향 없음)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[origin.strip() for origin in get_settings().cors_origins.split(",") if origin.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def reject_untrusted_origin(request: Request, call_next):
+    # CORS 헤더만 제한하면 단순 POST는 실행되므로, API 호출 자체를 먼저 거부한다.
+    origin = request.headers.get("origin")
+    if origin:
+        same_origin = f"{request.url.scheme}://{request.headers.get('host', '')}"
+        allowed = {item.strip() for item in get_settings().cors_origins.split(",") if item.strip()}
+        if origin != same_origin and origin not in allowed:
+            return JSONResponse({"detail": "허용되지 않은 요청 출처입니다."}, status_code=403)
+    return await call_next(request)
+
 
 # ── 라우터 등록 ──────────────────────────────────────────
 app.include_router(stream_router)
@@ -274,6 +286,10 @@ if STATIC_DIR.exists():
         if full_path.startswith(("api/", "health", "docs", "openapi")):
             from fastapi import HTTPException
             raise HTTPException(status_code=404, detail="Not Found")
+        # Vite public/에서 복사한 폰트 등도 HTML fallback 대신 실제 파일로 제공한다.
+        target = (STATIC_DIR / full_path).resolve()
+        if target.is_relative_to(STATIC_DIR.resolve()) and target.is_file():
+            return FileResponse(target)
         return FileResponse(STATIC_DIR / "index.html")
 else:
     logger.warning(

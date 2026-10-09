@@ -31,10 +31,8 @@ from app.engine.x_spaces.cookies import _build_headers, _parse_netscape_cookies
 
 def _sanitize_filename(name: str) -> str:
     """파일명에 사용 불가한 문자를 제거한다."""
-    invalid = r'\/:*?"<>|'
-    for ch in invalid:
-        name = name.replace(ch, "_")
-    return name.strip()[:50]
+    from app.core.utils import clean_filename
+    return clean_filename(name, max_length=50)
 
 
 class XSpacesEngine:
@@ -200,7 +198,7 @@ class XSpacesEngine:
 
         process = await asyncio.create_subprocess_exec(
             *cmd,
-            stdout=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.PIPE,
         )
         return process, str(output_path)

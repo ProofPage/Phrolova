@@ -196,7 +196,9 @@ class TestYtdlpLiveCookieFallback:
 
         async def fake_exec(*cmd, **kwargs):
             cmds.append(list(cmd))
-            return MagicMock()
+            process = MagicMock()
+            process.stderr = None
+            return process
 
         monkeypatch.setattr("app.engine.pipeline.ytdlp.asyncio.create_subprocess_exec", fake_exec)
         return cmds

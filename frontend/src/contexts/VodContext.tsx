@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { api, VodTask, VodImport, VodAddResult, VodStatusResponse } from "../api/client";
 import { useToast } from "../components/ui/Toast";
 import { getErrorMessage } from "../utils/error";
@@ -36,16 +36,23 @@ export function VodProvider({ children }: { children: ReactNode }) {
         setActiveCount(data.active_count);
     }, []);
 
-    const refreshTasks = useCallback(async () => {
-        try {
-            const data = await api.getAllVodStatus();
-            applyStatus(data);
-        } catch (e) {
-            setLoadError(true);
-            console.error("다시보기 상태 갱신 실패:", e);
-        } finally {
-            setLoading(false);
-        }
+    const inFlight = useRef<Promise<void> | null>(null);
+    const refreshTasks = useCallback((): Promise<void> => {
+        // 폴링과 버튼 갱신이 겹쳐도 응답 순서가 뒤집히거나 요청이 누적되지 않게 한다.
+        if (inFlight.current) return inFlight.current;
+        const request = (async () => {
+            try {
+                applyStatus(await api.getAllVodStatus());
+            } catch (e) {
+                setLoadError(true);
+                console.error("다시보기 상태 갱신 실패:", e);
+            } finally {
+                setLoading(false);
+                inFlight.current = null;
+            }
+        })();
+        inFlight.current = request;
+        return request;
     }, [applyStatus]);
 
     // 전역 폴링 (컴포넌트 언마운트와 무관하게 지속)

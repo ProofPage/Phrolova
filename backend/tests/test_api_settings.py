@@ -6,8 +6,10 @@ test_api_settings.py
 import pytest
 from fastapi.testclient import TestClient
 
-# NOTE: FastAPI lifespan with TestClient compatibility issue
-pytestmark = pytest.mark.skip(reason="FastAPI lifespan with TestClient compatibility issue")
+@pytest.fixture(autouse=True)
+def bind_client(api_client):
+    global client
+    client = api_client
 
 
 class TestSettingsAPI:
@@ -31,7 +33,7 @@ class TestSettingsAPI:
         assert "discord_bot_configured" in data
         assert "keep_download_parts" in data
         assert "max_record_retries" in data
-        assert "output_format" in data
+        assert "live_format" in data
         assert "recording_quality" in data
         assert "vod_max_concurrent" in data
         assert "vod_default_quality" in data
@@ -68,12 +70,12 @@ class TestSettingsAPI:
         assert data["settings"]["keep_download_parts"] is True
         assert data["settings"]["max_record_retries"] == 5
 
-    def test_update_general_settings(self):
+    def test_update_general_settings(self, tmp_path):
         """일반 설정 업데이트"""
         payload = {
-            "download_dir": "./test_recordings",
+            "download_dir": str(tmp_path / "recordings"),
             "monitor_interval": 60,
-            "output_format": "mp4",
+            "live_format": "mp4",
             "recording_quality": "1080p",
         }
 
@@ -128,7 +130,7 @@ class TestSettingsAPI:
         response = client.post("/api/settings/cookies/test")
 
         # 200 + success=false 또는 실패 메시지
-        assert response.status_code == 200
+        assert response.status_code == 400
 
     def test_update_cookies_empty_values(self):
         """빈 값으로 쿠키 업데이트 (인증 해제)"""

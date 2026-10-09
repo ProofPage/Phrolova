@@ -374,17 +374,11 @@ class YtdlpLivePipeline:
             for attempt in range(1, max_open_retries + 1):
                 session = None
                 try:
-                    session, stream = await asyncio.to_thread(
-                        self._create_streamlink_stream,
-                        hls_url,
-                        headers,
-                        cookies,
-                        start_offset,
-                        force_restart,
-                        quality,
+                    session, stream_fd = await self._open_streamlink_reader(
+                        hls_url, headers, cookies, start_offset, force_restart, quality,
                     )
                     self._streamlink_session = session
-                    self._streamlink_fd = await asyncio.to_thread(stream.open)
+                    self._streamlink_fd = stream_fd
                     logger.info(
                         f"[{self._channel_id}] Streamlink HLS 연결 성공 "
                         f"(시도 {attempt}/{max_open_retries})"
@@ -414,6 +408,8 @@ class YtdlpLivePipeline:
                     break
                 data = await asyncio.to_thread(stream_fd.read, 128 * 1024)
                 if not data:
+                    if self._intentional_stop or self._state != RecordingState.RECORDING:
+                        break
                     logger.warning(
                         f"[{self._channel_id}] 방송 감시 중 Streamlink 입력이 끝났습니다. "
                         "녹화를 오류로 표시해 자동 재연결을 요청합니다."
@@ -457,6 +453,31 @@ class YtdlpLivePipeline:
             process = self._process
             if process and process.stdin and not process.stdin.is_closing():
                 process.stdin.close()
+
+    async def _open_streamlink_reader(self, *args):
+        # asyncio 취소는 to_thread의 스레드를 멈추지 않으므로 결과 핸들을 회수한 뒤 닫는다.
+        def open_reader():
+            session, stream = self._create_streamlink_stream(*args)
+            try:
+                return session, stream.open()
+            except BaseException:
+                session.http.close()
+                raise
+
+        worker = asyncio.create_task(asyncio.to_thread(open_reader))
+        try:
+            return await asyncio.shield(worker)
+        except asyncio.CancelledError:
+            try:
+                session, stream_fd = await worker
+            except Exception:
+                pass  # 연결 실패로 핸들이 생성되지 않았어도 원래 취소를 전파한다.
+            else:
+                try:
+                    await asyncio.to_thread(stream_fd.close)
+                finally:
+                    await asyncio.to_thread(session.http.close)
+            raise
 
     @staticmethod
     def _redact_streamlink_error(message: str) -> str:

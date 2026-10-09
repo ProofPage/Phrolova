@@ -78,7 +78,9 @@ def _resolve_and_validate(file_id: str) -> Path:
     if not full_path.is_relative_to(base_dir):
         raise HTTPException(status_code=403, detail="접근이 허용되지 않는 경로입니다.")
 
-    if not full_path.exists():
+    if full_path.suffix.lower() != ".jsonl":
+        raise HTTPException(status_code=403, detail="채팅 로그 파일만 접근할 수 있습니다.")
+    if not full_path.is_file():
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
 
     return full_path
@@ -107,10 +109,16 @@ def _is_message(line: bytes) -> bool:
     if not line.strip():
         return False
     try:
-        json.loads(line)
+        raw = json.loads(line)
     except (json.JSONDecodeError, UnicodeDecodeError):
         return False
-    return True
+    return (
+        isinstance(raw, dict)
+        and isinstance(raw.get("timestamp", ""), str)
+        and isinstance(raw.get("nickname", "Unknown"), str)
+        and isinstance(raw.get("message", ""), str)
+        and (raw.get("user_id") is None or isinstance(raw["user_id"], str))
+    )
 
 
 def _scan_from(
@@ -207,6 +215,8 @@ def _read_page(path: Path, index: _ChatIndex, page: int, limit: int) -> list[dic
     with open(path, "rb") as f:
         f.seek(index.offsets[checkpoint])
         for line in f:
+            if f.tell() > index.scanned_bytes:
+                break
             if not _is_message(line):
                 continue
             if skip > 0:
@@ -241,11 +251,13 @@ def _read_filtered(
     matched = 0
     items: list[dict] = []
 
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
+    with open(path, "rb") as f:
+        for raw_line in f:
+            if not raw_line.endswith(b"\n"):
+                break
+            if not _is_message(raw_line):
                 continue
-
+            line = raw_line.decode("utf-8")
             if pre_search or pre_nickname:
                 lowered = line.lower()
                 if pre_search and pre_search not in lowered:
@@ -300,6 +312,8 @@ def _collect_files() -> list[dict]:
         for file in base_dir.glob("**/*.jsonl"):
             try:
                 resolved_file = file.resolve()
+                if not resolved_file.is_relative_to(base_dir):
+                    continue
                 if root_name == "legacy" and resolved_file.is_relative_to(roots[0][1]):
                     # 두 경로가 부모/자식 관계일 때 라이브 로그를 중복 노출하지 않는다.
                     continue
