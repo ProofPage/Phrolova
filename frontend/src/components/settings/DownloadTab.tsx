@@ -27,6 +27,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [vodMaxSpeed, setVodMaxSpeed] = useState(0);
     const [vodFilenameTemplate, setVodFilenameTemplate] = useState("[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}");
     const [vodFormat, setVodFormat] = useState("mp4");
+    const [cdn, setCdn] = useState<"default" | "akamai">("default");
     const [chatArchiveEnabled, setChatArchiveEnabled] = useState(false);
     const initialized = useRef(false);
     // 세 영역이 각각 따로 저장되므로 훅도 따로 둔다 — 저장 중 표시가 서로 섞이지 않는다.
@@ -50,6 +51,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         setVodDefaultQuality(settings.vod_default_quality);
         setVodMaxSpeed(settings.vod_max_speed);
         setVodFormat(settings.vod_format || "mp4");
+        setCdn(settings.chzzk_vod_cdn ?? "default");
         setVodFilenameTemplate(settings.vod_filename_template || "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}");
         setChatArchiveEnabled(settings.chat_archive_enabled);
     }, [settings]);
@@ -66,6 +68,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         vodDefaultQuality !== settings.vod_default_quality ||
         vodMaxSpeed !== settings.vod_max_speed ||
         vodFormat !== (settings.vod_format || "mp4") ||
+        cdn !== (settings.chzzk_vod_cdn ?? "default") ||
         vodFilenameTemplate !== (settings.vod_filename_template || "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}") ||
         chatArchiveEnabled !== settings.chat_archive_enabled
     );
@@ -78,6 +81,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
             vod_default_quality: vodDefaultQuality,
             vod_max_speed: vodMaxSpeed,
             vod_format: vodFormat,
+            chzzk_vod_cdn: cdn,
             vod_filename_template: vodFilenameTemplate,
             keep_download_parts: keepParts,
         }),
@@ -116,6 +120,16 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                             { value: "1080p", label: "1080p" },
                             { value: "720p", label: "720p" },
                             { value: "480p", label: "480p" },
+                        ]}
+                    />
+                </Field>
+                <Field label="Chzzk VOD CDN 선택" hint={cdn === "akamai" ? "다운로드한 영상의 재생 시간이 비정상적이거나 영상에 문제가 발생한 경우 사용하세요. 기본 CDN보다 다운로드 속도가 느릴 수 있습니다." : "Chzzk 다시보기 다운로드에만 적용됩니다. 저장 후 시작하거나 다시 다운로드하는 작업부터 적용되며, 진행 중인 작업에는 영향을 주지 않습니다."}>
+                    <Select
+                        value={cdn}
+                        onChange={(event) => setCdn(event.target.value as typeof cdn)}
+                        options={[
+                            { value: "default", label: "기본 CDN (권장)" },
+                            { value: "akamai", label: "Akamai CDN (재생 시간 오류 발생 시 사용)" },
                         ]}
                     />
                 </Field>

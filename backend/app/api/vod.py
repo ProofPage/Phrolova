@@ -5,7 +5,7 @@ VOD/클립 다운로드 관련 엔드포인트.
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -27,6 +27,7 @@ class VodDownloadRequest(BaseModel):
     url: str = Field(..., description="치지직 VOD/클립 URL 또는 유튜브 등 yt-dlp 지원 URL")
     quality: str = Field("best", description="화질 (best, worst, format_id)")
     output_dir: Optional[str] = Field(None, description="저장 디렉토리 (기본: settings)")
+    cdn: Literal["default", "akamai"] = "default"
 
 
 # ── 엔드포인트 ───────────────────────────────────────────
@@ -52,7 +53,7 @@ async def download_vod(req: VodDownloadRequest):
 
     try:
         result = await service.download_vod_batch(
-            url=req.url, quality=req.quality, output_dir=req.output_dir,
+            url=req.url, quality=req.quality, output_dir=req.output_dir, cdn=req.cdn,
         )
         return {**result, "url": req.url, "quality": req.quality}
     except ValueError as e:
@@ -136,15 +137,19 @@ async def resume_vod_download(task_id: str):
     return result
 
 
+class VodRetryRequest(BaseModel):
+    cdn: Literal["default", "akamai"] = "default"
+
+
 @router.post("/{task_id}/retry", summary="다운로드 재시도")
-async def retry_vod_download(task_id: str):
+async def retry_vod_download(task_id: str, req: Optional[VodRetryRequest] = None):
     """완료/에러 상태의 다운로드를 재시도합니다. 새 task_id를 반환합니다."""
     from app.main import get_recorder_service
 
     service = get_recorder_service()
 
     try:
-        new_task_id = await service.retry_vod(task_id)
+        new_task_id = await service.retry_vod(task_id, cdn=req.cdn if req else "default")
         return {
             "message": "다운로드가 재시작되었습니다.",
             "old_task_id": task_id,

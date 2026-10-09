@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 import json
 
 from fastapi import APIRouter, HTTPException
@@ -60,6 +60,7 @@ class VodSettingsUpdateRequest(BaseModel):
     vod_max_concurrent: Optional[int] = Field(None, ge=1, le=10, description="동시 다운로드 최대 개수")
     vod_default_quality: Optional[str] = Field(None, description="기본 화질 (best, 1080p, 720p, 480p)")
     vod_max_speed: Optional[int] = Field(None, ge=0, le=1000, description="최대 다운로드 속도 (MB/s, 0=무제한)")
+    chzzk_vod_cdn: Optional[Literal["default", "akamai"]] = None
     vod_format: Optional[str] = Field(None, description="VOD 다운로드 포맷 (mp4, mkv, ts)")
     keep_download_parts: Optional[bool] = Field(None, description="VOD 다운로드 중단 시 .part 파일 유지 여부")
 
@@ -157,54 +158,24 @@ async def update_download_settings(req: DownloadSettingsUpdateRequest):
 async def update_vod_settings(req: VodSettingsUpdateRequest):
     """VOD 다운로드 설정을 업데이트합니다."""
     settings = get_settings()
-    env_updates: dict[str, str] = {}
-
-    if req.keep_download_parts is not None:
-        settings.keep_download_parts = req.keep_download_parts
-        env_updates["KEEP_DOWNLOAD_PARTS"] = str(req.keep_download_parts).lower()
-
-    if req.vod_filename_template is not None:
-        _update_env_file({"VOD_FILENAME_TEMPLATE": req.vod_filename_template}, raise_on_error=True)
-        settings.vod_filename_template = req.vod_filename_template
-
-    # ── vod_max_concurrent ──
-    if req.vod_max_concurrent is not None:
-        settings.vod_max_concurrent = req.vod_max_concurrent
-        env_updates["VOD_MAX_CONCURRENT"] = str(req.vod_max_concurrent)
-
-    # ── vod_default_quality ──
-    if req.vod_default_quality is not None:
-        quality = req.vod_default_quality.lower()
-        if quality not in VALID_QUALITIES:
-            raise HTTPException(
-                status_code=400,
-                detail=f"지원하지 않는 품질입니다. 사용 가능: {', '.join(VALID_QUALITIES)}",
-            )
-        settings.vod_default_quality = quality
-        env_updates["VOD_DEFAULT_QUALITY"] = quality
-
-    # ── vod_max_speed ──
-    if req.vod_max_speed is not None:
-        settings.vod_max_speed = req.vod_max_speed
-        env_updates["VOD_MAX_SPEED"] = str(req.vod_max_speed)
-
-    # ── vod_format ──
-    if req.vod_format is not None:
-        fmt = req.vod_format.lower()
-        if fmt not in VALID_FORMATS:
-            raise HTTPException(
-                status_code=400,
-                detail=f"지원하지 않는 포맷입니다. 사용 가능: {', '.join(VALID_FORMATS)}",
-            )
-        settings.vod_format = fmt
-        env_updates["VOD_FORMAT"] = fmt
-
-    # .env 영구 저장
+    updates = req.model_dump(exclude_none=True)
+    for key, allowed in (("vod_default_quality", VALID_QUALITIES), ("vod_format", VALID_FORMATS)):
+        if key in updates:
+            value = updates[key].lower()
+            if value not in allowed:
+                raise HTTPException(status_code=400, detail=f"지원하지 않는 설정입니다: {key}")
+            updates[key] = value
+    env_updates = {
+        key.upper(): str(value).lower() if isinstance(value, bool) else str(value)
+        for key, value in updates.items()
+    }
     if env_updates:
         try:
-            _update_env_file(env_updates)
-        except Exception as e:
-            print(f"설정 파일 저장 실패: {e}")
+            _update_env_file(env_updates, raise_on_error=True)
+        except OSError as exc:
+            raise HTTPException(status_code=500, detail="VOD 설정 파일을 저장하지 못했습니다.") from exc
+    for key, value in updates.items():
+        setattr(settings, key, value)
 
     # VodEngine의 세마포어를 업데이트하려면 재시작이 필요
     # 현재는 런타임 중 반영 불가 (재시작 필요 안내)
@@ -215,6 +186,7 @@ async def update_vod_settings(req: VodSettingsUpdateRequest):
             "vod_default_quality": settings.vod_default_quality,
             "vod_max_speed": settings.vod_max_speed,
             "vod_format": settings.vod_format,
+            "chzzk_vod_cdn": settings.chzzk_vod_cdn,
             "vod_filename_template": settings.vod_filename_template,
             "keep_download_parts": settings.keep_download_parts,
         },

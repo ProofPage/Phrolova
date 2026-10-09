@@ -179,6 +179,7 @@ class RecorderService:
         url: str,
         quality: str = "best",
         output_dir: Optional[str] = None,
+        cdn: str = "default",
     ) -> str:
         """VOD 다운로드를 시작한다. task_id를 반환한다."""
         logger.info(f"[Service] VOD 다운로드 요청: {url}")
@@ -186,11 +187,12 @@ class RecorderService:
             url=url,
             quality=quality,
             output_dir=output_dir,
+            cdn=cdn,
         )
         return task_id
 
     async def download_vod_batch(
-        self, url: str, quality: str = "best", output_dir: Optional[str] = None,
+        self, url: str, quality: str = "best", output_dir: Optional[str] = None, cdn: str = "default",
     ) -> dict:
         """Return immediately; channel enumeration continues in the background."""
         url = url.strip()
@@ -200,7 +202,7 @@ class RecorderService:
             job = self._vod_engine.channel_imports.start(url, output_dir, quality)
             return {"task_id": None, "task_ids": [], "added_count": 0,
                     "import_id": job["id"], "message": "채널 영상 수집을 시작했습니다."}
-        task_id = await self.download_vod(url, quality, output_dir)
+        task_id = await self.download_vod(url, quality, output_dir, cdn=cdn)
         return {"task_id": task_id, "task_ids": [task_id], "added_count": 1,
                 "message": "다운로드 목록에 추가했습니다."}
 
@@ -233,10 +235,10 @@ class RecorderService:
         logger.info(f"[Service] VOD 다운로드 재개 요청: {task_id}")
         return self._vod_engine.resume_download(task_id)
 
-    async def retry_vod(self, task_id: str) -> str:
+    async def retry_vod(self, task_id: str, cdn: str = "default") -> str:
         """VOD 다운로드를 재시도한다. 새 task_id를 반환한다."""
         logger.info(f"[Service] VOD 다운로드 재시도 요청: {task_id}")
-        return await self._vod_engine.retry_download(task_id)
+        return await self._vod_engine.retry_download(task_id, cdn=cdn)
 
     def reorder_vod_tasks(self, task_ids: list[str]) -> dict:
         """VOD 다운로드 작업 순서를 재정렬한다."""

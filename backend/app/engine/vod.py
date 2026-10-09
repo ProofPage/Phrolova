@@ -21,8 +21,9 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Optional
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit
 
+from app.engine.chzzk_cdn import ChzzkCdnYoutubeDL, is_chzzk_media_url, is_chzzk_vod_url
 from app.core.vod_filename import build_vod_outtmpl
 from app.core.config import get_settings
 from app.core.logger import logger, get_media_logger
@@ -96,6 +97,11 @@ class VodDownloadTask:
     state: VodDownloadState = VodDownloadState.IDLE
     progress: float = 0.0
     quality: str = "best"
+    cdn: str = "default"
+    cdn_applied: bool = False
+    warning_message: Optional[str] = None
+    media_duration: Optional[float] = None
+    source_url: str = field(default="", init=False, repr=False)
     output_dir: str = ""
     output_path: Optional[str] = None
     expected_part_file: Optional[str] = None
@@ -125,6 +131,7 @@ class VodDownloadTask:
 
     def __post_init__(self) -> None:
         self.pause_event.set()  # 초기 상태: 일시정지 아님
+        self.source_url = self.url
 
 
 class VodEngine:
@@ -213,7 +220,7 @@ class VodEngine:
 
     def _is_chzzk_url(self, url: str) -> bool:
         """치지직 URL인지 확인."""
-        return "chzzk.naver.com" in url
+        return is_chzzk_media_url(url)
 
     def _is_x_spaces_url(self, url: str) -> bool:
         """X Spaces / Periscope CDN URL인지 확인."""
@@ -261,6 +268,13 @@ class VodEngine:
             "extractor_retries": 5,
             "file_access_retries": 5,
         }
+
+        if is_chzzk_vod_url(task.source_url):
+            # DASH exposes video/audio separately; plain "best" requires a muxed format.
+            if task.quality == "best":
+                opts["format"] = "bestvideo*+bestaudio/best"
+            elif task.quality == "worst":
+                opts["format"] = "worstvideo*+worstaudio/worst"
 
         if is_youtube_url(task.url):
             opts.update(runtime_options())
@@ -409,6 +423,7 @@ class VodEngine:
         url: str,
         output_dir: Optional[str] = None,
         quality: str = "best",
+        cdn: str = "default",
     ) -> str:
         """VOD/클립 다운로드를 시작한다.
 
@@ -421,6 +436,8 @@ class VodEngine:
             task_id (작업 추적용 UUID).
         """
         self._validate_media_url(url)
+        if cdn not in ("default", "akamai"):
+            raise ValueError("지원하지 않는 CDN입니다.")
         logger = get_media_logger(url)
         settings = get_settings()
 
@@ -436,9 +453,10 @@ class VodEngine:
         task = VodDownloadTask(
             url=url,
             quality=quality,
+            cdn=cdn,
             output_dir=save_dir,
             state=VodDownloadState.IDLE,
-            # 치지직은 두 CDN을 교대로 시도하므로 추가 재시도 여유를 둔다.
+            # 선택한 CDN 안에서만 제한된 재시도를 수행한다.
             max_retries=5 if self._is_chzzk_url(url) else 3,
         )
 
@@ -511,13 +529,13 @@ class VodEngine:
             task = self._tasks[task_id]
             if task.cancel_flag:
                 return
-            # CDN을 바꾸는 재시도는 이전 CDN에서 받은 조각을 이어받지 않는다.
-            # 서명·세그먼트 체계가 다른 CDN의 조각이 한 파일에 섞이는 것을 막는다.
+            # 갱신된 재생 정보와 이전 시도의 조각이 섞이지 않게 정리한다.
+            # CDN 선택은 작업 생성 시 고정되어 재시도 중 바뀌지 않는다.
             if self._is_chzzk_url(task.url):
                 if not await self._cleanup_partial_files(task):
                     task.state = VodDownloadState.ERROR
                     task.error_message = (
-                        "이전 CDN의 임시 조각 파일을 삭제하지 못해 안전한 재시도를 중단했습니다. "
+                        "이전 시도의 임시 조각 파일을 삭제하지 못해 안전한 재시도를 중단했습니다. "
                         "파일 잠금을 해제한 뒤 다시 시도해 주세요."
                     )
                     logger.error(f"[{task_id}] {task.error_message}")
@@ -948,12 +966,30 @@ class VodEngine:
         logger = get_media_logger(task.url)
         import yt_dlp
 
+        # Capture origin once; clip extraction temporarily changes task.url.
+        chzzk_source = is_chzzk_vod_url(task.source_url)
+        selected_cdn = task.cdn if chzzk_source else "default"
+        def make_ydl(options):
+            if selected_cdn == "akamai":
+                return ChzzkCdnYoutubeDL(options, cdn=selected_cdn)
+            return yt_dlp.YoutubeDL(options)
+        task.warning_message = None
+        task.cdn_applied = False
+        task.media_duration = None
+
         # 1. 메타데이터 추출
         opts_info = self._build_ytdlp_options(task, progress_callback=None, cookie_file=cookie_file)
+        if chzzk_source:
+            opts_info["hls_prefer_native"] = True
+            opts_info["skip_unavailable_fragments"] = False
 
         def _extract_info() -> dict[str, Any] | None:
-            with yt_dlp.YoutubeDL(opts_info) as ydl:
-                return ydl.extract_info(task.url, download=False)
+            with make_ydl(opts_info) as ydl:
+                try:
+                    return ydl.extract_info(task.url, download=False)
+                finally:
+                    if selected_cdn == "akamai":
+                        task.cdn_applied |= ydl.cdn_applied
 
         info: dict[str, Any] | None = await asyncio.to_thread(lambda: _extract_info())  # type: ignore[arg-type]
         if task.cancel_flag:
@@ -985,7 +1021,9 @@ class VodEngine:
             }
             index = 1
             while (candidate.exists() or Path(str(candidate) + ".part").exists()
-                   or str(candidate).casefold() in reserved):
+                   or candidate.with_suffix("." + get_settings().vod_format).exists()
+                   or str(candidate).casefold() in reserved
+                   or str(candidate.with_suffix("." + get_settings().vod_format)).casefold() in reserved):
                 candidate = Path(expected_file).with_name(
                     f"{Path(expected_file).stem} ({index}){Path(expected_file).suffix}"
                 )
@@ -1003,47 +1041,49 @@ class VodEngine:
 
         opts["outtmpl"] = expected_file.replace("%", "%%")
 
-        # 치지직 ABR_HLS 매니페스트는 세그먼트마다 CDN URL을 담는다. yt-dlp가
-        # 포맷 정보를 만든 뒤 URL 필드만 바꿔 Akamai를 우선 사용하고, 작업 재시도
-        # 때마다 원래 Naver CDN과 번갈아 시도한다. 서명 경로/쿼리 문자열은 보존한다.
-        if self._is_chzzk_url(task.url) and task.retry_count % 2 == 0:
-            info = self._rewrite_chzzk_cdn(info, "light-slit.akamaized.net")
-            logger.info(f"[{task_id}] CHZZK VOD CDN 시도: light-slit.akamaized.net")
-        elif self._is_chzzk_url(task.url):
-            logger.info(f"[{task_id}] CHZZK VOD CDN 시도: ex-nlive-slitvod-streaming.navercdn.com")
+        if chzzk_source:
+            opts["hls_prefer_native"] = True
+            opts["skip_unavailable_fragments"] = False
+            logger.info(f"[{task_id}] CHZZK VOD CDN 선택: {task.cdn}")
+
+        inspection_info: dict[str, Any] = {}
 
         def _download() -> str | None:
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                # 위에서 수정한 동일한 포맷/세그먼트 정보를 사용한다. 두 번째
-                # extract_info 호출로 새로운 매니페스트를 받아 URL 변경이 사라지는
-                # 문제도 피한다.
-                ydl.process_ie_result(info, download=True)
-                return expected_file
+            with make_ydl(opts) as ydl:
+                try:
+                    result = ydl.process_ie_result(info, download=True)
+                    # Merging/remuxing may change the extension. Use yt-dlp's
+                    # final result rather than treating the pre-merge name as final.
+                    for item in result.get("requested_downloads") or [result]:
+                        inspection_info.update(item)
+                        final_path = item.get("filepath")
+                        if final_path and Path(final_path).is_file():
+                            return final_path
+                    return expected_file
+                finally:
+                    if selected_cdn == "akamai":
+                        task.cdn_applied |= ydl.cdn_applied
+                    if selected_cdn == "akamai" and (ydl.cdn_unsupported or not task.cdn_applied):
+                        task.warning_message = "이 스트림의 CDN URL은 안전하게 변환할 수 없어 원래 주소를 사용했습니다."
 
         filepath: str | None = await asyncio.to_thread(lambda: _download())  # type: ignore[arg-type]
+
+        if task.cancel_flag:
+            raise DownloadCancelledError("다운로드가 취소되었습니다.")
 
         if filepath:
             if not Path(filepath).is_file():
                 raise RuntimeError("yt-dlp가 완료했지만 출력 파일이 없습니다.")
 
-            # yt-dlp의 성공 응답만으로는 일부 CDN이 반환한 불완전한 다시보기를
-            # 완료로 처리할 수 있다. 기대 길이와 실제 컨테이너 길이를 대조한다.
-            expected_duration = float(info.get("duration") or 0)
-            if self._is_chzzk_url(task.url) and expected_duration > 0:
-                actual_duration = await asyncio.to_thread(
-                    self._probe_media_duration, filepath
-                )
-                tolerance = max(10.0, expected_duration * 0.02)
-                if actual_duration + tolerance < expected_duration:
-                    Path(filepath).unlink(missing_ok=True)
-                    raise RuntimeError(
-                        f"불완전한 다시보기 다운로드: {actual_duration:.0f}초 / "
-                        f"기대 {expected_duration:.0f}초. 다른 CDN으로 재시도합니다."
-                    )
+            if chzzk_source:
+                await self._inspect_chzzk_download(task, inspection_info or info, filepath)
+            if task.cancel_flag:
+                raise DownloadCancelledError("다운로드가 취소되었습니다.")
 
             task.state = VodDownloadState.COMPLETED
             task.completed_at = datetime.now()
             task.output_path = filepath
+            task.resolved_filename = filepath
             task.progress = 100.0
             logger.info(f"[{task_id}] 다운로드 완료: {filepath}")
             self._save_history()
@@ -1085,28 +1125,6 @@ class VodEngine:
                 color="red",
                 fields={"오류": task.error_message},
             )
-
-    @staticmethod
-    def _rewrite_chzzk_cdn(info: dict[str, Any], target_host: str) -> dict[str, Any]:
-        """yt-dlp 포맷/프래그먼트의 치지직 스트림 호스트를 바꾼다."""
-        old_host = "ex-nlive-slitvod-streaming.navercdn.com"
-
-        def rewrite(value: Any) -> Any:
-            if isinstance(value, dict):
-                return {key: rewrite(item) for key, item in value.items()}
-            if isinstance(value, list):
-                return [rewrite(item) for item in value]
-            if not isinstance(value, str) or not value.startswith(("http://", "https://")):
-                return value
-            try:
-                parts = urlsplit(value)
-            except ValueError:
-                return value
-            if (parts.hostname or "").lower() != old_host:
-                return value
-            return urlunsplit(("https", target_host, parts.path, parts.query, parts.fragment))
-
-        return rewrite(info)
 
     @staticmethod
     def _format_download_error(exc: Exception) -> str:
@@ -1159,34 +1177,68 @@ class VodEngine:
                     break
         return cleanup_succeeded
 
+    async def _inspect_chzzk_download(self, task: VodDownloadTask, info: dict, filepath: str) -> None:
+        """Non-destructive checks: warnings do not turn a valid download into failure."""
+        warnings = [task.warning_message] if task.warning_message else []
+        try:
+            media = await asyncio.to_thread(self._probe_media_info, filepath)
+            task.media_duration = media["duration"]
+            streams = media["streams"]
+            if not media["format_name"] or not streams:
+                warnings.append("다운로드 파일의 미디어 컨테이너 또는 트랙을 확인하지 못했습니다.")
+            formats = info.get("requested_formats") or (
+                [info] if "vcodec" in info or "acodec" in info else info.get("formats") or [info]
+            )
+            for kind in ("video", "audio"):
+                codec = "vcodec" if kind == "video" else "acodec"
+                expected = any(fmt.get(codec) not in (None, "none") for fmt in formats)
+                if expected and kind not in streams:
+                    warnings.append(f"다운로드 파일에 {kind} 트랙이 없을 수 있습니다.")
+            try:
+                expected_duration = float(info.get("duration") or 0)
+            except (TypeError, ValueError):
+                expected_duration = 0
+            # Live/in-progress metadata is not a reliable comparison target.
+            if (math.isfinite(expected_duration) and expected_duration > 0
+                    and not info.get("is_live")
+                    and info.get("live_status") not in ("is_live", "is_upcoming", "post_live")):
+                tolerance = max(10.0, expected_duration * 0.02)
+                if abs(media["duration"] - expected_duration) > tolerance:
+                    warnings.append("다운로드한 영상의 재생 시간이 비정상적일 수 있습니다. Akamai CDN으로 다시 다운로드해 보세요.")
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+            warnings.append("FFprobe 검사를 완료하지 못했습니다. 파일을 직접 재생해 확인하세요.")
+        task.warning_message = " ".join(warnings) or None
+        if task.warning_message:
+            get_media_logger(task.source_url).warning(f"[{task.task_id}] {task.warning_message}")
+
     @staticmethod
-    def _probe_media_duration(filepath: str) -> float:
-        """ffprobe로 컨테이너 길이를 읽고, 검증할 수 없으면 재시도 가능한 오류를 낸다."""
-        settings = get_settings()
-        ffmpeg = Path(settings.resolve_ffmpeg_path())
+    def _probe_media_info(filepath: str) -> dict[str, Any]:
+        """Read only container duration and track types, with a bounded subprocess."""
+        ffmpeg = Path(get_settings().resolve_ffmpeg_path())
         candidates = [
             ffmpeg.with_name("ffprobe.exe" if ffmpeg.suffix.lower() == ".exe" else "ffprobe"),
             Path(shutil.which("ffprobe") or ""),
         ]
         ffprobe = next((path for path in candidates if path.is_file()), None)
         if ffprobe is None:
-            raise RuntimeError("다시보기 길이 검증에 필요한 ffprobe를 찾을 수 없습니다.")
+            raise RuntimeError("ffprobe를 찾을 수 없습니다.")
         result = subprocess.run(
-            [str(ffprobe), "-v", "error", "-show_entries", "format=duration",
-             "-of", "default=noprint_wrappers=1:nokey=1", filepath],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=True,
+            [str(ffprobe), "-v", "error", "-show_entries",
+             "format=duration,format_name:stream=codec_type", "-of", "json", filepath],
+            capture_output=True, text=True, timeout=30, check=True,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
-        try:
-            duration = float(result.stdout.strip())
-        except ValueError as exc:
-            raise RuntimeError("ffprobe가 유효한 다시보기 길이를 반환하지 않았습니다.") from exc
+        parsed = json.loads(result.stdout)
+        duration = float(parsed.get("format", {}).get("duration", "nan"))
         if not math.isfinite(duration) or duration < 0:
-            raise RuntimeError("ffprobe가 유효하지 않은 다시보기 길이를 반환했습니다.")
-        return duration
+            raise RuntimeError("ffprobe가 유효한 재생 시간을 반환하지 않았습니다.")
+        return {"duration": duration,
+                "format_name": parsed.get("format", {}).get("format_name", ""),
+                "streams": {stream.get("codec_type") for stream in parsed.get("streams", [])}}
+
+    @staticmethod
+    def _probe_media_duration(filepath: str) -> float:
+        return VodEngine._probe_media_info(filepath)["duration"]
 
     def _clean_filename(self, name: str) -> str:
         """파일명에서 사용할 수 없는 특수문자를 제거한다."""
@@ -1267,7 +1319,7 @@ class VodEngine:
         }
 
 
-    async def retry_download(self, task_id: str) -> str:
+    async def retry_download(self, task_id: str, cdn: str = "default") -> str:
         """완료/에러 상태의 작업을 재다운로드한다."""
         logger = self._task_logger(task_id)
         old_task = self._tasks.get(task_id)
@@ -1284,6 +1336,7 @@ class VodEngine:
             url=old_task.url,
             output_dir=old_task.output_dir,
             quality=old_task.quality,
+            cdn=cdn,
         )
 
         logger.info(f"[{task_id}] → 새 작업 생성: {new_task_id}")
@@ -1302,6 +1355,10 @@ class VodEngine:
             "state": task.state.value,
             "progress": round(task.progress, 1),
             "quality": task.quality,
+            "cdn": task.cdn,
+            "cdn_applied": task.cdn_applied,
+            "warning_message": task.warning_message,
+            "media_duration": task.media_duration,
             "output_path": task.output_path,
             "error_message": task.error_message,
             "created_at": task.created_at.isoformat(),
@@ -1516,6 +1573,10 @@ class VodEngine:
                     state=VodDownloadState.ERROR if interrupted else VodDownloadState(record["state"]),
                     progress=record.get("progress") or 0.0,
                     quality=record.get("quality") or "best",
+                    cdn=record.get("cdn") if record.get("cdn") in ("default", "akamai") else "default",
+                    cdn_applied=bool(record.get("cdn_applied", False)),
+                    warning_message=record.get("warning_message"),
+                    media_duration=record.get("media_duration"),
                     output_dir=record.get("output_dir") or "",
                     output_path=record.get("output_path"),
                     error_message="서버가 중단된 작업입니다. 다시 시도해 주세요." if interrupted else record.get("error_message"),
@@ -1543,6 +1604,10 @@ class VodEngine:
                     "state": task.state.value,
                     "progress": task.progress,
                     "quality": task.quality,
+                    "cdn": task.cdn,
+                    "cdn_applied": task.cdn_applied,
+                    "warning_message": task.warning_message,
+                    "media_duration": task.media_duration,
                     "output_dir": task.output_dir,
                     "output_path": task.output_path,
                     "error_message": task.error_message,

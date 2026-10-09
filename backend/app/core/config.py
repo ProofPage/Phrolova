@@ -198,6 +198,7 @@ class Settings(BaseSettings):
         from app.core.vod_filename import validate_vod_template
         return validate_vod_template(value)
 
+    chzzk_vod_cdn: Literal["default", "akamai"] = "default"
     vod_format: str = "mp4"            # VOD 다운로드 포맷: mp4(권장), mkv, ts
     recording_quality: str = "best"    # 녹화 품질: best, 1080p, 720p, 480p
 

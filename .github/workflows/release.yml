@@ -83,16 +83,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## Recording stability and Linux/Termux support
+          ## CHZZK VOD CDN selection and download reliability
 
-          - Improve headless setup, recording shutdown, cancellation, retry handling and process cleanup.
-          - Fix DASH patch reloading, X Spaces playlist paths, YouTube controls and history/settings persistence.
-          - Harden Origin checks, chat file access and secret-safe logs.
-          - Fix fonts, reduce overlapping UI requests and update compatible frontend dependencies.
+          - Add persistent manual Default / Akamai CDN selection for new CHZZK VOD jobs.
+          - Route supported manifest, video/audio segment and HLS key requests per job; no automatic CDN fallback.
+          - Keep live recording on Streamlink -> FFmpeg unchanged.
+          - Fix separate DASH tracks, merged output paths, filename collisions and VOD settings persistence.
+          - Preserve completed files and show non-destructive FFprobe duration/track warnings.
 
-          Validation: 412 Python tests passed; TypeScript and production build passed; local Linux x86_64 download/cancel, HLS, remux and restart persistence tested. npm audit reported 0 vulnerabilities.
-          New changes are not device-tested on Windows, ARM64 or Termux. Windows artifact is CI-built.
-          Known limitation: chzzkpy pins Python dependencies with reported advisories. See docs/bug-audit-ko.md.
+          Validation: 457 Python tests passed; TypeScript and production build passed. Local mock CDN HLS/DASH/AES downloads and real Streamlink HLS transport, cancellation, shutdown and restart persistence tested.
+          Actual external Akamai availability/path compatibility and this patch on Termux/ARM64/Windows devices remain unverified. Windows executable is CI-built.
+          Known limitation: existing chzzkpy dependency pins have reported advisories. See docs/cdn-audit-ko.md and docs/bug-audit-ko.md.
 
           Windows: stop the application before replacing the executable; preserve settings and data.
           Linux/Termux: use source archives and docs/linux-guide.md or docs/termux-guide.md. The exe is Windows-only.

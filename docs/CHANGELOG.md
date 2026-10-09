@@ -8,6 +8,18 @@
 
 ## [Unreleased]
 
+## [2.0.50] - 2026-10-09
+
+### Added
+- Persistent manual Default/Akamai CDN selection for CHZZK VOD; live recording remains Streamlink/FFmpeg.
+- Non-destructive FFprobe duration and track warnings.
+
+### Fixed
+- Separate DASH track selection, merged output paths, filename collisions and atomic VOD settings persistence.
+
+### Validation
+- 457 Python tests and frontend checks passed; mock CDN downloads verified. External CDN and new device testing remain incomplete. See docs/cdn-audit-ko.md.
+
 ## [2.0.49] - 2026-10-09
 
 ### Fixed
@@ -669,7 +681,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.49...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.50...HEAD
+[2.0.50]: https://github.com/ProofPage/Phrolova/compare/v2.0.49...v2.0.50
 [2.0.49]: https://github.com/ProofPage/Phrolova/compare/v2.0.48...v2.0.49
 [2.0.48]: https://github.com/ProofPage/Phrolova/compare/v2.0.47...v2.0.48
 [2.0.47]: https://github.com/ProofPage/Phrolova/compare/v2.0.46...v2.0.47

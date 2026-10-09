@@ -119,6 +119,7 @@ async def get_current_settings():
         "watchalong_tags": settings.watchalong_tags,
         "live_format": settings.live_format,
         "vod_format": settings.vod_format,
+        "chzzk_vod_cdn": settings.chzzk_vod_cdn,
         "recording_quality": settings.recording_quality,
         # VOD 설정
         "vod_max_concurrent": settings.vod_max_concurrent,

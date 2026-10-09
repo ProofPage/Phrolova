@@ -64,6 +64,8 @@ export interface Channel {
     last_error?: string;
 }
 
+export type ChzzkVodCdn = "default" | "akamai";
+
 export interface VodTask {
     task_id: string;
     url: string;
@@ -73,6 +75,10 @@ export interface VodTask {
     quality: string;
     output_path: string | null;
     error_message?: string;
+    cdn?: ChzzkVodCdn;
+    cdn_applied?: boolean;
+    warning_message?: string | null;
+    media_duration?: number | null;
     created_at: string;
     started_at: string | null;
     completed_at: string | null;
@@ -136,6 +142,7 @@ export interface Settings {
 
     live_format: string;
     vod_format: string;
+    chzzk_vod_cdn?: ChzzkVodCdn;
     recording_quality: string;
 
     // VOD 설정
@@ -205,6 +212,7 @@ export interface VodSettingsUpdate {
     vod_default_quality?: string;
     vod_max_speed?: number;
     vod_format?: string;
+    chzzk_vod_cdn?: ChzzkVodCdn;
     keep_download_parts?: boolean;
 }
 
@@ -387,11 +395,12 @@ export const api = {
     // Monitor
 
     // VOD
-    downloadVod: async (url: string, quality: string = "best", output_dir?: string) => {
+    downloadVod: async (url: string, quality: string = "best", output_dir?: string, cdn: ChzzkVodCdn = "default") => {
         const res = await client.post<VodAddResult>("/vod/download", {
             url,
             quality,
             output_dir,
+            cdn,
         });
         return res.data;
     },
@@ -414,8 +423,8 @@ export const api = {
         const res = await client.post(`/vod/${task_id}/resume`);
         return res.data;
     },
-    retryVodDownload: async (task_id: string) => {
-        const res = await client.post<{ message: string; old_task_id: string; new_task_id: string }>(`/vod/${task_id}/retry`);
+    retryVodDownload: async (task_id: string, cdn: ChzzkVodCdn = "default") => {
+        const res = await client.post<{ message: string; old_task_id: string; new_task_id: string }>(`/vod/${task_id}/retry`, { cdn });
         return res.data;
     },
     reorderVodTasks: async (task_ids: string[]) => {

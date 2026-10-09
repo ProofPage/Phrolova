@@ -451,12 +451,13 @@ function TaskCard({ task, canMoveUp, canMoveDown, onMove, onCancel, onPause, onR
                 <button type="button" disabled={!canMoveDown} onClick={() => { onMove(1); close(); }}><ArrowDown className="size-4" />{t("아래로 이동")}</button>
             </>}</ActionMenu>
             </div>
-            <p className="text-xs text-ink-faint">{source} · {task.quality === "best" ? t("최고 화질") : task.quality}</p>
+            <p className="text-xs text-ink-faint">{source} · {task.quality === "best" ? t("최고 화질") : task.quality}{source === t("Chzzk") && task.url.includes("chzzk.naver.com/video/") && ` · ${task.cdn === "akamai" ? "Akamai CDN" : "기본 CDN"}`}</p>
             {(task.state === "downloading" || task.state === "paused" || task.state === "cancelling") && <>
                 <div className="flex items-center gap-3"><div className="h-1 flex-1 overflow-hidden rounded bg-surface-4" role="progressbar" aria-label={t("다운로드 진행률")} aria-valuenow={Math.round(task.progress)} aria-valuemin={0} aria-valuemax={100}><div className="h-full bg-info transition-[width]" style={{width:`${task.progress}%`}} /></div><span className="text-xs text-ink-muted tabular-nums">{Math.round(task.progress)}%</span></div>
                 <div className="download-transfer flex flex-wrap gap-x-4 gap-y-1 text-ink-muted tabular-nums"><span>{formatBytes(task.downloaded_bytes)}{task.total_bytes > 0 && ` / ${formatBytes(task.total_bytes)}`}</span>{task.state === "downloading" && <span>{task.download_speed.toFixed(2)} MB/s</span>}{task.eta_seconds > 0 && <span>{t("남은 시간")} {formatDuration(task.eta_seconds)}</span>}</div>
             </>}
             {task.state === "completed" && <p className="text-xs text-ink-faint">{formatBytes(task.total_bytes || task.downloaded_bytes)}{task.completed_at && ` · ${new Date(task.completed_at).toLocaleString()}`}</p>}
+            {task.warning_message && <p className="text-xs text-warn" role="status">{task.warning_message}</p>}
             {task.error_message && <div className="text-xs text-danger"><p>{t("다운로드를 완료하지 못했습니다. 다시 시도하거나 영상 주소와 인증 설정을 확인하세요.")}</p><details className="mt-1"><summary className="cursor-pointer text-ink-faint">{t("오류 세부 정보")}</summary><p className="mt-1 break-words">{task.error_message}</p></details></div>}
             {task.output_path && <details className="text-xs text-ink-faint"><summary className="cursor-pointer">{t("저장 위치")}</summary><p className="mt-1 break-all">{task.output_path}</p></details>}
         </div>
