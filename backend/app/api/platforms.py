@@ -1,5 +1,5 @@
 """
-Rookery: Platforms API Router
+Phrolova: Platforms API Router
 멀티 플랫폼 채널 관리 및 플랫폼별 설정 엔드포인트.
 
 기존 /api/stream 라우터는 Chzzk 전용으로 하위 호환 유지.

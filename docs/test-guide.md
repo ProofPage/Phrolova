@@ -22,7 +22,7 @@
 
 ### 사전 준비
 ```powershell
-cd c:\Project\Rookery\backend
+cd c:\Project\Phrolova\backend
 .venv\Scripts\pip install -r requirements.txt
 ```
 
@@ -30,14 +30,14 @@ cd c:\Project\Rookery\backend
 
 **터미널 1 — 백엔드**
 ```powershell
-cd c:\Project\Rookery\backend
+cd c:\Project\Phrolova\backend
 .venv\Scripts\python run.py
 # 서버 시작 로그 확인: "Uvicorn running on http://0.0.0.0:8000"
 ```
 
 **터미널 2 — 프론트엔드**
 ```powershell
-cd c:\Project\Rookery\frontend
+cd c:\Project\Phrolova\frontend
 npm install
 npm run dev
 # 브라우저: http://localhost:3000
@@ -61,14 +61,14 @@ npm run dev
 
 ### Step A: 프론트엔드 빌드
 ```powershell
-cd c:\Project\Rookery\frontend
+cd c:\Project\Phrolova\frontend
 npm run build
 # 완료 후 확인: backend\app\static\index.html 파일 존재 여부
 ```
 
 ### Step B: FastAPI 단독 실행 (Vite 없이)
 ```powershell
-cd c:\Project\Rookery\backend
+cd c:\Project\Phrolova\backend
 .venv\Scripts\python run.py
 # 브라우저: http://localhost:8000
 ```
@@ -90,15 +90,15 @@ cd c:\Project\Rookery\backend
 
 > [!IMPORTANT]
 > `.exe` 빌드 전 반드시 **Step A**의 `npm run build`를 먼저 완료해야 한다.
-> `bin/` 폴더에 `ffmpeg.exe`를 배치하거나 `rookery.spec`의 `binaries` 항목 주석을 해제해야 FFmpeg가 번들에 포함된다.
+> `bin/` 폴더에 `ffmpeg.exe`를 배치하거나 `phrolova.spec`의 `binaries` 항목 주석을 해제해야 FFmpeg가 번들에 포함된다.
 
 ```powershell
 # PyInstaller 설치 (최초 1회)
 .venv\Scripts\pip install pyinstaller
 
 # 빌드 (프로젝트 루트에서 실행)
-cd c:\Project\Rookery
-.venv\Scripts\pyinstaller rookery.spec
+cd c:\Project\Phrolova
+.venv\Scripts\pyinstaller phrolova.spec
 
 # 빌드 결과물: dist\ChzzkRecorder\ChzzkRecorder.exe
 ```
@@ -116,7 +116,7 @@ cd c:\Project\Rookery
 ```bash
 sudo apt update && sudo apt install -y python3.12 python3.12-venv ffmpeg git
 
-cd /path/to/Rookery
+cd /path/to/Phrolova
 ```
 
 ### 설치 스크립트 실행
@@ -139,17 +139,17 @@ cd frontend && npm install && npm run build
 
 ### 서버 실행
 ```bash
-cd /path/to/Rookery/backend
+cd /path/to/Phrolova/backend
 ../.venv/bin/python run.py
 # 브라우저: http://[VM_IP]:8000 → 마법사 팝업 확인
 ```
 
 ### systemd 서비스 등록 (선택사항)
 ```bash
-rookery service install
+phrolova service install
 
-sudo systemctl status rookery
-sudo journalctl -u rookery -f
+sudo systemctl status phrolova
+sudo journalctl -u phrolova -f
 ```
 
 ### 체크리스트

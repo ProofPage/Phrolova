@@ -1,5 +1,5 @@
 """
-Rookery: 공용 HTTP 클라이언트
+Phrolova: 공용 HTTP 클라이언트
 
 라이브 감지 폴링은 채널 수 × 폴링 주기만큼 반복 실행된다.
 기존에는 폴링 한 번마다 httpx.AsyncClient를 새로 만들고 버렸기 때문에

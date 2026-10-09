@@ -1,5 +1,5 @@
 """
-Rookery: 기존 JSON 파일 → SQLite 일회성 이관
+Phrolova: 기존 JSON 파일 → SQLite 일회성 이관
 
 v1.2.0 이전 버전은 상태를 data/*.json 여러 개에 나눠 저장했다.
 업그레이드한 사용자가 채널 목록이나 이력을 잃지 않도록 첫 실행 때 한 번만 옮긴다.

@@ -1,5 +1,5 @@
 """
-Rookery: SSE 이벤트 버스
+Phrolova: SSE 이벤트 버스
 
 프론트엔드가 구독하는 Server-Sent Events 스트림에 상태 변화를 밀어낸다.
 Conductor에 섞여 있던 pub-sub 로직을 분리해 단위 테스트가 가능하게 했다.

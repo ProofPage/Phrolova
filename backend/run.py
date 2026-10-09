@@ -1,5 +1,5 @@
 """
-Rookery: 데스크톱 실행 진입점
+Phrolova: 데스크톱 실행 진입점
 
 PyInstaller로 빌드된 .exe 실행 시:
   1. Python 3.12+ 및 FFmpeg 의존성 자동 감지
@@ -330,9 +330,9 @@ def _run_tray(url: str, stop_event: threading.Event) -> None:
             icon.stop()
 
         icon = pystray.Icon(
-            "ChzzkRecorderPro",
+            "Phrolova",
             image,
-            "Rookery",
+            "Phrolova",
             menu=pystray.Menu(
                 pystray.MenuItem("브라우저 열기", on_open_browser, default=True),
                 pystray.Menu.SEPARATOR,

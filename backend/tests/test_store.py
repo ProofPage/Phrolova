@@ -6,6 +6,7 @@ SQLite 저장소의 스키마 마이그레이션, 레포지토리 동작, JSON �
 """
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -389,32 +390,37 @@ class TestJsonMigration:
             "대기 알림": 0,
         }
 class TestDbFilenameMigration:
-    """Rookery 리네이밍 시 구버전 DB 파일을 잃지 않는지 검증한다.
+    """Phrolova 리네이밍 시 구버전 DB 파일을 잃지 않는지 검증한다.
 
     backend/data/는 gitignore 대상이라 DB는 사용자 로컬에만 있다.
     이관에 실패하면 빈 DB가 생겨 채널 목록과 이력이 사라진 것처럼 보인다.
     """
 
     def test_renames_legacy_file(self, tmp_path):
-        (tmp_path / LEGACY_DB_FILENAME).write_bytes(b"sqlite")
-
+        import sqlite3
+        with sqlite3.connect(tmp_path / LEGACY_DB_FILENAME) as conn:
+            conn.execute("CREATE TABLE sample(value)")
+            conn.execute("INSERT INTO sample VALUES ('preserved')")
         result = _resolve_db_path(tmp_path)
-
         assert result == tmp_path / DB_FILENAME
-        assert result.exists()
-        assert not (tmp_path / LEGACY_DB_FILENAME).exists()
+        assert (tmp_path / LEGACY_DB_FILENAME).exists()
+        with sqlite3.connect(result) as conn:
+            assert conn.execute("SELECT value FROM sample").fetchone()[0] == "preserved"
 
     def test_moves_wal_and_shm_together(self, tmp_path):
-        """WAL은 본체 파일명에 묶여 있어 같이 옮기지 않으면 트랜잭션을 잃는다."""
-        (tmp_path / LEGACY_DB_FILENAME).write_bytes(b"sqlite")
-        (tmp_path / f"{LEGACY_DB_FILENAME}-wal").write_bytes(b"wal")
-        (tmp_path / f"{LEGACY_DB_FILENAME}-shm").write_bytes(b"shm")
-
-        _resolve_db_path(tmp_path)
-
-        assert (tmp_path / f"{DB_FILENAME}-wal").read_bytes() == b"wal"
-        assert (tmp_path / f"{DB_FILENAME}-shm").read_bytes() == b"shm"
-        assert not (tmp_path / f"{LEGACY_DB_FILENAME}-wal").exists()
+        import sqlite3
+        original = tmp_path / "rookery.db"
+        conn = sqlite3.connect(original)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("CREATE TABLE sample(value)")
+        conn.execute("INSERT INTO sample VALUES ('wal-data')")
+        conn.commit()
+        assert Path(str(original) + "-wal").exists()
+        result = _resolve_db_path(tmp_path)
+        with sqlite3.connect(result) as copy:
+            assert copy.execute("SELECT value FROM sample").fetchone()[0] == "wal-data"
+        assert original.exists()
+        conn.close()
 
     def test_keeps_existing_new_file(self, tmp_path):
         """이미 새 이름 DB가 있으면 구버전을 덮어쓰지 않는다."""

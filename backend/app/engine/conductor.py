@@ -1,5 +1,5 @@
 """
-Rookery: Conductor (비동기 오케스트레이터)
+Phrolova: Conductor (비동기 오케스트레이터)
 다중 채널 감시 루프를 관리하고, 방송 시작 시 자동 녹화를 트리거한다.
 멀티 플랫폼(Chzzk, YouTube, X Spaces)을 단일 Conductor로 통합 관리한다.
 """

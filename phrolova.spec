@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
-# Rookery PyInstaller 빌드 스펙 (onefile 방식)
-# 사용법: pyinstaller rookery.spec --clean
+# Phrolova PyInstaller 빌드 스펙 (onefile 방식)
+# 사용법: pyinstaller phrolova.spec --clean
 
 import re
 import shutil
@@ -50,12 +50,12 @@ VERSION_RESOURCE = VSVersionInfo(
         StringFileInfo([
             StringTable("040904B0", [
                 StringStruct("CompanyName", "Serian"),
-                StringStruct("FileDescription", "Rookery — 라이브 감시·녹화 및 아카이브 도구"),
+                StringStruct("FileDescription", "Phrolova — 라이브 감시·녹화 및 아카이브 도구"),
                 StringStruct("FileVersion", APP_VERSION),
-                StringStruct("InternalName", "Rookery"),
+                StringStruct("InternalName", "Phrolova"),
                 StringStruct("LegalCopyright", "Copyright (c) 2026 Serian (github.com/eruminyu). MIT License."),
-                StringStruct("OriginalFilename", "Rookery.exe"),
-                StringStruct("ProductName", "Rookery"),
+                StringStruct("OriginalFilename", "Phrolova.exe"),
+                StringStruct("ProductName", "Phrolova"),
                 StringStruct("ProductVersion", APP_VERSION),
             ]),
         ]),
@@ -158,7 +158,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="Rookery",
+    name="Phrolova",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

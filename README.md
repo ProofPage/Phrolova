@@ -103,7 +103,7 @@ The management script recognizes Debian/Ubuntu, Fedora/RHEL-family, and Arch-fam
 
 FFmpeg and FFprobe are **not bundled**. Although backend settings support `FFMPEG_PATH`, the desktop launcher's initial FFmpeg check searches the adjacent `bin` folder and `PATH`; use one of those locations for the release executable.
 
-The desktop build includes a system tray menu for opening the browser and exiting. Some tray labels and executable metadata retain the legacy name **Rookery**.
+The desktop build includes a system tray menu for opening the browser and exiting. Tray labels and executable metadata use **Phrolova**.
 
 To upgrade, exit the running application and replace the executable with the new release in the same folder. Keep `.env`, `data/`, `logs/`, `bin/`, and your media directories.
 
@@ -115,9 +115,9 @@ Run:
 curl -fsSL https://raw.githubusercontent.com/ProofPage/Phrolova/main/scripts/manage.sh | bash
 ```
 
-On a new installation, the script installs or checks dependencies, clones the repository, builds the frontend, creates `.venv`, installs backend requirements, and registers the `rookery` management command. It asks whether to install and start a systemd service. Without a service, use `rookery start` to run in the foreground.
+On a new installation, the script installs or checks dependencies, clones the repository, builds the frontend, creates `.venv`, installs backend requirements, and registers the `phrolova` management command. It asks whether to install and start a systemd service. Without a service, use `phrolova start` to run in the foreground.
 
-The default location is `~/rookery`. Existing legacy installation locations can be reused. Running the command again updates an existing installation from `main`; this is a source-branch update, not a pinned release installation.
+The default location is `~/Phrolova`. Existing legacy installation locations can be reused. Running the command again updates an existing installation from `main`; this is a source-branch update, not a pinned release installation.
 
 To choose a location, pass `INSTALL_DIR` to **Bash**, which executes the script:
 
@@ -129,19 +129,19 @@ Available management commands:
 
 | Command | Action |
 | --- | --- |
-| `rookery install` | Run installation and offer service registration |
-| `rookery update` | Update from `main`, rebuild when changed, and restart an installed service |
-| `rookery start` | Start the service, or run in the foreground without one |
-| `rookery stop` | Stop the service; use Ctrl+C for a foreground session |
-| `rookery restart` | Restart the application |
-| `rookery status` | Show version, location, port, and server/service status |
-| `rookery status --full` | Run the detailed health-check script |
-| `rookery logs` | Follow the service journal, or the script's fallback `logs/service.log` if present |
-| `rookery service install` | Register, enable, and start the systemd service |
-| `rookery service remove` | Remove the systemd service |
-| `rookery uninstall` | Remove the service, command links, and virtual environment; retain the repository and data |
+| `phrolova install` | Run installation and offer service registration |
+| `phrolova update` | Update from `main`, rebuild when changed, and restart an installed service |
+| `phrolova start` | Start the service, or run in the foreground without one |
+| `phrolova stop` | Stop the service; use Ctrl+C for a foreground session |
+| `phrolova restart` | Restart the application |
+| `phrolova status` | Show version, location, port, and server/service status |
+| `phrolova status --full` | Run the detailed health-check script |
+| `phrolova logs` | Follow the service journal, or the script's fallback `logs/service.log` if present |
+| `phrolova service install` | Register, enable, and start the systemd service |
+| `phrolova service remove` | Remove the systemd service |
+| `phrolova uninstall` | Remove the service, command links, and virtual environment; retain the repository and data |
 
-The CLI command and systemd service are still named `rookery`. Keep that spelling in commands. If an update encounters local changes that block a pull, the script may stash them before retrying; inspect the reported stash before continuing local development.
+The CLI command is `phrolova` and the service is `phrolova.service`. Legacy installations and service names are detected; old services are disabled only while the replacement is started, with rollback on failure. If an update encounters local changes that block a pull, the script may stash them before retrying; inspect the reported stash before continuing local development.
 
 ### Manual source installation
 
@@ -331,12 +331,12 @@ SQLite stores channels, automatic recording options, tags, recording sessions, l
 | Data | Source installation | Windows executable |
 | --- | --- | --- |
 | Settings | `.env` at repository root | `.env` beside executable |
-| Database | `backend/data/rookery.db` | `data/rookery.db` beside executable |
+| Database | `backend/data/phrolova.db` | `data/phrolova.db` beside executable |
 | Uploaded cookie files | `backend/data/` | `data/` beside executable |
 | Application logs | `logs/` at repository root | `logs/` beside executable |
 | Media and chat | Configured live/video directories | Configured live/video directories |
 
-The filename `rookery.db` remains an implementation identifier. Existing `signal_recorder.db` files are migrated when appropriate. Legacy JSON state is imported once into empty destination tables, and successfully handled source files are retained with a `.migrated` suffix.
+New installations use `phrolova.db`. Existing `rookery.db` or `signal_recorder.db` files are copied with SQLite backup (including committed WAL data), preserving originals. A failed migration continues using the original database. Legacy JSON state is imported once into empty destination tables, and successfully handled source files are retained with a `.migrated` suffix.
 
 For a straightforward backup, stop Phrolova cleanly, then copy `.env`, the entire data directory, and the media directories you need. SQLite uses WAL mode and checkpoints on normal shutdown; do not copy only the main database file while it is running and assume that all recent changes are included. Preserve cookie backups privately.
 
@@ -381,9 +381,9 @@ The main CHZZK/YouTube recording pipeline resolves a stream, receives its segmen
 | `assets/` | Icons and screenshots |
 | `.github/` | CI, Windows releases, and issue/PR templates |
 | `.env.example` | Environment template; see the compatibility notes above |
-| `rookery.spec` | Windows PyInstaller packaging configuration |
+| `phrolova.spec` | Windows PyInstaller packaging configuration |
 
-`backend/app/static/` is generated by the frontend build and is not committed. The npm package name `rookery`, PyInstaller specification, `dist/Rookery.exe` build output, database filename, and Linux command/service retain legacy identifiers. Published release assets use **Phrolova**.
+`backend/app/static/` is generated by the frontend build and is not committed. The npm package name `phrolova`, PyInstaller specification, `dist/Phrolova.exe` build output, database filename, and Linux command/service use the Phrolova brand. Published release assets use **Phrolova**.
 
 ## Development
 
@@ -440,10 +440,10 @@ npm ci
 npm run build
 cd ..
 python -m pip install -r backend/requirements.txt pyinstaller pillow pystray
-python -m PyInstaller --clean --noconfirm rookery.spec
+python -m PyInstaller --clean --noconfirm phrolova.spec
 ```
 
-The result is `dist/Rookery.exe`. The release workflow renames it to a versioned Phrolova Windows x64 asset. The specification bundles Node.js and retrieves its matching license during the build; network access is required. FFmpeg and FFprobe remain external dependencies.
+The result is `dist/Phrolova.exe`. The release workflow renames it to a versioned Phrolova Windows x64 asset. The specification bundles Node.js and retrieves its matching license during the build; network access is required. FFmpeg and FFprobe remain external dependencies.
 
 ## Limitations and troubleshooting
 
@@ -471,13 +471,13 @@ The result is `dist/Rookery.exe`. The release workflow renames it to a versioned
 | Retry limit reached | Inspect the reported failure and correct its cause before manually restarting recording or retrying a completed/failed video task |
 | Browser cannot connect or port is occupied | Check `HOST` and `PORT`, stop an older instance/service, and restart. Use `/health` on the configured port to check server response |
 | API works but the dashboard does not load | Run `npm ci` and `npm run build` in `frontend/`, confirm `backend/app/static/index.html` exists, and restart the backend |
-| Linux service does not start | Run `rookery status --full` and `rookery logs`; check the service user's access to the application, virtual environment, and output directories |
-| `rookery` command is missing | Re-run the installation one-liner to register it. If installed under `~/.local/bin`, ensure that directory is on your `PATH` |
-| `rookery logs` reports no file without systemd | Use the foreground console or the dashboard's Logs page. The script's fallback `logs/service.log` is not automatically created by foreground startup |
+| Linux service does not start | Run `phrolova status --full` and `phrolova logs`; check the service user's access to the application, virtual environment, and output directories |
+| `phrolova` command is missing | Re-run the installation one-liner to register it. If installed under `~/.local/bin`, ensure that directory is on your `PATH` |
+| `phrolova logs` reports no file without systemd | Use the foreground console or the dashboard's Logs page. The script's fallback `logs/service.log` is not automatically created by foreground startup |
 | Cannot save settings or media | Give the backend user write access to `.env`, the data directory, logs, and configured output directories. Check free disk space and use absolute paths |
 | An output folder does not open in your browser's machine | “Open location” runs on the backend host, not on a remote browser client; access the server's media directory directly |
 
-Back up settings and data before changing installation locations. To update a Linux installation managed by the script, use `rookery update`; for Windows, replace the stopped executable. Dashboard release checks notify you of updates but do not install them.
+Back up settings and data before changing installation locations. To update a Linux installation managed by the script, use `phrolova update`; for Windows, replace the stopped executable. Dashboard release checks notify you of updates but do not install them.
 
 ## Additional documentation
 

@@ -19,6 +19,7 @@ def test_frontend_package_versions_match_backend_version() -> None:
     package = _read_json("frontend/package.json")
     package_lock = _read_json("frontend/package-lock.json")
 
+    assert package["name"] == package_lock["name"] == package_lock["packages"][""]["name"] == "phrolova"
     assert package["version"] == __version__
     assert package_lock["version"] == __version__
     assert package_lock["packages"][""]["version"] == __version__
@@ -41,9 +42,20 @@ def test_changelog_has_current_release_and_comparison_links() -> None:
 
 
 def test_pyinstaller_version_resource_uses_backend_single_source() -> None:
-    spec = (PROJECT_ROOT / "rookery.spec").read_text(encoding="utf-8")
+    spec = (PROJECT_ROOT / "phrolova.spec").read_text(encoding="utf-8")
 
     assert 'Path("backend/app/version.py")' in spec
     assert 'StringStruct("FileVersion", APP_VERSION)' in spec
     assert 'StringStruct("ProductVersion", APP_VERSION)' in spec
     assert "version=VERSION_RESOURCE" in spec
+
+
+def test_phrolova_packaging_names():
+    spec = (PROJECT_ROOT / "phrolova.spec").read_text()
+    workflow = (PROJECT_ROOT / ".github/workflows/release.yml").read_text()
+    assert 'name="Phrolova"' in spec
+    for key, value in (("InternalName", "Phrolova"), ("OriginalFilename", "Phrolova.exe"), ("ProductName", "Phrolova")):
+        assert f'StringStruct("{key}", "{value}")' in spec
+    assert "dist/Phrolova.exe" in workflow
+    assert "phrolova.spec" in workflow
+    assert '"ChzzkRecorderPro"' not in (PROJECT_ROOT / "backend/run.py").read_text()

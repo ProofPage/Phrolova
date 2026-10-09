@@ -1,5 +1,5 @@
 """
-Rookery: Chat Logs API Router
+Phrolova: Chat Logs API Router
 채팅 아카이빙 로그 파일 목록 조회, 메시지 조회, 다운로드 엔드포인트.
 
 조회 성능:

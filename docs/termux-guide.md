@@ -122,3 +122,7 @@ proot는 glibc wheel과 배포판 바이너리를 사용할 수 있어 Native �
 ## 업데이트
 
 서버를 정상 종료한 다음 `git pull --ff-only`, 해당 환경의 requirements 설치, `npm ci && npm run build`를 수행하고 재시작하세요. Native에서는 `scripts/manage.sh`를 사용하지 마세요. 로컬 수정으로 pull이 실패하면 변경 사항을 검토하고 강제 초기화하지 마세요.
+
+## 데이터 파일명 이전
+
+새 기본 SQLite 이름은 `backend/data/phrolova.db`입니다. 기존 `rookery.db`와 `signal_recorder.db`는 SQLite 백업 API로 커밋된 WAL까지 이관하고 원본을 보존합니다. 업데이트 전에 앱을 정상 종료하고 DB 및 `.env`를 백업하세요. 실패하면 원본 DB를 계속 사용합니다. Termux 내부 `$HOME` 설치를 유지하며 이 리브랜딩은 `pkg` 설치 방식이나 Streamlink 라이브 경로를 변경하지 않습니다.

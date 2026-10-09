@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 chcp 65001 >nul
 
 REM ═══════════════════════════════════════════════════════════
-REM  Rookery — 통합 관리 스크립트 (Windows)
+REM  Phrolova — 통합 관리 스크립트 (Windows)
 REM
 REM    scripts\manage.bat install    의존성 설치 + 프론트엔드 빌드
 REM    scripts\manage.bat start      서버 실행
@@ -94,8 +94,8 @@ if not exist "%PY%" (
     exit /b 1
 )
 echo [INFO] 개발 서버를 시작합니다 (백엔드 / 프론트엔드 창이 각각 열립니다).
-start "Rookery — Backend"  cmd /k ""%PY%" -m uvicorn app.main:app --reload --app-dir backend"
-start "Rookery — Frontend" cmd /k "cd /d "%ROOT%\frontend" && npm run dev"
+start "Phrolova — Backend"  cmd /k ""%PY%" -m uvicorn app.main:app --reload --app-dir backend"
+start "Phrolova — Frontend" cmd /k "cd /d "%ROOT%\frontend" && npm run dev"
 echo [INFO] 두 창이 열렸습니다.
 goto :eof
 
@@ -139,7 +139,7 @@ goto :eof
 
 :help
 echo.
-echo   Rookery 관리 명령
+echo   Phrolova 관리 명령
 echo.
 echo     scripts\manage.bat install    의존성 설치 + 프론트엔드 빌드
 echo     scripts\manage.bat start      서버 실행

@@ -1,5 +1,5 @@
 """
-Rookery: 설정 관리 모듈
+Phrolova: 설정 관리 모듈
 pydantic-settings 기반으로 환경변수 및 .env 파일에서 설정을 로드한다.
 """
 

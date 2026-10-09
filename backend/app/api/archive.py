@@ -1,5 +1,5 @@
 """
-Rookery: Archive API Router
+Phrolova: Archive API Router
 X Spaces 아카이브 다운로드 엔드포인트.
 X Spaces m3u8 URL 조회 및 다운로드 엔드포인트 포함.
 """

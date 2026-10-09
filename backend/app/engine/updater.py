@@ -1,5 +1,5 @@
 """
-Rookery: Updater (자동 업데이트 알림 모듈)
+Phrolova: Updater (자동 업데이트 알림 모듈)
 GitHub API를 통해 주기적으로 최신 릴리즈를 확인하고, 
 신규 버전 발견 시 Discord를 통해 알림을 전송한다.
 """

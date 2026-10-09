@@ -24,7 +24,7 @@ class TestSettings:
         settings = Settings()
 
         # .env 파일에서 로드될 수 있으므로 기본값 또는 .env 값 확인
-        assert settings.app_name in ("Chzzk-Recorder-Pro", settings.app_name)
+        assert settings.app_name == "Phrolova"
         assert isinstance(settings.debug, bool)
         assert isinstance(settings.download_dir, str)
         assert isinstance(settings.host, str)

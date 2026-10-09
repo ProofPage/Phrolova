@@ -1,5 +1,5 @@
 """
-Rookery: 인증 관리 모듈 (Auth Manager)
+Phrolova: 인증 관리 모듈 (Auth Manager)
 치지직 쿠키(NID_AUT, NID_SES)를 관리하고 HTTP 헤더를 생성한다.
 """
 

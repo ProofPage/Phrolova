@@ -1,5 +1,5 @@
 """
-Rookery: Tags API Router
+Phrolova: Tags API Router
 사용자 정의 태그 목록과 채널별 태그 지정을 관리한다.
 """
 

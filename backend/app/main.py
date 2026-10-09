@@ -1,5 +1,5 @@
 """
-Rookery: FastAPI 진입점
+Phrolova: FastAPI 진입점
 Lifespan 컨텍스트 매니저를 통해 Conductor 라이프사이클을 관리한다.
 """
 

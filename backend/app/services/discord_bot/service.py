@@ -1,5 +1,5 @@
 """
-Rookery: Discord Bot 서비스
+Phrolova: Discord Bot 서비스
 User-Hosted Bot으로 원격에서 녹화 상태 확인 및 제어.
 
 사용자가 DISCORD_BOT_TOKEN을 설정에 입력하면 자동 구동된다.

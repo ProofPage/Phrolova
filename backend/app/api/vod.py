@@ -1,5 +1,5 @@
 """
-Rookery: VOD API Router
+Phrolova: VOD API Router
 VOD/클립 다운로드 관련 엔드포인트.
 """
 

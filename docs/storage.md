@@ -6,15 +6,15 @@ v2.0.0부터 영속 상태를 SQLite 파일 하나로 통합했다.
 
 | 실행 방식 | 경로 |
 |-----------|------|
-| `.exe` (PyInstaller) | `<exe 폴더>/data/rookery.db` |
-| 개발 환경 | `backend/data/rookery.db` |
-| Docker | `/app/backend/data/rookery.db` (`./data` 볼륨에 마운트) |
+| `.exe` (PyInstaller) | `<exe 폴더>/data/phrolova.db` |
+| 개발 환경 | `backend/data/phrolova.db` |
+| Docker | `/app/backend/data/phrolova.db` (`./data` 볼륨에 마운트) |
 
 `sqlite3`는 Python 표준 라이브러리이므로 단일 exe 빌드나 리눅스 설치에
 추가 요구사항이 생기지 않는다.
 
-WAL 모드로 동작하므로 실행 중에는 `rookery.db-wal`,
-`rookery.db-shm` 파일이 함께 존재한다. 앱을 정상 종료하면
+WAL 모드로 동작하므로 실행 중에는 `phrolova.db-wal`,
+`phrolova.db-shm` 파일이 함께 존재한다. 앱을 정상 종료하면
 WAL이 본 파일로 합쳐지므로, **백업은 앱을 종료한 뒤 `.db` 파일 하나만
 복사하면 된다.**
 
@@ -43,8 +43,9 @@ WAL이 본 파일로 합쳐지므로, **백업은 앱을 종료한 뒤 `.db` 파
 레거시 채널 키(`:` 없는 구버전 Chzzk 키)는 이관 과정에서
 `chzzk:<채널ID>` 형식으로 자동 변환된다.
 
-되돌리고 싶다면 앱을 끄고 `rookery.db`를 지운 뒤
-`.migrated` 파일들의 접미사를 떼면 이전 버전으로 돌아간다.
+브랜드 DB 이전은 `rookery.db`, 그 다음 `signal_recorder.db`를 탐지합니다. 새 `phrolova.db`가 이미 있으면 덮어쓰지 않습니다. SQLite 백업 API는 커밋된 WAL을 포함한 일관된 복사본을 만들고 무결성을 검사합니다. 열린 원본이나 WAL/SHM의 이름을 바꾸지 않습니다. 실패하면 원본 DB를 계속 사용하며 오류를 기록합니다.
+
+원본 DB는 복구용으로 보존합니다. 새 버전에서 추가된 데이터까지 이전 버전으로 가져가려면 앱을 정상 종료한 뒤 SQLite backup으로 새 DB를 레거시 이름의 별도 복사본으로 백업하세요. 원본이나 새 DB를 삭제하지 마세요. 중단된 임시 `.phrolova-migration-*` 파일은 게시되지 않으므로 재실행은 원본에서 다시 시작합니다.
 
 ## 스키마 버전 관리
 

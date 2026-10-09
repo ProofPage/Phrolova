@@ -1,5 +1,5 @@
 """
-Rookery: SQLite 스키마 정의 및 마이그레이션
+Phrolova: SQLite 스키마 정의 및 마이그레이션
 
 스키마 버전은 SQLite의 `PRAGMA user_version`으로 관리한다.
 새 버전을 추가할 때는 MIGRATIONS에 (버전, DDL) 항목을 append 하기만 하면 되며,

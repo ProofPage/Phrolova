@@ -26,7 +26,7 @@ cd backend
 ../.venv/bin/python run.py
 ```
 
-브라우저: <http://127.0.0.1:8000> 또는 <http://localhost:8000>. Ctrl+C로 종료하고 같은 명령으로 재시작합니다. 기본 상대 다운로드 경로는 실행 작업 디렉터리 기준입니다. 모든 시작 방식을 `backend/`에서 실행하거나 `.env`의 다운로드 경로를 절대경로로 지정하세요. 데이터베이스는 `backend/data/rookery.db`, 설정은 루트 `.env`(기존 `backend/.env` 지원), 로그는 루트 `logs/service.log`입니다.
+브라우저: <http://127.0.0.1:8000> 또는 <http://localhost:8000>. Ctrl+C로 종료하고 같은 명령으로 재시작합니다. 기본 상대 다운로드 경로는 실행 작업 디렉터리 기준입니다. 모든 시작 방식을 `backend/`에서 실행하거나 `.env`의 다운로드 경로를 절대경로로 지정하세요. 데이터베이스는 `backend/data/phrolova.db`, 설정은 루트 `.env`(기존 `backend/.env` 지원), 로그는 루트 `logs/service.log`입니다.
 
 Node.js는 웹 UI 빌드 이후 웹 서버 자체에는 필요하지 않습니다. 다만 YouTube의 JavaScript 처리에는 Node 또는 Deno가 필요하므로 YouTube를 쓰면 런타임을 유지하세요. `ffmpeg-python`은 FFmpeg 실행 파일을 설치하지 않습니다.
 
@@ -90,3 +90,23 @@ ssh -N -L 8000:127.0.0.1:8000 user@server
 ```
 
 그 뒤 로컬 브라우저의 <http://127.0.0.1:8000>을 사용합니다. 새 기본 설정은 로컬 전용이며 기존 명시적 HOST 값은 유지됩니다.
+
+## 공식 관리 명령과 기존 설치 이전
+
+설치 스크립트는 `phrolova` 명령을 등록합니다. 새 기본 경로는 `~/Phrolova`이며, 명시한 `INSTALL_DIR`과 현재 저장소를 우선하고 기존 `~/rookery`, `~/signal-recorder`, `~/chzzk-recorder-pro`를 이어받습니다. 기존 디렉터리를 삭제하거나 이동하지 않습니다.
+
+```bash
+phrolova install
+phrolova update
+phrolova start
+phrolova stop
+phrolova restart
+phrolova status
+phrolova status --full
+phrolova logs
+phrolova service install
+phrolova service remove
+phrolova uninstall
+```
+
+이전 서버에서 녹화·다운로드를 완료하고 정상 종료한 뒤 업데이트하세요. 기존 DB와 `.env`를 백업하세요. 서비스 전환은 기존 유닛을 중지하고 `phrolova.service`를 시작합니다. 등록 또는 헬스 확인 실패 시 이전 서비스 활성화·실행 상태를 복구합니다. 기존 유닛 파일은 비활성 상태로 보존합니다. 복구 실패 경고가 있으면 로그와 `systemctl status`를 확인하세요. 관리 명령 링크는 새 링크 등록 성공 후 동일 설치본을 가리키는 구형 심볼릭 링크만 제거합니다.

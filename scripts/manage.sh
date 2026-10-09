@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════
-#  Rookery — 통합 관리 스크립트 (Linux / macOS)
+#  Phrolova — 통합 관리 스크립트 (Linux / macOS)
 #
 #  원라이너 (설치 · 업데이트 겸용):
 #    curl -fsSL https://raw.githubusercontent.com/ProofPage/Phrolova/main/scripts/manage.sh | bash
 #
 #  설치 후에는 어디서나 한 단어로 쓴다:
-#    rookery update | start | stop | status | logs
+#    phrolova update | start | stop | status | logs
 #
 #  설계 원칙
 #    - 이 파일 하나로 설치·업데이트가 끝난다 (curl | bash 로 실행되므로 자기완결적이어야 함)
@@ -20,8 +20,11 @@ set -euo pipefail
 REPO_SLUG="ProofPage/Phrolova"
 REPO_URL="https://github.com/${REPO_SLUG}.git"
 RAW_URL="https://raw.githubusercontent.com/${REPO_SLUG}/main/scripts/manage.sh"
-APP_NAME="rookery"
-SERVICE_NAME="rookery"
+APP_NAME="phrolova"
+DEFAULT_INSTALL_DIR="$HOME/Phrolova"
+SERVICE_NAME="phrolova"
+SYSTEMD_UNIT_DIR="${SYSTEMD_UNIT_DIR:-/etc/systemd/system}"
+SYSTEMD_RUNTIME_DIR="${SYSTEMD_RUNTIME_DIR:-/run/systemd/system}"
 DEFAULT_PORT=8000
 REQUIRED_PYTHON_MINOR=12
 REQUIRED_FFMPEG_MAJOR=6
@@ -44,7 +47,7 @@ step()  { echo ""; echo "${BOLD}${CYAN}▶ $1${NC}"; }
 # 터미널 폰트에 따라 어긋나므로 테두리 없이 간다.
 banner() {
   echo ""
-  echo "${CYAN}${BOLD}  Rookery${NC} — 멀티 플랫폼 라이브 녹화 · 아카이빙"
+  echo "${CYAN}${BOLD}  Phrolova${NC} — 멀티 플랫폼 라이브 녹화 · 아카이빙"
   echo ""
 }
 
@@ -80,7 +83,7 @@ resolve_install_dir() {
   [ -n "${INSTALL_DIR:-}" ] && return
 
   local self_dir root
-  self_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)"
+  self_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")" 2>/dev/null && pwd || true)"
   if [ -n "$self_dir" ]; then
     root="$(dirname "$self_dir")"
     if [ -d "$root/backend" ] && [ -d "$root/frontend" ]; then
@@ -90,16 +93,16 @@ resolve_install_dir() {
   fi
 
   # 구버전 설치 경로를 쓰던 사용자를 그대로 이어받는다.
-  # Rookery로 이름을 바꾸기 전 설치본이 ~/signal-recorder에 있다.
+  # Phrolova로 이름을 바꾸기 전 설치본이 ~/signal-recorder에 있다.
   local legacy
-  for legacy in "$HOME/signal-recorder" "$HOME/chzzk-recorder-pro"; do
+  for legacy in "$HOME/Phrolova" "$HOME/rookery" "$HOME/signal-recorder" "$HOME/chzzk-recorder-pro"; do
     if [ -d "$legacy/.git" ]; then
       INSTALL_DIR="$legacy"
       return
     fi
   done
 
-  INSTALL_DIR="$HOME/$APP_NAME"
+  INSTALL_DIR="$DEFAULT_INSTALL_DIR"
 }
 
 is_installed() { [ -d "$INSTALL_DIR/.git" ]; }
@@ -278,7 +281,7 @@ sync_repo() {
     return 0
   fi
 
-  # 리포 이름이 여러 번 바뀌었다(Chzzk_downloader → Signal-Recorder → Rookery).
+  # 리포 이름이 여러 번 바뀌었다(Chzzk_downloader → Signal-Recorder → Phrolova).
   # GitHub 리다이렉트로 당장은 동작하지만 영구 보장이 아니므로 정식 주소로 맞춘다.
   local current_remote
   current_remote="$(git -C "$INSTALL_DIR" remote get-url origin 2>/dev/null || true)"
@@ -306,7 +309,7 @@ sync_repo() {
   # 지금은 gitignore 대상이라, 로컬 변경으로 남아 병합을 막는다.
   # 지우면 사용자가 직접 고친 파일까지 날릴 수 있으므로 stash로 치운다.
   warn "로컬 변경이 병합을 막고 있습니다. stash로 치우고 다시 시도합니다."
-  local stash_name="rookery-update-$(date +%Y%m%d-%H%M%S)"
+  local stash_name="phrolova-update-$(date +%Y%m%d-%H%M%S)"
   if ! git -C "$INSTALL_DIR" stash push -u -m "$stash_name" >/dev/null 2>&1; then
     warn "stash에 실패했습니다."
     return 2
@@ -352,7 +355,7 @@ USER_BINDIR="$HOME/.local/bin"
 
 # 이름이 바뀌기 전에 걸어둔 명령. systemd 유닛과 달리 지금까지 정리하지 않아
 # 옛 이름이 낡은 경로를 가리킨 채 남아 있었다.
-LEGACY_COMMAND_NAMES="signal-recorder chzzk-recorder-pro"
+LEGACY_COMMAND_NAMES="rookery signal-recorder chzzk-recorder-pro"
 
 # 우리가 만든 심볼릭 링크만 지운다. 같은 이름의 진짜 파일은 건드리지 않는다.
 remove_legacy_commands() {
@@ -361,10 +364,7 @@ remove_legacy_commands() {
     for name in $LEGACY_COMMAND_NAMES; do
       link="$dir/$name"
       [ -L "$link" ] || continue
-      case "$(readlink "$link" 2>/dev/null)" in
-        */scripts/manage.sh) ;;
-        *) continue ;;
-      esac
+      [ "$(readlink -f "$link" 2>/dev/null)" = "$(readlink -f "$INSTALL_DIR/scripts/manage.sh" 2>/dev/null)" ] || continue
       rm -f "$link" 2>/dev/null || $SUDO rm -f "$link" 2>/dev/null || true
       [ -e "$link" ] || info "구버전 명령 정리: $link"
     done
@@ -376,6 +376,7 @@ remove_legacy_commands() {
 link_into() {
   local dir="$1" target="$2"
   [ -d "$dir" ] || return 1
+  [ ! -e "$dir/$APP_NAME" ] || [ -L "$dir/$APP_NAME" ] || return 1
   ln -sf "$target" "$dir/$APP_NAME" 2>/dev/null && return 0
   [ -n "$SUDO" ] || return 1
   # sudo 프롬프트가 보여야 하므로 여기서는 stderr를 가리지 않는다.
@@ -386,9 +387,9 @@ link_into() {
 link_self() {
   local target="$INSTALL_DIR/scripts/manage.sh"
   chmod +x "$target" 2>/dev/null || true
-  remove_legacy_commands
 
   if link_into "$SYSTEM_BINDIR" "$target"; then
+    remove_legacy_commands
     info "명령 등록: $SYSTEM_BINDIR/$APP_NAME ✓"
     return 0
   fi
@@ -399,6 +400,7 @@ link_self() {
     $target update"
     return 0
   fi
+  remove_legacy_commands
   info "명령 등록: $USER_BINDIR/$APP_NAME ✓"
 
   case ":$PATH:" in
@@ -446,9 +448,9 @@ service_exists() {
   has_cmd systemctl && systemctl cat "${SERVICE_NAME}.service" >/dev/null 2>&1
 }
 
-# 이름이 두 번 바뀌었다: chzzk-recorder-pro → signal-recorder → rookery.
+# 이름이 두 번 바뀌었다: chzzk-recorder-pro → signal-recorder → phrolova.
 # 어느 시절에 설치했든 옛 유닛이 남아 있으면 포트를 물고 있어 새 유닛이 뜨지 못한다.
-LEGACY_SERVICE_NAMES="signal-recorder chzzk-recorder-pro"
+LEGACY_SERVICE_NAMES="rookery signal-recorder chzzk-recorder-pro"
 
 # 남아 있는 구버전 유닛 이름을 출력한다 (없으면 아무것도 출력하지 않음).
 find_legacy_services() {
@@ -461,35 +463,42 @@ find_legacy_services() {
   done
 }
 
+legacy_service_active() {
+  local name
+  for name in $(find_legacy_services); do
+    systemctl is-active --quiet "$name" && return 0
+  done
+  return 1
+}
+
 legacy_service_exists() {
   [ -n "$(find_legacy_services)" ]
 }
 
-# Rookery로 이름을 바꾸기 전 유닛이 남아 있으면 같은 포트를 물고 있어
-# 새 유닛이 뜨지 못한다. 등록 전에 먼저 걷어낸다.
-remove_legacy_service() {
-  local found name
-  found="$(find_legacy_services)"
-  [ -n "$found" ] || return 0
-
-  for name in $found; do
-    warn "구버전 서비스(${name})를 발견했습니다. 중지 후 제거합니다."
-    $SUDO systemctl disable --now "$name" 2>/dev/null || true
-    $SUDO rm -f "/etc/systemd/system/${name}.service"
-  done
-  $SUDO systemctl daemon-reload
-  info "구버전 서비스 제거 완료 ✓"
-}
-
+# Keep legacy units installed but disabled; restore their state on failure.
 service_install() {
-  [ -d /run/systemd/system ] && has_cmd systemctl || { warn "실행 중인 systemd가 없어 서비스 등록을 건너뜁니다."; return 0; }
-
-  remove_legacy_service
-
-  step "systemd 서비스 등록"
-  $SUDO tee "/etc/systemd/system/${SERVICE_NAME}.service" >/dev/null <<UNIT
+  [ -d "$SYSTEMD_RUNTIME_DIR" ] && has_cmd systemctl || { warn "실행 중인 systemd가 없어 서비스 등록을 건너뜁니다."; return 0; }
+  local found name active="" enabled="" backup target rc=0 new_active=0 new_enabled=0
+  found="$(find_legacy_services)"
+  target="$SYSTEMD_UNIT_DIR/${SERVICE_NAME}.service"
+  backup="$(mktemp -d)"
+  if [ -f "$target" ]; then
+    $SUDO cp -p "$target" "$backup/previous.service" || { rm -rf "$backup"; return 1; }
+  fi
+  systemctl is-active --quiet "$SERVICE_NAME" && new_active=1 || true
+  systemctl is-enabled --quiet "$SERVICE_NAME" && new_enabled=1 || true
+  for name in $found; do
+    systemctl is-active --quiet "$name" && active="$active $name" || true
+    systemctl is-enabled --quiet "$name" && enabled="$enabled $name" || true
+  done
+  # Stop before registering the new unit to avoid duplicate port ownership.
+  for name in $found; do
+    $SUDO systemctl disable --now "$name" || { rc=1; break; }
+  done
+  if [ "$rc" -eq 0 ]; then
+    $SUDO tee "$target" >/dev/null <<UNIT || rc=$?
 [Unit]
-Description=Rookery - Live Stream Recorder
+Description=Phrolova - Live Stream Recorder
 Documentation=https://github.com/${REPO_SLUG}
 After=network-online.target
 Wants=network-online.target
@@ -497,8 +506,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=$(whoami)
-WorkingDirectory=${INSTALL_DIR}/backend
-ExecStart=${INSTALL_DIR}/.venv/bin/python run.py
+WorkingDirectory="${INSTALL_DIR}/backend"
+ExecStart="${INSTALL_DIR}/.venv/bin/python" run.py
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
@@ -509,17 +518,37 @@ NoNewPrivileges=true
 [Install]
 WantedBy=multi-user.target
 UNIT
-
-  $SUDO systemctl daemon-reload
-  $SUDO systemctl enable --now "$SERVICE_NAME"
-  info "서비스 등록 완료 ✓"
-  info "상태 확인: ${SUDO:+$SUDO }systemctl status $SERVICE_NAME"
+  fi
+  if [ "$rc" -eq 0 ]; then
+    $SUDO systemctl daemon-reload && $SUDO systemctl enable --now "$SERVICE_NAME" || rc=1
+  fi
+  if [ "$rc" -eq 0 ]; then
+    wait_for_health "$(current_port)" || rc=1
+  fi
+  if [ "$rc" -ne 0 ]; then
+    warn "새 서비스 등록 실패. 이전 서비스 상태를 복구합니다."
+    $SUDO systemctl disable --now "$SERVICE_NAME" || true
+    if [ -f "$backup/previous.service" ]; then
+      $SUDO cp -p "$backup/previous.service" "$target" || true
+    else
+      $SUDO rm -f "$target" || true
+    fi
+    $SUDO systemctl daemon-reload || true
+    [ "$new_enabled" -eq 0 ] || $SUDO systemctl enable "$SERVICE_NAME" || true
+    [ "$new_active" -eq 0 ] || $SUDO systemctl start "$SERVICE_NAME" || true
+    for name in $enabled; do $SUDO systemctl enable "$name" || warn "복구 실패: $name enable"; done
+    for name in $active; do $SUDO systemctl start "$name" || warn "복구 실패: $name start"; done
+    rm -rf "$backup"
+    return 1
+  fi
+  rm -rf "$backup"
+  info "서비스 등록 완료 ✓ (이전 유닛은 비활성 상태로 보존)"
 }
 
 service_remove() {
   has_cmd systemctl || return 0
   $SUDO systemctl disable --now "$SERVICE_NAME" 2>/dev/null || true
-  $SUDO rm -f "/etc/systemd/system/${SERVICE_NAME}.service"
+  $SUDO rm -f "$SYSTEMD_UNIT_DIR/${SERVICE_NAME}.service"
   $SUDO systemctl daemon-reload
   info "서비스 제거 완료 ✓"
 }
@@ -587,7 +616,7 @@ cmd_update() {
 
   # 구버전 유닛으로 돌고 있던 서버를 새 유닛으로 옮긴다.
   # 그냥 두면 옛 서비스가 계속 포트를 잡고 있어, 안내대로 start를 해도 충돌한다.
-  if ! service_exists && legacy_service_exists; then
+  if legacy_service_active || { ! service_exists && legacy_service_exists; }; then
     warn "구버전 서비스($(find_legacy_services | paste -sd' ' -))로 실행 중입니다. ${SERVICE_NAME} 유닛으로 옮깁니다."
     service_install
     wait_for_health "$(current_port)" || true
@@ -612,6 +641,10 @@ cmd_update() {
 
 cmd_start() {
   require_install
+  if legacy_service_active || { ! service_exists && legacy_service_exists; }; then
+    service_install || return 1
+    return 0
+  fi
   if service_exists; then
     $SUDO systemctl start "$SERVICE_NAME"
     info "서비스 시작 ✓"
@@ -750,7 +783,7 @@ print_done() {
 cmd_help() {
   cat <<HELP
 
-${BOLD}Rookery 관리 명령${NC}
+${BOLD}Phrolova 관리 명령${NC}
 
   ${CYAN}$APP_NAME${NC} [명령]
 
@@ -764,7 +797,7 @@ ${BOLD}명령${NC}
   uninstall               제거 (녹화 파일·데이터는 유지)
 
 ${BOLD}환경 변수${NC}
-  INSTALL_DIR   설치 경로 (기본: \$HOME/$APP_NAME)
+  INSTALL_DIR   설치 경로 (기본: \$HOME/Phrolova)
 
 ${BOLD}최초 설치${NC}
   curl -fsSL $RAW_URL | bash

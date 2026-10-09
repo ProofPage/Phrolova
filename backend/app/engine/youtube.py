@@ -1,5 +1,5 @@
 """
-Rookery: YouTube 라이브 엔진
+Phrolova: YouTube 라이브 엔진
 유튜브 채널의 라이브 상태를 HTML 스크래핑 및 yt-dlp 메타데이터 분석을 통해 감지하고 라이브 URL을 반환한다.
 스트림 다운로드는 YtdlpLivePipeline에서 처리한다.
 """

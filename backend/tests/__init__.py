@@ -1,3 +1,3 @@
 """
-Chzzk-Recorder-Pro: 테스트 패키지
+Phrolova: 테스트 패키지
 """

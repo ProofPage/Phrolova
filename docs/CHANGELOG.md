@@ -6,6 +6,12 @@
 
 ---
 
+## 리브랜딩 (미출시)
+
+- 현재 제품·npm·트레이·PyInstaller·Linux 관리 명령을 Phrolova로 통일했습니다. 버전 번호는 변경하지 않았습니다.
+- 새 DB는 `phrolova.db`를 사용하며 `rookery.db` / `signal_recorder.db`는 WAL을 포함해 백업 이관하고 원본을 보존합니다.
+- 기존 설치 경로와 서비스 상태를 인식하며 서비스 이전 실패 시 이전 실행 상태를 복구합니다.
+
 ## [Unreleased]
 
 ## [2.0.51] - 2026-10-09

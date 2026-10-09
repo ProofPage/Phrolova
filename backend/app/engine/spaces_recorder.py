@@ -1,5 +1,5 @@
 """
-Rookery: X Spaces 녹화 제어
+Phrolova: X Spaces 녹화 제어
 
 X Spaces는 다른 플랫폼과 녹화 방식이 다르다. 스트림 URL을 yt-dlp 파이프라인에
 넘기는 대신 space_id로 yt-dlp subprocess를 직접 띄우고 프로세스를 관리한다.

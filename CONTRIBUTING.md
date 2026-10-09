@@ -4,7 +4,7 @@
 
 ## 먼저 알아둘 것
 
-Rookery는 실제로 방송을 녹화하는 데 쓰이고 있습니다. 동작이 깨지면 사용자의 녹화가 실패하고,
+Phrolova는 실제로 방송을 녹화하는 데 쓰이고 있습니다. 동작이 깨지면 사용자의 녹화가 실패하고,
 지나간 라이브는 다시 받을 수 없습니다. 리팩터링이든 기능 추가든 **기존 동작을 깨지 않는 것**이
 가장 중요합니다.
 
@@ -114,10 +114,10 @@ python -m pytest -c backend/pytest.ini backend/tests --basetemp=/path/to/writabl
 
 ## exe 빌드
 
-`rookery.spec`이 PyInstaller 스펙입니다. 프론트엔드를 먼저 빌드해야 웹 UI가 exe에 포함됩니다.
+`phrolova.spec`이 PyInstaller 스펙입니다. 프론트엔드를 먼저 빌드해야 웹 UI가 exe에 포함됩니다.
 
 ```bash
-pyinstaller rookery.spec --clean
+pyinstaller phrolova.spec --clean
 ```
 
 ffmpeg는 라이선스 문제로 번들하지 않습니다. 실행 시 `backend/run.py`의 의존성 검사가

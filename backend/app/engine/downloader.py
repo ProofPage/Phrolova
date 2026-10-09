@@ -1,7 +1,7 @@
 """
-Rookery: Chzzk 라이브 엔진
+Phrolova: Chzzk 라이브 엔진
 치지직 채널의 라이브 상태를 확인하고 라이브 URL을 반환한다.
-스트림 다운로드는 YtdlpLivePipeline에서 yt-dlp subprocess로 처리한다.
+CHZZK 라이브 수신은 기존 Streamlink → FFmpeg 파이프라인으로 처리한다.
 """
 
 from __future__ import annotations

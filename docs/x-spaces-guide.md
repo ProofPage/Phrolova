@@ -48,7 +48,7 @@ Twitter(X) Spaces 기능은 세 가지로 구성됩니다:
 
 ## 2단계: 쿠키 파일 업로드
 
-1. Rookery 웹 UI에서 **Settings** 페이지로 이동합니다.
+1. Phrolova 웹 UI에서 **Settings** 페이지로 이동합니다.
 2. **인증** 탭 → **Twitter(X) Spaces** 섹션을 찾습니다.
 3. 쿠키 파일(`.txt`)을 업로드합니다.
 4. **저장** 버튼 클릭.

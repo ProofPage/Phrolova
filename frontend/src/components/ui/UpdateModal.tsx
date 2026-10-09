@@ -12,7 +12,7 @@ interface UpdateModalProps {
 /**
  * 설치와 업데이트를 겸하는 원라이너. scripts/manage.sh 상단의 RAW_URL과 같은 주소다.
  *
- * `rookery` 명령을 못 찾는 사람에게는 이게 유일한 탈출구인데, 예전에는 본문에서
+ * `phrolova` 명령을 못 찾는 사람에게는 이게 유일한 탈출구인데, 예전에는 본문에서
  * "원라이너를 실행하라"고 말만 하고 정작 그 명령을 보여주지 않아 README를 뒤져야 했다.
  */
 const INSTALL_ONE_LINER =
@@ -109,17 +109,17 @@ export function UpdateModal({ info, onClose }: UpdateModalProps) {
                 );
             case "linux-native":
             default:
-                // 네이티브는 manage.sh가 등록한 rookery 명령으로 끝난다.
+                // 네이티브는 manage.sh가 등록한 phrolova 명령으로 끝난다.
                 return (
                     <div className="space-y-4">
                         <p className="text-sm text-ink-muted">
                             터미널에서 아래 명령을 실행하면 최신 버전으로 갱신한 뒤 자동으로 재시작됩니다.
                         </p>
-                        <CommandBlock command="rookery update" />
+                        <CommandBlock command="phrolova update" />
 
                         {/*
                           코드를 git pull로만 갱신해 온 사용자는 link_self()가 한 번도 돌지 않아
-                          rookery 명령 자체가 없다. 여기서 빠져나갈 길을 주지 않으면 막힌다.
+                          phrolova 명령 자체가 없다. 여기서 빠져나갈 길을 주지 않으면 막힌다.
                         */}
                         <div className="border-t border-line pt-4 space-y-2.5">
                             <p className="text-sm text-ink-muted">
@@ -127,7 +127,7 @@ export function UpdateModal({ info, onClose }: UpdateModalProps) {
                             </p>
                             <p className="text-xs text-ink-faint leading-relaxed">
                                 코드를 <span className="font-mono">git pull</span> 로만 갱신해 왔다면 명령이 등록되지 않았을 수 있습니다.
-                                아래 설치 원라이너가 업데이트를 겸하며, <span className="font-mono">rookery</span> 명령도 함께 등록합니다.
+                                아래 설치 원라이너가 업데이트를 겸하며, <span className="font-mono">phrolova</span> 명령도 함께 등록합니다.
                             </p>
                             <CommandBlock command={INSTALL_ONE_LINER} />
                         </div>

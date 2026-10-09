@@ -1,5 +1,5 @@
 """
-Rookery: 알림 서비스
+Phrolova: 알림 서비스
 전송 채널(Discord Bot / Webhook)에 독립적인 큐 기반 알림 파이프라인.
 
 설계 목표:

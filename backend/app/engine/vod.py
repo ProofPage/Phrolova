@@ -1,5 +1,5 @@
 """
-Rookery: VOD Engine (yt-dlp 래퍼)
+Phrolova: VOD Engine (yt-dlp 래퍼)
 yt-dlp를 사용하여 여러 플랫폼의 영상과 오디오를 다운로드한다.
 취소, 일시정지, 재개 기능을 지원한다.
 """
