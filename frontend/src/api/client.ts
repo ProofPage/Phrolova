@@ -72,6 +72,9 @@ export interface VodTask {
     title: string;
     state: "idle" | "downloading" | "paused" | "completed" | "error" | "cancelling";
     progress: number;
+    prepared?: boolean;
+    phase?: string;
+    metadata?: { id?: string; duration?: number; thumbnail?: string; uploader?: string; profile_image?: string; upload_date?: string; qualities?: { value: string; label: string }[]; quality_fallback?: boolean };
     quality: string;
     output_path: string | null;
     error_message?: string;
@@ -395,6 +398,12 @@ export const api = {
     // Monitor
 
     // VOD
+    prepareVods: async (urls: string[]) => (await client.post<{ results: { url: string; task_id?: string; duplicate?: boolean; error?: string }[] }>("/vod/prepare", { urls })).data,
+    startPreparedVods: async (task_ids: string[]) => (await client.post<{ results: { task_id: string; started?: boolean; error?: string }[] }>("/vod/start-prepared", { task_ids })).data,
+    startPreparedVod: async (id: string) => { await client.post(`/vod/${id}/start`); },
+    retryVodMetadata: async (id: string) => { await client.post(`/vod/${id}/metadata`); },
+    updateVodQuality: async (id: string, quality: string) => { await client.patch(`/vod/${id}/quality`, { quality }); },
+    removeVodTask: async (id: string) => { await client.delete(`/vod/${id}`); },
     downloadVod: async (url: string, quality: string = "best", output_dir?: string, cdn: ChzzkVodCdn = "default") => {
         const res = await client.post<VodAddResult>("/vod/download", {
             url,
@@ -431,8 +440,8 @@ export const api = {
         const res = await client.post("/vod/reorder", { task_ids });
         return res.data;
     },
-    clearCompletedVodTasks: async () => {
-        const res = await client.post<{ message: string; deleted_count: number; remaining_count: number }>("/vod/clear-completed");
+    clearCompletedVodTasks: async (completedOnly = false) => {
+        const res = await client.post<{ message: string; deleted_count: number; remaining_count: number }>("/vod/clear-completed", null, { params: { completed_only: completedOnly } });
         return res.data;
     },
     openVodFileLocation: async (task_id: string) => {

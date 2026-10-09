@@ -160,6 +160,24 @@ class RecorderService:
         await self._conductor.stop()
         return {"message": "Conductor 종료."}
 
+    def prepare_vods(self, urls: list[str]) -> dict:
+        return self._vod_engine.prepare_vods(urls)
+
+    def start_prepared_batch(self, task_ids: Optional[list[str]] = None) -> dict:
+        return self._vod_engine.start_prepared_batch(task_ids)
+
+    def start_prepared(self, task_id: str) -> dict:
+        return self._vod_engine.start_prepared(task_id)
+
+    def retry_metadata(self, task_id: str) -> dict:
+        return self._vod_engine.retry_metadata(task_id)
+
+    def set_prepared_quality(self, task_id: str, quality: str) -> dict:
+        return self._vod_engine.set_prepared_quality(task_id, quality)
+
+    def remove_vod_task(self, task_id: str) -> dict:
+        return self._vod_engine.remove_vod_task(task_id)
+
     # ── VOD 다운로드 ─────────────────────────────────────
 
     async def get_vod_info(self, url: str) -> dict:
@@ -245,10 +263,10 @@ class RecorderService:
         logger.info(f"[Service] VOD 작업 순서 재정렬 요청: {len(task_ids)}개")
         return self._vod_engine.reorder_tasks(task_ids)
 
-    def clear_completed_vod_tasks(self) -> dict:
+    def clear_completed_vod_tasks(self, completed_only: bool = False) -> dict:
         """대기 및 종료된 VOD 작업들을 일괄 삭제한다."""
         logger.info("[Service] VOD 작업 정리 요청")
-        return self._vod_engine.clear_completed_tasks()
+        return self._vod_engine.clear_completed_tasks(completed_only=completed_only)
 
     def open_vod_file_location(self, task_id: str) -> dict:
         """VOD 다운로드 파일 위치를 탐색기로 연다."""

@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Callable, Optional
 from urllib.parse import urlsplit
 
 from app.engine.chzzk_cdn import ChzzkCdnYoutubeDL, is_chzzk_media_url, is_chzzk_vod_url
+from app.engine.vod_preparation import VodPreparation
 from app.core.vod_filename import build_vod_outtmpl
 from app.core.config import get_settings
 from app.core.logger import logger, get_media_logger
@@ -101,6 +102,9 @@ class VodDownloadTask:
     cdn_applied: bool = False
     warning_message: Optional[str] = None
     media_duration: Optional[float] = None
+    prepared: bool = False
+    phase: str = "queued"
+    metadata: dict[str, Any] = field(default_factory=dict)
     source_url: str = field(default="", init=False, repr=False)
     output_dir: str = ""
     output_path: Optional[str] = None
@@ -134,7 +138,7 @@ class VodDownloadTask:
         self.source_url = self.url
 
 
-class VodEngine:
+class VodEngine(VodPreparation):
     """yt-dlp 기반 VOD/클립 다운로드 엔진.
 
     치지직, 유튜브 및 지원 사이트의 영상 주소를 처리한다.
@@ -163,6 +167,8 @@ class VodEngine:
         self._max_concurrent = settings.vod_max_concurrent
         self._semaphore = asyncio.Semaphore(self._max_concurrent)
 
+        self._metadata_semaphore = asyncio.Semaphore(2)
+        self._metadata_tasks: set[asyncio.Task] = set()
         self._load_history()
 
     def _notify(
@@ -276,6 +282,11 @@ class VodEngine:
             elif task.quality == "worst":
                 opts["format"] = "worstvideo*+worstaudio/worst"
 
+        if task.prepared and task.quality.endswith("p") and task.quality[:-1].isdigit():
+            height = int(task.quality[:-1])
+            opts["format"] = f"bestvideo*[height={height}]+bestaudio/best[height={height}]"
+        opts["postprocessor_hooks"] = [lambda d: setattr(task, "phase", "merging") if d.get("status") == "started" else None]
+
         if is_youtube_url(task.url):
             opts.update(runtime_options())
             opts["noplaylist"] = True
@@ -332,6 +343,7 @@ class VodEngine:
                 raise DownloadCancelledError("다운로드가 취소되었습니다.")
 
             if d.get("status") == "downloading":
+                task.phase = "downloading"
                 total = d.get("total_bytes") or d.get("total_bytes_estimate", 0)
                 downloaded = d.get("downloaded_bytes", 0)
                 if total > 0:
@@ -378,6 +390,9 @@ class VodEngine:
             "quiet": True,
             "no_warnings": True,
             "extract_flat": False,
+            "socket_timeout": 15,
+            "extractor_retries": 1,
+            "noplaylist": True,
         }
 
         def _extract() -> dict[str, Any] | None:
@@ -400,6 +415,18 @@ class VodEngine:
         if not info:
             raise ValueError(f"영상 정보를 가져올 수 없습니다: {url}")
 
+        profile_image = info.get("channel_thumbnail") or ""
+        channel_id = info.get("channel_id") or ""
+        if is_chzzk_vod_url(url) and not profile_image and isinstance(channel_id, str) and len(channel_id) == 32 and all(c in "0123456789abcdef" for c in channel_id):
+            import httpx
+            try:
+                async with httpx.AsyncClient(timeout=5, follow_redirects=False) as client:
+                    response = await client.get(f"https://api.chzzk.naver.com/service/v1/channels/{channel_id}", headers=self._auth.get_http_headers())
+                    response.raise_for_status()
+                    profile_image = (response.json().get("content") or {}).get("channelImageUrl") or ""
+            except (httpx.HTTPError, ValueError, AttributeError):
+                pass  # Optional profile artwork never prevents VOD preparation.
+
         formats = []
         for f in info.get("formats", []):
             formats.append({
@@ -407,13 +434,19 @@ class VodEngine:
                 "ext": f.get("ext"),
                 "resolution": f.get("resolution", "audio only"),
                 "filesize": f.get("filesize"),
+                "height": f.get("height"),
+                "vcodec": f.get("vcodec"),
+                "acodec": f.get("acodec"),
             })
 
         return {
             "title": info.get("title", "Unknown"),
             "duration": info.get("duration", 0),
             "thumbnail": info.get("thumbnail", ""),
-            "uploader": info.get("uploader", ""),
+            "uploader": info.get("channel") or info.get("uploader", ""),
+            "id": info.get("id", ""),
+            "upload_date": info.get("upload_date"),
+            "profile_image": profile_image,
             "formats": formats,
             "url": url,
         }
@@ -566,6 +599,7 @@ class VodEngine:
             self._save_history()
             return False
         task.state = VodDownloadState.DOWNLOADING
+        task.phase = "downloading"
         self._save_history()
         task.started_at = datetime.now()
         logger.info(f"[{task_id}] 다운로드 시작: {task.url}")
@@ -1076,6 +1110,7 @@ class VodEngine:
                 raise RuntimeError("yt-dlp가 완료했지만 출력 파일이 없습니다.")
 
             if chzzk_source:
+                task.phase = "verifying"
                 await self._inspect_chzzk_download(task, inspection_info or info, filepath)
             if task.cancel_flag:
                 raise DownloadCancelledError("다운로드가 취소되었습니다.")
@@ -1326,7 +1361,7 @@ class VodEngine:
         if not old_task:
             raise ValueError("작업을 찾을 수 없습니다.")
 
-        if old_task.state not in (VodDownloadState.COMPLETED, VodDownloadState.ERROR):
+        if old_task.state not in (VodDownloadState.COMPLETED, VodDownloadState.ERROR) and not (old_task.prepared and old_task.cancel_flag and old_task.state == VodDownloadState.IDLE):
             raise ValueError(f"재다운로드는 완료 또는 에러 상태에서만 가능합니다. 현재 상태: {old_task.state.value}")
 
         logger.info(f"[{task_id}] 재다운로드 요청 - URL: {old_task.url}, 화질: {old_task.quality}")
@@ -1338,6 +1373,13 @@ class VodEngine:
             quality=old_task.quality,
             cdn=cdn,
         )
+
+        if old_task.prepared and new_task_id in self._tasks:
+            new_task = self._tasks[new_task_id]
+            new_task.prepared = True
+            new_task.metadata = dict(old_task.metadata)
+            new_task.phase = "queued"
+            self._save_history()
 
         logger.info(f"[{task_id}] → 새 작업 생성: {new_task_id}")
         return new_task_id
@@ -1355,6 +1397,9 @@ class VodEngine:
             "state": task.state.value,
             "progress": round(task.progress, 1),
             "quality": task.quality,
+            "prepared": task.prepared,
+            "phase": "cancelled" if task.cancel_flag and task.state == VodDownloadState.IDLE else task.phase,
+            "metadata": task.metadata,
             "cdn": task.cdn,
             "cdn_applied": task.cdn_applied,
             "warning_message": task.warning_message,
@@ -1409,7 +1454,7 @@ class VodEngine:
 
         return {"message": "작업 순서가 변경되었습니다.", "count": len(task_ids)}
 
-    def clear_completed_tasks(self) -> dict[str, Any]:
+    def clear_completed_tasks(self, completed_only: bool = False) -> dict[str, Any]:
         """대기, 완료, 에러 상태의 작업을 삭제하고 다운로드 중 작업은 보존한다.
 
         Returns:
@@ -1420,8 +1465,11 @@ class VodEngine:
             VodDownloadState.COMPLETED,
             VodDownloadState.ERROR,
         }
+        if completed_only:
+            clearable_states = {VodDownloadState.COMPLETED}
         removed_tasks = [
             task for task in self._tasks.values() if task.state in clearable_states
+            and (task.download_task is None or task.download_task.done() or task.started_at is None)
         ]
 
         for task in removed_tasks:
@@ -1433,11 +1481,8 @@ class VodEngine:
                 if task.download_task is not None and not task.download_task.done():
                     task.download_task.cancel()
 
-        self._tasks = {
-            tid: task
-            for tid, task in self._tasks.items()
-            if task.state not in clearable_states
-        }
+        removed_ids = {task.task_id for task in removed_tasks}
+        self._tasks = {tid: task for tid, task in self._tasks.items() if tid not in removed_ids}
 
         deleted_count = len(removed_tasks)
         # Persist the removal as well as updating the UI's in-memory task list.
@@ -1458,6 +1503,7 @@ class VodEngine:
         wait for them; network timeout/retry settings may delay shutdown.
         """
         self._shutting_down = True
+        await asyncio.gather(*list(self._metadata_tasks), return_exceptions=True)
         imports = list(self.channel_imports.tasks.values())
         for job_id in list(self.channel_imports.tasks):
             self.channel_imports.cancel(job_id)
@@ -1473,6 +1519,8 @@ class VodEngine:
             pending.append(task.download_task)
         await asyncio.gather(*pending, return_exceptions=True)
         for task in self._tasks.values():
+            if task.prepared and task.cancel_flag and task.state == VodDownloadState.IDLE and (task.download_task is None or task.download_task.done()):
+                continue  # Already cancelled by the user, not interrupted by shutdown.
             if task.cancel_flag and task.state not in (VodDownloadState.COMPLETED, VodDownloadState.ERROR):
                 task.state = VodDownloadState.ERROR
                 task.error_message = "서버 종료로 중단되었습니다. 다시 시도해 주세요."
@@ -1562,8 +1610,9 @@ class VodEngine:
 
         restored = 0
         for record in records:
-            interrupted = record.get("state") in {"idle", "downloading", "paused", "cancelling"}
-            if record.get("state") not in ("completed", "error") and not interrupted:
+            prepared_idle = record.get("prepared") and record.get("state") == "idle" and record.get("phase") in {"ready", "metadata", "metadata_error", "cancelled"}
+            interrupted = not prepared_idle and record.get("state") in {"idle", "downloading", "paused", "cancelling"}
+            if record.get("state") not in ("completed", "error") and not interrupted and not prepared_idle:
                 continue
             try:
                 task = VodDownloadTask(
@@ -1573,6 +1622,10 @@ class VodEngine:
                     state=VodDownloadState.ERROR if interrupted else VodDownloadState(record["state"]),
                     progress=record.get("progress") or 0.0,
                     quality=record.get("quality") or "best",
+                    prepared=bool(record.get("prepared", False)),
+                    phase="metadata_error" if record.get("phase") == "metadata" else record.get("phase") or "queued",
+                    metadata=record.get("metadata") or {},
+                    cancel_flag=record.get("phase") == "cancelled",
                     cdn=record.get("cdn") if record.get("cdn") in ("default", "akamai") else "default",
                     cdn_applied=bool(record.get("cdn_applied", False)),
                     warning_message=record.get("warning_message"),
@@ -1604,6 +1657,9 @@ class VodEngine:
                     "state": task.state.value,
                     "progress": task.progress,
                     "quality": task.quality,
+                    "prepared": task.prepared,
+                    "phase": "cancelled" if task.cancel_flag and task.state == VodDownloadState.IDLE else task.phase,
+                    "metadata": task.metadata,
                     "cdn": task.cdn,
                     "cdn_applied": task.cdn_applied,
                     "warning_message": task.warning_message,

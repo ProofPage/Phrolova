@@ -83,17 +83,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## CHZZK VOD CDN selection and download reliability
+          ## CHZZK VOD preparation and batch downloads
 
-          - Add persistent manual Default / Akamai CDN selection for new CHZZK VOD jobs.
-          - Route supported manifest, video/audio segment and HLS key requests per job; no automatic CDN fallback.
-          - Keep live recording on Streamlink -> FFmpeg unchanged.
-          - Fix separate DASH tracks, merged output paths, filename collisions and VOD settings persistence.
-          - Preserve completed files and show non-destructive FFprobe duration/track warnings.
+          - Add drag-and-drop and multi-URL registration to the existing Downloads page.
+          - Show metadata cards, real per-video quality options and individual/batch start controls.
+          - Persist prepared VODs and selected quality using the existing SQLite history.
+          - Keep pause/resume/cancel/retry controls and add history-only removal; downloaded files are preserved.
+          - Add Korean, English and Japanese UI strings and responsive mobile controls.
+          - Keep CHZZK live recording on Streamlink -> FFmpeg. Existing yt-dlp, manual CDN selection and FFprobe checks remain in use.
 
-          Validation: 457 Python tests passed; TypeScript and production build passed. Local mock CDN HLS/DASH/AES downloads and real Streamlink HLS transport, cancellation, shutdown and restart persistence tested.
-          Actual external Akamai availability/path compatibility and this patch on Termux/ARM64/Windows devices remain unverified. Windows executable is CI-built.
-          Known limitation: existing chzzkpy dependency pins have reported advisories. See docs/cdn-audit-ko.md and docs/bug-audit-ko.md.
+          Validation: 490 Python tests passed; TypeScript and production build passed. Chromium UI checks passed at 390/1440px; existing 320/390/820/1024/1440px player/layout regressions passed. Local mock CDN downloads, merging, cancellation, shutdown and restart persistence tested.
+          External CHZZK/CDN downloads and this patch on Termux, ARM64 and Windows devices remain unverified. Windows executable is CI-built.
+          Existing chzzkpy dependency advisory limitations remain. See docs/vod-batch-ui-audit-ko.md.
 
           Windows: stop the application before replacing the executable; preserve settings and data.
           Linux/Termux: use source archives and docs/linux-guide.md or docs/termux-guide.md. The exe is Windows-only.

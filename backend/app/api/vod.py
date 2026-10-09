@@ -5,7 +5,7 @@ VOD/클립 다운로드 관련 엔드포인트.
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -184,12 +184,12 @@ async def reorder_vod_tasks(req: ReorderTasksRequest):
 
 
 @router.post("/clear-completed", summary="대기 및 완료 작업 정리")
-async def clear_completed_vod_tasks():
+async def clear_completed_vod_tasks(completed_only: bool = False):
     """대기, 완료, 오류 작업을 삭제하고 진행/일시정지 작업은 유지합니다."""
     from app.main import get_recorder_service
 
     service = get_recorder_service()
-    result = service.clear_completed_vod_tasks()
+    result = service.clear_completed_vod_tasks(completed_only=True) if completed_only else service.clear_completed_vod_tasks()
 
     return result
 
@@ -215,3 +215,65 @@ async def cancel_channel_import(import_id: str):
         return get_recorder_service().cancel_vod_import(import_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+
+
+class VodPrepareRequest(BaseModel):
+    urls: list[Annotated[str, Field(max_length=2048)]] = Field(..., min_length=1, max_length=100)
+
+
+class VodQualityRequest(BaseModel):
+    quality: str = Field(..., max_length=20)
+
+
+class VodStartBatchRequest(BaseModel):
+    task_ids: Optional[list[str]] = Field(None, max_length=1000)
+
+
+def _preparation_service():
+    from app.main import get_recorder_service
+    return get_recorder_service()
+
+
+@router.post('/prepare', summary='CHZZK VOD 준비 목록 등록')
+async def prepare_vods(req: VodPrepareRequest):
+    try:
+        return _preparation_service().prepare_vods(req.urls)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+
+
+@router.post('/start-prepared', summary='준비 완료 VOD 일괄 시작')
+async def start_prepared_vods(req: VodStartBatchRequest):
+    return _preparation_service().start_prepared_batch(req.task_ids)
+
+
+@router.post('/{task_id}/metadata', summary='VOD 정보 다시 조회')
+async def retry_vod_metadata(task_id: str):
+    try:
+        return _preparation_service().retry_metadata(task_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+
+
+@router.patch('/{task_id}/quality', summary='준비 VOD 화질 변경')
+async def update_prepared_quality(task_id: str, req: VodQualityRequest):
+    try:
+        return _preparation_service().set_prepared_quality(task_id, req.quality)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+
+
+@router.post('/{task_id}/start', summary='준비 VOD 개별 시작')
+async def start_prepared_vod(task_id: str):
+    try:
+        return _preparation_service().start_prepared(task_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+
+
+@router.delete('/{task_id}', summary='VOD 작업 이력만 제거')
+async def remove_vod_task(task_id: str):
+    try:
+        return _preparation_service().remove_vod_task(task_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None

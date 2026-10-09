@@ -8,6 +8,20 @@
 
 ## [Unreleased]
 
+## [2.0.51] - 2026-10-09
+
+### Added
+- CHZZK VOD preparation with link drops, multiple URLs, metadata cards, actual per-video quality and batch start.
+- Persistent prepared tasks and history-only per-task/completed cleanup.
+- Korean, English and Japanese controls for the new workflow.
+
+### Fixed
+- Preserve prepared quality and metadata on retry; prevent duplicate starts and late metadata resurrecting removed tasks.
+- Preserve user-cancelled prepared history during normal shutdown.
+
+### Validation
+- 490 Python tests, TypeScript/build and Chromium UI/player regression checks passed. External CHZZK/CDN and device validation remain incomplete. See docs/vod-batch-ui-audit-ko.md.
+
 ## [2.0.50] - 2026-10-09
 
 ### Added
@@ -681,7 +695,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.50...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.51...HEAD
+[2.0.51]: https://github.com/ProofPage/Phrolova/compare/v2.0.50...v2.0.51
 [2.0.50]: https://github.com/ProofPage/Phrolova/compare/v2.0.49...v2.0.50
 [2.0.49]: https://github.com/ProofPage/Phrolova/compare/v2.0.48...v2.0.49
 [2.0.48]: https://github.com/ProofPage/Phrolova/compare/v2.0.47...v2.0.48

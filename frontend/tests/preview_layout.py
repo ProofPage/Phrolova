@@ -38,7 +38,7 @@ async def main():
   t.update(title=name,output_path='/recordings/video.mp4',error_message='다운로드 서버 연결에 실패했습니다.' if t['state']=='error' else '')
  results=[]
  async with async_playwright() as p:
-  browser=await p.chromium.launch()
+  browser=await p.chromium.launch(executable_path=os.environ.get("PHROLOVA_CHROMIUM_EXECUTABLE"))
   for w,h in [(320,568),(390,844),(820,1180),(1024,768),(1440,900)]:
    if os.environ.get('PHROLOVA_PREVIEW_WIDTHS') and str(w) not in os.environ['PHROLOVA_PREVIEW_WIDTHS'].split(','):continue
    ctx=await browser.new_context(viewport={'width':w,'height':h},is_mobile=w<1024,has_touch=w<1024)

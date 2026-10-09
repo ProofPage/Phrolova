@@ -20,6 +20,7 @@ import {
     Trash2,
     Check,
 } from "lucide-react";
+import { VodPreparationPanel } from "../components/VodPreparationPanel";
 import { useVod } from "../contexts/VodContext";
 import { api, VodTask } from "../api/client";
 import { useToast } from "../components/ui/Toast";
@@ -46,15 +47,18 @@ export default function VodDownload() {
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const [taskFilter, setTaskFilter] = useState("all");
     const [visibleCount, setVisibleCount] = useState(50);
+    const [clearing, setClearing] = useState(false);
+    const clearingRef = useRef(false);
     const isInitialLoad = tasksLoading && tasks.length === 0;
     const toast = useToast();
     const confirm = useConfirm();
-    const clearableTaskCount = tasks.filter((task) =>
-        task.state === "idle" || task.state === "completed" || task.state === "error"
-    ).length;
-    const queuedCount = tasks.filter((task) => task.state === "idle").length;
-    const errorCount = tasks.filter((task) => task.state === "error").length;
-    const filteredTasks = tasks.filter(task => taskFilter === "all" || task.state === taskFilter);
+    const clearableTaskCount = tasks.filter((task) => task.state === "completed").length;
+    const completedCount = clearableTaskCount;
+    const isQueued = (task: VodTask) => task.state === "idle" && !["metadata", "metadata_error", "cancelled"].includes(task.phase ?? "");
+    const queuedCount = tasks.filter(isQueued).length;
+    const errorCount = tasks.filter((task) => task.state === "error" || task.phase === "metadata_error").length;
+    const matchesFilter = (task: VodTask, filter: string) => filter === "all" || (filter === "error" ? task.state === "error" || task.phase === "metadata_error" : filter === "idle" ? isQueued(task) : task.state === filter);
+    const filteredTasks = tasks.filter(task => matchesFilter(task, taskFilter));
     const visibleTasks = filteredTasks.slice(0, visibleCount);
     const sourceOptions = [
         { id: "chzzk", label: t("Chzzk"), dot: "bg-chzzk" },
@@ -174,20 +178,21 @@ export default function VodDownload() {
     };
 
     const handleClearCompleted = async () => {
+        if (clearingRef.current) return; clearingRef.current = true; setClearing(true);
         const ok = await confirm({
             title: t("다운로드 목록을 정리할까요?"),
-            message: t("대기 중·완료·실패한 작업만 목록에서 삭제합니다. 진행 중이거나 일시정지한 작업과 저장된 파일은 유지됩니다."),
+            message: t("완료된 작업 이력만 정리합니다. 저장된 영상 파일은 삭제하지 않습니다."),
             confirmText: t("목록 정리"),
             variant: "danger",
         });
-        if (!ok) return;
+        if (!ok) { clearingRef.current = false; setClearing(false); return; }
 
         try {
-            const result = await clearCompleted();
+            const result = await clearCompleted(true);
             toast.success(t("다운로드 목록에서 {count}개 항목을 삭제했습니다.").replace("{count}", String(result.deleted_count)));
         } catch (err: unknown) {
             toast.error(getErrorMessage(err, t("목록 정리에 실패했습니다.")));
-        }
+        } finally { clearingRef.current = false; setClearing(false); }
     };
 
     const handleDragStart = (index: number) => {
@@ -315,6 +320,9 @@ export default function VodDownload() {
                 actionsPlacement="below"
             />
 
+            <VodPreparationPanel tasks={tasks} refresh={refreshTasks} />
+            <p className="text-xs text-ink-muted" role="status">{t("다운로드")}: {completedCount}/{tasks.length} · {t("진행 중")} {activeCount} · {t("실패")} {errorCount}</p>
+
             {loadError && <div role="status" className="flex flex-wrap items-center justify-between gap-2 border-y border-line py-3 text-xs text-ink-muted"><span>{t("다운로드 목록을 불러오지 못했습니다. 잠시 후 다시 시도하세요.")}</span><Button icon={RotateCw} onClick={() => void refreshTasks()}>{t("다시 시도")}</Button></div>}
             {imports.map((job) => {
                 const running = job.state === "queued" || job.state === "collecting";
@@ -358,12 +366,12 @@ export default function VodDownload() {
                         <Button
                             icon={Trash2}
                             onClick={handleClearCompleted}
-                            disabled={clearableTaskCount === 0}
+                            disabled={clearing || clearableTaskCount === 0}
                             title={clearableTaskCount > 0
-                                ? "대기·완료·오류 항목을 정리합니다."
+                                ? t("완료된 작업 이력만 정리합니다. 저장된 영상 파일은 삭제하지 않습니다.")
                                 : "진행 중이거나 일시정지한 항목은 정리할 수 없습니다."}
                         >
-                            목록 정리
+                            {t("완료 목록 정리")}
                         </Button>
                     )}
                 </div>
@@ -371,7 +379,7 @@ export default function VodDownload() {
                 <div className="min-w-0 overflow-x-auto border-b border-line" role="group" aria-label={t("다운로드 상태 필터")}>
                     <div className="flex w-max min-w-full gap-1 pb-2">
                         {[["all", "전체"], ["downloading", "다운로드 중"], ["idle", "대기 중"], ["paused", "일시정지"], ["completed", "완료"], ["error", "실패"]].map(([value,label]) => <button key={value} type="button" onClick={(event) => { setTaskFilter(value); setVisibleCount(50); event.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" }); }} aria-pressed={taskFilter === value} className={clsx("dashboard-filter min-h-11 sm:min-h-8 shrink-0 rounded-[5px] px-2.5 py-1.5 text-xs whitespace-nowrap", taskFilter === value && "is-selected")}>
-                            {t(label)} <span className="ml-1 text-ink-faint">{value === "all" ? tasks.length : tasks.filter(task => task.state === value).length}</span>
+                            {t(label)} <span className="ml-1 text-ink-faint">{value === "all" ? tasks.length : tasks.filter(task => matchesFilter(task, value)).length}</span>
                         </button>)}
                     </div>
                 </div>
@@ -402,10 +410,14 @@ export default function VodDownload() {
                                     canMoveDown={!reordering && visibleIndex < visibleTasks.length - 1}
                                     onMove={(direction) => { const target = visibleTasks[visibleIndex + direction]; if (target) void reorderTask(task.task_id, tasks.indexOf(target), true); }}
                                     onCancel={() => handleCancel(task.task_id, task.title)}
-                                    onPause={() => void handleTaskAction(() => pauseTask(task.task_id), "다운로드를 일시정지했습니다.", "다운로드를 일시정지하지 못했습니다.")}
-                                    onResume={() => void handleTaskAction(() => resumeTask(task.task_id), "다운로드를 재개했습니다.", "다운로드를 재개하지 못했습니다.")}
+                                    onPause={() => handleTaskAction(() => pauseTask(task.task_id), "다운로드를 일시정지했습니다.", "다운로드를 일시정지하지 못했습니다.")}
+                                    onResume={() => handleTaskAction(() => resumeTask(task.task_id), "다운로드를 재개했습니다.", "다운로드를 재개하지 못했습니다.")}
                                     onRetry={() => handleRetry(task.task_id, task.title)}
                                     onOpenLocation={() => openFileLocation(task.task_id)}
+                                    onStart={() => handleTaskAction(async () => { await api.startPreparedVod(task.task_id); await refreshTasks(); }, "다운로드를 시작했습니다.", "요청에 실패했습니다.")}
+                                    onMetadata={() => handleTaskAction(async () => { await api.retryVodMetadata(task.task_id); await refreshTasks(); }, "정보 조회를 시작했습니다.", "요청에 실패했습니다.")}
+                                    onQuality={(quality) => handleTaskAction(async () => { await api.updateVodQuality(task.task_id, quality); await refreshTasks(); }, "화질을 변경했습니다.", "요청에 실패했습니다.")}
+                                    onRemove={() => handleTaskAction(async () => { await api.removeVodTask(task.task_id); await refreshTasks(); }, "작업 이력을 제거했습니다.", "요청에 실패했습니다.")}
                                 />
                             </div>
                         ))}
@@ -427,47 +439,68 @@ interface TaskCardProps {
     canMoveUp: boolean;
     canMoveDown: boolean;
     onMove: (direction: number) => void;
-    onCancel: () => void;
-    onPause: () => void;
-    onResume: () => void;
-    onRetry: () => void;
-    onOpenLocation: () => void;
+    onStart: () => Promise<void>;
+    onMetadata: () => Promise<void>;
+    onQuality: (quality: string) => Promise<void>;
+    onRemove: () => Promise<void>;
+    onCancel: () => Promise<void>;
+    onPause: () => Promise<void>;
+    onResume: () => Promise<void>;
+    onRetry: () => Promise<void>;
+    onOpenLocation: () => Promise<void>;
 }
 
-function TaskCard({ task, canMoveUp, canMoveDown, onMove, onCancel, onPause, onResume, onRetry, onOpenLocation }: TaskCardProps) {
+function TaskCard({ task, canMoveUp, canMoveDown, onMove, onCancel, onPause, onResume, onRetry, onOpenLocation, onStart, onMetadata, onQuality, onRemove }: TaskCardProps) {
     const { t } = useLanguage();
+    const [busy, setBusy] = useState(false);
+    const busyRef = useRef(false);
+    const act = async (action: () => Promise<void>) => {
+        if (busyRef.current) return; busyRef.current = true; setBusy(true);
+        try { await action(); } finally { busyRef.current = false; setBusy(false); }
+    };
+    const phaseLabels: Record<string, string> = { metadata: "정보 조회 중", metadata_error: "정보 조회 실패", ready: "다운로드 준비 완료", merging: "병합 중", verifying: "검증 중", cancelled: "취소됨" };
+    const metadata = task.metadata;
+    const canPrepare = task.prepared && task.state === "idle" && task.phase === "ready";
+    const canSelectQuality = task.prepared && task.state === "idle" && (task.phase === "ready" || (task.phase === "queued" && !task.started_at));
     const statusLabels: Record<string,string> = { idle: "대기 중", downloading: "다운로드 중", paused: "일시정지", completed: "완료", error: "실패", cancelling: "취소 중" };
     const tone = task.state === "error" ? "danger" : task.state === "completed" ? "ok" : task.state === "paused" ? "warn" : task.state === "downloading" ? "info" : "neutral";
     const source = (() => { try { const host = new URL(task.url).hostname; return host.includes("youtube") || host === "youtu.be" ? "YouTube" : host.includes("chzzk") ? t("Chzzk") : host.includes("x.com") || host.includes("twitter.com") ? "X Spaces" : host; } catch { return t("외부 영상"); } })();
-    return <div className="download-row">
+    return <div className="download-row" data-task-id={task.task_id}>
         <div className="download-content min-w-0 [overflow-wrap:anywhere]">
             <div className="download-heading flex min-w-0 flex-wrap items-start gap-2">
+                {metadata?.thumbnail && <img className="w-28 sm:w-36 aspect-video object-cover rounded shrink-0 self-start" src={metadata.thumbnail} alt="" referrerPolicy="no-referrer" onError={event => { event.currentTarget.style.display = "none"; }} />}
                 <span className="download-state-icon grid size-5 shrink-0 place-items-center text-ink-faint" aria-hidden="true">
             {task.state === "downloading" || task.state === "cancelling" ? <Loader2 className="size-4 animate-spin" /> : task.state === "completed" ? <CheckCircle className="size-4 text-ok" /> : task.state === "error" ? <AlertCircle className="size-4 text-danger" /> : task.state === "paused" ? <Pause className="size-4 text-warn" /> : <Clock className="size-4" />}
                 </span>
-                <h3 className="download-title min-w-0 flex-1 break-words font-medium text-ink" title={task.title}>{task.title}</h3><Badge tone={tone}>{t(statusLabels[task.state] || task.state)}</Badge>
+                <h3 className="download-title min-w-0 flex-1 break-words font-medium text-ink" title={task.title}>{task.title}</h3><Badge tone={tone}>{t(task.state === "idle" || task.state === "downloading" ? phaseLabels[task.phase ?? ""] || statusLabels[task.state] : statusLabels[task.state] || task.state)}</Badge>
             <ActionMenu className="download-mobile-menu" label={`${t("작업 순서 변경")}: ${task.title}`}>{close => <>
                 <button type="button" disabled={!canMoveUp} onClick={() => { onMove(-1); close(); }}><ArrowUp className="size-4" />{t("위로 이동")}</button>
                 <button type="button" disabled={!canMoveDown} onClick={() => { onMove(1); close(); }}><ArrowDown className="size-4" />{t("아래로 이동")}</button>
             </>}</ActionMenu>
             </div>
-            <p className="text-xs text-ink-faint">{source} · {task.quality === "best" ? t("최고 화질") : task.quality}{source === t("Chzzk") && task.url.includes("chzzk.naver.com/video/") && ` · ${task.cdn === "akamai" ? "Akamai CDN" : "기본 CDN"}`}</p>
+            {metadata && <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">{metadata.profile_image && <img src={metadata.profile_image} alt="" className="size-5 rounded-full" referrerPolicy="no-referrer" onError={event => { event.currentTarget.style.display = "none"; }} />}{metadata.uploader && <span>{metadata.uploader}</span>}<span>VOD {metadata.id}</span>{metadata.duration != null && <span>{formatDuration(metadata.duration)}</span>}{metadata.upload_date && <span>{metadata.upload_date}</span>}</div>}
+            {canSelectQuality && <div className="flex flex-wrap gap-1" role="group" aria-label={t("영상별 화질 선택")}>{metadata?.qualities?.map(option => <button key={option.value} type="button" aria-pressed={task.quality === option.value} disabled={busy} className={clsx("min-h-9 rounded px-3 text-xs border", task.quality === option.value ? "bg-info/15 border-info text-info" : "border-line text-ink-muted")} onClick={() => void act(() => onQuality(option.value))}>{option.label}</button>)}</div>}
+            {metadata?.quality_fallback && <p className="text-xs text-warn">{t("기본 화질이 제공되지 않아 사용 가능한 화질을 선택했습니다.")}</p>}
+            <p className="text-xs text-ink-faint">{source} · {task.quality === "best" ? t("최고 화질") : task.quality}{source === t("Chzzk") && task.url.includes("chzzk.naver.com/video/") && ` · ${task.prepared && ["ready", "metadata", "metadata_error"].includes(task.phase ?? "") ? t("시작 시 저장된 CDN 설정 적용") : task.cdn === "akamai" ? "Akamai CDN" : t("기본 CDN")}`}</p>
             {(task.state === "downloading" || task.state === "paused" || task.state === "cancelling") && <>
                 <div className="flex items-center gap-3"><div className="h-1 flex-1 overflow-hidden rounded bg-surface-4" role="progressbar" aria-label={t("다운로드 진행률")} aria-valuenow={Math.round(task.progress)} aria-valuemin={0} aria-valuemax={100}><div className="h-full bg-info transition-[width]" style={{width:`${task.progress}%`}} /></div><span className="text-xs text-ink-muted tabular-nums">{Math.round(task.progress)}%</span></div>
                 <div className="download-transfer flex flex-wrap gap-x-4 gap-y-1 text-ink-muted tabular-nums"><span>{formatBytes(task.downloaded_bytes)}{task.total_bytes > 0 && ` / ${formatBytes(task.total_bytes)}`}</span>{task.state === "downloading" && <span>{task.download_speed.toFixed(2)} MB/s</span>}{task.eta_seconds > 0 && <span>{t("남은 시간")} {formatDuration(task.eta_seconds)}</span>}</div>
             </>}
             {task.state === "completed" && <p className="text-xs text-ink-faint">{formatBytes(task.total_bytes || task.downloaded_bytes)}{task.completed_at && ` · ${new Date(task.completed_at).toLocaleString()}`}</p>}
             {task.warning_message && <p className="text-xs text-warn" role="status">{task.warning_message}</p>}
-            {task.error_message && <div className="text-xs text-danger"><p>{t("다운로드를 완료하지 못했습니다. 다시 시도하거나 영상 주소와 인증 설정을 확인하세요.")}</p><details className="mt-1"><summary className="cursor-pointer text-ink-faint">{t("오류 세부 정보")}</summary><p className="mt-1 break-words">{task.error_message}</p></details></div>}
+            {task.error_message && <div className="text-xs text-danger"><p>{t(task.phase === "metadata_error" ? "영상 정보를 가져오지 못했습니다. 해당 항목에서 다시 조회해 주세요." : "다운로드를 완료하지 못했습니다. 다시 시도하거나 영상 주소와 인증 설정을 확인하세요.")}</p><details className="mt-1"><summary className="cursor-pointer text-ink-faint">{t("오류 세부 정보")}</summary><p className="mt-1 break-words">{task.error_message}</p></details></div>}
             {task.output_path && <details className="text-xs text-ink-faint"><summary className="cursor-pointer">{t("저장 위치")}</summary><p className="mt-1 break-all">{task.output_path}</p></details>}
         </div>
         <div className="download-footer">
             <div className="download-actions">
-            {task.state === "downloading" && <Button variant="ghost" icon={Pause} onClick={onPause}>{t("일시정지하기")}</Button>}
-            {task.state === "paused" && <Button variant="secondary" icon={Play} onClick={onResume}>{t("재개")}</Button>}
-            {(task.state === "downloading" || task.state === "paused") && <Button variant="danger" icon={Square} onClick={onCancel}>{t("취소")}</Button>}
-            {(task.state === "completed" || task.state === "error") && <Button variant="secondary" icon={RotateCw} onClick={onRetry}>{t(task.state === "error" ? "다시 시도" : "다시 다운로드")}</Button>}
-            {task.state === "completed" && task.output_path && <Button variant="ghost" icon={FolderOpen} onClick={onOpenLocation} title={t("파일 위치 열기")}>{t("폴더 열기")}</Button>}
+            {canPrepare && <Button variant="primary" icon={Play} disabled={busy} onClick={() => void act(onStart)}>{t("다운로드 시작")}</Button>}
+            {task.prepared && task.state === "idle" && task.phase === "metadata_error" && <Button icon={RotateCw} disabled={busy} onClick={() => void act(onMetadata)}>{t("정보 다시 조회")}</Button>}
+            {task.state === "downloading" && task.phase !== "merging" && task.phase !== "verifying" && <Button variant="ghost" icon={Pause} disabled={busy} onClick={() => void act(onPause)}>{t("일시정지하기")}</Button>}
+            {task.state === "paused" && <Button variant="secondary" icon={Play} disabled={busy} onClick={() => void act(onResume)}>{t("재개")}</Button>}
+            {(task.state === "downloading" || task.state === "paused") && <Button variant="danger" icon={Square} disabled={busy} onClick={() => void act(onCancel)}>{t("취소")}</Button>}
+            {(task.state === "completed" || task.state === "error" || (task.prepared && task.phase === "cancelled")) && <Button variant="secondary" icon={RotateCw} disabled={busy} onClick={() => void act(onRetry)}>{t(task.state === "error" ? "다시 시도" : "다시 다운로드")}</Button>}
+            {task.state === "completed" && task.output_path && <Button variant="ghost" icon={FolderOpen} disabled={busy} onClick={() => void act(onOpenLocation)} title={t("파일 위치 열기")}>{t("폴더 열기")}</Button>}
+            {(task.state === "idle" || task.state === "completed" || task.state === "error") && <Button icon={Trash2} variant="ghost" disabled={busy} onClick={() => void act(onRemove)} title={t("영상 파일은 삭제하지 않습니다.")}>{t("이력 제거")}</Button>}
         </div>
         <div className="download-reorder" role="group" aria-label={`${t("작업 순서 변경")}: ${task.title}`}>
             <span className="text-xs text-ink-faint">{t("작업 순서 변경")}</span>

@@ -1,7 +1,7 @@
 {
   "name": "rookery",
   "private": true,
-  "version": "2.0.50",
+  "version": "2.0.51",
   "description": "치지직·X Spaces·YouTube 라이브를 감시해 자동 녹화하는 도구의 웹 UI",
   "author": "Serian (https://github.com/eruminyu)",
   "license": "MIT",

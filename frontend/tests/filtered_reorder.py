@@ -13,7 +13,7 @@ async def main():
   channel.update(channel_id=chr(65+i), channel_name=chr(65+i), last_error='')
   FIX['channels'].append(channel)
  async with async_playwright() as p:
-  browser = await p.chromium.launch()
+  browser = await p.chromium.launch(executable_path=os.environ.get("PHROLOVA_CHROMIUM_EXECUTABLE"))
   context = await browser.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)
   await context.add_init_script("localStorage.setItem('dashboardViewMode','grid');window.EventSource=class{close(){}}")
   await context.route('**/api/**',mock)
