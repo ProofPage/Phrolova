@@ -154,6 +154,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Conductor를 먼저 멈춰야 종료 중 발생한 '녹화 완료' 알림이 큐에 들어간다.
     if conductor:
         await conductor.stop()
+    if _recorder_service:
+        await _recorder_service._vod_engine.shutdown()
     # 알림 서비스를 봇보다 먼저 정리해 마지막 알림 전송을 시도한다.
     if _notification_service:
         await _notification_service.stop()

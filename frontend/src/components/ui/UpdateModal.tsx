@@ -96,6 +96,17 @@ export function UpdateModal({ info, onClose }: UpdateModalProps) {
                     </div>
                 );
             }
+            case "termux-native":
+            case "termux-proot":
+            case "windows-native":
+            case "macos-native":
+                return (
+                    <div className="space-y-3">
+                        <p className="text-sm text-ink-muted">서버를 중지하고 저장소를 갱신한 뒤 환경별 설치 가이드에 따라 의존성과 웹 UI를 다시 준비하세요.</p>
+                        <CommandBlock command="git pull --ff-only" />
+                        <p className="text-xs text-ink-faint">docs/linux-guide.md 및 docs/termux-guide.md를 확인하세요. 기존 설정과 데이터는 유지하세요.</p>
+                    </div>
+                );
             case "linux-native":
             default:
                 // 네이티브는 manage.sh가 등록한 rookery 명령으로 끝난다.

@@ -118,6 +118,7 @@ class VodDownloadTask:
     cancel_flag: bool = False
     pause_event: threading.Event = field(default_factory=threading.Event)
     download_task: Optional[asyncio.Task] = None
+    process: Optional[asyncio.subprocess.Process] = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         self.pause_event.set()  # 초기 상태: 일시정지 아님
@@ -143,6 +144,7 @@ class VodEngine:
         self._tasks: dict[str, VodDownloadTask] = {}
         self.channel_imports = ChannelImports(self._enqueue_channel_video)
         self._notifier = notifier
+        self._shutting_down = False
         self._repo = repo or VodRepository()
 
 
@@ -191,6 +193,20 @@ class VodEngine:
     def _task_logger(self, task_id: str):
         task = self._tasks.get(task_id)
         return get_media_logger(task.url) if task else logger
+
+    @staticmethod
+    def _terminate_process(process: asyncio.subprocess.Process) -> None:
+        try:
+            process.terminate()
+        except ProcessLookupError:
+            return
+        def force_stop() -> None:
+            if process.returncode is None:
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    pass
+        asyncio.get_running_loop().call_later(10.0, force_stop)
 
     def _is_chzzk_url(self, url: str) -> bool:
         """치지직 URL인지 확인."""
@@ -424,6 +440,7 @@ class VodEngine:
         self._tasks = new_tasks
 
         # 백그라운드에서 다운로드 시작
+        self._save_history()
         task.download_task = asyncio.create_task(self._run_download(task.task_id))
 
         logger.info(f"[{task.task_id}] 다운로드 작업 추가: {url} (화질: {quality})")
@@ -472,6 +489,8 @@ class VodEngine:
                 return
 
             task = self._tasks[task_id]
+            if task.cancel_flag:
+                return
             # CDN을 바꾸는 재시도는 이전 CDN에서 받은 조각을 이어받지 않는다.
             # 서명·세그먼트 체계가 다른 CDN의 조각이 한 파일에 섞이는 것을 막는다.
             if self._is_chzzk_url(task.url):
@@ -503,7 +522,10 @@ class VodEngine:
             logger.error(f"[{task_id}] 작업을 찾을 수 없습니다.")
             return False
 
+        if task.cancel_flag:
+            return False
         task.state = VodDownloadState.DOWNLOADING
+        self._save_history()
         task.started_at = datetime.now()
         logger.info(f"[{task_id}] 다운로드 시작: {task.url}")
 
@@ -518,7 +540,7 @@ class VodEngine:
         except DownloadCancelledError:
             task.state = VodDownloadState.IDLE
             task.progress = 0.0
-            if not get_settings().keep_download_parts:
+            if not self._shutting_down and not get_settings().keep_download_parts:
                 await self._cleanup_partial_files(task)
             logger.info(f"[{task_id}] 다운로드 취소됨: {task.url}")
 
@@ -534,7 +556,7 @@ class VodEngine:
             if task.cancel_flag:
                 task.state = VodDownloadState.IDLE
                 task.progress = 0.0
-                if not get_settings().keep_download_parts:
+                if not self._shutting_down and not get_settings().keep_download_parts:
                     await self._cleanup_partial_files(task)
                 logger.info(f"[{task_id}] 다운로드 취소됨 (예외 처리): {task.url}")
             else:
@@ -554,7 +576,7 @@ class VodEngine:
                     logger.error(f"[{task_id}] 다운로드 불가: {e}")
                     task.error_message = error_msg
                     task.state = VodDownloadState.ERROR
-                    if not get_settings().keep_download_parts:
+                    if not self._shutting_down and not get_settings().keep_download_parts:
                         await self._cleanup_partial_files(task)
                     self._save_history()
                     return False
@@ -575,7 +597,7 @@ class VodEngine:
 
                     task.error_message = f"재시도 {task.max_retries}회 실패: {error_msg}"
                     task.state = VodDownloadState.ERROR
-                    if not get_settings().keep_download_parts:
+                    if not self._shutting_down and not get_settings().keep_download_parts:
                         await self._cleanup_partial_files(task)
                     # 에러 발생 시 이력 저장
                     self._save_history()
@@ -806,7 +828,16 @@ class VodEngine:
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE,
             )
-            _, stderr_data = await proc.communicate()
+            task.process = proc
+            try:
+                _, stderr_data = await proc.communicate()
+            finally:
+                if proc.returncode is None:
+                    proc.kill()
+                    await proc.communicate()
+                task.process = None
+            if task.cancel_flag:
+                raise DownloadCancelledError("다운로드가 취소되었습니다.")
 
             if proc.returncode != 0:
                 err = stderr_data.decode(errors='replace')[-500:]
@@ -1154,6 +1185,8 @@ class VodEngine:
 
         logger.info(f"[{task_id}] 다운로드 취소 요청...")
         task.cancel_flag = True
+        if task.process is not None and task.process.returncode is None:
+            self._terminate_process(task.process)
         task.state = VodDownloadState.CANCELLING
         # 일시정지 중이면 해제해서 취소가 진행되도록
         task.pause_event.set()
@@ -1333,6 +1366,33 @@ class VodEngine:
             "remaining_count": len(self._tasks),
         }
 
+    async def shutdown(self) -> None:
+        """Stop producing work and drain downloads before the database closes.
+
+        yt-dlp threads cannot be killed safely. Signal their progress hooks and
+        wait for them; network timeout/retry settings may delay shutdown.
+        """
+        self._shutting_down = True
+        imports = list(self.channel_imports.tasks.values())
+        for job_id in list(self.channel_imports.tasks):
+            self.channel_imports.cancel(job_id)
+        await asyncio.gather(*imports, return_exceptions=True)
+        pending = []
+        for task in self._tasks.values():
+            if task.download_task is None or task.download_task.done():
+                continue
+            task.cancel_flag = True
+            task.pause_event.set()
+            if task.process is not None and task.process.returncode is None:
+                self._terminate_process(task.process)
+            pending.append(task.download_task)
+        await asyncio.gather(*pending, return_exceptions=True)
+        for task in self._tasks.values():
+            if task.cancel_flag and task.state not in (VodDownloadState.COMPLETED, VodDownloadState.ERROR):
+                task.state = VodDownloadState.ERROR
+                task.error_message = "서버 종료로 중단되었습니다. 다시 시도해 주세요."
+        self._save_history()
+
     def open_file_location(self, task_id: str) -> dict[str, Any]:
         """작업의 출력 파일 위치를 탐색기로 엽니다.
 
@@ -1366,9 +1426,13 @@ class VodEngine:
             elif system == "Darwin":  # macOS
                 # macOS: open -R "파일경로"
                 subprocess.run(["open", "-R", str(output_file)], check=False)
-            else:  # Linux
-                # Linux: xdg-open "폴더경로"
-                subprocess.run(["xdg-open", str(output_file.parent)], check=False)
+            else:  # Linux / Termux / headless
+                import os
+                if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+                    return {"message": "헤드리스 서버에서는 표시된 저장 경로를 사용하세요.", "path": str(output_file)}
+                result = subprocess.run(["xdg-open", str(output_file.parent)], check=False, timeout=10)
+                if result.returncode:
+                    return {"error": "파일 관리자를 열지 못했습니다.", "path": str(output_file)}
 
             logger.info(f"[{task_id}] 파일 위치 열기: {output_file}")
             return {"message": "파일 위치를 열었습니다.", "path": str(output_file)}
@@ -1413,19 +1477,20 @@ class VodEngine:
 
         restored = 0
         for record in records:
-            if record.get("state") not in ("completed", "error"):
+            interrupted = record.get("state") in {"idle", "downloading", "paused", "cancelling"}
+            if record.get("state") not in ("completed", "error") and not interrupted:
                 continue
             try:
                 task = VodDownloadTask(
                     task_id=record["task_id"],
                     url=record["url"],
                     title=record.get("title"),
-                    state=VodDownloadState(record["state"]),
+                    state=VodDownloadState.ERROR if interrupted else VodDownloadState(record["state"]),
                     progress=record.get("progress") or 0.0,
                     quality=record.get("quality") or "best",
                     output_dir=record.get("output_dir") or "",
                     output_path=record.get("output_path"),
-                    error_message=record.get("error_message"),
+                    error_message="서버가 중단된 작업입니다. 다시 시도해 주세요." if interrupted else record.get("error_message"),
                     created_at=self._parse_dt(record.get("created_at")) or datetime.now(),
                     started_at=self._parse_dt(record.get("started_at")),
                     completed_at=self._parse_dt(record.get("completed_at")),
@@ -1458,7 +1523,6 @@ class VodEngine:
                     "completed_at": task.completed_at.isoformat() if task.completed_at else None,
                 }
                 for task in self._tasks.values()
-                if task.state in (VodDownloadState.COMPLETED, VodDownloadState.ERROR)
             }
             # 취소/삭제된 작업까지 반영해야 하므로 전체 교체한다.
             # 완료 작업은 보통 수십 건 수준이라 비용이 문제되지 않는다.

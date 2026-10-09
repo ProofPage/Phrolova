@@ -31,6 +31,9 @@ async def sse_events(request: Request):
 
             while True:
                 # 클라이언트의 연결이 끊겼는지 주기적으로 체크하기 위해 wait_for 사용
+                server = getattr(request.app.state, "uvicorn_server", None)
+                if server is not None and server.should_exit:
+                    break
                 if await request.is_disconnected():
                     break
                 

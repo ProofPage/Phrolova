@@ -1,207 +1,92 @@
-# Linux 서버 설치 가이드
+# Linux 설치 및 운영
 
-## 📋 개요
+Python 3.12+가 필요합니다. 아래 명령은 Ubuntu 24.04 또는 Python 3.12+를 제공하는 Debian 배포판을 기준으로 합니다. Debian 12의 기본 Python 3.11에서는 실행 진입점이 중지되므로 Python 3.12+를 별도로 준비하거나 배포판을 업그레이드하세요. Debian에 Ubuntu PPA를 추가하지 마세요. x86_64에서 검증했고 ARM64 실제 실행은 미검증입니다.
 
-설치 방법은 두 가지입니다.
-
-| 방식 | 대상 | 특징 |
-|------|------|------|
-| **원라이너** | 대부분의 경우 | 한 줄로 설치·업데이트·실행까지 전부 처리 |
-| **수동 설치** | 개발/고급 사용자 | 단계별로 직접 제어 |
-
----
-
-## 🚀 방법 1: 원라이너 (권장)
+## 설치
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ProofPage/Phrolova/main/scripts/manage.sh | bash
-```
-
-이 한 줄이 설치와 업데이트를 겸합니다. 설치되어 있지 않으면 설치하고, 이미 설치되어 있으면 최신 버전으로 갱신한 뒤 재시작합니다.
-
-
-**자동으로 처리되는 것**
-
-- Ubuntu / Debian / CentOS / Fedora / Arch / macOS 감지
-- Python 3.10+, ffmpeg 6+, Node.js 20+ 설치
-- 프론트엔드 빌드 (React → 정적 파일) 및 Python 가상환경 구성
-- systemd 서비스 등록 (선택, 부팅 시 자동 실행)
-- 헬스체크로 정상 기동 확인
-
-### 설치 후 관리
-
-설치가 끝나면 `rookery` 명령이 등록됩니다.
-`/usr/local/bin`에 걸 수 있으면 그곳에, 권한이 없으면 `~/.local/bin`에 등록합니다.
-
-```bash
-rookery status          # 상태 요약
-rookery status --full   # 상세 점검 (프로세스·DB·디스크·로그)
-rookery update          # 최신 버전으로 갱신 후 재시작
-rookery start           # 시작
-rookery stop            # 중지
-rookery restart         # 재시작
-rookery logs            # 로그 실시간 보기
-rookery service install # systemd 등록
-rookery service remove  # systemd 해제
-rookery uninstall       # 제거 (녹화 파일·데이터는 유지)
-```
-
-> **`rookery: command not found` 가 나온다면** 코드를 `git pull` 로만 갱신해 와서
-> 명령이 한 번도 등록되지 않은 경우입니다. 아래 원라이너가 업데이트를 겸하며
-> 명령도 함께 등록합니다.
->
-> ```bash
-> curl -fsSL https://raw.githubusercontent.com/ProofPage/Phrolova/main/scripts/manage.sh | bash
-> ```
->
-> `~/.local/bin`에 등록됐는데 PATH에 없다는 경고가 나왔다면 셸 설정에 아래를 추가하세요.
-> root 계정은 이 경로가 기본 PATH에 없습니다.
->
-> ```bash
-> echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-> ```
-
-### 옵션
-
-```bash
-# 설치 경로 변경 (기본: ~/rookery)
-INSTALL_DIR=/opt/rookery curl -fsSL https://raw.githubusercontent.com/ProofPage/Phrolova/main/scripts/manage.sh | bash
-
-# 명시적으로 설치만 수행 (업데이트 판단 없이)
-curl -fsSL https://raw.githubusercontent.com/ProofPage/Phrolova/main/scripts/manage.sh | bash -s -- install
-```
-
----
-
-
-## 🔧 방법 2: 수동 설치 (고급 사용자)
-
-### 사전 요구사항
-
-```bash
-# Ubuntu/Debian 기준
 sudo apt-get update
-sudo apt-get install -y python3.12 python3.12-venv ffmpeg git
-```
-
-### 설치
-
-```bash
-# 저장소 클론
-git clone https://github.com/ProofPage/Phrolova.git
-cd Rookery
-
-# 프론트엔드 빌드
-cd frontend
-npm ci && npm run build
-cp -r dist ../backend/app/static
-cd ..
-
-# Python 의존성 설치
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -r backend/requirements.txt
-```
-
-### 실행
-
-```bash
-# 프로젝트 루트에서
-source .venv/bin/activate
+sudo apt-get install -y git python3 python3-venv python3-dev ffmpeg nodejs npm build-essential pkg-config libxml2-dev libxslt1-dev libffi-dev libssl-dev tmux
+python3 -c 'import sys; assert sys.version_info >= (3, 12), "Python 3.12+ required"'
+node --version
+# Node.js 22+ 권장. 배포판 Node가 오래되면 공식 설치 방법으로 먼저 갱신하세요.
+git clone https://github.com/ProofPage/Phrolova.git "$HOME/Phrolova"
+cd "$HOME/Phrolova"
+python3 -m venv .venv
+.venv/bin/python -m pip install -r backend/requirements.txt
+.venv/bin/python -m pip check
+(cd frontend && npm ci && npm run build)
+# 빌드는 backend/app/static에 직접 출력됩니다. dist 복사 불필요.
+if [ ! -e .env ] && [ ! -e backend/.env ]; then
+  cp .env.example .env
+  chmod 600 .env
+fi
+# 새 템플릿 기본 HOST는 127.0.0.1. 기존 .env는 직접 확인하세요.
 cd backend
-python run.py
+../.venv/bin/python run.py
 ```
 
-접속: `http://서버IP:8000`
+브라우저: <http://127.0.0.1:8000> 또는 <http://localhost:8000>. Ctrl+C로 종료하고 같은 명령으로 재시작합니다. 기본 상대 다운로드 경로는 실행 작업 디렉터리 기준입니다. 모든 시작 방식을 `backend/`에서 실행하거나 `.env`의 다운로드 경로를 절대경로로 지정하세요. 데이터베이스는 `backend/data/rookery.db`, 설정은 루트 `.env`(기존 `backend/.env` 지원), 로그는 루트 `logs/service.log`입니다.
 
-### 백그라운드 실행 (systemd)
+Node.js는 웹 UI 빌드 이후 웹 서버 자체에는 필요하지 않습니다. 다만 YouTube의 JavaScript 처리에는 Node 또는 Deno가 필요하므로 YouTube를 쓰면 런타임을 유지하세요. `ffmpeg-python`은 FFmpeg 실행 파일을 설치하지 않습니다.
 
-`/etc/systemd/system/rookery.service` 생성:
+## 백그라운드 실행
 
-```ini
-[Unit]
-Description=Rookery
-After=network-online.target
+```bash
+cd "$HOME/Phrolova"
+bash scripts/manage.sh start
+# systemd 없는 환경에서는 포그라운드 실행입니다.
+# 별도 세션에서:
+tmux new -s phrolova
+cd "$HOME/Phrolova/backend"
+../.venv/bin/python run.py
+# Ctrl+B, D로 분리; tmux attach -t phrolova로 복귀 후 Ctrl+C로 종료.
+```
 
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/home/ubuntu/Rookery/backend
-ExecStart=/home/ubuntu/Rookery/.venv/bin/python run.py
-Restart=on-failure
-RestartSec=10
+systemd가 실제로 동작하는 일반 Linux에서만:
 
-[Install]
-WantedBy=multi-user.target
+```bash
+cd "$HOME/Phrolova"
+bash scripts/manage.sh service install
+bash scripts/manage.sh status
+bash scripts/manage.sh logs
+bash scripts/manage.sh stop
+bash scripts/manage.sh restart
+```
+
+자동 등록은 현재 사용자와 저장소 경로를 사용합니다. systemd 부팅 자동 실행은 이 검수 컨테이너에서 미검증입니다. 직접 작성할 때도 `WorkingDirectory`를 `backend`로 지정하고 `ExecStart`에 가상환경 Python과 `run.py` 절대경로를 사용하세요. 서비스 종료는 네트워크 타임아웃/yt-dlp 재시도가 끝날 때까지 지연될 수 있습니다.
+
+## 업데이트와 점검
+
+녹화·다운로드가 끝난 다음 서버를 종료하세요. 아래 명령은 로컬 수정을 강제로 덮어쓰지 않습니다.
+
+```bash
+cd "$HOME/Phrolova"
+git pull --ff-only
+.venv/bin/python -m pip install -r backend/requirements.txt
+(cd frontend && npm ci && npm run build)
+cd backend
+../.venv/bin/python run.py
 ```
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable rookery
-sudo systemctl start rookery
-sudo systemctl status rookery
+cd "$HOME/Phrolova"
+tail -f logs/service.log
+curl -f http://127.0.0.1:8000/health
+.venv/bin/streamlink --version
+.venv/bin/yt-dlp --version
+ffmpeg -version
+ffprobe -version
 ```
 
----
+오류: Python 버전 오류는 3.12+ 환경을 준비하세요. UI가 없으면 프론트엔드를 다시 빌드하세요. `Permission denied`이면 설치 폴더·`backend/data`·`logs`·다운로드 경로에 실행 사용자 쓰기 권한이 있는지 확인하세요. `address already in use`이면 기존 인스턴스를 종료하세요. 임의 프로세스 전체 종료 명령을 사용하지 마세요. 설정·DB·쿠키를 삭제하여 해결하지 마세요.
 
-## 🌐 방화벽 설정
+## 원격 접속
 
-원격 접속 시 포트 개방:
+API에는 일반 웹 사용자 인증이 없습니다. CHZZK/YouTube/X 쿠키와 Discord 명령 허용 목록은 웹 API 접근 통제가 아닙니다. 외부 공개 전에 인증을 제공하는 리버스 프록시/VPN과 접근 제한을 구성해야 합니다. 원격 관리의 간단한 방법은 SSH 터널입니다.
 
 ```bash
-# UFW (Ubuntu)
-sudo ufw allow 8000/tcp
-
-# firewalld (CentOS/RHEL)
-sudo firewall-cmd --permanent --add-port=8000/tcp
-sudo firewall-cmd --reload
+ssh -N -L 8000:127.0.0.1:8000 user@server
 ```
 
----
-
-## 🧙 초기설정 마법사
-
-설치 후 처음 접속하면 브라우저 기반 마법사가 표시됩니다.
-
-1. `http://서버IP:8000` 접속
-2. 마법사 완료 → `.env` 파일 자동 생성
-3. 이후 재시작해도 설정 유지
-
-> `.env` 파일을 삭제하면 마법사가 다시 표시됩니다.
-
----
-
-## 🔄 재설치 / 완전 초기화
-
-대부분의 경우 재설치할 필요 없이 `rookery update` 로 충분합니다.
-완전히 지우고 다시 깔아야 한다면:
-
-```bash
-# 1. 서비스와 실행 환경 정리 (녹화 파일과 data/ 는 남습니다)
-rookery uninstall
-
-# 2. 저장소까지 지우려면
-rm -rf ~/rookery
-
-# 3. 재설치
-curl -fsSL https://raw.githubusercontent.com/ProofPage/Phrolova/main/scripts/manage.sh | bash
-```
-
-> ⚠️ **`address already in use` 오류가 나는 경우**
-> 기존 서비스가 포트를 점유하고 있는 상태입니다. 먼저 중지하세요.
-> ```bash
-> rookery stop
-> ```
-
----
-
-
-## 🛠️ 트러블슈팅
-
-| 증상 | 해결 |
-|------|------|
-| `python3.12` 없음 | `sudo add-apt-repository ppa:deadsnakes/ppa && sudo apt install python3.12` |
-| `ffmpeg` 명령 없음 | `sudo apt install ffmpeg` |
-| 포트 접속 불가 | 방화벽 확인, `sudo ufw allow 8000/tcp` |
-| `address already in use` 오류 | `sudo systemctl stop rookery` 후 재실행 |
-| Permission denied | `chown -R $USER:$USER ./recordings ./data ./logs` |
+그 뒤 로컬 브라우저의 <http://127.0.0.1:8000>을 사용합니다. 새 기본 설정은 로컬 전용이며 기존 명시적 HOST 값은 유지됩니다.

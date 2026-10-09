@@ -337,10 +337,15 @@ class VodRepository:
 
     def replace_all(self, records: dict[str, dict]) -> None:
         """전체 작업 목록을 교체한다 (완료 작업 일괄 삭제 등에 사용)."""
-        with self._db.transaction() as conn:
-            conn.execute("DELETE FROM vod_tasks")
+        # Write first: an interruption must not empty all existing history.
         for task_id, record in records.items():
             self.upsert(task_id, record)
+        with self._db.transaction() as conn:
+            if records:
+                placeholders = ",".join("?" for _ in records)
+                conn.execute(f"DELETE FROM vod_tasks WHERE task_id NOT IN ({placeholders})", tuple(records))
+            else:
+                conn.execute("DELETE FROM vod_tasks")
 
     def delete(self, task_id: str) -> None:
         self._db.execute("DELETE FROM vod_tasks WHERE task_id = ?", (task_id,))

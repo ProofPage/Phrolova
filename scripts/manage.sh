@@ -23,7 +23,7 @@ RAW_URL="https://raw.githubusercontent.com/${REPO_SLUG}/main/scripts/manage.sh"
 APP_NAME="rookery"
 SERVICE_NAME="rookery"
 DEFAULT_PORT=8000
-REQUIRED_PYTHON_MINOR=10
+REQUIRED_PYTHON_MINOR=12
 REQUIRED_FFMPEG_MAJOR=6
 REQUIRED_NODE_MAJOR=20
 
@@ -116,6 +116,9 @@ venv_pip()    { echo "$INSTALL_DIR/.venv/bin/pip"; }
 PKG_MANAGER=""
 
 detect_os() {
+  if [ -n "${TERMUX_VERSION:-}" ] || [[ "${PREFIX:-}" == /data/data/*/files/usr ]]; then
+    error "Termux Native에서는 scripts/install-termux.sh를 사용하세요. GNU/Linux 바이너리를 설치하지 않습니다."
+  fi
   if [ "$(uname -s)" = "Darwin" ]; then
     has_cmd brew || error "Homebrew가 필요합니다: https://brew.sh"
     PKG_MANAGER="brew"
@@ -195,7 +198,7 @@ ensure_ffmpeg() {
 
 ensure_python() {
   local cmd ver minor
-  for cmd in python3.13 python3.12 python3.11 python3.10 python3; do
+  for cmd in python3.14 python3.13 python3.12 python3; do
     has_cmd "$cmd" || continue
     ver="$("$cmd" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
     minor="$(echo "$ver" | cut -d. -f2)"
@@ -210,11 +213,7 @@ ensure_python() {
     info "Python 3.12 설치 중..."
     case "$PKG_MANAGER" in
       apt)
-        $SUDO apt-get update -qq
-        $SUDO apt-get install -y software-properties-common
-        $SUDO add-apt-repository -y ppa:deadsnakes/ppa
-        $SUDO apt-get update -qq
-        $SUDO apt-get install -y python3.12 python3.12-venv
+        error "Python 3.12+를 먼저 설치하세요. Debian에 Ubuntu PPA를 자동 추가하지 않습니다."
         ;;
       dnf)  $SUDO dnf install -y python3.12 ;;
       brew) brew install python@3.12 ;;
@@ -483,7 +482,7 @@ remove_legacy_service() {
 }
 
 service_install() {
-  has_cmd systemctl || { warn "systemd가 없어 서비스 등록을 건너뜁니다."; return 0; }
+  [ -d /run/systemd/system ] && has_cmd systemctl || { warn "실행 중인 systemd가 없어 서비스 등록을 건너뜁니다."; return 0; }
 
   remove_legacy_service
 
@@ -620,6 +619,9 @@ cmd_start() {
   else
     info "포그라운드로 실행합니다 (Ctrl+C 로 종료)."
     cd "$INSTALL_DIR/backend"
+    local pidfile="$INSTALL_DIR/backend/data/server.pid"
+    mkdir -p "$(dirname "$pidfile")"
+    echo "$$" > "$pidfile"
     exec "$(venv_python)" run.py
   fi
 }
@@ -629,8 +631,16 @@ cmd_stop() {
   if service_exists; then
     $SUDO systemctl stop "$SERVICE_NAME"
     info "서비스 중지 ✓"
-  elif pkill -f 'uvicorn.*app.main' 2>/dev/null; then
-    info "프로세스 종료 ✓"
+  elif [ -f "$INSTALL_DIR/backend/data/server.pid" ]; then
+    local pid
+    pid="$(cat "$INSTALL_DIR/backend/data/server.pid")"
+    [[ "$pid" =~ ^[0-9]+$ ]] || error "잘못된 PID 파일입니다."
+    if [ -r "/proc/$pid/cmdline" ] && [ "$(readlink "/proc/$pid/cwd")" = "$INSTALL_DIR/backend" ] && tr '\0' ' ' < "/proc/$pid/cmdline" | grep -q 'run.py'; then
+      kill -TERM "$pid"
+      info "종료 신호 전송 ✓"
+    else
+      warn "PID가 이 설치본의 서버와 일치하지 않습니다."
+    fi
   else
     warn "실행 중인 프로세스가 없습니다."
   fi

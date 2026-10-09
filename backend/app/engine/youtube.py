@@ -15,6 +15,7 @@ logger = app_logger.getChild("youtube")
 from app.core.config import get_settings
 from app.core.http import get_http_client
 from app.engine.base import LiveStatus
+from app.engine.youtube_support import runtime_cli_options
 
 
 class YoutubeLiveEngine:
@@ -122,23 +123,30 @@ class YoutubeLiveEngine:
         
         ytdlp_path = get_settings().resolve_ytdlp_path()
         # --simulate -j 옵션으로 스트림 다운로드 없이 JSON 메타데이터만 조회
-        cmd = [ytdlp_path, url, "--simulate", "-j", "--no-warnings"]
+        cmd = [ytdlp_path, url, "--simulate", "-j", "--no-warnings", "--ignore-config", *runtime_cli_options()]
         
+        proc = None
         try:
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            stdout, stderr = await proc.communicate()
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
             if proc.returncode == 0:
                 info = _json.loads(stdout.decode())
                 # yt-dlp 응답의 is_live 플래그 검증
                 if info.get("is_live") is True:
                     return True, info
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             logger.debug(f"[YouTube] yt-dlp 메타데이터 조회 중 예외 발생: {e}")
-            
+        finally:
+            if proc is not None and proc.returncode is None:
+                proc.kill()
+                await proc.communicate()
+
         return False, None
 
     def get_stream_url(self, channel_id: str) -> str:

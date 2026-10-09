@@ -96,8 +96,9 @@ class TestSettings:
 
     def test_resolve_ffmpeg_path_configured(self, tmp_path):
         """설정된 FFmpeg 경로가 유효한 경우"""
-        ffmpeg_file = tmp_path / "ffmpeg.exe"
+        ffmpeg_file = tmp_path / "ffmpeg"
         ffmpeg_file.touch()
+        ffmpeg_file.chmod(0o755)
 
         settings = Settings(ffmpeg_path=str(ffmpeg_file))
         resolved = settings.resolve_ffmpeg_path()

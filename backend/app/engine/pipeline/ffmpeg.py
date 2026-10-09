@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import asyncio.subprocess
 from datetime import datetime
 from pathlib import Path
@@ -228,6 +229,8 @@ class FFmpegPipeline:
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                # Terminal Ctrl+C belongs to the server; it finalizes FFmpeg via EOF/q.
+                start_new_session=(os.name != "nt"),
             )
             self._state = RecordingState.RECORDING
             self._start_time = datetime.now()

@@ -67,9 +67,9 @@ def _find_ytdlp() -> str | None:
     else:
         bundle_dir = Path(__file__).resolve().parent.parent
 
-    for fname in ("yt-dlp.exe", "yt-dlp"):
+    for fname in (("yt-dlp.exe", "yt-dlp") if sys.platform == "win32" else ("yt-dlp",)):
         p = bundle_dir / "bin" / fname
-        if p.is_file():
+        if p.is_file() and (sys.platform == "win32" or os.access(p, os.X_OK)):
             return str(p)
 
     return shutil.which("yt-dlp")
@@ -77,6 +77,9 @@ def _find_ytdlp() -> str | None:
 
 def _download_ytdlp(bin_dir: Path) -> str | None:
     """yt-dlp.exe를 GitHub Releases에서 자동 다운로드한다."""
+    if sys.platform != "win32":
+        print("  yt-dlp: python -m pip install yt-dlp")
+        return None
     import urllib.request
 
     url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
@@ -108,12 +111,10 @@ def _find_ffmpeg() -> str | None:
     else:
         bundle_dir = Path(__file__).resolve().parent.parent
 
-    candidates = [
-        bundle_dir / "bin" / "ffmpeg.exe",
-        bundle_dir / "bin" / "ffmpeg",
-    ]
+    names = ("ffmpeg.exe", "ffmpeg") if sys.platform == "win32" else ("ffmpeg",)
+    candidates = [bundle_dir / "bin" / name for name in names]
     for p in candidates:
-        if p.is_file():
+        if p.is_file() and (sys.platform == "win32" or os.access(p, os.X_OK)):
             return str(p)
 
     # 2) 시스템 PATH
@@ -194,6 +195,10 @@ def _run_dependency_check() -> bool:
     if all_ok:
         print("  ✅ 모든 의존성 확인 완료. 서버를 시작합니다...\n")
         return True
+
+    if sys.platform != "win32" or not sys.stdin.isatty():
+        print("필수 의존성을 설치하세요: Python 3.12+, 시스템 FFmpeg, backend/requirements.txt")
+        return False
 
     # ── 의존성 미충족 → 대화형 안내 ─────────────────────────
     print()
@@ -360,15 +365,21 @@ def _run_server(settings, stop_event: threading.Event) -> None:
         # None이어야 uvicorn이 자기 stderr 핸들러를 달지 않는다.
         # 그래야 app.core.logger가 잡아둔 라우팅이 유지된다.
         log_config=None,
+        timeout_graceful_shutdown=10,
     )
     server = uvicorn.Server(config)
+    app.state.uvicorn_server = server
 
     def _watch_stop():
         stop_event.wait()
         server.should_exit = True
 
     threading.Thread(target=_watch_stop, daemon=True).start()
-    server.run()
+    try:
+        server.run()
+    except KeyboardInterrupt:
+        # Uvicorn re-raises SIGINT after graceful shutdown; match uvicorn.run().
+        pass
 
 
 # ── 진입점 ───────────────────────────────────────────────────
@@ -378,7 +389,9 @@ if __name__ == "__main__":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
     # PyInstaller 빌드이거나 --desktop 플래그가 있으면 데스크톱 모드
-    desktop_mode = IS_FROZEN or "--desktop" in sys.argv
+    desktop_mode = (IS_FROZEN or "--desktop" in sys.argv) and sys.platform == "win32"
+    if not _check_python_version():
+        sys.exit("Python 3.12 이상이 필요합니다.")
 
     if desktop_mode:
         # 의존성 검사 (없으면 안내 후 종료)
@@ -404,16 +417,5 @@ if __name__ == "__main__":
         # 트레이 아이콘 실행 (메인 스레드 블로킹)
         _run_tray(url, stop_event)
     else:
-        # CLI 모드: 단순 uvicorn 실행
-        import uvicorn
-        from app.main import app
-        uvicorn.run(
-            app,
-            host=settings.host,
-            port=settings.port,
-            reload=False,
-            loop="asyncio",
-            log_level="info",
-            # 위 _run_server와 같은 이유로 None.
-            log_config=None,
-        )
+        # Run on the main thread, sharing shutdown handling with desktop mode.
+        _run_server(settings, stop_event)

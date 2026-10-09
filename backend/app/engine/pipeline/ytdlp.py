@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import asyncio.subprocess
 import mimetypes
 import re
@@ -15,6 +16,7 @@ from urllib.parse import urlsplit, urlunsplit
 from app.core.config import get_settings
 from app.core.logger import logger
 from app.engine.chzzk_time_machine import resolve_time_machine_stream
+from app.engine.youtube_support import is_youtube_url, runtime_cli_options
 
 from app.engine.pipeline.state import RecordingState
 
@@ -315,6 +317,8 @@ class YtdlpLivePipeline:
                 stdin=asyncio.subprocess.PIPE,   # Streamlink가 HLS 데이터를 전달
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE,
+                # Terminal Ctrl+C belongs to the server; it finalizes FFmpeg via EOF/q.
+                start_new_session=(os.name != "nt"),
             )
             process = self._process
             self._state = RecordingState.RECORDING
@@ -572,6 +576,9 @@ class YtdlpLivePipeline:
             "--ignore-config",
         ]
 
+        if is_youtube_url(page_url):
+            cmd.extend(runtime_cli_options())
+
         cookie_file_path: Optional[str] = None
         if cookie_file:
             cmd += ["--cookies", cookie_file]
@@ -588,8 +595,8 @@ class YtdlpLivePipeline:
                 stderr=asyncio.subprocess.PIPE,
             )
             try:
-                stdout, stderr = await proc.communicate()
-            except asyncio.CancelledError:
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=60)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
                 if proc.returncode is None:
                     proc.kill()
                 await proc.communicate()

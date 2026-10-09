@@ -1,0 +1,11 @@
+fastapi
+python-multipart
+httpx[socks]
+aiofiles
+yt-dlp[default]
+streamlink>=7.3,<9
+ffmpeg-python
+python-dotenv
+pydantic-settings
+chzzkpy
+discord.py

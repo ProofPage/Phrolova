@@ -30,6 +30,13 @@ def runtime_options():
     return {"js_runtimes": runtimes} if runtimes else {}
 
 
+def runtime_cli_options():
+    args = []
+    for name, options in runtime_options().get("js_runtimes", {}).items():
+        args.extend(["--js-runtimes", f"{name}:{options['path']}"])
+    return args
+
+
 @contextmanager
 def youtube_cookies():
     source = get_settings().youtube_cookie_file

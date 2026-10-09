@@ -6,6 +6,7 @@ Rookery: 공통 유틸리티
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 from app.core.config import resolve_env_path
@@ -101,7 +102,15 @@ def clean_filename(name: str, max_length: int = 150) -> str:
     # Windows 파일명 금지 문자: \ / : * ? " < > |
     cleaned = re.sub(r'[\\/:*?"<>|]', "_", name)
     cleaned = cleaned.strip()
-    return cleaned[:max_length]
+    suffix = Path(cleaned).suffix
+    if suffix.lower() not in {".ts", ".mp4", ".mkv", ".m4a", ".part"}:
+        suffix = ""
+    stem = cleaned[:-len(suffix)] if suffix else cleaned
+    stem = stem[:max(0, max_length - len(suffix))]
+    # Reserve room for downloader sidecars and numbered collisions.
+    if sys.platform != "win32":
+        stem = stem.encode("utf-8")[:240 - len(suffix.encode("utf-8"))].decode("utf-8", errors="ignore")
+    return stem + suffix
 
 
 def update_env_file(updates: dict[str, str], *, raise_on_error: bool = False) -> None:

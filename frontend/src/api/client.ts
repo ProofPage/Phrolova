@@ -329,7 +329,7 @@ export interface UpdateInfo {
     published_at: string;
     download_url: string;
     checked_at: string | null;
-    environment: "windows-exe" | "linux-native";
+    environment: "windows-exe" | "linux-native" | "termux-native" | "termux-proot" | "windows-native" | "macos-native";
 }
 
 // ── System Logs Types ───────────────────────────────────

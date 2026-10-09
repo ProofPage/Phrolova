@@ -87,7 +87,7 @@ The generic download engine uses yt-dlp internally, but this does not establish 
 
 The Python requirements install `yt-dlp[default]`, `streamlink>=7.3,<9`, FastAPI, and the remaining backend dependencies. Installing the `ffmpeg-python` package does **not** install the FFmpeg executable.
 
-Version checks differ across entry points: the Linux script accepts Python 3.10+ and Node.js 20+, while desktop startup checks Python 3.12+, CI uses Python 3.12 and Node.js 20, and Windows packaging requires Node.js 22+ and currently builds with Node.js 24. Use Python 3.12 and Node.js 22+ for a new source setup rather than treating the installer's older minimums as a tested compatibility guarantee. The Linux installer requires FFmpeg 6+.
+Version checks differ across entry points: the Linux script requires Python 3.12+ and Node.js 20+, while desktop startup checks Python 3.12+, CI uses Python 3.12 and Node.js 20, and Windows packaging requires Node.js 22+ and currently builds with Node.js 24. Use Python 3.12 and Node.js 22+ for a new source setup rather than treating the installer's older minimums as a tested compatibility guarantee. The Linux installer requires FFmpeg 6+.
 
 The management script recognizes Debian/Ubuntu, Fedora/RHEL-family, and Arch-family systems and includes a Homebrew path for macOS. Dependency installation is distribution-dependent; the repository does not establish a tested minimum OS release or a macOS release package. Its Linux static FFmpeg fallback handles x86_64 and aarch64.
 
@@ -228,7 +228,7 @@ These defaults come from the current settings implementation, rather than older 
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `HOST` | `0.0.0.0` | Server bind address; use `127.0.0.1` for local-only access |
+| `HOST` | `127.0.0.1` | Server bind address; use `127.0.0.1` for local-only access |
 | `PORT` | `8000` | HTTP port |
 | `FFMPEG_PATH` | `ffmpeg` | Backend FFmpeg executable path; adjacent `bin/` and `PATH` are also searched |
 | `DOWNLOAD_DIR` | `./recordings` | Fallback media directory and setup-completion setting |
@@ -254,7 +254,7 @@ These defaults come from the current settings implementation, rather than older 
 
 Video output format is a merge preference, not a universal conversion guarantee. Single-file downloads, clips, and Spaces use different paths; Spaces output is M4A. Quality requests are constrained by the formats exposed upstream.
 
-**Template compatibility:** `.env.example` still contains `OUTPUT_FORMAT`, which the current settings model ignores. Use `LIVE_FORMAT` and `VOD_FORMAT`. Its old live filename default is automatically migrated. Its comments about bundled FFmpeg and Docker do not describe the current release. Existing `SPLIT_DOWNLOAD_DIRS`, `VOD_CHZZK_DIR`, and `VOD_EXTERNAL_DIR` values remain legacy fallbacks when `VOD_DOWNLOAD_DIR` is empty.
+**Template compatibility:** use `LIVE_FORMAT` and `VOD_FORMAT`; the template uses `LIVE_FORMAT`. Its old live filename default is automatically migrated. Its comments about bundled FFmpeg and Docker do not describe the current release. Existing `SPLIT_DOWNLOAD_DIRS`, `VOD_CHZZK_DIR`, and `VOD_EXTERNAL_DIR` values remain legacy fallbacks when `VOD_DOWNLOAD_DIR` is empty.
 
 ### Filename templates
 
@@ -340,7 +340,7 @@ The filename `rookery.db` remains an implementation identifier. Existing `signal
 
 For a straightforward backup, stop Phrolova cleanly, then copy `.env`, the entire data directory, and the media directories you need. SQLite uses WAL mode and checkpoints on normal shutdown; do not copy only the main database file while it is running and assume that all recent changes are included. Preserve cookie backups privately.
 
-Only completed and failed video task history is restored at startup. Queued, active, and paused downloads and channel-import jobs are not a durable restart queue. Keeping `.part` files does not guarantee automatic continuation after a restart.
+Video tasks are persisted, including queued and active tasks. Interrupted tasks are restored as errors for manual retry; channel-import jobs are not restored. Keeping `.part` files does not guarantee automatic continuation after a restart.
 
 ## Architecture
 
@@ -452,8 +452,8 @@ The result is `dist/Rookery.exe`. The release workflow renames it to a versioned
 - **YouTube web start/stop:** the current `/api/stream/record/…` route does not preserve the `youtube:` channel prefix. Use automatic recording or Discord `/start` and `/stop`, which call the conductor with the correct composite key. Do not assume the visible web buttons work for YouTube.
 - **YouTube live authentication:** uploaded YouTube cookies are wired into downloads, imports, and preview resolution, but are not passed by the conductor into automatic live recording. Restricted live broadcasts may fail even when video downloads work with cookies.
 - **X Spaces:** detection depends on unofficial APIs and available metadata. Its live recording process lacks the CHZZK/YouTube stalled-recording retry path. Direct Space URLs should use Discord; the web path needs a captured playlist.
-- **Download controls:** pause/resume is implemented through yt-dlp progress callbacks. The direct FFmpeg Spaces replay path does not implement equivalent pause/cancel handling, granular progress, or the yt-dlp speed limit. Paused yt-dlp tasks retain their concurrency slot.
-- **Task order and persistence:** display reordering does not reschedule already-created download coroutines. Active queues and imports are not restored across restarts.
+- **Download controls:** pause/resume is implemented through yt-dlp progress callbacks. The direct FFmpeg Spaces replay path supports cancellation but does not implement pause/resume, granular progress, or the yt-dlp speed limit. Paused yt-dlp tasks retain their concurrency slot.
+- **Task order and persistence:** display reordering does not reschedule already-created download coroutines. Interrupted video tasks require manual retry after a restart; channel imports are not restored.
 - **Availability:** a quality setting, cookie, retry, or captured URL cannot recover media that the upstream platform no longer supplies. No guarantee of gap-free recordings or complete platform coverage is made.
 
 ### Common issues
@@ -501,3 +501,7 @@ Follow the repository's existing line endings, use theme tokens and shared UI pr
 Phrolova is distributed under the [MIT License](LICENSE).
 
 Copyright (c) 2026 Serian (github.com/eruminyu). The original author attribution is preserved in the license and package metadata. The repository also records contributions in its Git history and changelog.
+
+## Linux and Android compatibility audit
+
+See [Linux instructions](docs/linux-guide.md), [Native Termux and proot instructions](docs/termux-guide.md), and the [compatibility audit](docs/compatibility-audit-ko.md). Native Termux installation, web UI, CHZZK recording, restart persistence, and graceful shutdown were confirmed on a user device. Additional platform downloads and background operation were reported as verified by the user; detailed test logs for those checks were not collected. Linux ARM64 and proot execution remain unverified; ARM64 wheel availability is not an execution test.

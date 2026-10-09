@@ -1,0 +1,21 @@
+BOOT/HEALTH {"message":"Phrolova Engine Started"}
+SPA_HTML PASS
+OPENAPI_ROUTES 66
+SSE data: {"type": "status_update", "data": []}
+TAG_WRITE PASS
+LOCAL_VOD PASS /tmp/phrolova-audit-nppwig0r/recordings/[Unknown] sample 2026-10-09 14-48-35.mp4
+CANCEL_REQUEST {"message":"다운로드 취소 요청됨.","state":"cancelling","task_id":"feccdb0d-f597-44a1-83b6-eab9e7dc4569"}
+LOCAL_VOD_CANCEL PASS
+ENV_WRITE PASS
+SIGTERM PASS
+RESTART_DB_HISTORY_ENV PASS
+SIGINT PASS
+2026-10-09 14:48:38 | info     | phrolova | [audit] Streamlink 라이브 수신 및 FFmpeg 녹화 시작 (quality=best, 타임머신 오프셋=0초): /tmp/phrolova-audit-nppwig0r/recordings/검수-live.ts
+2026-10-09 14:48:38 | info     | phrolova | [audit] Streamlink HLS 연결 성공 (시도 1/3)
+2026-10-09 14:48:38 | warning  | phrolova | [audit] 방송 감시 중 Streamlink 입력이 끝났습니다. 녹화를 오류로 표시해 자동 재연결을 요청합니다.
+2026-10-09 14:48:38 | info     | phrolova | [audit] 실패한 Streamlink/FFmpeg 프로세스 정리 중...
+duration=12.023222
+STREAMLINK_HLS_FFMPEG_TS PASS RecordingState.ERROR
+REMUX mp4 PASS
+REMUX mkv PASS
+ARTIFACT_DIR /tmp/phrolova-audit-nppwig0r

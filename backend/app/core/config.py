@@ -6,6 +6,7 @@ pydantic-settings 기반으로 환경변수 및 .env 파일에서 설정을 로�
 from __future__ import annotations
 
 import sys
+import os
 import shutil
 from functools import lru_cache
 from pathlib import Path
@@ -119,7 +120,7 @@ class Settings(BaseSettings):
     nid_ses: Optional[str] = None
 
     # ── 서버 ─────────────────────────────────────────────
-    host: str = "0.0.0.0"
+    host: str = "127.0.0.1"
     port: int = 8000
 
     # ── Discord Bot ──────────────────────────────────────
@@ -223,7 +224,7 @@ class Settings(BaseSettings):
         import sys as _sys
 
         # 1) 시스템 PATH
-        for name in ("yt-dlp", "yt-dlp.exe"):
+        for name in (("yt-dlp", "yt-dlp.exe") if sys.platform == "win32" else ("yt-dlp",)):
             found = shutil.which(name)
             if found:
                 return found
@@ -234,16 +235,16 @@ class Settings(BaseSettings):
         else:
             base_dir = Path(__file__).resolve().parents[3]
 
-        for fname in ("yt-dlp.exe", "yt-dlp"):
+        for fname in (("yt-dlp.exe", "yt-dlp") if sys.platform == "win32" else ("yt-dlp",)):
             candidate = base_dir / "bin" / fname
-            if candidate.is_file():
+            if candidate.is_file() and (sys.platform == "win32" or os.access(candidate, os.X_OK)):
                 return str(candidate)
 
         # 3) venv bin/ (개발 환경)
         venv_bin = Path(_sys.executable).parent
-        for name in ("yt-dlp", "yt-dlp.exe"):
+        for name in (("yt-dlp", "yt-dlp.exe") if sys.platform == "win32" else ("yt-dlp",)):
             candidate = venv_bin / name
-            if candidate.is_file():
+            if candidate.is_file() and (sys.platform == "win32" or os.access(candidate, os.X_OK)):
                 return str(candidate)
 
         # 4) Windows exe 환경에서 자동 다운로드
@@ -269,7 +270,7 @@ class Settings(BaseSettings):
 
         # 1) 설정값이 유효한 경우
         configured = Path(self.ffmpeg_path)
-        if configured.is_file():
+        if configured.is_file() and (sys.platform == "win32" or (configured.suffix.lower() != ".exe" and os.access(configured, os.X_OK))):
             return str(configured)
 
         # 2) exe 옆 bin/ 폴더 (PyInstaller 빌드 환경 포함)
@@ -280,9 +281,9 @@ class Settings(BaseSettings):
             # 개발 환경: 프로젝트 루트 기준
             base_dir = Path(__file__).resolve().parents[3]
 
-        for fname in ("ffmpeg.exe", "ffmpeg"):
+        for fname in (("ffmpeg.exe", "ffmpeg") if sys.platform == "win32" else ("ffmpeg",)):
             candidate = base_dir / "bin" / fname
-            if candidate.is_file():
+            if candidate.is_file() and (sys.platform == "win32" or os.access(candidate, os.X_OK)):
                 return str(candidate)
 
         # 3) 시스템 PATH

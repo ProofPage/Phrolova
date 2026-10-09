@@ -3,6 +3,7 @@ Rookery: System API (시스템 및 업데이트 관리)
 """
 
 import sys
+import os
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -15,9 +16,17 @@ router = APIRouter(prefix="/api/system", tags=["System"])
 def _detect_environment() -> str:
     """현재 실행 환경을 감지한다."""
     # PyInstaller (Windows EXE 등)
-    if getattr(sys, "frozen", False):
+    if getattr(sys, "frozen", False) and sys.platform == "win32":
         return "windows-exe"
 
+    if os.environ.get("PHROLOVA_ENVIRONMENT") == "termux-proot":
+        return "termux-proot"
+    if sys.platform != "win32" and str(Path(sys.executable).resolve()).startswith("/data/data/"):
+        return "termux-native"
+    if sys.platform == "win32":
+        return "windows-native"
+    if sys.platform == "darwin":
+        return "macos-native"
     # 그 외 (Linux Native / 개발환경 등)
     return "linux-native"
 
