@@ -8,6 +8,22 @@
 
 ## [Unreleased]
 
+## [2.0.49] - 2026-10-09
+
+### Fixed
+- Stabilize recording lifecycle, download cancellation, FFmpeg/Streamlink cleanup and DASH parsing.
+- Correct X Spaces relative playlists, YouTube channel controls and atomic VOD history/settings writes.
+- Harden Origin checks, chat file access and credential redaction.
+- Serve fonts correctly and coalesce download status requests.
+- Restore original Windows packaging icons.
+
+### Added
+- Linux and Native Termux installation, headless operation and compatibility audit documentation.
+
+### Changed
+- Update compatible frontend dependencies; retain Python dependency constraints documented in the audit.
+
+
 ## [2.0.48] - 2026-10-08
 
 ### Changed
@@ -653,7 +669,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.48...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.49...HEAD
+[2.0.49]: https://github.com/ProofPage/Phrolova/compare/v2.0.48...v2.0.49
 [2.0.48]: https://github.com/ProofPage/Phrolova/compare/v2.0.47...v2.0.48
 [2.0.47]: https://github.com/ProofPage/Phrolova/compare/v2.0.46...v2.0.47
 [2.0.46]: https://github.com/ProofPage/Phrolova/compare/v2.0.45...v2.0.46
