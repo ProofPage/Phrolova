@@ -2,6 +2,8 @@ name: Windows Release
 
 on:
   push:
+    branches:
+      - "release/v*.*.*"
     tags:
       - "v*.*.*"
 
@@ -24,6 +26,13 @@ jobs:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+
+      - name: Resolve release tag
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME -replace '^release/', ''
+          if ($tag -notmatch '^v[0-9]+[.][0-9]+[.][0-9]+$') { throw 'Invalid release version' }
+          "RELEASE_TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: 프론트엔드 의존성 설치
         run: npm ci
@@ -66,7 +75,7 @@ jobs:
 
       - name: 릴리스 파일 이름 설정
         shell: pwsh
-        run: Move-Item dist/Rookery.exe "dist/Phrolova-$env:GITHUB_REF_NAME-windows-x64.exe"
+        run: Move-Item dist/Rookery.exe "dist/Phrolova-$env:RELEASE_TAG-windows-x64.exe"
 
       - name: GitHub Release 생성 및 Latest 갱신
         shell: pwsh
@@ -74,17 +83,26 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## Responsive UI and accessibility improvements
+          ## Recording stability and Linux/Termux support
 
-          - Adapt mobile, tablet, and desktop layouts to available content width.
-          - Refine Live channel cards and compact centered offline, loading, and error preview states.
-          - Improve Downloads layouts and touch/keyboard reordering in filtered lists.
-          - Improve Settings, Stats, and Logs layouts on narrow and tablet screens.
-          - Improve touch controls, keyboard focus, dialogs, safe areas, and long-text handling.
+          - Improve headless setup, recording shutdown, cancellation, retry handling and process cleanup.
+          - Fix DASH patch reloading, X Spaces playlist paths, YouTube controls and history/settings persistence.
+          - Harden Origin checks, chat file access and secret-safe logs.
+          - Fix fonts, reduce overlapping UI requests and update compatible frontend dependencies.
 
-          Replace your existing executable with the Windows x64 release build.
+          Validation: 412 Python tests passed; TypeScript and production build passed; local Linux x86_64 download/cancel, HLS, remux and restart persistence tested. npm audit reported 0 vulnerabilities.
+          New changes are not device-tested on Windows, ARM64 or Termux. Windows artifact is CI-built.
+          Known limitation: chzzkpy pins Python dependencies with reported advisories. See docs/bug-audit-ko.md.
+
+          Windows: stop the application before replacing the executable; preserve settings and data.
+          Linux/Termux: use source archives and docs/linux-guide.md or docs/termux-guide.md. The exe is Windows-only.
           '@
           $notes | Set-Content -Path release-notes.md -Encoding utf8
-          $asset = "dist/Phrolova-$env:GITHUB_REF_NAME-windows-x64.exe"
-          $version = $env:GITHUB_REF_NAME.TrimStart('v')
-          gh release create $env:GITHUB_REF_NAME $asset --title "Version $version" --notes-file release-notes.md --latest --verify-tag
+          $asset = "dist/Phrolova-$env:RELEASE_TAG-windows-x64.exe"
+          $version = $env:RELEASE_TAG.TrimStart('v')
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            gh release create $env:RELEASE_TAG $asset --title "Version $version" --notes-file release-notes.md --latest --verify-tag
+          } else {
+            gh release create $env:RELEASE_TAG $asset --title "Version $version" --notes-file release-notes.md --latest --target $env:GITHUB_SHA
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
