@@ -83,20 +83,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @'
-          ## CHZZK VOD preparation and batch downloads
+          ## Phrolova branding and safe legacy migration
 
-          - Add drag-and-drop and multi-URL registration to the existing Downloads page.
-          - Show metadata cards, real per-video quality options and individual/batch start controls.
-          - Persist prepared VODs and selected quality using the existing SQLite history.
-          - Keep pause/resume/cancel/retry controls and add history-only removal; downloaded files are preserved.
-          - Add Korean, English and Japanese UI strings and responsive mobile controls.
-          - Keep CHZZK live recording on Streamlink -> FFmpeg. Existing yt-dlp, manual CDN selection and FFprobe checks remain in use.
+          - Unify Windows executable metadata, tray, npm identity and packaging under Phrolova.
+          - Build dist/Phrolova.exe with phrolova.spec; keep the versioned Windows x64 release asset format.
+          - Use phrolova commands, phrolova.service and ~/Phrolova for new Linux installations.
+          - Detect existing installation directories and command links; restore prior systemd state if service migration fails.
+          - Use phrolova.db; back up legacy rookery.db or signal_recorder.db including committed WAL data. Preserve originals and use the original on migration failure.
+          - Preserve settings, media, license attribution and existing Streamlink -> FFmpeg live recording, yt-dlp VOD, CDN and playback behavior.
 
-          Validation: 490 Python tests passed; TypeScript and production build passed. Chromium UI checks passed at 390/1440px; existing 320/390/820/1024/1440px player/layout regressions passed. Local mock CDN downloads, merging, cancellation, shutdown and restart persistence tested.
-          External CHZZK/CDN downloads and this patch on Termux, ARM64 and Windows devices remain unverified. Windows executable is CI-built.
-          Existing chzzkpy dependency advisory limitations remain. See docs/vod-batch-ui-audit-ko.md.
+          Validation: 500 Python tests passed; npm ci, TypeScript, production build, Chromium UI/player regressions and local Linux streaming/download/restart tests passed.
+          Windows executable is CI-built and Defender-scanned. Interactive Windows tray/startup, real systemd boot, Android Termux/ARM64 devices and external CHZZK downloads remain unverified for this release.
+          See docs/rebranding-audit-ko.md for migration details and test limits.
 
-          Windows: stop the application before replacing the executable; preserve settings and data.
+          Before updating, finish recordings/downloads, stop all old instances and back up settings/data. Keep legacy DB originals; never run old and new versions against separate database snapshots simultaneously.
+          Windows: replace the stopped executable in the same directory; preserve .env, data, logs, bin and media.
           Linux/Termux: use source archives and docs/linux-guide.md or docs/termux-guide.md. The exe is Windows-only.
           '@
           $notes | Set-Content -Path release-notes.md -Encoding utf8

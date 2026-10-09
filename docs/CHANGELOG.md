@@ -6,13 +6,16 @@
 
 ---
 
-## 리브랜딩 (미출시)
-
-- 현재 제품·npm·트레이·PyInstaller·Linux 관리 명령을 Phrolova로 통일했습니다. 버전 번호는 변경하지 않았습니다.
-- 새 DB는 `phrolova.db`를 사용하며 `rookery.db` / `signal_recorder.db`는 WAL을 포함해 백업 이관하고 원본을 보존합니다.
-- 기존 설치 경로와 서비스 상태를 인식하며 서비스 이전 실패 시 이전 실행 상태를 복구합니다.
-
 ## [Unreleased]
+
+## [2.0.52] - 2026-10-09
+
+### Changed
+- Windows 제품 메타데이터·트레이·PyInstaller 스펙과 실행 파일을 Phrolova로 통일했습니다.
+- npm 패키지명과 Linux 관리 명령·systemd 서비스를 phrolova로 변경했습니다. 신규 기본 경로는 ~/Phrolova입니다.
+- SQLite 파일명을 phrolova.db로 변경하고 레거시 DB를 WAL 포함 백업 이관합니다. 원본 보존 및 실패 시 원본 사용을 지원합니다.
+- 기존 Linux 설치 탐지, 관리 명령 링크 전환 및 서비스 교체 실패 시 실행 상태 복구를 추가했습니다.
+- 기존 다운로드·라이브 Streamlink/FFmpeg 경로와 사용자 설정·원 저작권 표기를 유지했습니다.
 
 ## [2.0.51] - 2026-10-09
 
@@ -701,7 +704,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.51...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.52...HEAD
+[2.0.52]: https://github.com/ProofPage/Phrolova/compare/v2.0.51...v2.0.52
 [2.0.51]: https://github.com/ProofPage/Phrolova/compare/v2.0.50...v2.0.51
 [2.0.50]: https://github.com/ProofPage/Phrolova/compare/v2.0.49...v2.0.50
 [2.0.49]: https://github.com/ProofPage/Phrolova/compare/v2.0.48...v2.0.49
