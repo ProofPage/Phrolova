@@ -4,19 +4,20 @@ export function canonicalVodUrl(value: string): string | null {
         const url = new URL(value.trim());
         if (!['https:', 'http:'].includes(url.protocol) || url.hostname !== 'chzzk.naver.com'
             || url.username || url.password || (url.port && url.port !== '80' && url.port !== '443')) return null;
-        const match = url.pathname.match(/^\/video\/(\d+)\/?$/);
-        return match ? `https://chzzk.naver.com/video/${match[1]}` : null;
+        const match = url.pathname.match(/^\/(video\/\d+|clips\/[A-Za-z0-9_-]+)\/?$/);
+        return match ? `https://chzzk.naver.com/${match[1]}` : null;
     } catch { return null; }
 }
 
-export function parseVodUrls(text: string): { urls: string[]; invalid: string[] } {
+export function parseVodUrls(text: string): { urls: string[]; invalid: string[]; duplicates: string[]; count: number } {
     const entries = text.split(/\s+/).filter(value => value && !value.startsWith('#'));
     const urls = new Set<string>(); const invalid: string[] = [];
+    const duplicates: string[] = [];
     for (const entry of entries) {
         const url = canonicalVodUrl(entry);
-        if (url) urls.add(url); else invalid.push(entry);
+        if (url) { if (urls.has(url)) duplicates.push(url); urls.add(url); } else invalid.push(entry);
     }
-    return { urls: [...urls], invalid };
+    return { urls: [...urls], invalid, duplicates, count: entries.length };
 }
 
 export function droppedVodText(data: Pick<DataTransfer, 'getData'>): string {

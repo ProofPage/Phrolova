@@ -7,10 +7,8 @@ yt-dlp를 사용하여 여러 플랫폼의 영상과 오디오를 다운로드�
 from __future__ import annotations
 
 import asyncio
-import json
 import math
 import os
-import shutil
 import subprocess
 import tempfile
 import threading
@@ -25,6 +23,7 @@ from urllib.parse import urlsplit
 
 from app.engine.chzzk_cdn import ChzzkCdnYoutubeDL, is_chzzk_media_url, is_chzzk_vod_url
 from app.engine.vod_preparation import VodPreparation
+from app.engine.media_inspection import InspectionError, probe_media
 from app.core.vod_filename import build_vod_outtmpl
 from app.core.config import get_settings
 from app.core.logger import logger, get_media_logger
@@ -101,7 +100,16 @@ class VodDownloadTask:
     cdn: str = "default"
     cdn_applied: bool = False
     warning_message: Optional[str] = None
+    download_warning_message: Optional[str] = None
     media_duration: Optional[float] = None
+    inspection_state: str = "pending"
+    inspection_code: Optional[str] = None
+    inspection_message: Optional[str] = None
+    inspection_diagnostics: dict[str, Any] = field(default_factory=dict)
+    inspected_at: Optional[datetime] = None
+    file_size: Optional[int] = None
+    retry_task_id: Optional[str] = None
+    inspection_task: Optional[asyncio.Task] = field(default=None, repr=False)
     prepared: bool = False
     phase: str = "queued"
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -169,6 +177,7 @@ class VodEngine(VodPreparation):
 
         self._metadata_semaphore = asyncio.Semaphore(2)
         self._metadata_tasks: set[asyncio.Task] = set()
+        self._inspection_tasks: set[asyncio.Task] = set()
         self._load_history()
 
     def _notify(
@@ -384,6 +393,39 @@ class VodEngine(VodPreparation):
             title, duration, thumbnail, formats 등.
         """
         self._validate_media_url(url)
+        if self._is_chzzk_url(url) and "/clips/" in urlsplit(url).path:
+            from app.engine.vod_preparation import canonical_vod_url
+            import httpx
+            canonical = canonical_vod_url(url)
+            clip_id = canonical.rsplit("/", 1)[-1]
+            async with httpx.AsyncClient(timeout=30, follow_redirects=False) as client:
+                response = await client.get(f"https://api.chzzk.naver.com/service/v1/play-info/clip/{clip_id}", headers=self._auth.get_http_headers())
+                response.raise_for_status()
+                content = response.json().get("content") or {}
+            video_id, in_key = content.get("videoId"), content.get("inKey")
+            from urllib.parse import urlencode, quote
+            playback = None
+            if video_id and in_key:
+                playback = f"https://apis.naver.com/neonplayer/vodplay/v1/playback/{quote(str(video_id), safe='')}?{urlencode({'key': in_key, 'env': 'real', 'lc': 'en_US', 'cpl': 'en_US'})}"
+            else:
+                import json
+                for key in ("liveRewindPlaybackJson", "playbackJson"):
+                    raw = content.get(key)
+                    try:
+                        data = json.loads(raw) if isinstance(raw, str) else raw or {}
+                        playback = next((media.get("path") for media in data.get("media", []) if str(media.get("path", "")).startswith(("http://", "https://"))), None)
+                    except (ValueError, TypeError, AttributeError):
+                        continue
+                    if playback:
+                        break
+            if not playback:
+                raise ValueError("클립의 재생 정보를 가져오지 못했습니다.")
+            info = await self.get_video_info(playback)
+            channel = content.get("ownerChannel") or content.get("channel") or {}
+            info.update(id=clip_id, title=content.get("contentTitle") or info.get("title"),
+                        uploader=channel.get("channelName") or info.get("uploader"),
+                        profile_image=channel.get("channelImageUrl") or "")
+            return info
         opts: dict[str, Any] = {
             "ignoreconfig": True,
             "logger": get_media_logger(url),
@@ -762,6 +804,8 @@ class VodEngine(VodPreparation):
                 task.url = source_url
             # _download_external이 task.title을 yt-dlp 메타로 덮어쓰므로 복원
             self._rename_clip_output(task_id, task, safe_channel, safe_title)
+            if task.state == VodDownloadState.COMPLETED and task.output_path:
+                await self._inspect_chzzk_download(task, task.metadata, task.output_path)
             return
 
         # 방법 2: HLS (liveRewindPlaybackJson 또는 playbackJson)
@@ -784,6 +828,8 @@ class VodEngine(VodPreparation):
                     finally:
                         task.url = source_url
                     self._rename_clip_output(task_id, task, safe_channel, safe_title)
+                    if task.state == VodDownloadState.COMPLETED and task.output_path:
+                        await self._inspect_chzzk_download(task, task.metadata, task.output_path)
                     return
 
         raise RuntimeError(
@@ -1008,6 +1054,7 @@ class VodEngine(VodPreparation):
                 return ChzzkCdnYoutubeDL(options, cdn=selected_cdn)
             return yt_dlp.YoutubeDL(options)
         task.warning_message = None
+        task.download_warning_message = None
         task.cdn_applied = False
         task.media_duration = None
 
@@ -1035,6 +1082,11 @@ class VodEngine(VodPreparation):
         vod_title = info.get("title", "Unknown")
         uploader = info.get("uploader") or info.get("channel") or "Unknown Channel"
         task.title = f"[{uploader}] {vod_title}"
+        is_clip = "/clips/" in urlsplit(task.source_url).path
+        task.metadata.update({key: info.get(key) for key in ("id", "duration", "thumbnail", "uploader", "upload_date", "is_live", "live_status")
+                              if not is_clip or task.metadata.get(key) is None})
+        if is_clip:
+            task.metadata["id"] = urlsplit(task.source_url).path.rstrip("/").rsplit("/", 1)[-1]
         logger.info(f"[{task_id}] 미디어 정보: {task.title}")
 
         # 예상 파일명 저장
@@ -1099,24 +1151,32 @@ class VodEngine(VodPreparation):
                         task.cdn_applied |= ydl.cdn_applied
                     if selected_cdn == "akamai" and (ydl.cdn_unsupported or not task.cdn_applied):
                         task.warning_message = "이 스트림의 CDN URL은 안전하게 변환할 수 없어 원래 주소를 사용했습니다."
+                        task.download_warning_message = task.warning_message
 
         filepath: str | None = await asyncio.to_thread(lambda: _download())  # type: ignore[arg-type]
+        task.metadata["expected_streams"] = [kind for kind, codec in (("video", "vcodec"), ("audio", "acodec"))
+            if any(fmt.get(codec) not in (None, "none") for fmt in (inspection_info.get("requested_formats") or [inspection_info or info]))]
 
         if task.cancel_flag:
             raise DownloadCancelledError("다운로드가 취소되었습니다.")
 
         if filepath:
+            filepath = str(Path(filepath).expanduser().resolve())
             if not Path(filepath).is_file():
                 raise RuntimeError("yt-dlp가 완료했지만 출력 파일이 없습니다.")
 
             if chzzk_source:
                 task.phase = "verifying"
+                task.output_path = str(Path(filepath).absolute())
+                task.state = VodDownloadState.COMPLETED
+                task.completed_at = datetime.now()
+                task.progress = 100.0
                 await self._inspect_chzzk_download(task, inspection_info or info, filepath)
             if task.cancel_flag:
                 raise DownloadCancelledError("다운로드가 취소되었습니다.")
 
             task.state = VodDownloadState.COMPLETED
-            task.completed_at = datetime.now()
+            task.completed_at = task.completed_at or datetime.now()
             task.output_path = filepath
             task.resolved_filename = filepath
             task.progress = 100.0
@@ -1214,21 +1274,38 @@ class VodEngine(VodPreparation):
 
     async def _inspect_chzzk_download(self, task: VodDownloadTask, info: dict, filepath: str) -> None:
         """Non-destructive checks: warnings do not turn a valid download into failure."""
-        warnings = [task.warning_message] if task.warning_message else []
+        warnings = []
+        task.inspection_state = "running"
+        task.inspection_message = "파일 정보를 확인하고 있습니다."
+        task.inspection_code = None
+        task.inspection_diagnostics = {}
+        self._save_history()
         try:
+            try:
+                task.file_size = await asyncio.to_thread(lambda: Path(filepath).stat().st_size)
+            except OSError:
+                task.file_size = None
             media = await asyncio.to_thread(self._probe_media_info, filepath)
             task.media_duration = media["duration"]
+            task.file_size = media.get("size", task.file_size)
+            task.inspection_diagnostics = media.get("diagnostics", {})
+            task.inspection_diagnostics.update(format_name=media["format_name"], duration=media["duration"],
+                                               streams=sorted(kind for kind in media["streams"] if isinstance(kind, str)),
+                                               tracks=media.get("tracks", []))
+            if task.inspection_diagnostics.get("stderr", "").strip():
+                warnings.append("파일 검사 중 오류가 보고되었습니다. 상세 정보를 확인하세요.")
+                get_media_logger(task.source_url).warning(f"[{task.task_id}] FFprobe stderr: {task.inspection_diagnostics['stderr']}")
             streams = media["streams"]
-            if not media["format_name"] or not streams:
+            if not media["format_name"] or not streams.intersection({"video", "audio"}):
                 warnings.append("다운로드 파일의 미디어 컨테이너 또는 트랙을 확인하지 못했습니다.")
             formats = info.get("requested_formats") or (
                 [info] if "vcodec" in info or "acodec" in info else info.get("formats") or [info]
             )
             for kind in ("video", "audio"):
                 codec = "vcodec" if kind == "video" else "acodec"
-                expected = any(fmt.get(codec) not in (None, "none") for fmt in formats)
+                expected = kind in info.get("expected_streams", []) or any(fmt.get(codec) not in (None, "none") for fmt in formats)
                 if expected and kind not in streams:
-                    warnings.append(f"다운로드 파일에 {kind} 트랙이 없을 수 있습니다.")
+                    warnings.append(f"다운로드 파일에서 {'영상' if kind == 'video' else '음성'} 정보를 찾지 못했습니다.")
             try:
                 expected_duration = float(info.get("duration") or 0)
             except (TypeError, ValueError):
@@ -1238,42 +1315,57 @@ class VodEngine(VodPreparation):
                     and not info.get("is_live")
                     and info.get("live_status") not in ("is_live", "is_upcoming", "post_live")):
                 tolerance = max(10.0, expected_duration * 0.02)
-                if abs(media["duration"] - expected_duration) > tolerance:
+                if media["duration"] is not None and abs(media["duration"] - expected_duration) > tolerance:
                     warnings.append("다운로드한 영상의 재생 시간이 비정상적일 수 있습니다. Akamai CDN으로 다시 다운로드해 보세요.")
-        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
-            warnings.append("FFprobe 검사를 완료하지 못했습니다. 파일을 직접 재생해 확인하세요.")
-        task.warning_message = " ".join(warnings) or None
+            if media["duration"] is None:
+                warnings.append("파일의 재생 시간을 확인하지 못했습니다.")
+            task.inspection_state = "attention" if warnings else "passed"
+            task.inspection_code = "media_warning" if warnings else None
+            task.inspection_message = " ".join(warnings) if warnings else "파일 검사 완료"
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
+            task.inspection_state = "failed"
+            task.inspection_code = exc.code if isinstance(exc, InspectionError) else "probe_failed"
+            task.inspection_message = str(exc) if isinstance(exc, InspectionError) else "파일 정보를 확인하지 못했습니다."
+            task.inspection_diagnostics = exc.diagnostics if isinstance(exc, InspectionError) else {"detail": repr(exc)}
+            warnings.append(task.inspection_message)
+            get_media_logger(task.source_url).warning(f"[{task.task_id}] FFprobe inspection: {task.inspection_diagnostics}")
+        finally:
+            task.inspected_at = datetime.now()
+        task.warning_message = " ".join(filter(None, [task.download_warning_message, *warnings])) or None
+        self._save_history()
         if task.warning_message:
             get_media_logger(task.source_url).warning(f"[{task.task_id}] {task.warning_message}")
 
     @staticmethod
     def _probe_media_info(filepath: str) -> dict[str, Any]:
-        """Read only container duration and track types, with a bounded subprocess."""
-        ffmpeg = Path(get_settings().resolve_ffmpeg_path())
-        candidates = [
-            ffmpeg.with_name("ffprobe.exe" if ffmpeg.suffix.lower() == ".exe" else "ffprobe"),
-            Path(shutil.which("ffprobe") or ""),
-        ]
-        ffprobe = next((path for path in candidates if path.is_file()), None)
-        if ffprobe is None:
-            raise RuntimeError("ffprobe를 찾을 수 없습니다.")
-        result = subprocess.run(
-            [str(ffprobe), "-v", "error", "-show_entries",
-             "format=duration,format_name:stream=codec_type", "-of", "json", filepath],
-            capture_output=True, text=True, timeout=30, check=True,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        )
-        parsed = json.loads(result.stdout)
-        duration = float(parsed.get("format", {}).get("duration", "nan"))
-        if not math.isfinite(duration) or duration < 0:
-            raise RuntimeError("ffprobe가 유효한 재생 시간을 반환하지 않았습니다.")
-        return {"duration": duration,
-                "format_name": parsed.get("format", {}).get("format_name", ""),
-                "streams": {stream.get("codec_type") for stream in parsed.get("streams", [])}}
+        """Compatibility entry point; callers run this in a worker thread."""
+        return probe_media(filepath)
 
     @staticmethod
     def _probe_media_duration(filepath: str) -> float:
         return VodEngine._probe_media_info(filepath)["duration"]
+
+    def reinspect_download(self, task_id: str) -> dict[str, Any]:
+        """Schedule one inspection; status polling remains responsive during FFprobe."""
+        task = self._tasks.get(task_id)
+        if task is None:
+            raise ValueError("작업을 찾을 수 없습니다.")
+        if task.state != VodDownloadState.COMPLETED or not task.output_path:
+            raise ValueError("다운로드가 완료된 파일만 검사할 수 있습니다.")
+        if task.inspection_state == "running":
+            raise ValueError("이미 파일을 검사하고 있습니다.")
+        if task.download_task is not None and not task.download_task.done():
+            raise ValueError("다운로드 작업 종료를 기다려 주세요.")
+        if self._shutting_down:
+            raise ValueError("서버가 종료 중입니다.")
+        task.inspection_state = "running"
+        task.inspection_message = "파일 정보를 확인하고 있습니다."
+        future = asyncio.create_task(self._inspect_chzzk_download(task, task.metadata, task.output_path))
+        task.inspection_task = future
+        self._inspection_tasks.add(future)
+        future.add_done_callback(self._inspection_tasks.discard)
+        self._save_history()
+        return self.get_task_status(task_id)
 
     def _clean_filename(self, name: str) -> str:
         """파일명에서 사용할 수 없는 특수문자를 제거한다."""
@@ -1361,6 +1453,12 @@ class VodEngine(VodPreparation):
         if not old_task:
             raise ValueError("작업을 찾을 수 없습니다.")
 
+        previous_retry = self._tasks.get(old_task.retry_task_id or "")
+        if previous_retry and (previous_retry.state in (VodDownloadState.IDLE, VodDownloadState.DOWNLOADING, VodDownloadState.PAUSED, VodDownloadState.CANCELLING)) and not previous_retry.cancel_flag:
+            raise ValueError("이미 다시 다운로드하고 있습니다.")
+        if old_task.inspection_state == "running":
+            raise ValueError("파일 검사 종료를 기다려 주세요.")
+
         if old_task.state not in (VodDownloadState.COMPLETED, VodDownloadState.ERROR) and not (old_task.prepared and old_task.cancel_flag and old_task.state == VodDownloadState.IDLE):
             raise ValueError(f"재다운로드는 완료 또는 에러 상태에서만 가능합니다. 현재 상태: {old_task.state.value}")
 
@@ -1373,6 +1471,8 @@ class VodEngine(VodPreparation):
             quality=old_task.quality,
             cdn=cdn,
         )
+        old_task.retry_task_id = new_task_id
+        self._save_history()
 
         if old_task.prepared and new_task_id in self._tasks:
             new_task = self._tasks[new_task_id]
@@ -1403,6 +1503,14 @@ class VodEngine(VodPreparation):
             "cdn": task.cdn,
             "cdn_applied": task.cdn_applied,
             "warning_message": task.warning_message,
+            "download_warning_message": task.download_warning_message,
+            "inspection_state": task.inspection_state,
+            "inspection_code": task.inspection_code,
+            "inspection_message": task.inspection_message,
+            "inspection_diagnostics": task.inspection_diagnostics,
+            "inspected_at": task.inspected_at.isoformat() if task.inspected_at else None,
+            "file_size": task.file_size,
+            "retry_task_id": task.retry_task_id,
             "media_duration": task.media_duration,
             "output_path": task.output_path,
             "error_message": task.error_message,
@@ -1469,6 +1577,7 @@ class VodEngine(VodPreparation):
             clearable_states = {VodDownloadState.COMPLETED}
         removed_tasks = [
             task for task in self._tasks.values() if task.state in clearable_states
+            and task.inspection_state != "running"
             and (task.download_task is None or task.download_task.done() or task.started_at is None)
         ]
 
@@ -1503,6 +1612,7 @@ class VodEngine(VodPreparation):
         wait for them; network timeout/retry settings may delay shutdown.
         """
         self._shutting_down = True
+        await asyncio.gather(*list(self._inspection_tasks), return_exceptions=True)
         await asyncio.gather(*list(self._metadata_tasks), return_exceptions=True)
         imports = list(self.channel_imports.tasks.values())
         for job_id in list(self.channel_imports.tasks):
@@ -1511,6 +1621,9 @@ class VodEngine(VodPreparation):
         pending = []
         for task in self._tasks.values():
             if task.download_task is None or task.download_task.done():
+                continue
+            if task.state == VodDownloadState.COMPLETED:
+                pending.append(task.download_task)
                 continue
             task.cancel_flag = True
             task.pause_event.set()
@@ -1629,6 +1742,14 @@ class VodEngine(VodPreparation):
                     cdn=record.get("cdn") if record.get("cdn") in ("default", "akamai") else "default",
                     cdn_applied=bool(record.get("cdn_applied", False)),
                     warning_message=record.get("warning_message"),
+                    download_warning_message=record.get("download_warning_message"),
+                    inspection_state=("pending" if record.get("inspection_state") == "running" else record.get("inspection_state") or ("attention" if record.get("warning_message") else "pending")),
+                    inspection_code=record.get("inspection_code"),
+                    inspection_message=record.get("inspection_message") if record.get("inspection_state") != "running" else "파일 검사가 중단되었습니다. 다시 검사를 시도할 수 있습니다.",
+                    inspection_diagnostics=record.get("inspection_diagnostics") or {},
+                    inspected_at=self._parse_dt(record.get("inspected_at")),
+                    file_size=record.get("file_size"),
+                    retry_task_id=record.get("retry_task_id"),
                     media_duration=record.get("media_duration"),
                     output_dir=record.get("output_dir") or "",
                     output_path=record.get("output_path"),
@@ -1663,6 +1784,14 @@ class VodEngine(VodPreparation):
                     "cdn": task.cdn,
                     "cdn_applied": task.cdn_applied,
                     "warning_message": task.warning_message,
+                    "download_warning_message": task.download_warning_message,
+                    "inspection_state": task.inspection_state,
+                    "inspection_code": task.inspection_code,
+                    "inspection_message": task.inspection_message,
+                    "inspection_diagnostics": task.inspection_diagnostics,
+                    "inspected_at": task.inspected_at.isoformat() if task.inspected_at else None,
+                    "file_size": task.file_size,
+                    "retry_task_id": task.retry_task_id,
                     "media_duration": task.media_duration,
                     "output_dir": task.output_dir,
                     "output_path": task.output_path,

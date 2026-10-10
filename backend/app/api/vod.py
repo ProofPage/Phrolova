@@ -141,6 +141,15 @@ class VodRetryRequest(BaseModel):
     cdn: Literal["default", "akamai"] = "default"
 
 
+@router.post("/{task_id}/inspect", summary="다운로드 파일 다시 검사", status_code=202)
+async def reinspect_vod_file(task_id: str):
+    from app.main import get_recorder_service
+    try:
+        return get_recorder_service().reinspect_vod(task_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+
+
 @router.post("/{task_id}/retry", summary="다운로드 재시도")
 async def retry_vod_download(task_id: str, req: Optional[VodRetryRequest] = None):
     """완료/에러 상태의 다운로드를 재시도합니다. 새 task_id를 반환합니다."""

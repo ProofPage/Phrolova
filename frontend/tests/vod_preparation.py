@@ -52,7 +52,7 @@ async def check(browser,width):
  page=await context.new_page();page.on('pageerror',lambda error:errors.append(str(error)))
  await page.goto(BASE+'/vod');panel=page.get_by_test_id('vod-preparation')
  await panel.get_by_role('textbox').fill('https://chzzk.naver.com/video/1\nhttps://chzzk.naver.com/video/2?tracking=1\nhttps://chzzk.naver.com/video/1\nfile:///tmp/unsafe')
- await panel.get_by_role('button',name='VOD 등록',exact=True).click()
+ await panel.get_by_role('button',name='목록에 추가',exact=True).click()
  await page.locator('[data-task-id="2"]').wait_for();assert len(tasks)==2
  assert await panel.get_by_role('alert').count()==1
  card=page.locator('[data-task-id="1"]');assert 'Test streamer' in await card.inner_text()
@@ -62,7 +62,7 @@ async def check(browser,width):
  for kind,value,id in [('text/uri-list','# comment\nhttps://chzzk.naver.com/video/3','3'),('text/plain','https://chzzk.naver.com/video/4','4'),('text/html','<a href="https://chzzk.naver.com/video/99">VOD</a><script>window.__unsafe=true</script>','99')]:
   transfer=await page.evaluate_handle('([kind,value])=>{const dt=new DataTransfer();dt.setData(kind,value);return dt}',[kind,value])
   await panel.dispatch_event('dragenter',{'dataTransfer':transfer})
-  assert 'CHZZK 다시보기 URL을 여기에 놓으세요.' in await panel.inner_text()
+  assert 'CHZZK 다시보기 또는 클립 URL을 여기에 놓으세요.' in await panel.inner_text()
   await panel.dispatch_event('drop',{'dataTransfer':transfer});await page.locator(f'[data-task-id="{id}"]').wait_for()
  assert not await page.evaluate('Boolean(window.__unsafe)')
  failed=page.locator('[data-task-id="99"]');await failed.get_by_role('button',name='정보 다시 조회',exact=True).click()
@@ -72,7 +72,7 @@ async def check(browser,width):
  await page.screenshot(path=str(OUT/f'vod-ready-{width}.png'),full_page=True)
  await page.reload();await page.locator('[data-task-id="1"]').wait_for();assert len(tasks)==5
  await page.locator('[data-task-id="4"]').get_by_role('button',name='다운로드 시작',exact=True).click()
- await panel.get_by_role('button',name='전체 다운로드 시작',exact=False).click()
+ await panel.get_by_role('button',name='전체 다운로드',exact=False).click()
  await card.get_by_role('button',name='일시정지하기',exact=True).wait_for()
  await card.get_by_role('button',name='일시정지하기',exact=True).click()
  await card.get_by_role('button',name='재개',exact=True).click()
@@ -83,15 +83,24 @@ async def check(browser,width):
  await page.locator('[data-task-id="99"]').get_by_role('button',name='취소',exact=True).click()
  await page.get_by_role('dialog').get_by_role('button',name='다운로드 취소',exact=True).click()
  await page.locator('[data-task-id="99"]').get_by_role('button',name='다시 다운로드',exact=True).click()
- await page.get_by_role('dialog').get_by_role('button',name='다시 시도',exact=True).click()
+ await page.get_by_role('dialog').get_by_role('button',name='다시 다운로드',exact=True).click()
  await page.locator('[data-task-id="99-retry"]').wait_for()
- await page.locator('[data-task-id="99"]').get_by_role('button',name='이력 제거',exact=True).click()
+ await page.locator('[data-task-id="99"]').get_by_role('button',name='목록에서 제거',exact=True).click()
  await page.locator('[data-task-id="99"]').wait_for(state="detached")
+ count=len(tasks)
+ await panel.get_by_role('textbox').fill('https://chzzk.naver.com/clips/Clip_123?tracking=1')
+ await panel.get_by_role('button',name='목록에 추가',exact=True).click()
+ await page.locator('[data-task-id="Clip_123"]').wait_for();assert len(tasks)==count+1
+ assert '클립 번호' in await page.locator('[data-task-id="Clip_123"]').inner_text()
+ await panel.get_by_role('textbox').fill('https://chzzk.naver.com/clips/Clip_123')
+ await panel.get_by_role('button',name='목록에 추가',exact=True).click()
+ await page.wait_for_timeout(300);assert len(tasks)==count+1
+ assert '이미 목록에 있는 영상입니다.' in await panel.get_by_role('alert').inner_text()
  assert any(path.endswith('/1/quality') and data['quality']=='720p' for path,method,data in requests)
  assert await page.evaluate('document.documentElement.scrollWidth<=innerWidth'),width
  assert not errors,errors
  await page.screenshot(path=str(OUT/f'vod-{width}.png'),full_page=True)
- for lang,label in [('en','Register VODs'),('ja','VODを登録')]:
+ for lang,label in [('en','Add to list'),('ja','リストに追加')]:
   await page.evaluate('([lang])=>localStorage.setItem("phrolova-language",lang)',[lang]);await page.reload()
   await panel.get_by_role('button',name=label,exact=True).wait_for()
  await context.close();print('VOD preparation browser PASS',width)

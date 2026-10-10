@@ -8,6 +8,20 @@
 
 ## [Unreleased]
 
+## [2.0.53] - 2026-10-10
+
+### Fixed
+- FFprobe 경로를 FFmpeg와 독립적으로 탐색하고 Linux/Termux 및 실행 권한을 확인합니다.
+- 파일 존재·크기, 프로세스 종료 코드, stderr, JSON 오류와 타임아웃을 구분하여 보존합니다.
+- 다운로드 완료와 파일 검사 상태를 분리하고 검사 실패 시 파일을 보존하며 다시 검사를 지원합니다.
+
+### Changed
+- CHZZK 다운로드 대기 목록, URL 검증·중복 안내, 버튼·통계·완료 카드 문구를 통일했습니다.
+- 라이브 그리드·목록을 공통 녹화 카드로 구성하고 목록을 컴팩트한 가로 행으로 재설계했습니다.
+- 네 가지 녹화 지표에 레이블과 단위를 제공하고 보기 전환 시 상세 상태와 마지막 측정값을 유지합니다.
+- 자동 녹화·녹화 제어·태그 요청의 중복을 방지하고 저장·중지 진행 상태를 표시합니다.
+- 아이콘 접근성 이름, 모바일 터치 영역, 컨테이너 기반 반응형 레이아웃을 개선했습니다.
+
 ## [2.0.52] - 2026-10-09
 
 ### Changed
@@ -704,7 +718,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.52...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.53...HEAD
+[2.0.53]: https://github.com/ProofPage/Phrolova/compare/v2.0.52...v2.0.53
 [2.0.52]: https://github.com/ProofPage/Phrolova/compare/v2.0.51...v2.0.52
 [2.0.51]: https://github.com/ProofPage/Phrolova/compare/v2.0.50...v2.0.51
 [2.0.50]: https://github.com/ProofPage/Phrolova/compare/v2.0.49...v2.0.50

@@ -258,6 +258,9 @@ class RecorderService:
         logger.info(f"[Service] VOD 다운로드 재시도 요청: {task_id}")
         return await self._vod_engine.retry_download(task_id, cdn=cdn)
 
+    def reinspect_vod(self, task_id: str) -> dict:
+        return self._vod_engine.reinspect_download(task_id)
+
     def reorder_vod_tasks(self, task_ids: list[str]) -> dict:
         """VOD 다운로드 작업 순서를 재정렬한다."""
         logger.info(f"[Service] VOD 작업 순서 재정렬 요청: {len(task_ids)}개")

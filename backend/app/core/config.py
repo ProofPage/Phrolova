@@ -12,7 +12,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Optional
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -93,6 +93,8 @@ class Settings(BaseSettings):
 
     # ── FFmpeg ───────────────────────────────────────────
     ffmpeg_path: str = "ffmpeg"
+    ffprobe_path: str = "ffprobe"
+    file_inspection_timeout: float = Field(default=120, ge=1, le=600)
 
     # ── 저장 경로 ────────────────────────────────────────
     download_dir: str = "./recordings"
@@ -261,6 +263,30 @@ class Settings(BaseSettings):
             "pip install yt-dlp 또는 프로그램 옆 bin/yt-dlp.exe를 배치하세요."
         )
 
+    def resolve_ffprobe_path(self) -> str:
+        """Resolve independently of FFmpeg, including a Termux PREFIX installation."""
+        names = ("ffprobe.exe", "ffprobe") if sys.platform == "win32" else ("ffprobe",)
+        candidates = [Path(self.ffprobe_path).expanduser()]
+        configured = shutil.which(self.ffprobe_path)
+        if configured:
+            candidates.append(Path(configured))
+        try:
+            ffmpeg = Path(self.resolve_ffmpeg_path())
+            candidates.extend(ffmpeg.with_name(name) for name in names)
+        except FileNotFoundError:
+            pass
+        base = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[3]
+        candidates.extend(base / "bin" / name for name in names)
+        system = shutil.which("ffprobe")
+        if system:
+            candidates.append(Path(system))
+        if os.environ.get("PREFIX"):
+            candidates.append(Path(os.environ["PREFIX"]) / "bin" / "ffprobe")
+        for candidate in candidates:
+            if candidate.is_file() and (sys.platform == "win32" or (candidate.suffix.lower() != ".exe" and os.access(candidate, os.X_OK))):
+                return str(candidate.resolve())
+        raise FileNotFoundError("FFprobe executable not found; configure FFPROBE_PATH or PATH")
+
     def resolve_ffmpeg_path(self) -> str:
         """FFmpeg 실행 파일 경로를 탐색 순서에 따라 결정한다.
 
@@ -272,7 +298,7 @@ class Settings(BaseSettings):
         import sys as _sys
 
         # 1) 설정값이 유효한 경우
-        configured = Path(self.ffmpeg_path)
+        configured = Path(self.ffmpeg_path).expanduser()
         if configured.is_file() and (sys.platform == "win32" or (configured.suffix.lower() != ".exe" and os.access(configured, os.X_OK))):
             return str(configured)
 
@@ -293,6 +319,11 @@ class Settings(BaseSettings):
         system_ffmpeg = shutil.which("ffmpeg")
         if system_ffmpeg:
             return system_ffmpeg
+
+        if os.environ.get("PREFIX"):
+            prefix_ffmpeg = Path(os.environ["PREFIX"]) / "bin" / "ffmpeg"
+            if prefix_ffmpeg.is_file() and os.access(prefix_ffmpeg, os.X_OK):
+                return str(prefix_ffmpeg)
 
         raise FileNotFoundError(
             "FFmpeg를 찾을 수 없습니다. "

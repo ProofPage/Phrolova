@@ -32,6 +32,28 @@ def test_canonicalization_and_real_quality_options():
     assert canonical_vod_url(URL+'/?tracking=1#fragment') == URL
     assert quality_options(INFO) == [{'value':'1080p','label':'1080p'},{'value':'720p','label':'720p'}]
 
+
+def test_clip_canonicalization():
+    assert canonical_vod_url('https://chzzk.naver.com/clips/Clip_123-abc?tracking=1') == 'https://chzzk.naver.com/clips/Clip_123-abc'
+    with pytest.raises(ValueError): canonical_vod_url('https://chzzk.naver.com/clips/../123')
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('fallback', [False, True])
+async def test_clip_metadata_uses_supported_playback_routes(monkeypatch, fallback):
+    import httpx
+    import yt_dlp
+    content = {'contentTitle': '클립 제목', 'ownerChannel': {'channelName': '클립 채널'},
+               **({'playbackJson': {'media': [{'path': 'https://example.test/clip.m3u8'}]}} if fallback else {'videoId': 'video-hash', 'inKey': 'encoded/key'})}
+    async def get(_self, url, **_kwargs):
+        return httpx.Response(200, request=httpx.Request('GET', url), json={'content': content})
+    monkeypatch.setattr(httpx.AsyncClient, 'get', get)
+    monkeypatch.setattr(yt_dlp.YoutubeDL, 'extract_info', lambda *_args, **_kwargs: INFO)
+    engine = VodEngine()
+    info = await engine.get_video_info('https://chzzk.naver.com/clips/Clip_123')
+    assert info['id'] == 'Clip_123' and info['title'] == '클립 제목' and info['uploader'] == '클립 채널'
+    assert quality_options(info)[0]['value'] == '1080p'
+
 @pytest.mark.asyncio
 async def test_batch_deduplicates_before_lookup_and_keeps_partial_success(monkeypatch):
     engine = VodEngine(); mock = AsyncMock(return_value=INFO)

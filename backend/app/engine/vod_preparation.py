@@ -11,13 +11,13 @@ from app.core.config import get_settings
 def canonical_vod_url(value: str) -> str:
     try:
         parts = urlsplit(value.strip())
-        match = re.fullmatch(r'/video/([0-9]+)/?', parts.path)
+        match = re.fullmatch(r'/(video/[0-9]+|clips/[A-Za-z0-9_-]+)/?', parts.path)
         if (parts.scheme not in ('http', 'https') or parts.hostname != 'chzzk.naver.com'
                 or parts.username or parts.password or parts.port not in (None, 80, 443) or not match):
             raise ValueError
-        return f'https://chzzk.naver.com/video/{match[1]}'
+        return f'https://chzzk.naver.com/{match[1]}'
     except ValueError:
-        raise ValueError('CHZZK 다시보기 주소를 입력해 주세요.') from None
+        raise ValueError('CHZZK 다시보기 또는 클립 URL을 입력해 주세요.') from None
 
 
 def quality_options(info: dict) -> list[dict]:
@@ -47,7 +47,7 @@ class VodPreparation:
                 results.append({'url': url, 'task_id': existing.task_id, 'duplicate': True})
                 continue
             if sum(task.prepared for task in self._tasks.values()) >= 1000:
-                results.append({'url': url, 'error': 'VOD 준비 목록 한도를 초과했습니다.'})
+                results.append({'url': url, 'error': '다운로드 대기 목록은 최대 1,000건까지 추가할 수 있습니다.'})
                 continue
             settings = get_settings()
             task = VodDownloadTask(url=url, title=url.rsplit('/', 1)[-1], prepared=True,
@@ -173,6 +173,8 @@ class VodPreparation:
             raise ValueError('작업을 찾을 수 없습니다.')
         if task.state not in (VodDownloadState.IDLE, VodDownloadState.COMPLETED, VodDownloadState.ERROR):
             raise ValueError('진행 중인 작업은 먼저 취소해 주세요.')
+        if task.inspection_state == 'running':
+            raise ValueError('파일 검사 종료를 기다려 주세요.')
         if task.download_task is not None and not task.download_task.done():
             if task.started_at is not None:
                 raise ValueError('작업 종료를 기다려 주세요.')

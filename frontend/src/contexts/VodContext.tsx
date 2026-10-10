@@ -99,7 +99,8 @@ export function VodProvider({ children }: { children: ReactNode }) {
 
     const openFileLocation = async (taskId: string) => {
         try {
-            await api.openVodFileLocation(taskId);
+            const result = await api.openVodFileLocation(taskId);
+            toast.success(result.message);
         } catch (e: unknown) {
             toast.error(getErrorMessage(e, "파일 위치를 열 수 없습니다."));
         }

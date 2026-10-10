@@ -104,6 +104,7 @@ EXPECTED_API_ROUTES = {
     ("POST", "/api/vod/{task_id}/pause"),
     ("POST", "/api/vod/{task_id}/resume"),
     ("POST", "/api/vod/{task_id}/retry"),
+    ("POST", "/api/vod/{task_id}/inspect"),
     ("GET", "/health"),
     ("GET", "/health/detail"),
 }

@@ -20,7 +20,7 @@ export interface ChannelDownloadOptions {
 }
 
 export const PLATFORM_LABELS: Record<Platform, string> = {
-    chzzk: "Chzzk",
+    chzzk: "CHZZK",
     x_spaces: "X Spaces",
     youtube: "YouTube",
 };
@@ -81,6 +81,14 @@ export interface VodTask {
     cdn?: ChzzkVodCdn;
     cdn_applied?: boolean;
     warning_message?: string | null;
+    download_warning_message?: string | null;
+    inspection_state?: 'pending' | 'running' | 'passed' | 'attention' | 'failed';
+    inspection_code?: string | null;
+    inspection_message?: string | null;
+    inspection_diagnostics?: Record<string, unknown> & { detail?: string; stderr?: string; returncode?: number | null; binary?: string };
+    inspected_at?: string | null;
+    file_size?: number | null;
+    retry_task_id?: string | null;
     media_duration?: number | null;
     created_at: string;
     started_at: string | null;
@@ -434,6 +442,10 @@ export const api = {
     },
     retryVodDownload: async (task_id: string, cdn: ChzzkVodCdn = "default") => {
         const res = await client.post<{ message: string; old_task_id: string; new_task_id: string }>(`/vod/${task_id}/retry`, { cdn });
+        return res.data;
+    },
+    inspectVodFile: async (task_id: string) => {
+        const res = await client.post<VodTask>(`/vod/${task_id}/inspect`);
         return res.data;
     },
     reorderVodTasks: async (task_ids: string[]) => {

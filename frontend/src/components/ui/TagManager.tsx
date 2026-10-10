@@ -20,6 +20,8 @@ interface TagManagerProps {
     onDeleteTag?: (tag: string) => void;
     disabled?: boolean;
     triggerLabel?: string;
+    compact?: boolean;
+    busy?: boolean;
 }
 
 export function TagManager({
@@ -31,6 +33,8 @@ export function TagManager({
     onDeleteTag,
     disabled = false,
     triggerLabel,
+    compact = false,
+    busy = false,
 }: TagManagerProps) {
     const { t } = useLanguage();
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -103,6 +107,7 @@ export function TagManager({
     }, [isOpen]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (busy) return;
         if (e.key === "Enter" && inputValue.trim()) {
             e.preventDefault();
             const newTag = inputValue.trim();
@@ -121,6 +126,7 @@ export function TagManager({
     };
 
     const toggleTag = (tag: string) => {
+        if (busy) return;
         if (selectedTags.includes(tag)) {
             onRemoveTag(tag);
         } else {
@@ -129,7 +135,7 @@ export function TagManager({
     };
 
     const unselectedTags = availableTags.filter((t) => !selectedTags.includes(t));
-    const filteredAvailable = unselectedTags.filter((t) =>
+    const filteredAvailable = (compact ? Array.from(new Set([...selectedTags, ...availableTags])) : unselectedTags).filter((t) =>
         t.toLowerCase().includes(inputValue.toLowerCase())
     );
 
@@ -139,7 +145,7 @@ export function TagManager({
     return (
         <div className="tag-manager relative inline-flex min-w-0 max-w-full items-center gap-1.5 flex-wrap" ref={containerRef}>
             {/* 선택된 태그 목록 */}
-            {selectedTags.map((tag) => (
+            {!compact && selectedTags.map((tag) => (
                 <span
                     key={tag}
                     className="tag-chip inline-flex min-w-0 items-center gap-1 text-[10px] font-medium"
@@ -160,12 +166,13 @@ export function TagManager({
             {!disabled && (
                 <button
                     ref={triggerRef}
+                    disabled={busy}
                     onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setIsOpen(true); }}
                     aria-label={t("태그 관리")} aria-expanded={isOpen}
                     className={clsx("icon-button", triggerLabel && "tag-manager-labeled")}
                     title={t("태그 관리")}
                 >
-                    <Plus className="w-3 h-3" />
+                    {compact ? <Tag className="w-4 h-4" /> : <Plus className="w-3 h-3" />}
                     {triggerLabel && <span className="hidden lg:inline">{triggerLabel}</span>}
                 </button>
             )}
@@ -190,6 +197,7 @@ export function TagManager({
                     <div className="min-h-0 overflow-y-auto overscroll-contain scrollbar-thin py-1">
                         {isExactMatchFree && (
                             <button
+                                disabled={busy}
                                 onClick={() => {
                                     const newTag = inputValue.trim();
                                     onCreateTag(newTag);
@@ -206,6 +214,7 @@ export function TagManager({
                             // 버튼 안에 버튼을 넣을 수 없어 행을 감싼다.
                             <div key={tag} className="flex items-center group/tag">
                                 <button
+                                    disabled={busy}
                                     onClick={() => toggleTag(tag)}
                                     className={clsx(
                                         "flex-1 min-w-0 text-left tag-option min-h-9 px-3 py-2 text-xs transition-colors flex items-center justify-between",

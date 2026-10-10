@@ -123,7 +123,7 @@ async def test_duration_and_missing_track_warn_without_deleting_file(tmp_path, m
     path = tmp_path/'video.mp4'; path.write_bytes(b'keep original bytes')
     monkeypatch.setattr(engine, '_probe_media_info', lambda _: {'duration':30,'format_name':'mp4','streams':{'video'}})
     await engine._inspect_chzzk_download(task, {'duration':600,'formats':[{'vcodec':'h264','acodec':'aac'}]}, str(path))
-    assert 'Akamai CDN' in task.warning_message and 'audio' in task.warning_message
+    assert 'Akamai CDN' in task.warning_message and '음성' in task.warning_message
     assert path.read_bytes() == b'keep original bytes'
     assert task.media_duration == 30
 
@@ -134,7 +134,9 @@ async def test_missing_probe_warns_without_failing(monkeypatch):
     def missing(_): raise RuntimeError('missing ffprobe')
     monkeypatch.setattr(engine, '_probe_media_info', missing)
     await engine._inspect_chzzk_download(task, {'duration':600}, 'unused')
-    assert 'FFprobe' in task.warning_message
+    assert task.inspection_state == 'failed'
+    assert task.inspection_message == '파일 정보를 확인하지 못했습니다.'
+    assert 'missing ffprobe' in task.inspection_diagnostics['detail']
 
 
 @pytest.mark.asyncio
@@ -193,7 +195,7 @@ def mock_media_server(tmp_path, monkeypatch):
     playlist=playlist.replace('list0.ts',f'https://{DEFAULT_HOST}/list0.ts?token=test%2Fvalue')
     (media/'list.m3u8').write_text(playlist)
     subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-i',str(source),'-c','copy',
-                    '-f','dash',str(media/'sample.mpd')],check=True,timeout=30)
+                    '-f','dash',str(media/'sample.mpd')],check=True,timeout=30,cwd=media)
     mpd=(media/'sample.mpd').read_text(); mpd=mpd.replace('<Period ',f'<BaseURL>https://{DEFAULT_HOST}/</BaseURL>\n\t<Period ',1)
     (media/'sample.mpd').write_text(mpd)
     class Handler(http.server.SimpleHTTPRequestHandler):

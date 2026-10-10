@@ -1,18 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Radio, WifiOff } from "lucide-react";
 import { api, type Channel, type PlatformStatus } from "../api/client";
 import { AddChannelForm } from "../components/dashboard/AddChannelForm";
 import { ChannelDownloadModal } from "../components/dashboard/ChannelDownloadModal";
 import { LiveDownloadCondition } from "../components/dashboard/LiveDownloadCondition";
-import { ChannelCard } from "../components/dashboard/ChannelCard";
-import { ChannelRow } from "../components/dashboard/ChannelRow";
+import { RecordingChannelCard } from "../components/dashboard/RecordingChannelCard";
 import { DashboardFilters, type StatusFilter, type ViewMode } from "../components/dashboard/DashboardFilters";
 import { useConfirm } from "../components/ui/ConfirmModal";
 import { Button, EmptyState, PageHeader } from "../components/ui/primitives";
 import { useToast } from "../components/ui/Toast";
 import { useChannelReorder } from "../hooks/useChannelReorder";
 import { useChannelStream } from "../hooks/useChannelStream";
-import { getChannelKey, getUnpairedCompactKeys } from "../utils/channel";
+import { getChannelKey } from "../utils/channel";
 import { getErrorMessage } from "../utils/error";
 import { useLanguage } from "../contexts/LanguageContext";
 
@@ -40,7 +39,16 @@ export default function Dashboard() {
     });
     const [globalTags, setGlobalTags] = useState<string[]>([]);
     const [selectedFilterTags, setSelectedFilterTags] = useState<string[]>([]);
-    const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [pendingActions, setPendingActions] = useState<Record<string, 'start' | 'stop' | 'remove'>>({});
+    const actionRequests = useRef(new Set<string>());
+    const autoRequests = useRef(new Set<string>());
+    const [autoLoading, setAutoLoading] = useState(new Set<string>());
+    const tagRequests = useRef(new Set<string>());
+    const [tagLoading, setTagLoading] = useState(new Set<string>());
+    const finishAction = (key: string) => {
+        actionRequests.current.delete(key);
+        setPendingActions(current => { const next = { ...current }; delete next[key]; return next; });
+    };
     const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
     const toast = useToast();
     const confirm = useConfirm();
@@ -55,59 +63,67 @@ export default function Dashboard() {
     }, []);
 
     const handleRemoveChannel = async (channel: Channel) => {
+        const key = getChannelKey(channel);
+        if (actionRequests.current.has(key)) return;
+        actionRequests.current.add(key);
         const displayName = channel.channel_name || channel.channel_id;
         const ok = await confirm({
             title: "채널 제거",
-            message: `'${displayName}' 채널을 감시 목록에서 제거할까요?`,
+            message: `'${displayName}' 채널을 감시 목록에서 제거할까요?${channel.recording?.is_recording ? '\n진행 중인 녹화도 중지됩니다.' : ''}\n저장된 녹화 파일은 삭제되지 않습니다.`,
             confirmText: "제거",
             variant: "danger",
         });
-        if (!ok) return;
+        if (!ok) { actionRequests.current.delete(key); return; }
+        setPendingActions(current => ({ ...current, [key]: 'remove' }));
         try {
             const platform = channel.platform || "chzzk";
             if (platform === "chzzk") await api.removeChannel(channel.channel_id);
             else await api.removePlatformChannel(platform, channel.channel_id);
             toast.success("채널이 제거되었습니다.");
-            fetchChannels();
+            await fetchChannels();
         } catch {
             toast.error("채널 제거에 실패했습니다.");
+        } finally {
+            finishAction(key);
         }
     };
 
     const handleStartRecord = async (channel: Channel) => {
-        if (actionLoading) return;
         const key = getChannelKey(channel);
-        setActionLoading(key);
+        if (actionRequests.current.has(key)) return;
+        actionRequests.current.add(key);
+        setPendingActions(current => ({ ...current, [key]: 'start' }));
         try {
             await api.startRecording(key);
             toast.success("녹화를 시작합니다.");
-            fetchChannels();
+            await fetchChannels();
         } catch (error) {
             toast.error(getErrorMessage(error, "녹화 시작에 실패했습니다."));
         } finally {
-            setActionLoading(null);
+            finishAction(key);
         }
     };
 
     const handleStopRecord = async (channel: Channel) => {
-        if (actionLoading) return;
+        const key = getChannelKey(channel);
+        if (actionRequests.current.has(key)) return;
+        actionRequests.current.add(key);
         const ok = await confirm({
             title: "녹화 중지",
             message: "현재 진행 중인 녹화를 중지할까요?",
             confirmText: "중지",
             variant: "danger",
         });
-        if (!ok) return;
-        const key = getChannelKey(channel);
-        setActionLoading(key);
+        if (!ok) { actionRequests.current.delete(key); return; }
+        setPendingActions(current => ({ ...current, [key]: 'stop' }));
         try {
             await api.stopRecording(key);
             toast.success("녹화가 중지되었습니다.");
-            fetchChannels();
+            await fetchChannels();
         } catch (error) {
             toast.error(getErrorMessage(error, "녹화 중지에 실패했습니다."));
         } finally {
-            setActionLoading(null);
+            finishAction(key);
         }
     };
 
@@ -139,33 +155,53 @@ export default function Dashboard() {
     };
 
     const handleToggleAutoRecord = async (channel: Channel) => {
+        const key = getChannelKey(channel);
+        if (autoRequests.current.has(key) || actionRequests.current.has(key)) return;
+        autoRequests.current.add(key);
+        setAutoLoading(new Set(autoRequests.current));
         try {
             const platform = channel.platform || "chzzk";
             if (platform === "chzzk") await api.toggleAutoRecord(channel.channel_id);
             else await api.togglePlatformAutoRecord(platform, channel.channel_id);
-            fetchChannels();
+            await fetchChannels();
         } catch {
             toast.error("자동 녹화 설정 변경에 실패했습니다.");
+        } finally {
+            autoRequests.current.delete(key);
+            setAutoLoading(new Set(autoRequests.current));
         }
     };
 
     const handleChannelAddTag = async (channel: Channel, tag: string) => {
+        const key = getChannelKey(channel);
         const tags = channel.tags || [];
-        if (tags.includes(tag)) return;
+        if (tags.includes(tag) || tagRequests.current.has(key)) return;
+        tagRequests.current.add(key);
+        setTagLoading(new Set(tagRequests.current));
         try {
             await api.updateChannelTags(getChannelKey(channel), [...tags, tag]);
-            fetchChannels();
+            await fetchChannels();
         } catch {
             toast.error("태그 추가 실패");
+        } finally {
+            tagRequests.current.delete(key);
+            setTagLoading(new Set(tagRequests.current));
         }
     };
 
     const handleChannelRemoveTag = async (channel: Channel, tag: string) => {
+        const key = getChannelKey(channel);
+        if (tagRequests.current.has(key)) return;
+        tagRequests.current.add(key);
+        setTagLoading(new Set(tagRequests.current));
         try {
             await api.updateChannelTags(getChannelKey(channel), (channel.tags || []).filter((item) => item !== tag));
-            fetchChannels();
+            await fetchChannels();
         } catch {
             toast.error("태그 제거 실패");
+        } finally {
+            tagRequests.current.delete(key);
+            setTagLoading(new Set(tagRequests.current));
         }
     };
 
@@ -213,7 +249,6 @@ export default function Dashboard() {
         if (filter === "offline" && channel.is_live) return false;
         return selectedFilterTags.length === 0 || selectedFilterTags.some((tag) => (channel.tags || []).includes(tag));
     });
-    const unpairedCompactKeys = getUnpairedCompactKeys(filteredChannels.map(getChannelKey), expandedChannelKeys);
 
     useEffect(() => {
         if (initialLoading) return;
@@ -243,8 +278,8 @@ export default function Dashboard() {
             if (next.has(key)) next.delete(key);
             else next.add(key);
             return next;
-        }), ...getReorderProps(key, filteredChannels.map(getChannelKey)), isActionLoading: actionLoading === key };
-        return viewMode === "grid" ? <ChannelCard key={key} {...props} isFullWidth={unpairedCompactKeys.has(key)} /> : <ChannelRow key={key} {...props} />;
+        }), ...getReorderProps(key, filteredChannels.map(getChannelKey)), isActionLoading: !!pendingActions[key], pendingAction: pendingActions[key], isAutoRecordLoading: autoLoading.has(key), isTagLoading: tagLoading.has(key) };
+        return <RecordingChannelCard key={key} {...props} mode={viewMode} />;
     };
 
     return (
@@ -295,8 +330,7 @@ export default function Dashboard() {
 
             {initialLoading ? <div className="space-y-2" aria-label={t("채널 정보를 불러오는 중")} aria-busy="true">{[1,2,3].map(item => <div key={item} className="flex items-center gap-3 border-b border-line py-3"><div className="skeleton size-8 rounded-full" /><div className="flex-1 space-y-2"><div className="skeleton h-3 w-1/3" /><div className="skeleton h-3 w-1/2" /></div></div>)}</div>
             : filteredChannels.length === 0 ? <EmptyState icon={Radio} title={channels.length === 0 ? "등록된 채널이 없습니다." : "필터 조건에 맞는 채널이 없습니다."} description={channels.length === 0 ? "채널을 추가하면 방송 상태를 확인하고 자동으로 녹화할 수 있습니다." : "상태 또는 태그 필터를 변경해 보세요."} action={channels.length > 0 ? <Button onClick={() => { setFilter("all"); setSelectedFilterTags([]); }}>필터 초기화</Button> : undefined} />
-            : viewMode === "grid" ? <div className="dashboard-channel-grid">{filteredChannels.map(renderChannel)}</div>
-            : <div className="min-w-0 space-y-2">{filteredChannels.map(renderChannel)}</div>}
+            : <div className={viewMode === 'grid' ? 'dashboard-channel-grid' : 'min-w-0 space-y-2'}>{filteredChannels.map(renderChannel)}</div>}
             {editingChannel && <ChannelDownloadModal
                 platform={editingChannel.platform || "chzzk"}
                 name={editingChannel.channel_name || editingChannel.channel_id}
