@@ -44,35 +44,8 @@ async def test_remove_channel_stops_pipeline_before_forgetting_it():
     assert 'chzzk:abc' not in conductor._channels
 
 
-@pytest.mark.asyncio
-async def test_shutdown_cleans_failed_pipeline_and_chat():
-    conductor = Conductor()
-    conductor.add_channel('abc')
-    task = conductor._channels['chzzk:abc']
-    task.pipeline = Mock(state=RecordingState.ERROR, stop_recording=AsyncMock())
-    task.chat_archiver = Mock(stop=AsyncMock())
-    task.pipeline.get_status.return_value = {}
-    pipe, chat = task.pipeline, task.chat_archiver
-    await conductor.stop()
-    pipe.stop_recording.assert_awaited_once()
-    chat.stop.assert_awaited_once()
 
 
-@pytest.mark.asyncio
-async def test_capture_clear_is_persisted(monkeypatch):
-    import app.main as main
-    from app.api.archive import router
-    conductor = Conductor()
-    from app.engine.base import Platform
-    conductor.add_channel('tester', platform=Platform.X_SPACES)
-    task = conductor._channels['x_spaces:tester']
-    task.captured_m3u8_url = 'https://example.test/list.m3u8'
-    conductor._save_capture_state('x_spaces:tester')
-    monkeypatch.setattr(main, 'get_recorder_service', lambda: SimpleNamespace(_conductor=conductor))
-    app = FastAPI(); app.include_router(router)
-    response = TestClient(app).delete('/api/archive/spaces/captured/x_spaces:tester')
-    assert response.status_code == 200
-    assert Conductor()._channels['x_spaces:tester'].captured_m3u8_url is None
 
 
 def test_youtube_composite_key_is_preserved():
@@ -101,25 +74,8 @@ def test_env_duplicate_key_update_survives_reload(tmp_path, monkeypatch):
     assert b'\r\n' in path.read_bytes()
 
 
-@pytest.mark.parametrize('filtered', [False, True])
-def test_chat_skips_non_object_json_and_partial_tail(tmp_path, filtered):
-    from app.api.chat import _read_messages
-    path = tmp_path / 'chat.jsonl'
-    path.write_bytes(b'null\n[]\n42\n{"nickname":null,"message":123}\n'
-                     b'{"nickname":"user","message":"hello"}\n'
-                     b'{"nickname":"user","message":"hello unfinished"}')
-    messages, total = _read_messages(path, 1, 100, 'hello' if filtered else None)
-    assert total == 1
-    assert [m['message'] for m in messages] == ['hello']
 
 
-def test_chat_file_download_rejects_non_chat_file(tmp_path):
-    from app.api.chat import _resolve_and_validate, _encode_file_id
-    from fastapi import HTTPException
-    get_settings().download_dir = str(tmp_path)
-    (tmp_path / 'private.txt').write_text('secret')
-    with pytest.raises(HTTPException):
-        _resolve_and_validate(_encode_file_id('private.txt'))
 
 
 def test_external_browser_cannot_access_local_api():
@@ -198,7 +154,6 @@ async def test_duplicate_live_start_keeps_one_pipeline(monkeypatch):
         pipeline.state = RecordingState.RECORDING
     pipeline.start_recording = AsyncMock(side_effect=start)
     monkeypatch.setattr(module, 'YtdlpLivePipeline', Mock(return_value=pipeline))
-    monkeypatch.setattr(conductor, '_start_chat_archiver', AsyncMock())
     await asyncio.gather(conductor._start_recording('chzzk:abc', is_retry=True), conductor._start_recording('chzzk:abc', is_retry=True))
     pipeline.start_recording.assert_awaited_once()
 
@@ -247,31 +202,6 @@ def test_same_origin_and_cli_requests_remain_allowed():
     assert client.get('/api/tags').json()['tags'] == []
 
 
-@pytest.mark.asyncio
-async def test_ffmpeg_stderr_is_drained_while_child_runs(tmp_path, monkeypatch):
-    from app.engine.pipeline import FFmpegPipeline
-    # 실제 subprocess가 파이프 버퍼보다 큰 출력을 써도 막히지 않아야 한다.
-    actual_exec = asyncio.create_subprocess_exec
-    processes = []
-    async def fake_ffmpeg(*args, **kwargs):
-        proc = await actual_exec(sys.executable, '-c', 'import sys; sys.stderr.write("x"*300000); sys.stderr.flush()', **kwargs)
-        processes.append(proc)
-        return proc
-    monkeypatch.setattr(asyncio, 'create_subprocess_exec', fake_ffmpeg)
-    monkeypatch.setattr('app.core.config.Settings.resolve_ffmpeg_path', lambda self: 'ffmpeg')
-    pipeline = FFmpegPipeline('stderr-test')
-    try:
-        await pipeline.start_recording('https://example.test/stream', output_dir=str(tmp_path), filename='test.ts')
-        await asyncio.wait_for(processes[0].wait(), timeout=3)
-        for _ in range(100):
-            if pipeline.state == RecordingState.COMPLETED:
-                break
-            await asyncio.sleep(0.01)
-        assert pipeline.state == RecordingState.COMPLETED
-    finally:
-        if processes and processes[0].returncode is None:
-            processes[0].kill()
-            await processes[0].communicate()
 
 
 def test_public_font_is_served_as_font_not_spa_html():
@@ -307,34 +237,6 @@ def test_env_multiline_value_updates_without_orphan_lines(tmp_path, monkeypatch)
     assert 'second' not in path.read_text()
 
 
-@pytest.mark.asyncio
-async def test_spaces_resolves_nested_segments_keys_and_unique_output(tmp_path, monkeypatch):
-    import httpx
-    engine = VodEngine()
-    task = VodDownloadTask(url='https://cdn.pscp.tv/root/master_playlist.m3u8', output_dir=str(tmp_path))
-    engine._tasks[task.task_id] = task
-    master = '#EXTM3U\nsub/audio.m3u8\n'
-    playlist = '#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI="key.bin"\n#EXTINF:1,\n../chunk.aac\n'
-    requests = []
-    async def get(url):
-        requests.append(url)
-        return httpx.Response(200, text=master if len(requests) == 1 else playlist, request=httpx.Request('GET', url))
-    client = Mock(get=AsyncMock(side_effect=get))
-    client.__aenter__ = AsyncMock(return_value=client); client.__aexit__ = AsyncMock()
-    monkeypatch.setattr(httpx, 'AsyncClient', Mock(return_value=client))
-    async def spawn(*cmd, **kwargs):
-        text = Path(cmd[cmd.index('-i') + 1]).read_text()
-        assert 'URI="https://cdn.pscp.tv/root/sub/key.bin"' in text
-        assert 'https://cdn.pscp.tv/root/chunk.aac' in text
-        assert task.task_id in cmd[-1]
-        Path(cmd[-1]).write_bytes(b'fake-audio')
-        return Mock(returncode=0, communicate=AsyncMock(return_value=(b'', b'')))
-    monkeypatch.setattr(asyncio, 'create_subprocess_exec', spawn)
-    monkeypatch.setattr('app.core.config.Settings.resolve_ffmpeg_path', lambda self: 'ffmpeg')
-    await engine._download_x_spaces_replay(task.task_id, task)
-    assert requests[1] == 'https://cdn.pscp.tv/root/sub/audio.m3u8'
-    assert task.state == VodDownloadState.COMPLETED
-    assert not list(tmp_path.glob('_tmp_*'))
 
 
 @pytest.mark.asyncio
@@ -349,9 +251,9 @@ async def test_cancel_during_stream_open_closes_late_reader(monkeypatch):
         release.wait(timeout=3)
         return fd
     session = Mock()
-    stream = Mock(open=Mock(side_effect=open_reader))
-    monkeypatch.setattr(pipeline, '_create_streamlink_stream', lambda *args: (session, stream))
-    opening = asyncio.create_task(pipeline._open_streamlink_reader('url', {}, None, 0, False, 'best'))
+    stream = Mock(open=Mock(side_effect=open_reader));stream.substreams=None
+    monkeypatch.setattr(pipeline, '_create_streamlink_stream', lambda *args,**kwargs: (session, stream))
+    opening = asyncio.create_task(pipeline._open_raw_readers('url', {}, None, 0, False, 'best'))
     assert await asyncio.to_thread(entered.wait, 2)
     opening.cancel()
     release.set()

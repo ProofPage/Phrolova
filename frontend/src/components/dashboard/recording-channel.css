@@ -1,5 +1,5 @@
 /* Shared data and actions; container width chooses presentation density. */
-.recording-channel { container: recording / inline-size; border: 1px solid var(--color-line); background: var(--color-surface-1); border-radius: var(--radius-card); min-width: 0; }
+.recording-channel { container: recording / inline-size; border: 1px solid var(--color-line); background: var(--color-surface-1); border-radius: var(--radius-card); min-width: 0; align-self: start; }
 .recording-channel-summary { display: grid; grid-template-columns: minmax(0,1fr) auto; grid-template-areas: "identity management" "controls controls" "metrics metrics"; align-items: start; gap: 12px; padding: 14px; }
 .recording-channel-identity { grid-area: identity; display: flex; align-items: start; gap: 10px; min-width: 0; }
 .recording-avatar { width: 38px; height: 38px; border-radius: 50%; flex: 0 0 38px; object-fit: cover; }
@@ -7,10 +7,6 @@
 .recording-channel-copy { min-width: 0; flex: 1; }
 .recording-channel-name { display: flex; gap: 7px; align-items: center; min-width: 0; }
 .recording-channel-name h3 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; line-height: 20px; font-weight: 650; color: var(--color-ink); }
-.recording-platform { flex-shrink: 0; font-size: 10px; line-height: 16px; border: 1px solid var(--color-line); padding: 0 4px; border-radius: 3px; }
-.recording-platform.platform-chzzk { color: var(--color-chzzk); }
-.recording-platform.platform-youtube { color: var(--color-youtube); }
-.recording-platform.platform-x_spaces { color: var(--color-ink-muted); }
 .recording-broadcast-title { font-size: 12px; line-height: 18px; color: var(--color-ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
 .recording-channel-meta { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 4px 6px; margin-top: 4px; font-size: 10px; line-height: 16px; color: var(--color-ink-faint); }
 .recording-viewers { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -41,18 +37,20 @@
 .recording-metrics dd.text-ok { color: var(--color-ok); }
 .recording-metrics.is-inactive dd { color: var(--color-ink-muted); }
 .recording-channel-notices { padding: 0 14px 12px; }
-.recording-chat { display: flex; align-items: center; gap: 5px; color: var(--color-info); font-size: 11px; }
 .recording-detail-disclosure[hidden] { display: none; }
-.recording-channel-details { border-top: 1px solid var(--color-line); padding: 14px; animation: recording-details-enter 120ms ease-out; }
-.recording-details-fields { display: grid; gap: 6px; font-size: 12px; line-height: 1.5; padding-bottom: 12px; }
+.recording-channel-details { display: grid; grid-template-columns: minmax(0,1fr); align-items: start; gap: 18px; border-top: 1px solid var(--color-line); padding: 14px; animation: recording-details-enter 120ms ease-out; }
+.recording-details-copy { min-width: 0; }
+.recording-details-fields { display: grid; gap: 10px; font-size: 12px; line-height: 1.5; }
 .recording-details-fields > div { display: grid; grid-template-columns: 90px minmax(0,1fr); gap: 8px; }
 .recording-details-fields dt { color: var(--color-ink-faint); }
-.recording-details-fields dd { color: var(--color-ink-muted); overflow-wrap: anywhere; }
+.recording-details-fields dd { min-width: 0; color: var(--color-ink-muted); overflow-wrap: anywhere; }
 .recording-details-fields a { color: var(--color-info); text-decoration: underline; text-underline-offset: 2px; }
-.recording-error { color: var(--color-danger); font-size: 12px; overflow-wrap: anywhere; margin-bottom: 12px; }
+.recording-error { color: var(--color-danger); font-size: 12px; overflow-wrap: anywhere; margin-top: 12px; }
 .recording-error summary { cursor: pointer; }
 @keyframes recording-details-enter { from { opacity: .5; } to { opacity: 1; } }
 @media (prefers-reduced-motion:reduce) { .recording-channel-details { animation: none; } }
+@container recording (min-width:820px) { .recording-channel-details { grid-template-columns: minmax(250px,1fr) minmax(0,2fr); } }
+@container recording (max-width:500px) { .recording-details-fields > div { grid-template-columns: 76px minmax(0,1fr); gap: 8px; } }
 @container recording (min-width:440px) { .recording-metrics { grid-template-columns: repeat(4,minmax(0,1fr)); } }
 @container recording (min-width:560px) {
   .recording-direct-actions { display: flex; }

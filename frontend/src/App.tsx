@@ -10,9 +10,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
 import Dashboard from "./pages/Dashboard";
 import VodDownload from "./pages/VodDownload";
-import ArchivePage from "./pages/Archive";
 import Settings from "./pages/Settings";
-import ChatLogs from "./pages/ChatLogs";
 import Stats from "./pages/Stats";
 import SystemLogs from "./pages/SystemLogs";
 import { Button } from "./components/ui/primitives";
@@ -84,8 +82,6 @@ const router = createBrowserRouter([
                 children: [
                     { index: true, element: <Dashboard /> },
                     { path: "vod", element: <VodDownload /> },
-                    { path: "archive", element: <ArchivePage /> },
-                    { path: "chat", element: <ChatLogs /> },
                     { path: "stats", element: <Stats /> },
                     { path: "settings", element: <Settings /> },
                     { path: "system-logs", element: <SystemLogs /> },

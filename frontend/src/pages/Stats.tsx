@@ -142,7 +142,7 @@ export default function Stats() {
                         <div className="stats-summary gap-0">
                             <MetricCard icon={Clock} label={t("완료된 라이브 녹화 시간")} value={formatDuration(live.total_duration_seconds, language)} detail={`${formatCount(live.total_sessions, language, "session")} · ${live.active_recordings} ${t("활성 녹화")}`} tone="ok" />
                             <MetricCard icon={Video} label={t("완료된 녹화 용량")} value={formatBytes(live.total_size_bytes)} detail={t("완료된 라이브 파일 합계")} tone="live" />
-                            <MetricCard icon={Download} label={t("영상 다운로드")} value={formatCount(vod.total_completed, language, "item")} detail={`${t("Chzzk")} ${vod.by_type.chzzk} · ${t("외부")} ${vod.by_type.external}`} tone="primary" />
+                            <MetricCard icon={Download} label={t("영상 다운로드")} value={formatCount(vod.total_completed, language, "item")} detail={`${t("치지직")} ${vod.by_type.chzzk} · ${t("외부")} ${vod.by_type.external}`} tone="primary" />
 
                         </div>
 

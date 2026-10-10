@@ -43,24 +43,6 @@ def extract_channel_id(channel_id: str) -> str:
 
 
 
-def extract_x_id(value: str) -> str:
-    """X URL 또는 순수 유저 ID에서 유저 ID만 추출한다.
-
-    지원 형식:
-        - https://x.com/someuser
-        - https://twitter.com/someuser
-        - @someuser (@핸들)
-        - someuser (순수 ID, 숫자 numeric ID도 그대로 통과)
-    """
-    value = value.strip().rstrip("/")
-    for domain in ("x.com/", "twitter.com/"):
-        if domain in value:
-            path = value.split(domain, 1)[1]
-            value = path.split("/")[0].split("?")[0]
-            break
-    # @핸들 처리
-    value = value.lstrip("@")
-    return value
 
 
 def extract_youtube_id(value: str) -> str:

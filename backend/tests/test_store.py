@@ -85,14 +85,8 @@ class TestChannelRepository:
         """재등록해도 캡처된 Master URL이 날아가면 안 된다."""
         repo = ChannelRepository(db)
         repo.upsert("x_spaces:user", "x_spaces", "user", auto_record=True)
-        repo.update_capture(
-            "x_spaces:user",
-            captured_m3u8_url="https://m3u8",
-            captured_m3u8_at="2026-01-01T00:00:00",
-            master_url="https://master",
-            master_url_captured_at="2026-01-01T00:00:00",
-            master_url_file="C:/urls/a.txt",
-        )
+        db.execute("UPDATE channels SET captured_m3u8_url=?,captured_m3u8_at=?,master_url=?,master_url_captured_at=?,master_url_file=? WHERE composite_key=?",
+                   ("https://m3u8","2026-01-01T00:00:00","https://master","2026-01-01T00:00:00","C:/urls/a.txt","x_spaces:user"))
 
         repo.upsert("x_spaces:user", "x_spaces", "user", auto_record=False)
 

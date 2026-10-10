@@ -17,7 +17,6 @@ from pydantic import Field
 
 from app.core.config import get_settings
 from app.core.utils import (
-    extract_x_id,
     extract_youtube_id,
     update_env_file as _update_env_file,
 )
@@ -26,13 +25,12 @@ from app.api.download_options import ChannelDownloadOptions
 
 router = APIRouter(prefix="/api/platforms", tags=["Platforms"])
 
-
 # ── 요청 스키마 ──────────────────────────────────────────
 
 class AddPlatformChannelRequest(ChannelDownloadOptions):
     """멀티 플랫폼 채널 추가 요청."""
 
-    platform: str = Field(..., description="플랫폼 (chzzk, x_spaces, youtube)")
+    platform: str = Field(..., description="플랫폼 (chzzk, youtube, soop, cime)")
     channel_id: str = Field(..., description="채널 ID (플랫폼별 사용자 ID)")
     auto_record: bool = Field(True, description="방송 시작 시 자동 녹화 여부")
 
@@ -51,15 +49,20 @@ async def add_platform_channel(req: AddPlatformChannelRequest):
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail=f"지원하지 않는 플랫폼: '{req.platform}'. 사용 가능: chzzk, x_spaces, youtube",
+            detail="지원하지 않는 플랫폼입니다. 사용 가능: chzzk, youtube, soop, cime",
         )
 
     # URL로 입력해도 ID만 추출
     channel_id = req.channel_id
-    if platform == Platform.X_SPACES:
-        channel_id = extract_x_id(channel_id)
-    elif platform == Platform.YOUTUBE:
+    if platform == Platform.YOUTUBE:
         channel_id = extract_youtube_id(channel_id)
+    elif platform in (Platform.SOOP, Platform.CIME):
+        from app.engine.soop import normalize_soop_channel_id
+        from app.engine.cime import normalize_cime_channel_id
+        try:
+            channel_id = (normalize_soop_channel_id if platform == Platform.SOOP else normalize_cime_channel_id)(channel_id)
+        except ValueError as error:
+            raise HTTPException(400, str(error)) from None
 
     service = get_recorder_service()
     if platform != Platform.CHZZK and req.download_condition is not None:
@@ -70,6 +73,8 @@ async def add_platform_channel(req: AddPlatformChannelRequest):
         auto_record=req.auto_record,
         download_condition=req.download_condition,
         watchalong_tags=req.watchalong_tags,
+        **({'recording_quality': req.recording_quality} if req.recording_quality is not None else {}),
+            **({'output_format':req.output_format,'output_format_provided':True} if 'output_format' in req.model_fields_set else {}),
     )
 
 
@@ -110,6 +115,8 @@ async def update_download_options(platform: str, channel_id: str, req: ChannelDo
         get_recorder_service().set_download_options(
             f"{platform_enum.value}:{channel_id}", req.auto_record,
             req.download_condition, req.watchalong_tags,
+            **({'recording_quality': req.recording_quality} if req.recording_quality is not None else {}),
+            **({'output_format':req.output_format,'output_format_provided':True} if 'output_format' in req.model_fields_set else {}),
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -153,15 +160,12 @@ async def get_platform_status():
             "enabled": True,
             "authenticated": bool(settings.nid_aut and settings.nid_ses),
         },
-        "x_spaces": {
-            "enabled": True,
-            "authenticated": bool(settings.x_cookie_file),
-            "cookie_file_set": bool(settings.x_cookie_file),
-        },
         "youtube": {
             "enabled": True,
             "authenticated": True,
         },
+        "soop": {"enabled": True, "authenticated": bool(settings.soop_cookie_file)},
+        "cime": {"enabled": True, "authenticated": bool(settings.cime_cookie_file)},
     }
 
 
@@ -171,35 +175,13 @@ async def get_platform_status():
 
 import sys as _sys
 if getattr(_sys, "frozen", False):
-    _COOKIE_SAVE_PATH = Path(_sys.executable).parent / "data" / "x_cookies.txt"
+    _COOKIE_SAVE_PATH = Path(_sys.executable).parent / "data" / "platform_cookies.txt"
 else:
-    _COOKIE_SAVE_PATH = Path(__file__).resolve().parents[2] / "data" / "x_cookies.txt"
+    _COOKIE_SAVE_PATH = Path(__file__).resolve().parents[2] / "data" / "platform_cookies.txt"
 
 
-@router.post("/x/cookie", summary="X Spaces 쿠키 파일 업로드")
-async def upload_x_cookie(file: UploadFile = File(...)):
-    """Netscape 형식 쿠키 파일을 업로드하여 서버에 저장합니다."""
-    save_path = _COOKIE_SAVE_PATH
-    save_path.parent.mkdir(parents=True, exist_ok=True)
-
-    content = await file.read()
-    save_path.write_bytes(content)
-
-    _update_env_file({"X_COOKIE_FILE": str(save_path)})
-    get_settings.cache_clear()
-    return {"message": "쿠키 파일 업로드 완료.", "path": str(save_path)}
 
 
-@router.delete("/x/cookie", summary="X Spaces 쿠키 파일 삭제")
-async def delete_x_cookie():
-    """저장된 쿠키 파일을 삭제하고 설정을 초기화합니다."""
-    save_path = _COOKIE_SAVE_PATH
-    if save_path.exists():
-        save_path.unlink()
-
-    _update_env_file({"X_COOKIE_FILE": ""})
-    get_settings.cache_clear()
-    return {"message": "쿠키 파일 삭제 완료."}
 
 
 @router.get("/youtube/cookie")
@@ -258,3 +240,59 @@ async def delete_youtube_cookie():
     _update_env_file({"YOUTUBE_COOKIE_FILE": ""})
     get_settings.cache_clear()
     return {"configured": False}
+
+@router.get('/{platform}/{channel_id}/qualities', summary='현재 라이브 화질 조회')
+async def platform_qualities(platform: str, channel_id: str):
+    from app.main import get_recorder_service
+    if platform not in ('soop', 'cime'):
+        raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    try:
+        engine = get_recorder_service()._conductor._get_engine(Platform(platform))
+        status = await engine.check_live_status(channel_id)
+        if not status['is_live']:
+            return {'qualities': [], 'live': False, 'message': '방송 중일 때 이용 가능한 화질을 확인할 수 있습니다.'}
+        return {'qualities': await engine.get_qualities(channel_id), 'live': True}
+    except Exception as error:
+        from app.engine.platform_auth import redact_media_error
+        raise HTTPException(502, redact_media_error(error)) from None
+
+@router.get('/{platform}/cookie', summary='플랫폼 쿠키 파일 상태')
+async def platform_cookie_status_api(platform: str):
+    from app.engine.platform_auth import platform_cookie_status
+    if platform not in ('soop', 'cime'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    return platform_cookie_status(platform)
+
+@router.post('/{platform}/cookie', summary='플랫폼 쿠키 파일 등록')
+async def platform_cookie_upload(platform: str, file: UploadFile = File(...)):
+    import tempfile
+    import os
+    from app.engine.platform_auth import read_cookie_jar
+    if platform not in ('soop', 'cime'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    content = await file.read(1024 * 1024 + 1)
+    if len(content) > 1024 * 1024: raise HTTPException(400, '쿠키 파일은 1MB 이하여야 합니다.')
+    destination = _COOKIE_SAVE_PATH.with_name(f'{platform}_cookies.txt')
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=destination.parent) as directory:
+        temporary = Path(directory) / 'cookies.txt'
+        temporary.write_bytes(content)
+        try:
+            jar = read_cookie_jar(temporary, platform, include_expired=True)
+            if not len(jar): raise ValueError
+            jar.save(str(temporary), ignore_discard=True, ignore_expires=True)
+        except (OSError, UnicodeError, ValueError):
+            raise HTTPException(400, '해당 플랫폼의 Netscape 형식 쿠키 파일을 선택하세요.') from None
+        os.chmod(temporary, 0o600)
+        temporary.replace(destination)
+    _update_env_file({f'{platform.upper()}_COOKIE_FILE': str(destination)})
+    get_settings.cache_clear()
+    setattr(get_settings(), f'{platform}_cookie_file', str(destination))
+    return await platform_cookie_status_api(platform)
+
+@router.delete('/{platform}/cookie', summary='플랫폼 쿠키 파일 제거')
+async def platform_cookie_delete(platform: str):
+    if platform not in ('soop', 'cime'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    _COOKIE_SAVE_PATH.with_name(f'{platform}_cookies.txt').unlink(missing_ok=True)
+    _update_env_file({f'{platform.upper()}_COOKIE_FILE': ''})
+    get_settings.cache_clear()
+    setattr(get_settings(), f'{platform}_cookie_file', None)
+    return {'configured': False, 'valid': False, 'expired': False, 'message': '쿠키 파일을 제거했습니다.'}

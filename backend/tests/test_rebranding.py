@@ -2,6 +2,7 @@
 import os
 import sqlite3
 import subprocess
+import shutil
 from pathlib import Path
 
 import pytest
@@ -73,6 +74,7 @@ def shell(tmp_path, body):
     return result.stdout
 
 
+@pytest.mark.skipif(shutil.which("bash") is None,reason="Bash unavailable on this Windows host")
 def test_install_dir_priority_and_legacy(tmp_path):
     (tmp_path / 'rookery/.git').mkdir(parents=True)
     # The sourced script lives outside a repository so path resolution is isolated.
@@ -86,6 +88,7 @@ INSTALL_DIR="$HOME/custom"; resolve_install_dir
     shell(tmp_path, 'unset INSTALL_DIR; resolve_install_dir; [ "$INSTALL_DIR" = "$HOME/Phrolova" ]')
 
 
+@pytest.mark.skipif(shutil.which("bash") is None,reason="Bash unavailable on this Windows host")
 def test_command_links_safe_transition(tmp_path):
     shell(tmp_path, '''
 SYSTEM_BINDIR="$HOME/bin"; USER_BINDIR="$HOME/userbin"; INSTALL_DIR="$HOME/install"
@@ -101,6 +104,7 @@ remove_legacy_commands
 
 
 @pytest.mark.parametrize('failure', [False, True])
+@pytest.mark.skipif(shutil.which("bash") is None,reason="Bash unavailable on this Windows host")
 def test_service_transition_and_rollback(tmp_path, failure):
     shell(tmp_path, '''
 INSTALL_DIR="$HOME/install"; SYSTEMD_RUNTIME_DIR="$HOME/runtime"; SYSTEMD_UNIT_DIR="$HOME/units"
@@ -139,6 +143,7 @@ grep -q 'Description=Phrolova - Live Stream Recorder' "$SYSTEMD_UNIT_DIR/phrolov
 ''')
 
 
+@pytest.mark.skipif(shutil.which("bash") is None,reason="Bash unavailable on this Windows host")
 def test_management_commands_and_update_restart(tmp_path):
     shell(tmp_path, '''
 INSTALL_DIR="$HOME/install"; SYSTEMD_UNIT_DIR="$HOME/units"; SUDO=""

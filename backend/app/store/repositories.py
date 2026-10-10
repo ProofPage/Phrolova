@@ -26,47 +26,6 @@ def _loads(raw: Any, default: Any) -> Any:
         return default
 
 
-class ChatIndexRepository:
-    """채팅 로그 파일의 줄 수·바이트 오프셋 인덱스.
-
-    JSONL 원본에서 언제든 다시 만들 수 있는 파생 데이터다. 행이 사라지거나
-    파일과 어긋나면 그 파일만 다시 훑으면 되므로 정확성에 영향이 없다.
-    """
-
-    def __init__(self, db: Optional[Database] = None) -> None:
-        self._db = db or get_database()
-
-    def get(self, path: str) -> Optional[dict]:
-        row = self._db.query_one(
-            "SELECT message_count, offsets, scanned_bytes FROM chat_file_index WHERE path = ?",
-            (path,),
-        )
-        if row is None:
-            return None
-        return {
-            "message_count": row["message_count"],
-            "offsets": _loads(row["offsets"], []),
-            "scanned_bytes": row["scanned_bytes"],
-        }
-
-    def save(
-        self,
-        path: str,
-        message_count: int,
-        offsets: list[int],
-        scanned_bytes: int,
-    ) -> None:
-        self._db.execute(
-            """
-            INSERT INTO chat_file_index (path, message_count, offsets, scanned_bytes)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(path) DO UPDATE SET
-                message_count = excluded.message_count,
-                offsets       = excluded.offsets,
-                scanned_bytes = excluded.scanned_bytes
-            """,
-            (path, message_count, json.dumps(offsets), scanned_bytes),
-        )
 
 
 class ChannelRepository:
@@ -129,6 +88,9 @@ class ChannelRepository:
             (1 if value else 0, composite_key),
         )
 
+    def set_recording_quality(self, composite_key: str, quality: str) -> None:
+        self._db.execute("UPDATE channels SET recording_quality = ? WHERE composite_key = ?", (quality, composite_key))
+
     def set_tags(self, composite_key: str, tags: list[str]) -> None:
         self._db.execute(
             "UPDATE channels SET tags = ? WHERE composite_key = ?",
@@ -158,35 +120,6 @@ class ChannelRepository:
                 changed += 1
         return changed
 
-    def update_capture(
-        self,
-        composite_key: str,
-        captured_m3u8_url: Optional[str],
-        captured_m3u8_at: Optional[str],
-        master_url: Optional[str],
-        master_url_captured_at: Optional[str],
-        master_url_file: Optional[str],
-    ) -> None:
-        """X Spaces 캡처 정보를 갱신한다 (Space 종료 시 None으로 초기화)."""
-        self._db.execute(
-            """
-            UPDATE channels SET
-                captured_m3u8_url      = ?,
-                captured_m3u8_at       = ?,
-                master_url             = ?,
-                master_url_captured_at = ?,
-                master_url_file        = ?
-            WHERE composite_key = ?
-            """,
-            (
-                captured_m3u8_url,
-                captured_m3u8_at,
-                master_url,
-                master_url_captured_at,
-                master_url_file,
-                composite_key,
-            ),
-        )
 
     @staticmethod
     def _to_dict(row) -> dict:
@@ -197,6 +130,8 @@ class ChannelRepository:
             "auto_record": bool(row["auto_record"]),
             "download_condition": row["download_condition"],
             "watchalong_tags": row["watchalong_tags"],
+            "recording_quality": row["recording_quality"],
+            "output_format": row["output_format"],
             "tags": _loads(row["tags"], []),
             "captured_m3u8_url": row["captured_m3u8_url"],
             "captured_m3u8_at": row["captured_m3u8_at"],

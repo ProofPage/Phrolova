@@ -191,7 +191,7 @@ class Settings(BaseSettings):
         return 0
 
     # ── 녹화 포맷/품질 ─────────────────────────────────────
-    live_format: str = "ts"            # 라이브 녹화 포맷: ts(권장), mkv, mp4
+    live_format: str = "mp4"           # 종료 후 저장 형식; 명시된 기존 TS 설정은 유지
     vod_filename_template: str = "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}"
 
     @field_validator("vod_filename_template")
@@ -209,13 +209,11 @@ class Settings(BaseSettings):
     vod_default_quality: str = "best"  # 기본 화질: best, 1080p, 720p, 480p
     vod_max_speed: int = 0             # 최대 다운로드 속도 (MB/s, 0 = 무제한)
 
-    # ── 채팅 아카이빙 ────────────────────────────────────
-    chat_archive_enabled: bool = False  # 녹화 시 채팅 자동 아카이빙 여부
 
     youtube_cookie_file: Optional[str] = None
+    soop_cookie_file: Optional[str] = None
+    cime_cookie_file: Optional[str] = None
 
-    # ── X Spaces 인증 ────────────────────────────────────
-    x_cookie_file: Optional[str] = None  # Netscape 형식 쿠키 파일 경로
 
     def resolve_ytdlp_path(self, auto_download: bool = False) -> str:
         """yt-dlp 실행 파일 경로를 탐색 순서에 따라 결정한다.

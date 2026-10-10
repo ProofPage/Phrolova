@@ -100,10 +100,10 @@ class TestPayloadLimits:
 
     def test_long_field_is_split_not_dropped(self):
         """Master URL처럼 긴 값은 잘리지 않고 여러 필드로 나뉘어야 한다."""
-        long_url = "https://prod-fastly.video.pscp.tv/" + ("x" * 3000)
+        long_url = "https://cdn.example.com/" + ("x" * 3000)
         note = Notification(
-            kind=NotificationKind.SPACE_DETECTED,
-            title="🎙️ X Spaces 감지",
+            kind=NotificationKind.LIVE_DETECTED,
+            title="방송 시작 감지",
             fields={"Master URL": long_url},
         )
 

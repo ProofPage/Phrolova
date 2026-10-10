@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useMemo, useRef } from "react";
 import { CheckCircle, AlertCircle, AlertTriangle, X } from "lucide-react";
 import { clsx } from "clsx";
+import { localizePlatformNames } from '../../utils/platformNames';
 
 // ── Types ────────────────────────────────────
 
@@ -74,6 +75,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
     const addToast = useCallback(
         (type: ToastType, message: string) => {
+            message = localizePlatformNames(message);
             const id = `toast-${++counterRef.current}`;
             setToasts((prev) => [...prev, { id, type, message }]);
 

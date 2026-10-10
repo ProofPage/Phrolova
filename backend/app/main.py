@@ -32,13 +32,12 @@ from app.version import __version__
 
 # API Routers
 from app.api.stream import router as stream_router
+from app.api.recordings import router as recordings_router
 from app.api.vod import router as vod_router
 from app.api.settings import router as settings_router
-from app.api.chat import router as chat_router
 from app.api.stats import router as stats_router
 from app.api.setup import router as setup_router
 from app.api.platforms import router as platforms_router
-from app.api.archive import router as archive_router
 from app.api.tags import router as tags_router
 from app.api.events import router as events_router
 from app.api.system import router as system_router
@@ -233,12 +232,11 @@ async def reject_untrusted_origin(request: Request, call_next):
 # ── 라우터 등록 ──────────────────────────────────────────
 app.include_router(stream_router)
 app.include_router(vod_router)
+app.include_router(recordings_router)
 app.include_router(settings_router)
-app.include_router(chat_router)
 app.include_router(stats_router)
 app.include_router(setup_router)
 app.include_router(platforms_router)
-app.include_router(archive_router)
 app.include_router(tags_router)
 app.include_router(events_router)
 app.include_router(system_router)

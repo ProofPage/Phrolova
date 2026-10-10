@@ -43,7 +43,7 @@ class SetupCompleteRequest(BaseModel):
     download_dir: Optional[str] = Field(None, description="구버전 호환용 기본 저장 경로")
     live_download_dir: Optional[str] = Field(None, description="라이브 녹화 저장 경로")
     vod_download_dir: Optional[str] = Field(None, description="다시보기/VOD 저장 경로")
-    live_format: str = Field("ts", description="라이브 녹화 포맷 (ts, mp4, mkv)")
+    live_format: str = Field("mp4", description="녹화 종료 후 저장 형식 (mp4, mkv; 기존 ts 호환)")
     recording_quality: str = Field("best", description="녹화 품질 (best, 1080p, 720p, 480p)")
 
     # Step 2: 치지직 인증 (선택)

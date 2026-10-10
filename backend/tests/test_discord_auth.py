@@ -139,7 +139,7 @@ class TestBotWiring:
 
         # 상태 변경 명령어가 실제로 등록되어 있는지 확인
         slash_names = {c.name for c in bot.tree.get_commands()}
-        for name in ("start", "stop", "rescan", "download-space", "capture-space"):
+        for name in ("start", "stop", "rescan"):
             assert name in slash_names
 
     @pytest.mark.asyncio

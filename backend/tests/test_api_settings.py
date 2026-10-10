@@ -38,7 +38,6 @@ class TestSettingsAPI:
         assert "vod_max_concurrent" in data
         assert "vod_default_quality" in data
         assert "vod_max_speed" in data
-        assert "chat_archive_enabled" in data
         assert "discord_notification_channel_id" in data or data.get("discord_notification_channel_id") is None
 
     def test_update_cookies(self):
@@ -99,17 +98,6 @@ class TestSettingsAPI:
         data = response.json()
         assert "message" in data
 
-    def test_update_chat_settings(self):
-        """채팅 설정 업데이트"""
-        payload = {
-            "chat_archive_enabled": True,
-        }
-
-        response = client.put("/api/settings/chat", json=payload)
-
-        assert response.status_code == 200
-        data = response.json()
-        assert "message" in data
 
     def test_update_discord_settings(self):
         """Discord 설정 업데이트"""

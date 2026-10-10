@@ -56,7 +56,7 @@ export function GeneralTab({ settings, onSaved, onDirtyChange }: Props) {
 
             <Field
                 label={t("라이브 저장 위치")}
-                hint={t("라이브 녹화 파일과 해당 방송의 채팅 로그가 저장됩니다.")}
+                hint={t("라이브 녹화 파일이 저장됩니다.")}
             >
                 <DirInput value={liveDownloadDir} onChange={setLiveDownloadDir} placeholder="예: E:\\recordings\\Live" />
             </Field>

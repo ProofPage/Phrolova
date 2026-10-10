@@ -36,12 +36,13 @@ class RecorderService:
 
     # ── 채널 관리 ────────────────────────────────────────
 
-    def add_channel(self, channel_id: str, auto_record: bool = True) -> dict:
+    def add_channel(self, channel_id: str, auto_record: bool = True, output_format: Optional[str] = None, output_format_provided: bool = False) -> dict:
         """Chzzk 감시 채널을 추가한다 (하위 호환용)."""
         return self.add_platform_channel(
             channel_id=channel_id,
             platform=Platform.CHZZK,
             auto_record=auto_record,
+            **({'output_format':output_format,'output_format_provided':True} if output_format_provided else {}),
         )
 
     def add_platform_channel(
@@ -51,11 +52,15 @@ class RecorderService:
         auto_record: bool = True,
         download_condition: Optional[str] = None,
         watchalong_tags: Optional[str] = None,
+        recording_quality: Optional[str] = None,
+        output_format: Optional[str] = None, output_format_provided: bool = False,
     ) -> dict:
         """멀티 플랫폼 감시 채널을 추가한다."""
         self._conductor.add_channel(
             channel_id, auto_record=auto_record, platform=platform,
             download_condition=download_condition, watchalong_tags=watchalong_tags,
+            **({'recording_quality': recording_quality} if recording_quality is not None else {}),
+            **({'output_format':output_format,'output_format_provided':True} if output_format_provided else {}),
         )
         composite_key = self._conductor.make_composite_key(platform, channel_id)
         return {
@@ -102,8 +107,8 @@ class RecorderService:
         """채널 폴링 주기를 무시하고 즉시 스캔을 트리거한다."""
         self._conductor.trigger_scan_now(composite_key)
 
-    def set_download_options(self, composite_key: str, auto_record: bool, condition: Optional[str], tags: Optional[str]) -> None:
-        self._conductor.set_download_options(composite_key, auto_record, condition, tags)
+    def set_download_options(self, composite_key: str, auto_record: bool, condition: Optional[str], tags: Optional[str], recording_quality: Optional[str] = None, output_format: Optional[str] = None, output_format_provided: bool = False) -> None:
+        self._conductor.set_download_options(composite_key, auto_record, condition, tags, **({'recording_quality': recording_quality} if recording_quality is not None else {}), **({'output_format':output_format,'output_format_provided':True} if output_format_provided else {}))
 
     def set_channel_tags(self, composite_key: str, tags: list[str]) -> None:
         """특정 채널의 태그를 변경한다."""
@@ -157,11 +162,11 @@ class RecorderService:
 
     async def stop_monitoring(self) -> dict:
         """모든 감시 및 녹화를 중지한다."""
-        await self._conductor.stop()
+        await self._conductor.stop(close_finalizer=False)
         return {"message": "Conductor 종료."}
 
-    def prepare_vods(self, urls: list[str]) -> dict:
-        return self._vod_engine.prepare_vods(urls)
+    def prepare_vods(self, urls: list[str], source: str = 'chzzk') -> dict:
+        return self._vod_engine.prepare_vods(urls, source=source)
 
     def start_prepared_batch(self, task_ids: Optional[list[str]] = None) -> dict:
         return self._vod_engine.start_prepared_batch(task_ids)
@@ -184,13 +189,7 @@ class RecorderService:
         """VOD 메타데이터를 조회한다."""
         return await self._vod_engine.get_video_info(url)
 
-    async def capture_space(self, username: str) -> dict:
-        """Twitter Spaces m3u8 URL을 즉시 1회 조회한다."""
-        return await self._conductor.capture_space(username)
 
-    async def download_space(self, space_url: str) -> dict:
-        """Space URL로 직접 다운로드한다 (채널 등록 불필요)."""
-        return await self._conductor.download_space(space_url)
 
     async def download_vod(
         self,

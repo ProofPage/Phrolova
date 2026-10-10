@@ -80,7 +80,7 @@ function StepIndicator({ current, total }: { current: Step; total: number }) {
 
 function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormData, v: string) => void }) {
     const qualities = ["best", "1080p", "720p", "480p"];
-    const formats = ["ts", "mp4", "mkv"];
+    const formats = ["mp4", "mkv"];
 
     return (
         <div className="space-y-6 max-sm:space-y-4">
@@ -97,7 +97,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                     placeholder="예: C:\\Recordings\\Live 또는 /home/user/recordings/live"
                 />
                 <p className="text-xs text-ink-faint mt-1.5 flex items-start gap-1">
-                    라이브 녹화와 채팅 로그를 저장합니다. 폴더가 없으면 자동으로 만듭니다.
+                    라이브 녹화 파일을 저장합니다. 폴더가 없으면 자동으로 만듭니다.
                 </p>
             </div>
 
@@ -114,7 +114,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                     placeholder="예: C:\\Recordings\\Video 또는 /home/user/recordings/video"
                 />
                 <p className="text-xs text-ink-faint mt-1.5 flex items-start gap-1">
-                    Chzzk 다시보기·클립, YouTube와 외부 영상이 이곳에 저장됩니다.
+                    치지직 다시보기·클립, 유튜브와 외부 영상이 이곳에 저장됩니다.
                 </p>
             </div>
 
@@ -141,7 +141,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
 
             {/* 파일 형식 */}
             <div>
-                <label className="block text-sm font-medium text-ink-muted mb-2">라이브 녹화 파일 형식</label>
+                <label className="block text-sm font-medium text-ink-muted mb-2">녹화 완료 후 저장 형식</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {formats.map((f) => (
                         <button
@@ -159,7 +159,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                     ))}
                 </div>
                 <p className="text-xs text-ink-faint mt-1.5">
-                    TS는 녹화가 중단되어도 파일을 재생할 수 있어 라이브 녹화에 적합합니다.
+                    Streamlink로 TS를 저장하고, 녹화 종료 후 선택한 형식으로 변환합니다.
                 </p>
             </div>
         </div>
@@ -173,7 +173,7 @@ function Step2({ data }: { data: FormData }) {
         { label: "라이브 저장 위치", value: data.live_download_dir || "(미설정)" },
         { label: "영상 저장 위치", value: data.vod_download_dir || "(미설정)" },
         { label: "라이브 녹화 화질", value: data.recording_quality },
-        { label: "라이브 녹화 파일 형식", value: `.${data.output_format.toUpperCase()}` },
+        { label: "녹화 완료 후 저장 형식", value: `.${data.output_format.toUpperCase()}` },
     ];
 
     return (
@@ -208,7 +208,7 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
     const [data, setData] = useState<FormData>(() => ({
         live_download_dir: defaultDirectories.live_download_dir,
         vod_download_dir: defaultDirectories.vod_download_dir,
-        output_format: "ts",
+        output_format: "mp4",
         recording_quality: "best",
     }));
 

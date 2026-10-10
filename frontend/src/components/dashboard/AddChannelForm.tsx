@@ -1,16 +1,19 @@
 import { useListboxPosition } from "../../hooks/useListboxPosition";
 import { useListboxKeyboard } from "../../hooks/useListboxKeyboard";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { ChevronDown, Lock, Plus } from "lucide-react";
 import { api, PLATFORM_LABELS, type ChannelDownloadOptions, type Platform, type PlatformStatus } from "../../api/client";
 import { ChannelDownloadModal } from "./ChannelDownloadModal";
 import { useToast } from "../ui/Toast";
 import { Button, Input } from "../ui/primitives";
+import { CHZZK_CHANNEL_INPUT_ERROR } from "../../utils/chzzkChannel";
+import { parsePlatformChannelInput } from "../../utils/platformChannels";
 
 const PLATFORM_DOT_STYLES: Record<Platform, string> = {
     chzzk: "bg-chzzk",
-    x_spaces: "bg-xspaces",
     youtube: "bg-youtube",
+    soop: "bg-soop",
+    cime: "bg-cime",
 };
 
 interface Props {
@@ -26,6 +29,10 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
     const dropdownRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [inputError, setInputError] = useState<string | null>(null);
+    const inputId = useId();
+    const normalizedChannelId = parsePlatformChannelInput(selectedPlatform, channelId);
+    const validationError = selectedPlatform === 'chzzk' ? CHZZK_CHANNEL_INPUT_ERROR : `올바른 ${PLATFORM_LABELS[selectedPlatform]} 채널 ID 또는 채널 링크를 입력하세요.`;
 
     useEffect(() => {
         if (!dropdownOpen) return;
@@ -39,9 +46,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
     }, [dropdownOpen]);
 
     const isPlatformEnabled = (platform: Platform): boolean => {
-        if (platform === "chzzk" || platform === "youtube") return true;
-        if (!platformStatus) return false;
-        return platformStatus.x_spaces.authenticated;
+        return platformStatus?.[platform]?.enabled ?? true;
     };
 
     const sortedPlatforms = (Object.keys(PLATFORM_LABELS) as Platform[])
@@ -53,17 +58,26 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
     const handleSubmit = (event: FormEvent) => {
         event.preventDefault();
         if (!channelId.trim()) return;
+        if (!normalizedChannelId) {
+            setInputError(validationError);
+            return;
+        }
+        setInputError(null);
         setDropdownOpen(false);
         setSettingsOpen(true);
     };
 
     const handleAdd = async (options: ChannelDownloadOptions) => {
+        if (!normalizedChannelId) {
+            setInputError(validationError);
+            throw new Error(validationError);
+        }
         setLoading(true);
         try {
             if (selectedPlatform === "chzzk") {
-                await api.addChannel(channelId.trim(), options.auto_record, options);
+                await api.addChannel(normalizedChannelId!, options.auto_record, options);
             } else {
-                await api.addPlatformChannel(selectedPlatform, channelId.trim(), options.auto_record);
+                await api.addPlatformChannel(selectedPlatform, normalizedChannelId, options.auto_record, options);
             }
             setChannelId("");
             toast.success("채널이 추가되었습니다.");
@@ -73,9 +87,10 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
         }
     };
 
-    const placeholder = selectedPlatform === "chzzk" ? "Chzzk 채널 ID"
+    const placeholder = selectedPlatform === "chzzk" ? "치지직 채널 ID 또는 https://chzzk.naver.com/..."
         : selectedPlatform === "youtube" ? "핸들(@username) 또는 채널 ID"
-        : selectedPlatform === "x_spaces" ? "X 유저네임 입력"
+        : selectedPlatform === "soop" ? "숲 채널 ID 또는 https://play.sooplive.com/..."
+        : selectedPlatform === "cime" ? "씨미 채널 ID 또는 https://ci.me/@..."
         : "채널 ID";
 
     return (
@@ -109,6 +124,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
                                     disabled={!enabled}
                                     onClick={() => {
                                         setSelectedPlatform(platform);
+                                        setInputError(null);
                                         setDropdownOpen(false);
                                     }}
                                     className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${enabled ? "text-ink-muted hover:bg-surface-3" : "text-ink-faint opacity-50 cursor-not-allowed"}`}
@@ -124,15 +140,16 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
             </div>
 
             <div className="flex min-w-0 gap-2 sm:flex-1">
-            <Input value={channelId} onChange={(event) => setChannelId(event.target.value)} aria-label={`${PLATFORM_LABELS[selectedPlatform]} 채널 ID`} placeholder={placeholder} className="min-w-0 flex-1" />
+            <Input id={inputId} value={channelId} onChange={(event) => { setChannelId(event.target.value); setInputError(null); }} disabled={loading || settingsOpen} aria-label={['chzzk', 'soop', 'cime'].includes(selectedPlatform) ? `${PLATFORM_LABELS[selectedPlatform]} 채널 ID 또는 채널 링크` : `${PLATFORM_LABELS[selectedPlatform]} 채널 ID`} aria-invalid={!!inputError} aria-describedby={inputError ? `${inputId}-error` : undefined} placeholder={placeholder} className="min-w-0 flex-1" />
                     <Button type="submit" variant="primary" icon={Plus} loading={loading} disabled={!channelId.trim()} aria-label="채널 추가 설정 열기" title="채널 추가 설정 열기" className="shrink-0 px-3 sm:px-4">
                 채널 추가
             </Button>
             </div>
+            {inputError && <p id={`${inputId}-error`} role="alert" className="text-xs text-danger">{inputError}</p>}
             </div>
             <p className="text-[11px] text-ink-faint leading-relaxed">채널을 추가한 뒤 자동 녹화 여부와 조건을 선택할 수 있습니다.</p>
         </form>
-        {settingsOpen && <ChannelDownloadModal platform={selectedPlatform} name={channelId.trim()} onClose={() => setSettingsOpen(false)} onSave={handleAdd} />}
+        {settingsOpen && <ChannelDownloadModal platform={selectedPlatform} name={normalizedChannelId || channelId.trim()} channelId={normalizedChannelId || channelId.trim()} onClose={() => setSettingsOpen(false)} onSave={handleAdd} />}
         </>
     );
 }

@@ -89,28 +89,3 @@ async def get_auth_status():
 
     service = get_recorder_service()
     return service.get_auth_status()
-
-
-@router.get("/cookie-status", summary="X 쿠키 유효성 상태 조회")
-async def get_cookie_status():
-    """X Spaces 쿠키의 유효성 상태를 반환합니다.
-
-    쿠키는 하루 1회 자동 검증되며, 이 엔드포인트는 가장 최근 검증 결과를 반환합니다.
-    프론트엔드 Settings 페이지 만료 배너에 사용됩니다.
-    """
-    from app.main import get_recorder_service
-
-    service = get_recorder_service()
-    conductor = service._conductor
-    return {"x": conductor.get_cookie_status()}
-
-
-@router.post("/cookie-status/check", summary="X 쿠키 즉시 검증")
-async def check_cookie_now():
-    """X Spaces 쿠키를 즉시 검증합니다 (24시간 주기 무시)."""
-    from app.main import get_recorder_service
-
-    service = get_recorder_service()
-    conductor = service._conductor
-    await conductor._check_x_cookie()
-    return {"x": conductor.get_cookie_status()}

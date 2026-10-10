@@ -1,13 +1,16 @@
 import { memo, useEffect, useId, useRef, useState } from 'react';
-import { Loader2, MessageSquare, Play, Settings2, Square, Users } from 'lucide-react';
+import { Loader2, Play, Settings2, Square, Users } from 'lucide-react';
+import { RecordingPostprocess } from './RecordingPostprocess';
 import { clsx } from 'clsx';
-import { PLATFORM_LABELS, type Channel } from '../../api/client';
+import { type Channel } from '../../api/client';
 import type { ReorderProps } from '../../hooks/useChannelReorder';
 import { getChannelKey } from '../../utils/channel';
+import { localizePlatformNames } from '../../utils/platformNames';
 import { formatBytes, formatDuration } from '../../utils/format';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Button, Card, Switch } from '../ui/primitives';
 import { TagManager } from '../ui/TagManager';
+import { PlatformBadge } from '../ui/PlatformBadge';
 import { ChannelActions } from './ChannelActions';
 import { LivePreview } from './LivePreview';
 import { DownloadHoldStatus } from './DownloadHoldStatus';
@@ -54,7 +57,7 @@ function RecordingChannelHeader({ channel }: { channel: Channel }) {
         {channel.profile_image_url ? <img src={channel.profile_image_url} alt="" className="recording-avatar" />
             : <span className="recording-avatar recording-avatar-fallback" aria-hidden="true"><Users className="size-4" /></span>}
         <div className="recording-channel-copy">
-            <div className="recording-channel-name"><h3 title={name}>{name}</h3><span className={`recording-platform platform-${channel.platform || 'chzzk'}`}>{PLATFORM_LABELS[channel.platform || 'chzzk']}</span></div>
+            <div className="recording-channel-name"><h3 title={name}>{name}</h3><PlatformBadge platform={channel.platform || 'chzzk'} /></div>
             <p className="recording-broadcast-title" title={channel.title || undefined}>{channel.is_live && channel.title ? channel.title : t('현재 방송 중이 아닙니다.')}</p>
             {(channel.is_live || tags.length > 0) && <div className="recording-channel-meta">
                 {channel.is_live && finite(channel.viewer_count) && <span className="recording-viewers" title={`${t('시청자')}: ${channel.viewer_count.toLocaleString()}`}><Users className="size-3" aria-hidden="true" /><span>{t('시청자')} {channel.viewer_count.toLocaleString()}</span></span>}
@@ -129,8 +132,9 @@ function RecordingChannelDetails({ channel }: { channel: Channel }) {
     const { t } = useLanguage();
     const name = channel.channel_name || channel.channel_id;
     const recording = channel.recording;
-    const url = (channel.platform || 'chzzk') === 'chzzk' ? `https://chzzk.naver.com/live/${encodeURIComponent(channel.channel_id)}` : null;
+    const url = channel.channel_url || ((channel.platform || 'chzzk') === 'chzzk' ? `https://chzzk.naver.com/live/${encodeURIComponent(channel.channel_id)}` : null);
     return <div className="recording-channel-details">
+        <div className="recording-details-copy">
         <dl className="recording-details-fields">
             <div><dt>{t('채널')}</dt><dd>{name}</dd></div>
             {channel.title && <div><dt>{t('방송 제목')}</dt><dd>{channel.title}</dd></div>}
@@ -138,10 +142,13 @@ function RecordingChannelDetails({ channel }: { channel: Channel }) {
             {url && <div><dt>{t('방송 URL')}</dt><dd><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></dd></div>}
             {recording?.output_path && <div><dt>{t('녹화 파일')}</dt><dd>{recording.output_path}</dd></div>}
             {recording?.start_time && <div><dt>{t('녹화 시작 시각')}</dt><dd>{new Date(recording.start_time).toLocaleString()}</dd></div>}
+            {channel.recording_quality && <div><dt>{t('녹화 화질')}</dt><dd>{channel.recording_quality === 'best' ? t('최고 화질') : channel.recording_quality}</dd></div>}
+            {channel.recording_inspection && <div><dt>{t('파일 검사')}</dt><dd className={channel.recording_inspection.state === 'passed' ? 'text-ok' : 'text-warn'} role="status">{channel.recording_inspection.message}</dd></div>}
             {channel.download_condition && <div><dt>{t('녹화 조건')}</dt><dd>{t(({ all: '모든 방송 녹화', watchalong: '같이보기 방송만 녹화', exclude_watchalong: '같이보기 방송 제외' })[channel.download_condition])}</dd></div>}
             {!!channel.tags?.length && <div><dt>{t('태그')}</dt><dd>{channel.tags.join(', ')}</dd></div>}
         </dl>
-        {channel.last_error && <details className="recording-error"><summary>{t('최근 녹화 오류')}</summary><p>{channel.last_error}</p></details>}
+        {channel.last_error && <details className="recording-error"><summary>{t('최근 녹화 오류')}</summary><p>{localizePlatformNames(channel.last_error)}</p></details>}
+        </div>
         <LivePreview channelKey={getChannelKey(channel)} isLive={channel.is_live} name={name} poster={channel.thumbnail_url} />
     </div>;
 }
@@ -157,7 +164,8 @@ export function RecordingChannelCard(props: ChannelItemProps & { mode: 'grid' | 
             <RecordingControls {...props} />
             <RecordingMetrics recording={channel.recording} />
         </div>
-        {(channel.download_hold_reason || channel.chat_archiving?.is_running) && <div className="recording-channel-notices"><DownloadHoldStatus channel={channel} />{channel.chat_archiving?.is_running && <p className="recording-chat"><MessageSquare className="size-3" aria-hidden="true" />{t('채팅 저장 중')} · {channel.chat_archiving.message_count.toLocaleString()}{t('개')}</p>}</div>}
+        {channel.download_hold_reason && <div className="recording-channel-notices"><DownloadHoldStatus channel={channel} /></div>}
+        {channel.postprocess && <div className="px-3 pb-3"><RecordingPostprocess job={channel.postprocess}/></div>}
         <div id={detailsId} className="recording-detail-disclosure" hidden={!props.isSelected}>{props.isSelected && <RecordingChannelDetails channel={channel} />}</div>
     </Card>;
 }

@@ -1,8 +1,8 @@
 {
   "name": "phrolova",
   "private": true,
-  "version": "2.0.53",
-  "description": "치지직·X Spaces·YouTube 라이브를 감시해 자동 녹화하는 도구의 웹 UI",
+  "version": "2.0.54",
+  "description": "치지직·유튜브·SOOP·CIME 라이브 자동 녹화 및 다운로드 관리 UI",
   "author": "Serian (https://github.com/eruminyu)",
   "license": "MIT",
   "repository": {

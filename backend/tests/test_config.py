@@ -38,7 +38,6 @@ class TestSettings:
         assert isinstance(settings.vod_max_concurrent, int)
         assert isinstance(settings.vod_default_quality, str)
         assert isinstance(settings.vod_max_speed, int)
-        assert isinstance(settings.chat_archive_enabled, bool)
 
     def test_optional_fields_default_none(self, monkeypatch):
         """Optional 필드가 기본값 None인지 확인 (환경변수 없는 경우)"""
@@ -72,7 +71,6 @@ class TestSettings:
         assert settings.app_name == "TestApp"
         assert settings.port == 9000
         assert settings.monitor_interval == 60
-        assert settings.chat_archive_enabled is True
 
     def test_cookies_from_env(self, monkeypatch):
         """쿠키가 환경변수에서 로드되는지 확인"""

@@ -1,6 +1,5 @@
 # Android Termux 설치 및 운영
 
-Native는 Android/Bionic이고 proot의 Ubuntu/Debian은 GNU/glibc입니다. 둘은 같은 Python 바이너리·가상환경을 공유할 수 없습니다. 비루팅 실행을 대상으로 하며 **사용자 단말에서 Native 설치·웹 UI·치지직 녹화·정상 종료·재시작 후 채널 유지·녹화 파일 재생을 확인했습니다**. 추가 VOD·YouTube·X Spaces 및 장시간 백그라운드 동작은 사용자 검증 완료 보고를 받았지만 상세 로그와 실행 조건은 수집하지 않았습니다. Native의 C/Rust 패키지 소스 빌드가 실패하면 proot 방법을 사용하세요.
 
 ## A. Native Termux
 

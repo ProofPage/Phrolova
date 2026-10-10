@@ -7,7 +7,6 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.platforms import router
-from app.api.archive import router as archive_router
 from app.core.config import Settings
 from app.engine.base import Platform
 from app.engine.conductor import Conductor
@@ -17,7 +16,7 @@ from app.store.repositories import ChannelRepository
 
 def test_unsupported_saved_channel_is_ignored_without_deletion():
     repo = ChannelRepository()
-    for platform in ("twitcasting", "chzzk", "youtube"):
+    for platform in ("twitcasting", "x_spaces", "chzzk", "youtube"):
         repo.upsert(f"{platform}:legacy", platform, "legacy", True)
     before = repo.list_all()
 
@@ -32,7 +31,6 @@ def test_unsupported_saved_channel_is_ignored_without_deletion():
 def test_removed_platform_requests_are_rejected():
     app = FastAPI()
     app.include_router(router)
-    app.include_router(archive_router)
     client = TestClient(app)
 
     response = client.post("/api/platforms/channels", json={
@@ -69,7 +67,7 @@ async def test_removed_media_is_rejected_before_extraction(host):
 
 @pytest.mark.parametrize("url", [
     "https://chzzk.naver.com/video/1", "https://www.youtube.com/watch?v=abcdefghijk",
-    "https://example.com/video", "https://x.com/i/spaces/abc",
+    "https://example.com/video",
     "https://twitcasting.tv.example.com/video",
 ])
 def test_other_media_urls_remain_supported(url):
@@ -77,9 +75,10 @@ def test_other_media_urls_remain_supported(url):
 
 
 @pytest.mark.asyncio
-async def test_old_download_history_is_preserved_but_cannot_restart():
+@pytest.mark.parametrize('url',['https://twitcasting.tv/legacy/movie/1','https://x.com/i/spaces/old'])
+async def test_old_download_history_is_preserved_but_cannot_restart(url):
     repo = Mock()
-    record = {"task_id": "legacy", "url": "https://twitcasting.tv/legacy/movie/1", "state": "completed"}
+    record = {"task_id": "legacy", "url": url, "state": "completed"}
     repo.list_all.return_value = [record]
     engine = VodEngine(repo=repo)
 

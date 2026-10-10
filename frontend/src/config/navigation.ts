@@ -2,7 +2,6 @@ import {
     BarChart3,
     Download,
     LayoutDashboard,
-    MessageSquare,
     Radio,
     Settings,
     Terminal,
@@ -36,13 +35,6 @@ export const NAV_GROUPS: NavGroup[] = [
         items: [
             { name: "라이브", to: "/", icon: LayoutDashboard },
             { name: "다운로드", to: "/vod", icon: Download },
-        ],
-    },
-    {
-        title: "미디어 허브",
-        items: [
-            { name: "X Spaces", to: "/archive", icon: Radio },
-            { name: "채팅 기록", to: "/chat", icon: MessageSquare },
         ],
     },
     {

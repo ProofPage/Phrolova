@@ -125,8 +125,6 @@ async def get_current_settings():
         "vod_max_concurrent": settings.vod_max_concurrent,
         "vod_default_quality": settings.vod_default_quality,
         "vod_max_speed": settings.vod_max_speed,
-        # 채팅 설정
-        "chat_archive_enabled": settings.chat_archive_enabled,
         # Discord 설정
         "discord_notification_channel_id": settings.discord_notification_channel_id,
         "discord_command_user_ids": settings.discord_command_user_ids,
@@ -145,8 +143,6 @@ async def get_current_settings():
         "split_download_dirs": settings.split_download_dirs,
         "vod_chzzk_dir": settings.vod_chzzk_dir,
         "vod_external_dir": settings.vod_external_dir,
-        # X Spaces 인증
-        "x_cookie_file": settings.x_cookie_file,
     }
 
 

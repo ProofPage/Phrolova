@@ -183,8 +183,7 @@ class TestYtdlpLiveCookieFallback:
 
         monkeypatch.setattr("app.core.config.Settings.resolve_ffmpeg_path", lambda self: "ffmpeg")
         pipeline = YtdlpLivePipeline(channel_id="someone")
-        monkeypatch.setattr(pipeline, "_run_streamlink_feeder", AsyncMock())
-        monkeypatch.setattr(pipeline, "_watch_process", AsyncMock())
+        monkeypatch.setattr(pipeline, "_begin_receiver", AsyncMock())
         monkeypatch.setattr(pipeline, "_update_statistics_loop", AsyncMock())
         return pipeline
 
@@ -222,9 +221,8 @@ class TestYtdlpLiveCookieFallback:
 
         extract.assert_awaited_once()
         assert extract.await_args.kwargs.get("cookie_file") is None
-        assert "-cookies" not in ffmpeg_cmds[0]
-        assert ffmpeg_cmds[0][ffmpeg_cmds[0].index("-i") + 1] == "pipe:0"
-        assert pipeline._run_streamlink_feeder.call_args.kwargs["cookies"] is None
+        assert ffmpeg_cmds == []
+        assert pipeline._resume_args[2] is None
 
     @pytest.mark.asyncio
     async def test_failure_retries_once_with_the_cookie(self, pipeline, ffmpeg_cmds, tmp_path, monkeypatch):
@@ -244,11 +242,8 @@ class TestYtdlpLiveCookieFallback:
 
         assert extract.await_count == 2
         assert extract.await_args_list[1].kwargs["cookie_file"] == self.LENT
-        cmd = ffmpeg_cmds[0]
-        # 로그인 쿠키는 FFmpeg 인자가 아닌 Streamlink의 도메인 범위 쿠키 jar로 전달한다.
-        assert "-cookies" not in cmd
-        assert cmd[cmd.index("-i") + 1] == "pipe:0"
-        assert pipeline._run_streamlink_feeder.call_args.kwargs["cookies"] == (
+        assert ffmpeg_cmds == []
+        assert pipeline._resume_args[2] == (
             "session=abc; Domain=.example.com; Path=/; Secure; Expires=1790000000"
         )
 

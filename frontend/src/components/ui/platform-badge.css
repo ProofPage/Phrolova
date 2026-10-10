@@ -1,0 +1,5 @@
+.platform-badge { display: inline-flex; align-items: center; flex-shrink: 0; white-space: nowrap; font-size: 10px; line-height: 16px; border: 1px solid var(--color-line); padding: 0 4px; border-radius: 3px; background: transparent; color: var(--color-ink-muted); }
+.platform-badge.platform-chzzk { color: var(--color-chzzk); }
+.platform-badge.platform-youtube { color: var(--color-youtube); }
+.platform-badge.platform-soop { color: var(--color-soop); }
+.platform-badge.platform-cime { color: var(--color-cime); }

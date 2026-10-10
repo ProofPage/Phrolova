@@ -1,4 +1,4 @@
-"""다운로드·VOD·채팅 설정."""
+"""라이브 녹화 및 VOD 다운로드 설정."""
 
 from __future__ import annotations
 
@@ -65,10 +65,6 @@ class VodSettingsUpdateRequest(BaseModel):
     keep_download_parts: Optional[bool] = Field(None, description="VOD 다운로드 중단 시 .part 파일 유지 여부")
 
 
-class ChatSettingsUpdateRequest(BaseModel):
-    """채팅 아카이빙 설정 업데이트 요청."""
-
-    chat_archive_enabled: bool = Field(..., description="녹화 시 채팅 자동 아카이빙 여부")
 
 
 @router.put("/live-condition", summary="자동 라이브 다운로드 기본 조건")
@@ -189,26 +185,5 @@ async def update_vod_settings(req: VodSettingsUpdateRequest):
             "chzzk_vod_cdn": settings.chzzk_vod_cdn,
             "vod_filename_template": settings.vod_filename_template,
             "keep_download_parts": settings.keep_download_parts,
-        },
-    }
-
-
-@router.put("/chat", summary="채팅 아카이빙 설정 업데이트")
-async def update_chat_settings(req: ChatSettingsUpdateRequest):
-    """채팅 아카이빙 설정을 업데이트합니다."""
-    settings = get_settings()
-    settings.chat_archive_enabled = req.chat_archive_enabled
-
-    try:
-        _update_env_file({
-            "CHAT_ARCHIVE_ENABLED": str(req.chat_archive_enabled).lower(),
-        })
-    except Exception as e:
-        print(f"설정 파일 저장 실패: {e}")
-
-    return {
-        "message": "채팅 아카이빙 설정이 업데이트되었습니다.",
-        "settings": {
-            "chat_archive_enabled": settings.chat_archive_enabled,
         },
     }

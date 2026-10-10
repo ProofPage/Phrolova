@@ -8,6 +8,26 @@
 
 ## [Unreleased]
 
+## [2.0.54] - 2026-10-11
+
+### Added
+- SOOP·CIME 라이브 감지, 인증, 화질, 미리보기 및 다운로드 연동을 추가했습니다.
+- 녹화 종료 후 MKV/MP4 자동 변환과 FFprobe 검사, 영속 작업 큐 및 실패 복구를 추가했습니다.
+- 전역·채널별 저장 형식, 원본 TS 보관 및 동시 변환 수 설정을 추가했습니다.
+
+### Changed
+- Streamlink가 TS를 직접 저장하고 FFmpeg는 녹화 종료 후 stream copy 변환을 수행합니다.
+- 라이브·다운로드 카드, 입력 영역, 통계, 상태별 작업 버튼과 모바일 레이아웃을 정리했습니다.
+- 치지직 채널 ID·링크 입력과 한글 플랫폼 표시, 공통 배지 및 Full HD 미리보기를 개선했습니다.
+- 사이드바의 빈 미디어 허브 그룹과 녹화 카드의 처리 상세·파일 경로 설명을 제거했습니다.
+
+### Removed
+- 채팅 수집·저장·조회 및 X Spaces 실행 기능을 제거했습니다. 기존 파일과 과거 이력은 보존합니다.
+
+### Fixed
+- 정상 방송 종료 후 반복 녹화, 파일 핸들 종료 전 변환, 변환·검사 실패 시 원본 손실을 방지합니다.
+- 녹화·다운로드 상태와 파일 검사 상태를 분리하고 재검사·재변환 및 서버 재시작 복구를 지원합니다.
+
 ## [2.0.53] - 2026-10-10
 
 ### Fixed
@@ -718,7 +738,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.53...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.54...HEAD
+[2.0.54]: https://github.com/ProofPage/Phrolova/compare/v2.0.53...v2.0.54
 [2.0.53]: https://github.com/ProofPage/Phrolova/compare/v2.0.52...v2.0.53
 [2.0.52]: https://github.com/ProofPage/Phrolova/compare/v2.0.51...v2.0.52
 [2.0.51]: https://github.com/ProofPage/Phrolova/compare/v2.0.50...v2.0.51

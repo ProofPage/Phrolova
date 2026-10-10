@@ -60,7 +60,6 @@ class NotificationKind(str, Enum):
     RECORDING_STARTED = "recording_started"
     RECORDING_COMPLETED = "recording_completed"
     RECORDING_FAILED = "recording_failed"
-    SPACE_DETECTED = "space_detected"
     VOD_COMPLETED = "vod_completed"
     VOD_FAILED = "vod_failed"
     COOKIE_EXPIRED = "cookie_expired"
@@ -74,7 +73,6 @@ KIND_LABELS: dict[NotificationKind, str] = {
     NotificationKind.RECORDING_STARTED: "녹화 시작",
     NotificationKind.RECORDING_COMPLETED: "녹화 완료",
     NotificationKind.RECORDING_FAILED: "녹화 실패",
-    NotificationKind.SPACE_DETECTED: "X Spaces 감지",
     NotificationKind.VOD_COMPLETED: "미디어 다운로드 완료",
     NotificationKind.VOD_FAILED: "미디어 다운로드 실패",
     NotificationKind.COOKIE_EXPIRED: "쿠키 만료",

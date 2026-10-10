@@ -6,7 +6,6 @@
 
 VOD API → RecorderService → VodEngine → yt-dlp 요청/다운로더 → FFmpeg 병합 → FFprobe → 작업 기록과 UI의 연결을 조사했다. 설정 API, 환경 파일 저장, 취소/재시도/파일명 충돌, 기존 DASH 패치, 라이브 파이프라인과 테스트도 확인했다. 이번 변경은 CDN 기능과 그 경로에서 확인한 결함에 한정하며 저장소 전체에 버그가 없다는 판정은 아니다.
 
-라이브 녹화는 기존 Streamlink → FFmpeg를 그대로 사용한다. 라이브·타임머신·클립·YouTube·X Spaces에는 CDN 변환을 적용하지 않는다. 라이브 파이프라인/Conductor 소스는 수정하지 않았다. Python/Node 의존성을 변경하지 않았다.
 
 설정 → 다운로드의 VOD 영역에 다음 선택을 추가했다.
 

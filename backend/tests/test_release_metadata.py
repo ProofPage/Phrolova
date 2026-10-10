@@ -51,11 +51,11 @@ def test_pyinstaller_version_resource_uses_backend_single_source() -> None:
 
 
 def test_phrolova_packaging_names():
-    spec = (PROJECT_ROOT / "phrolova.spec").read_text()
-    workflow = (PROJECT_ROOT / ".github/workflows/release.yml").read_text()
+    spec = (PROJECT_ROOT / "phrolova.spec").read_text(encoding="utf-8")
+    workflow = (PROJECT_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     assert 'name="Phrolova"' in spec
     for key, value in (("InternalName", "Phrolova"), ("OriginalFilename", "Phrolova.exe"), ("ProductName", "Phrolova")):
         assert f'StringStruct("{key}", "{value}")' in spec
     assert "dist/Phrolova.exe" in workflow
     assert "phrolova.spec" in workflow
-    assert '"ChzzkRecorderPro"' not in (PROJECT_ROOT / "backend/run.py").read_text()
+    assert '"ChzzkRecorderPro"' not in (PROJECT_ROOT / "backend/run.py").read_text(encoding="utf-8")

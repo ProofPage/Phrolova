@@ -16,7 +16,6 @@ from app.engine.base import Platform, PlatformEngine
 from app.engine.channel import ChannelTask
 from app.engine.events import EventBus
 from app.engine.pipeline import RecordingState
-from app.engine.spaces_recorder import SpacesRecorder
 
 
 class TestEventBus:
@@ -110,10 +109,6 @@ class TestChannelTask:
     def test_is_recording_false_when_idle(self):
         assert ChannelTask(channel_id="abc").is_recording is False
 
-    def test_is_recording_true_for_spaces_process(self):
-        task = ChannelTask(channel_id="user", platform=Platform.X_SPACES)
-        task.spaces_process = object()  # 프로세스 핸들 존재만 확인한다
-        assert task.is_recording is True
 
     def test_is_recording_follows_pipeline_state(self):
         class FakePipeline:
@@ -126,23 +121,6 @@ class TestChannelTask:
         FakePipeline.state = RecordingState.COMPLETED
         assert task.is_recording is False
 
-    def test_clear_space_capture_resets_all_fields(self):
-        task = ChannelTask(channel_id="user", platform=Platform.X_SPACES)
-        task.master_url = "https://master"
-        task.master_url_captured_at = "2026-01-01T00:00:00"
-        task.captured_m3u8_url = "https://m3u8"
-        task.captured_m3u8_at = "2026-01-01T00:00:00"
-        task.master_url_file = "C:/urls/a.txt"
-        task._current_space_id = "1abcDEF"
-
-        task.clear_space_capture()
-
-        assert task.master_url is None
-        assert task.master_url_captured_at is None
-        assert task.captured_m3u8_url is None
-        assert task.captured_m3u8_at is None
-        assert task.master_url_file is None
-        assert task._current_space_id is None
 
     def test_tags_default_is_independent_per_instance(self):
         """가변 기본값이 인스턴스 간에 공유되면 안 된다."""
@@ -151,87 +129,6 @@ class TestChannelTask:
         assert b.tags == []
 
 
-class TestSpacesRecorder:
-    def test_save_master_url_file_writes_url(self, tmp_path, monkeypatch):
-        from app.core.config import get_settings
-
-        settings = get_settings()
-        original = settings.download_dir
-        settings.download_dir = str(tmp_path)
-        try:
-            task = ChannelTask(
-                channel_id="someone",
-                platform=Platform.X_SPACES,
-                channel_name="someone",
-                title="테스트 스페이스",
-            )
-            url = "https://prod-fastly.video.pscp.tv/master_playlist.m3u8"
-
-            path = SpacesRecorder.save_master_url_file(task, url, "1abcDEF")
-
-            assert path is not None
-            content = (tmp_path / "x_spaces_urls").glob("*.txt")
-            saved = next(content).read_text(encoding="utf-8")
-            assert url in saved
-            assert "테스트 스페이스" in saved
-            assert "1abcDEF" in saved
-        finally:
-            settings.download_dir = original
-
-    def test_save_master_url_file_sanitizes_channel_name(self, tmp_path):
-        """파일명에 쓸 수 없는 문자가 채널명에 있어도 저장에 성공해야 한다."""
-        from app.core.config import get_settings
-
-        settings = get_settings()
-        original = settings.download_dir
-        settings.download_dir = str(tmp_path)
-        try:
-            task = ChannelTask(
-                channel_id="user",
-                platform=Platform.X_SPACES,
-                channel_name='bad/name:with*chars?',
-            )
-            path = SpacesRecorder.save_master_url_file(task, "https://m", "sid")
-            assert path is not None
-        finally:
-            settings.download_dir = original
-
-    def test_finalize_part_file_renames(self, tmp_path):
-        final = tmp_path / "space.m4a"
-        part = tmp_path / "space.m4a.part"
-        part.write_bytes(b"audio")
-
-        SpacesRecorder._finalize_part_file(str(final), "test")
-
-        assert final.exists()
-        assert not part.exists()
-
-    def test_finalize_part_file_keeps_existing_final(self, tmp_path):
-        """최종 파일이 이미 있으면 .part로 덮어쓰지 않는다."""
-        final = tmp_path / "space.m4a"
-        part = tmp_path / "space.m4a.part"
-        final.write_bytes(b"complete")
-        part.write_bytes(b"partial")
-
-        SpacesRecorder._finalize_part_file(str(final), "test")
-
-        assert final.read_bytes() == b"complete"
-
-    def test_finalize_part_file_handles_none(self):
-        SpacesRecorder._finalize_part_file(None, "test")
-
-    @pytest.mark.asyncio
-    async def test_start_without_space_id_raises(self):
-        recorder = SpacesRecorder(lambda: None)
-        task = ChannelTask(channel_id="user", platform=Platform.X_SPACES)
-
-        with pytest.raises(ValueError):
-            await recorder.start(task)
-
-    @pytest.mark.asyncio
-    async def test_stop_without_process_is_noop(self):
-        recorder = SpacesRecorder(lambda: None)
-        await recorder.stop(ChannelTask(channel_id="user"), label="test")
 
 
 class TestSharedHttpClient:
@@ -286,13 +183,3 @@ class TestPlatformEngineProtocol:
         from app.engine.youtube import YoutubeLiveEngine
 
         assert issubclass(YoutubeLiveEngine, PlatformEngine)
-
-    def test_x_spaces_is_deliberately_outside_the_protocol(self):
-        """X Spaces는 스트림 URL이 아니라 space_id로 녹화해 규약을 따르지 않는다.
-
-        Conductor가 별도 경로로 처리한다는 사실을 여기에 고정해 둔다. 나중에
-        누군가 get_stream_url을 얹으면 이 테스트가 그 변화를 알려준다.
-        """
-        from app.engine.x_spaces import XSpacesEngine
-
-        assert not issubclass(XSpacesEngine, PlatformEngine)

@@ -53,7 +53,9 @@ def _archive(path: Path) -> None:
 
 
 def _table_is_empty(db: Database, table: str) -> bool:
-    row = db.query_one(f"SELECT 1 FROM {table} LIMIT 1")  # noqa: S608 — 내부 상수만 사용
+    row = db.query_one(
+        f"SELECT 1 FROM {table} LIMIT 1"
+    )  # noqa: S608 — 내부 상수만 사용
     return row is None
 
 
@@ -88,13 +90,17 @@ def _migrate_channels(db: Database, data_dir: Path) -> int:
             auto_record=bool(config.get("auto_record", True)),
             tags=config.get("tags") or [],
         )
-        repo.update_capture(
-            composite_key=composite_key,
-            captured_m3u8_url=config.get("captured_m3u8_url"),
-            captured_m3u8_at=config.get("captured_m3u8_at"),
-            master_url=config.get("master_url"),
-            master_url_captured_at=config.get("master_url_captured_at"),
-            master_url_file=config.get("master_url_file"),
+        # Import retained legacy metadata without reintroducing its execution service.
+        db.execute(
+            "UPDATE channels SET captured_m3u8_url=?,captured_m3u8_at=?,master_url=?,master_url_captured_at=?,master_url_file=? WHERE composite_key=?",
+            (
+                config.get("captured_m3u8_url"),
+                config.get("captured_m3u8_at"),
+                config.get("master_url"),
+                config.get("master_url_captured_at"),
+                config.get("master_url_file"),
+                composite_key,
+            ),
         )
         count += 1
 
@@ -133,8 +139,10 @@ def _migrate_vod_history(db: Database, data_dir: Path) -> int:
     repo = VodRepository(db)
     count = 0
     # 구버전은 {task_id: {...}} 형태, 더 오래된 버전은 [{...}] 형태였다.
-    items = data.items() if isinstance(data, dict) else (
-        (rec.get("task_id", ""), rec) for rec in data if isinstance(rec, dict)
+    items = (
+        data.items()
+        if isinstance(data, dict)
+        else ((rec.get("task_id", ""), rec) for rec in data if isinstance(rec, dict))
     )
     for task_id, record in items:
         if not task_id or not isinstance(record, dict):

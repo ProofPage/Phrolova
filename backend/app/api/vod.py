@@ -9,8 +9,33 @@ from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+from pathlib import Path
+from fastapi.responses import FileResponse
 
 router = APIRouter(prefix="/api/vod", tags=["VOD"])
+
+
+@router.get('/capabilities', summary='다운로드 소스 및 기능')
+async def vod_capabilities():
+    return {'sources': [
+        {'id': 'chzzk', 'label': '치지직'}, {'id': 'youtube', 'label': '유튜브'},
+        {'id': 'soop', 'label': '숲'}, {'id': 'cime', 'label': '씨미'},
+        {'id': 'external', 'label': '외부 영상'},
+    ], 'prepare': True, 'pause': True, 'file_open': True}
+
+
+@router.get('/{task_id}/file', summary='완료된 영상 파일 열기')
+async def open_vod_file(task_id: str):
+    from app.main import get_recorder_service
+    status = get_recorder_service().get_vod_task_status(task_id)
+    if status.get('error'):
+        raise HTTPException(status_code=404, detail='작업을 찾을 수 없습니다.')
+    if status.get('state') != 'completed':
+        raise HTTPException(status_code=409, detail='다운로드 완료 후 파일을 열 수 있습니다.')
+    path = Path(status.get('output_path') or '')
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail='다운로드한 파일을 찾을 수 없습니다.')
+    return FileResponse(path, filename=path.name, content_disposition_type='inline')
 
 
 # ── 요청 스키마 ──────────────────────────────────────────
@@ -228,6 +253,7 @@ async def cancel_channel_import(import_id: str):
 
 class VodPrepareRequest(BaseModel):
     urls: list[Annotated[str, Field(max_length=2048)]] = Field(..., min_length=1, max_length=100)
+    source: Literal['chzzk', 'youtube', 'soop', 'cime', 'external', 'auto'] = 'auto'
 
 
 class VodQualityRequest(BaseModel):
@@ -246,7 +272,8 @@ def _preparation_service():
 @router.post('/prepare', summary='CHZZK VOD 준비 목록 등록')
 async def prepare_vods(req: VodPrepareRequest):
     try:
-        return _preparation_service().prepare_vods(req.urls)
+        service = _preparation_service()
+        return service.prepare_vods(req.urls) if req.source == 'chzzk' else service.prepare_vods(req.urls, source=req.source)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from None
 

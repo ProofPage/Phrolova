@@ -19,7 +19,6 @@ class TestChannelTask:
         assert task.channel_id == "test_channel"
         assert task.auto_record is True
         assert task.pipeline is None
-        assert task.chat_archiver is None
         assert task.monitor_task is None
         assert task.is_live is False
         assert task.channel_name is None
@@ -174,7 +173,6 @@ class TestConductor:
         assert ch1["auto_record"] is True
         assert ch1["is_live"] is False
         assert ch1["recording"] is None
-        assert ch1["chat_archiving"] is None
 
         # 두 번째 채널
         ch2 = next(ch for ch in status if ch["channel_id"] == "channel_2")
@@ -198,7 +196,6 @@ class TestConductor:
         assert "auto_record" in channel_status
         assert "is_live" in channel_status
         assert "recording" in channel_status
-        assert "chat_archiving" in channel_status
         assert "channel_name" in channel_status
         assert "title" in channel_status
         assert "category" in channel_status
@@ -227,25 +224,6 @@ class TestConductor:
         conductor = Conductor()
         assert conductor.channel_count == 0
 
-    def test_persistence_restores_tags_and_capture_state(self):
-        """태그와 X Spaces 캡처 정보가 재시작 후에도 복원된다."""
-        conductor1 = Conductor()
-        conductor1.add_channel(
-            channel_id="someone", auto_record=True, platform=Platform.X_SPACES
-        )
-        key = Conductor.make_composite_key(Platform.X_SPACES, "someone")
-        conductor1.set_channel_tags(key, ["스페이스"])
-
-        task = conductor1._channels[key]
-        task.master_url = "https://master.example/playlist.m3u8"
-        task.master_url_captured_at = "2026-01-01T00:00:00"
-        conductor1._save_capture_state(key)
-
-        conductor2 = Conductor()
-        restored = conductor2._channels[key]
-
-        assert restored.tags == ["스페이스"]
-        assert restored.master_url == "https://master.example/playlist.m3u8"
 
     def test_removed_channel_does_not_come_back(self):
         """제거한 채널이 재시작 후 되살아나면 안 된다."""
@@ -354,7 +332,6 @@ class TestRecordingCookie:
         from unittest.mock import AsyncMock
 
         conductor = Conductor()
-        monkeypatch.setattr(conductor, "_start_chat_archiver", AsyncMock())
         conductor.add_channel(channel_id=channel_id, platform=platform)
         key = Conductor.make_composite_key(platform, channel_id)
         await conductor._start_recording(key, is_retry=True)

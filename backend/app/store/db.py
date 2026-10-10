@@ -189,7 +189,7 @@ def _resolve_db_path(data_dir: Path) -> Path:
                     source.backup(target)
                     if target.execute("PRAGMA quick_check").fetchone()[0] != "ok":
                         raise sqlite3.DatabaseError("backup integrity check failed")
-                with temporary.open("rb") as backup:
+                with temporary.open("r+b") as backup:
                     os.fsync(backup.fileno())
                 # Atomic, no-overwrite publication; concurrent migration is safe.
                 try:

@@ -13,7 +13,6 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from app.engine.base import Platform
-from app.engine.chat import ChatArchiver
 from app.engine.pipeline import RecordingState, YtdlpLivePipeline
 
 
@@ -24,8 +23,12 @@ class ChannelTask:
     channel_id: str
     platform: Platform = Platform.CHZZK
     auto_record: bool = True
+    recording_quality: Optional[str] = None
+    output_format: Optional[str] = None
+    recording_job_id: Optional[str] = None
+    broadcast_ended: bool = False
+    recording_inspection: Optional[dict] = None
     pipeline: Optional[YtdlpLivePipeline] = field(default=None, repr=False)
-    chat_archiver: Optional[ChatArchiver] = field(default=None, repr=False)
     monitor_task: Optional[asyncio.Task] = field(default=None, repr=False)
     # 수동 요청과 자동 감시가 동시에 같은 녹화 핸들을 덮어쓰지 않도록 보호한다.
     recording_lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
@@ -44,20 +47,6 @@ class ChannelTask:
     download_condition: Optional[str] = None
     watchalong_tags: Optional[str] = None
     last_error: Optional[str] = None
-    # X Spaces 전용
-    spaces_process: Optional[asyncio.subprocess.Process] = field(default=None, repr=False)
-    spaces_stderr_task: Optional[asyncio.Task] = field(default=None, repr=False)
-    spaces_output_path: Optional[str] = None
-    _current_space_id: Optional[str] = None
-    # X Spaces 전용: 라이브 중 캡처한 dynamic m3u8 URL
-    captured_m3u8_url: Optional[str] = None
-    captured_m3u8_at: Optional[str] = None
-    # X Spaces 전용: master_playlist.m3u8 (안정적, 종료 후 ~30일 유효)
-    master_url: Optional[str] = None
-    master_url_captured_at: Optional[str] = None
-    # X Spaces 전용: master URL이 저장된 .txt 파일 경로 (녹화 실패 시 백업용)
-    master_url_file: Optional[str] = None
-
     # ── 파생 상태 ────────────────────────────────────────
 
     @property
@@ -67,19 +56,8 @@ class ChannelTask:
 
     @property
     def is_recording(self) -> bool:
-        """지금 녹화 중인지 (파이프라인 또는 Spaces 프로세스)."""
-        if self.spaces_process is not None:
-            return True
+        """Streamlink 수신 파이프라인이 녹화 중인지."""
         return (
             self.pipeline is not None
             and self.pipeline.state == RecordingState.RECORDING
         )
-
-    def clear_space_capture(self) -> None:
-        """Space가 끝났을 때 캡처 상태를 초기화한다 (다음 Space 준비)."""
-        self.master_url = None
-        self.master_url_captured_at = None
-        self.captured_m3u8_url = None
-        self.captured_m3u8_at = None
-        self.master_url_file = None
-        self._current_space_id = None

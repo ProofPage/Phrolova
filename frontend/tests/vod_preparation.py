@@ -62,8 +62,8 @@ async def check(browser,width):
  for kind,value,id in [('text/uri-list','# comment\nhttps://chzzk.naver.com/video/3','3'),('text/plain','https://chzzk.naver.com/video/4','4'),('text/html','<a href="https://chzzk.naver.com/video/99">VOD</a><script>window.__unsafe=true</script>','99')]:
   transfer=await page.evaluate_handle('([kind,value])=>{const dt=new DataTransfer();dt.setData(kind,value);return dt}',[kind,value])
   await panel.dispatch_event('dragenter',{'dataTransfer':transfer})
-  assert 'CHZZK 다시보기 또는 클립 URL을 여기에 놓으세요.' in await panel.inner_text()
-  await panel.dispatch_event('drop',{'dataTransfer':transfer});await page.locator(f'[data-task-id="{id}"]').wait_for()
+  assert await panel.get_by_role('textbox').count()==1
+  await panel.dispatch_event('drop',{'dataTransfer':transfer});await panel.get_by_role('button',name='목록에 추가',exact=True).click();await page.locator(f'[data-task-id="{id}"]').wait_for()
  assert not await page.evaluate('Boolean(window.__unsafe)')
  failed=page.locator('[data-task-id="99"]');await failed.get_by_role('button',name='정보 다시 조회',exact=True).click()
  await failed.get_by_role('button',name='다운로드 시작',exact=True).wait_for()
@@ -72,9 +72,9 @@ async def check(browser,width):
  await page.screenshot(path=str(OUT/f'vod-ready-{width}.png'),full_page=True)
  await page.reload();await page.locator('[data-task-id="1"]').wait_for();assert len(tasks)==5
  await page.locator('[data-task-id="4"]').get_by_role('button',name='다운로드 시작',exact=True).click()
- await panel.get_by_role('button',name='전체 다운로드',exact=False).click()
- await card.get_by_role('button',name='일시정지하기',exact=True).wait_for()
- await card.get_by_role('button',name='일시정지하기',exact=True).click()
+ await page.get_by_role('button',name='전체 다운로드',exact=False).click()
+ await card.get_by_role('button',name='일시정지',exact=True).wait_for()
+ await card.get_by_role('button',name='일시정지',exact=True).click()
  await card.get_by_role('button',name='재개',exact=True).click()
  tasks[1]['state']='completed';await page.wait_for_timeout(2200)
  await page.get_by_role('button',name='완료 목록 정리',exact=True).click()
@@ -82,16 +82,16 @@ async def check(browser,width):
  await page.locator('[data-task-id="2"]').wait_for(state="detached");assert len(tasks)==4
  await page.locator('[data-task-id="99"]').get_by_role('button',name='취소',exact=True).click()
  await page.get_by_role('dialog').get_by_role('button',name='다운로드 취소',exact=True).click()
- await page.locator('[data-task-id="99"]').get_by_role('button',name='다시 다운로드',exact=True).click()
+ await page.locator('[data-task-id="99"]').get_by_role('button',name='작업 메뉴',exact=False).click();await page.get_by_role('dialog').get_by_role('button',name='다시 다운로드',exact=True).click()
  await page.get_by_role('dialog').get_by_role('button',name='다시 다운로드',exact=True).click()
  await page.locator('[data-task-id="99-retry"]').wait_for()
- await page.locator('[data-task-id="99"]').get_by_role('button',name='목록에서 제거',exact=True).click()
+ await page.locator('[data-task-id="99"]').get_by_role('button',name='작업 메뉴',exact=False).click();await page.get_by_role('dialog').get_by_role('button',name='목록에서 제거',exact=True).click();await page.get_by_role('dialog').get_by_role('button',name='목록에서 제거',exact=True).click()
  await page.locator('[data-task-id="99"]').wait_for(state="detached")
  count=len(tasks)
  await panel.get_by_role('textbox').fill('https://chzzk.naver.com/clips/Clip_123?tracking=1')
  await panel.get_by_role('button',name='목록에 추가',exact=True).click()
  await page.locator('[data-task-id="Clip_123"]').wait_for();assert len(tasks)==count+1
- assert '클립 번호' in await page.locator('[data-task-id="Clip_123"]').inner_text()
+ await page.locator('[data-task-id="Clip_123"]').get_by_role('button',name='상세 보기',exact=False).click();assert '클립 번호' in await page.locator('[data-task-id="Clip_123"]').inner_text()
  await panel.get_by_role('textbox').fill('https://chzzk.naver.com/clips/Clip_123')
  await panel.get_by_role('button',name='목록에 추가',exact=True).click()
  await page.wait_for_timeout(300);assert len(tasks)==count+1

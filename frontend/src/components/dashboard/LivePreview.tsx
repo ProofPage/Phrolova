@@ -4,8 +4,14 @@ import { CircleAlert, VideoOff } from "lucide-react";
 import { api } from "../../api/client";
 import { Button } from "../ui/primitives";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { preferredNativePreviewUrl, preferredPreviewLevel } from "../../utils/livePreviewQuality";
+import { LiveFramePreview } from './LiveFramePreview';
 
-export function LivePreview({ channelKey, isLive, name, poster }: { channelKey: string; isLive: boolean; name: string; poster?: string }) {
+type PreviewProps = { channelKey: string; isLive: boolean; name: string; poster?: string };
+export function LivePreview(props: PreviewProps) {
+    return /^(soop|cime):/.test(props.channelKey) ? <LiveFramePreview {...props} /> : <HlsLivePreview {...props} />;
+}
+function HlsLivePreview({ channelKey, isLive, name, poster }: PreviewProps) {
     const { t } = useLanguage();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [attempt, setAttempt] = useState(0);
@@ -25,8 +31,18 @@ export function LivePreview({ channelKey, isLive, name, poster }: { channelKey: 
         let nativeStarted = false;
         let recovering = false;
         let failed = false;
+        let measured = '';
+
+        const measure = () => {
+            if (stopped || failed || video.videoWidth <= 0 || video.videoHeight <= 0) return;
+            const key = `${video.videoWidth}x${video.videoHeight}`;
+            if (key === measured) return;
+            measured = key;
+            console.info('[Phrolova] 미리보기 실제 해상도', { channel: channelKey, width: video.videoWidth, height: video.videoHeight });
+        };
 
         const detach = () => {
+            measured = '';
             hls?.destroy();
             hls = null;
             video.pause();
@@ -46,6 +62,7 @@ export function LivePreview({ channelKey, isLive, name, poster }: { channelKey: 
             void video.play().catch(() => {});
         };
         const loaded = () => {
+            measure();
             if (!hls && video.seekable.length) {
                 video.currentTime = Math.max(video.seekable.start(0), video.seekable.end(video.seekable.length - 1) - 3);
             }
@@ -59,6 +76,7 @@ export function LivePreview({ channelKey, isLive, name, poster }: { channelKey: 
                 loaded();
             }
             setState("ready");
+            measure();
         };
         const recover = () => {
             if (stopped || failed || recovering) return;
@@ -82,21 +100,36 @@ export function LivePreview({ channelKey, isLive, name, poster }: { channelKey: 
                 video.muted = true;
                 if (Hls.isSupported()) {
                     hls = new Hls({
+                        autoStartLoad: false,
+                        capLevelToPlayerSize: false,
                         lowLatencyMode: true,
                         liveSyncDuration: 6,
                         liveMaxLatencyDuration: 15,
                         maxLiveSyncPlaybackRate: 1.05,
                         backBufferLength: 10,
                         maxBufferLength: 15,
+                        maxMaxBufferLength: 30,
+                        maxBufferSize: 12 * 1024 * 1024,
                     });
-                    hls.on(Hls.Events.MANIFEST_PARSED, play);
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        if (stopped || failed || !hls) return;
+                        const level = preferredPreviewLevel(hls.levels);
+                        if (level >= 0) {
+                            hls.startLevel = level;
+                            hls.loadLevel = level;
+                            console.info('[Phrolova] 미리보기 스트림 선택', { channel: channelKey, width: hls.levels[level].width, height: hls.levels[level].height });
+                        }
+                        hls.startLoad();
+                        play();
+                    });
                     hls.on(Hls.Events.ERROR, (_, data) => {
                         if (data.fatal) recover();
                     });
                     hls.loadSource(url);
                     hls.attachMedia(video);
                 } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-                    video.src = url;
+                    const selected = await preferredNativePreviewUrl(url, abort.signal);
+                    if (!stopped && !abort.signal.aborted) video.src = selected;
                 } else fail("이 브라우저에서는 라이브 미리보기를 재생할 수 없습니다.");
             } catch (error) {
                 if (stopped || abort.signal.aborted) return;
@@ -107,6 +140,7 @@ export function LivePreview({ channelKey, isLive, name, poster }: { channelKey: 
             }
         };
         video.addEventListener("loadedmetadata", loaded);
+        video.addEventListener("resize", measure);
         video.addEventListener("canplay", ready);
         video.addEventListener("playing", ready);
         video.addEventListener("error", recover);
@@ -121,6 +155,7 @@ export function LivePreview({ channelKey, isLive, name, poster }: { channelKey: 
             clearTimeout(refreshTimer);
             clearTimeout(loadingTimer);
             video.removeEventListener("loadedmetadata", loaded);
+            video.removeEventListener("resize", measure);
             video.removeEventListener("canplay", ready);
             video.removeEventListener("playing", ready);
             video.removeEventListener("error", recover);
@@ -129,6 +164,7 @@ export function LivePreview({ channelKey, isLive, name, poster }: { channelKey: 
     }, [channelKey, isLive, attempt]);
 
     return <div className="channel-live-preview" aria-label={`${name} ${t("방송 미리보기")}`}>
+        <div className="channel-preview-stage">
         {isLive && <div className="channel-preview-player" hidden={state !== "ready"}>
             <video ref={videoRef} controls autoPlay muted playsInline poster={poster} className="size-full object-contain" aria-label={`${name} LIVE`} />
         </div>}
@@ -137,5 +173,6 @@ export function LivePreview({ channelKey, isLive, name, poster }: { channelKey: 
             <span className="channel-preview-message">{t(!isLive ? "현재 방송 중이 아닙니다." : state === "loading" ? "미리보기를 불러오는 중" : message)}</span>
             {isLive && state === "error" && <Button type="button" aria-label={t("다시 시도")} onClick={() => { setState("loading"); setAttempt(value => value + 1); }}>{t("다시 시도")}</Button>}
         </div>}
+        </div>
     </div>;
 }

@@ -123,6 +123,17 @@ MIGRATIONS: list[tuple[int, str]] = [
         ALTER TABLE channels ADD COLUMN watchalong_tags TEXT;
         """,
     ),
+    (4, "ALTER TABLE channels ADD COLUMN recording_quality TEXT;"),
+    (5, """
+        ALTER TABLE channels ADD COLUMN output_format TEXT;
+        ALTER TABLE live_history ADD COLUMN recording_job_id TEXT;
+        CREATE UNIQUE INDEX IF NOT EXISTS live_history_job ON live_history(recording_job_id);
+        CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS recording_jobs (
+            id TEXT PRIMARY KEY, composite_key TEXT NOT NULL, source_path TEXT NOT NULL UNIQUE,
+            state TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL
+        );
+    """),
 ]
 
 #: 코드가 기대하는 최신 스키마 버전.

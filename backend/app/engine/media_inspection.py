@@ -50,7 +50,7 @@ def probe_media(filepath: str) -> dict[str, Any]:
     except FileNotFoundError as exc:
         raise InspectionError("tool_missing", str(exc)) from exc
     args = [binary, "-v", "error", "-show_entries",
-            "format=duration,size,format_name:stream=index,codec_type,codec_name,duration",
+            "format=duration,size,format_name:stream=index,codec_type,codec_name,duration,width,height,avg_frame_rate",
             "-of", "json", str(path)]
     try:
         result = subprocess.run(args, capture_output=True, timeout=settings.file_inspection_timeout,

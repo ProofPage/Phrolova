@@ -1,5 +1,6 @@
 import { YouTubeAuth } from "./YouTubeAuth";
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { PlatformCookieAuth } from "./PlatformCookieAuth";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { AlertCircle, CheckCircle2, KeyRound, Save, Shield, Trash2, Upload } from "lucide-react";
 import { api, type Settings as SettingsType } from "../../api/client";
 import { getErrorMessage } from "../../utils/error";
@@ -18,22 +19,15 @@ interface Props {
 
 type CookieStatus = "valid" | "invalid" | "checking" | "unknown";
 
-export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
+export function AuthTab({ onSaved, onDirtyChange }: Props) {
     const { t } = useLanguage();
     const toast = useToast();
-    const confirm = useConfirm();
-    const cookieFileInputRef = useRef<HTMLInputElement>(null);
     const [savingCookies, setSavingCookies] = useState(false);
     const [nidAut, setNidAut] = useState("");
     const [nidSes, setNidSes] = useState("");
     const [cookieStatus, setCookieStatus] = useState<CookieStatus>("unknown");
     const [nickname, setNickname] = useState<string | null>(null);
-    const [xCookieFileSet, setXCookieFileSet] = useState(false);
-    const [xCookieUploading, setXCookieUploading] = useState(false);
 
-    useEffect(() => {
-        if (settings) setXCookieFileSet(!!settings.x_cookie_file);
-    }, [settings]);
 
     const dirty = nidAut !== "" || nidSes !== "";
     useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
@@ -76,41 +70,6 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
         }
     };
 
-    const handleUploadXCookie = async (event: ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        setXCookieUploading(true);
-        try {
-            await api.uploadXCookie(file);
-            setXCookieFileSet(true);
-            toast.success("쿠키 파일이 업로드되었습니다.");
-            onSaved();
-        } catch (error) {
-            toast.error(getErrorMessage(error, "쿠키 파일 업로드에 실패했습니다."));
-        } finally {
-            setXCookieUploading(false);
-            if (cookieFileInputRef.current) cookieFileInputRef.current.value = "";
-        }
-    };
-
-    const handleDeleteXCookie = async () => {
-        const ok = await confirm({
-            title: "쿠키 파일 삭제",
-            message: "저장된 X 쿠키 파일을 삭제하시겠습니까?",
-            confirmText: "삭제",
-            variant: "danger",
-        });
-        if (!ok) return;
-        try {
-            await api.deleteXCookie();
-            setXCookieFileSet(false);
-            toast.success("쿠키 파일이 삭제되었습니다.");
-            onSaved();
-        } catch (error) {
-            toast.error(getErrorMessage(error, "쿠키 파일 삭제에 실패했습니다."));
-        }
-    };
-
     const cookieBadge = cookieStatus === "checking" ? (
         <Badge>확인 중...</Badge>
     ) : cookieStatus === "valid" ? (
@@ -124,7 +83,7 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
     return (
         <div className="space-y-6">
             <Card className="space-y-5">
-                <CardHeader icon={KeyRound} title="Chzzk" action={cookieBadge} />
+                <CardHeader icon={KeyRound} title="치지직" action={cookieBadge} />
                 <Field label="NID_AUT">
                     <Input type="password" value={nidAut} onChange={(event) => setNidAut(event.target.value)} placeholder="NID_AUT 쿠키 값 입력..." />
                 </Field>
@@ -140,19 +99,10 @@ export function AuthTab({ settings, onSaved, onDirtyChange }: Props) {
 
 
             <YouTubeAuth />
+            <PlatformCookieAuth platform="soop" onSaved={onSaved} />
+            <PlatformCookieAuth platform="cime" onSaved={onSaved} />
 
-            <Card className="space-y-5">
-                <CardHeader icon={KeyRound} title="X Spaces" description="X Spaces 녹화 시 사용할 Netscape 형식 쿠키 파일을 업로드하세요." />
-                <div className="flex flex-wrap items-center gap-3">
-                    <StatusDot active={xCookieFileSet} label={xCookieFileSet ? "업로드됨" : "없음"} />
-                    <input ref={cookieFileInputRef} type="file" accept=".txt" className="hidden" onChange={handleUploadXCookie} />
-                    <Button icon={Upload} loading={xCookieUploading} onClick={() => cookieFileInputRef.current?.click()}>
-                        {xCookieUploading ? "업로드 중..." : "파일 선택"}
-                    </Button>
-                    {xCookieFileSet && <Button variant="danger" icon={Trash2} onClick={handleDeleteXCookie}>삭제</Button>}
-                </div>
-                {xCookieFileSet && <p className="flex items-center gap-2 text-xs text-ok"><CheckCircle2 className="w-4 h-4" /> X Spaces 인증 파일이 준비되었습니다.</p>}
-            </Card>
+
         </div>
     );
 }

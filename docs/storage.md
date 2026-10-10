@@ -22,7 +22,9 @@ WAL이 본 파일로 합쳐지므로, **백업은 앱을 종료한 뒤 `.db` 파
 
 | 테이블 | 용도 | 이전 파일 |
 |--------|------|-----------|
-| `channels` | 감시 채널 목록, 자동 녹화 설정, 태그, X Spaces 캡처 URL | `channels.json` |
+| `channels` | 감시 채널, 자동 녹화·화질·출력 형식 설정 | `channels.json` |
+| `app_settings` | 녹화 완료 후 저장 형식·원본 보관·변환 동시 실행 수 | — |
+| `recording_jobs` | TS 원본·후처리 상태·최종 파일·검사·재시도 | — |
 | `live_history` | 녹화 완료 세션 이력 | `live_history.json` |
 | `live_detections` | 라이브 감지 날짜 (하루 1회) | *메모리 전용이라 재시작 시 소실됐음* |
 | `vod_tasks` | VOD 다운로드 작업 이력 | `vod_history.json` |

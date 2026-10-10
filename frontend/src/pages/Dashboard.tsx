@@ -5,6 +5,7 @@ import { AddChannelForm } from "../components/dashboard/AddChannelForm";
 import { ChannelDownloadModal } from "../components/dashboard/ChannelDownloadModal";
 import { LiveDownloadCondition } from "../components/dashboard/LiveDownloadCondition";
 import { RecordingChannelCard } from "../components/dashboard/RecordingChannelCard";
+import { RecordingJobsPanel } from "../components/dashboard/RecordingJobsPanel";
 import { DashboardFilters, type StatusFilter, type ViewMode } from "../components/dashboard/DashboardFilters";
 import { useConfirm } from "../components/ui/ConfirmModal";
 import { Button, EmptyState, PageHeader } from "../components/ui/primitives";
@@ -331,6 +332,7 @@ export default function Dashboard() {
             {initialLoading ? <div className="space-y-2" aria-label={t("채널 정보를 불러오는 중")} aria-busy="true">{[1,2,3].map(item => <div key={item} className="flex items-center gap-3 border-b border-line py-3"><div className="skeleton size-8 rounded-full" /><div className="flex-1 space-y-2"><div className="skeleton h-3 w-1/3" /><div className="skeleton h-3 w-1/2" /></div></div>)}</div>
             : filteredChannels.length === 0 ? <EmptyState icon={Radio} title={channels.length === 0 ? "등록된 채널이 없습니다." : "필터 조건에 맞는 채널이 없습니다."} description={channels.length === 0 ? "채널을 추가하면 방송 상태를 확인하고 자동으로 녹화할 수 있습니다." : "상태 또는 태그 필터를 변경해 보세요."} action={channels.length > 0 ? <Button onClick={() => { setFilter("all"); setSelectedFilterTags([]); }}>필터 초기화</Button> : undefined} />
             : <div className={viewMode === 'grid' ? 'dashboard-channel-grid' : 'min-w-0 space-y-2'}>{filteredChannels.map(renderChannel)}</div>}
+            <RecordingJobsPanel visibleIds={filteredChannels.flatMap(channel=>channel.postprocess?[channel.postprocess.id]:[])}/>
             {editingChannel && <ChannelDownloadModal
                 platform={editingChannel.platform || "chzzk"}
                 name={editingChannel.channel_name || editingChannel.channel_id}

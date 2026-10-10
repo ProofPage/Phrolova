@@ -82,7 +82,6 @@ def api_client(monkeypatch, tmp_path):
     monkeypatch.setattr(main, 'get_recorder_service', lambda: service)
     monkeypatch.setattr(conductor._chzzk_engine, 'check_live_status', AsyncMock(return_value={'is_live': False}))
     monkeypatch.setattr(conductor, '_start_recording', AsyncMock())
-    monkeypatch.setattr(conductor, '_cookie_check_loop', AsyncMock())
     test_app = FastAPI()
     for router in (settings_router, stream_router, vod_router):
         test_app.include_router(router)

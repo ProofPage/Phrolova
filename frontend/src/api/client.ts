@@ -11,24 +11,33 @@ export const client = axios.create({
 
 // ── Types ───────────────────────────────────────────────
 
-export type Platform = "chzzk" | "x_spaces" | "youtube";
+export type Platform = "chzzk" | "youtube" | "soop" | "cime";
+export type DownloadSource = Platform | 'external';
 export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
 export interface ChannelDownloadOptions {
+    output_format?: 'mp4' | 'mkv' | null;
     auto_record: boolean;
     download_condition: DownloadCondition | null;
     watchalong_tags: string | null;
+    recording_quality?: string;
 }
 
 export const PLATFORM_LABELS: Record<Platform, string> = {
-    chzzk: "CHZZK",
-    x_spaces: "X Spaces",
-    youtube: "YouTube",
+    chzzk: "치지직",
+    youtube: "유튜브",
+    soop: "숲",
+    cime: "씨미",
 };
 
 export interface Channel {
+    output_format?: 'mp4' | 'mkv' | null;
+    postprocess?: RecordingJob | null;
+    recording_inspection?: {state: 'passed' | 'failed'; message: string; duration?: number; tracks?: {codec_type?: string; width?: number; height?: number; avg_frame_rate?: string}[]};
     composite_key?: string;
     platform?: Platform;
     channel_id: string;
+    channel_url?: string;
+    recording_quality?: string;
     auto_record: boolean;
     download_condition?: DownloadCondition | null;
     watchalong_tags?: string | null;
@@ -55,11 +64,6 @@ export interface Channel {
         download_speed: number;  // MB/s
         bitrate: number;  // kbps
     };
-    chat_archiving?: {
-        is_running: boolean;
-        message_count: number;
-        output_path: string;
-    };
     tags?: string[];
     last_error?: string;
 }
@@ -68,6 +72,7 @@ export type ChzzkVodCdn = "default" | "akamai";
 
 export interface VodTask {
     task_id: string;
+    platform?: Platform | 'external';
     url: string;
     title: string;
     state: "idle" | "downloading" | "paused" | "completed" | "error" | "cancelling";
@@ -161,8 +166,6 @@ export interface Settings {
     vod_default_quality: string;
     vod_max_speed: number;
 
-    // 채팅 설정
-    chat_archive_enabled: boolean;
 
     // Discord 설정
     discord_notification_channel_id?: string;
@@ -182,14 +185,30 @@ export interface Settings {
     vod_chzzk_dir: string;
     vod_external_dir: string;
 
-    // X Spaces 인증
     x_cookie_file?: string;
 }
 
 export interface PlatformStatus {
     chzzk: { enabled: boolean; authenticated: boolean };
-    x_spaces: { enabled: boolean; authenticated: boolean; cookie_file_set: boolean };
     youtube: { enabled: boolean; authenticated: boolean };
+    soop?: { enabled: boolean; authenticated: boolean };
+    cime?: { enabled: boolean; authenticated: boolean };
+}
+
+export interface PlatformCookieStatus {
+    configured: boolean;
+    valid: boolean | null;
+    expired?: boolean;
+    message?: string;
+}
+
+export interface LiveQuality {
+    value: string;
+    label: string;
+    width?: number;
+    height?: number;
+    fps?: number;
+    bitrate?: number;
 }
 
 
@@ -227,9 +246,6 @@ export interface VodSettingsUpdate {
     keep_download_parts?: boolean;
 }
 
-export interface ChatSettingsUpdate {
-    chat_archive_enabled: boolean;
-}
 
 export interface DiscordSettingsUpdate {
     discord_bot_token?: string;
@@ -270,30 +286,11 @@ export interface NotificationStatus {
 
 // ── Chat Log Types ───────────────────────────────────────
 
-export interface ChatLogFile {
-    file_id: string;
-    filename: string;
-    channel: string;
-    size_bytes: number;
-    message_count: number;
-    created_at: string;
-    modified_at: string;
-}
 
-export interface ChatMessageItem {
-    timestamp: string;
-    user_id: string | null;
-    nickname: string;
-    message: string;
-}
 
-export interface MessagesResponse {
-    messages: ChatMessageItem[];
-    total: number;
-    page: number;
-    limit: number;
-    has_next: boolean;
-}
+
+export interface RecordingJob { id: string; composite_key: string; channel_name: string; state: string; target_format: string; progress: number | null; output_path: string | null; source_paths: string[]; error_message: string | null; inspection_state: string; diagnostics?: Record<string, unknown>; source_cleanup_warning?: string; }
+export interface RecordingOutputSettings { output_format: 'mp4'|'mkv'|'ts'; keep_source_ts: boolean; max_concurrent: number; }
 
 // ── Stats Types ─────────────────────────────────────────
 
@@ -406,7 +403,8 @@ export const api = {
     // Monitor
 
     // VOD
-    prepareVods: async (urls: string[]) => (await client.post<{ results: { url: string; task_id?: string; duplicate?: boolean; error?: string }[] }>("/vod/prepare", { urls })).data,
+    getVodCapabilities: async () => (await client.get<{ sources: { id: DownloadSource; label: string }[]; prepare: boolean; pause: boolean; file_open: boolean }>("/vod/capabilities")).data,
+    prepareVods: async (urls: string[], source?: DownloadSource) => (await client.post<{ results: { url: string; task_id?: string; duplicate?: boolean; error?: string }[] }>("/vod/prepare", { urls, ...(source ? { source } : {}) })).data,
     startPreparedVods: async (task_ids: string[]) => (await client.post<{ results: { task_id: string; started?: boolean; error?: string }[] }>("/vod/start-prepared", { task_ids })).data,
     startPreparedVod: async (id: string) => { await client.post(`/vod/${id}/start`); },
     retryVodMetadata: async (id: string) => { await client.post(`/vod/${id}/metadata`); },
@@ -507,10 +505,6 @@ export const api = {
         const res = await client.put("/settings/vod", data);
         return res.data;
     },
-    updateChatSettings: async (data: ChatSettingsUpdate) => {
-        const res = await client.put("/settings/chat", data);
-        return res.data;
-    },
     updateDiscordSettings: async (data: DiscordSettingsUpdate) => {
         const res = await client.put("/settings/discord", data);
         return res.data;
@@ -535,8 +529,8 @@ export const api = {
     },
 
     // Platform Channels (멀티 플랫폼)
-    addPlatformChannel: async (platform: Platform, channel_id: string, auto_record: boolean = true) => {
-        const res = await client.post("/platforms/channels", { platform, channel_id, auto_record });
+    addPlatformChannel: async (platform: Platform, channel_id: string, auto_record: boolean = true, options?: ChannelDownloadOptions) => {
+        const res = await client.post("/platforms/channels", { platform, channel_id, auto_record, ...options });
         return res.data;
     },
     removePlatformChannel: async (platform: Platform, channel_id: string) => {
@@ -556,19 +550,19 @@ export const api = {
         const res = await client.get<PlatformStatus>("/platforms/status");
         return res.data;
     },
-    uploadXCookie: async (file: File) => {
+    getLivePreviewFrame: async (channelKey: string, signal?: AbortSignal): Promise<Blob> =>
+        (await client.get(`/stream/preview-frame/${encodeURIComponent(channelKey)}`, { responseType: 'blob', signal, timeout: 60000 })).data,
+    getPlatformQualities: async (platform: 'soop' | 'cime', channel_id: string, signal?: AbortSignal) =>
+        (await client.get<{ qualities: LiveQuality[]; live?: boolean; message?: string }>(`/platforms/${platform}/${encodeURIComponent(channel_id)}/qualities`, { signal })).data,
+    getPlatformCookieStatus: async (platform: 'soop' | 'cime'): Promise<PlatformCookieStatus> =>
+        (await client.get<PlatformCookieStatus>(`/platforms/${platform}/cookie`)).data,
+    uploadPlatformCookie: async (platform: 'soop' | 'cime', file: File): Promise<PlatformCookieStatus> => {
         const form = new FormData();
-        form.append("file", file);
-        const res = await client.post("/platforms/x/cookie", form, {
-            headers: { "Content-Type": "multipart/form-data" },
-        });
-        return res.data;
+        form.append('file', file);
+        return (await client.post<PlatformCookieStatus>(`/platforms/${platform}/cookie`, form, { headers: { 'Content-Type': 'multipart/form-data' } })).data;
     },
-    deleteXCookie: async () => {
-        const res = await client.delete("/platforms/x/cookie");
-        return res.data;
-    },
-
+    deletePlatformCookie: async (platform: 'soop' | 'cime'): Promise<PlatformCookieStatus> =>
+        (await client.delete<PlatformCookieStatus>(`/platforms/${platform}/cookie`)).data,
     // Stats
     getStats: async (): Promise<StatsResponse> => {
         const res = await client.get<StatsResponse>("/stats/");
@@ -604,23 +598,13 @@ export const api = {
         return res.data;
     },
 
-    // Chat Logs
-    getChatFiles: async () => {
-        const res = await client.get<ChatLogFile[]>("/chat/files");
-        return res.data;
-    },
-    getChatMessages: async (
-        file_id: string,
-        params: { page?: number; limit?: number; search?: string; nickname?: string }
-    ) => {
-        const res = await client.get<MessagesResponse>(`/chat/files/${file_id}/messages`, {
-            params,
-        });
-        return res.data;
-    },
-    getChatDownloadUrl: (file_id: string): string =>
-        `${API_BASE_URL}/chat/files/${file_id}/download`,
-
+    getRecordingOutputSettings: async (): Promise<RecordingOutputSettings> => (await client.get('/recordings/settings')).data,
+    updateRecordingOutputSettings: async (data: RecordingOutputSettings) => (await client.put('/recordings/settings',data)).data,
+    getRecordingJobs: async (): Promise<{jobs: RecordingJob[]}> => (await client.get('/recordings/jobs')).data,
+    retryRecording: async (id: string, output_format?: 'mp4'|'mkv') => (await client.post(`/recordings/${id}/retry`, {output_format})).data,
+    inspectRecording: async (id: string) => (await client.post(`/recordings/${id}/inspect`)).data,
+    openRecordingLocation: async (id: string) => (await client.post(`/recordings/${id}/open-location`)).data,
+    recordingFileUrl: (id: string) => `${API_BASE_URL}/recordings/${id}/file`,
     // System Logs
     getSystemLogFiles: async (): Promise<SystemLogFile[]> => {
         const res = await client.get<SystemLogFile[]>("/system/logs");

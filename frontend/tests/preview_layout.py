@@ -29,7 +29,7 @@ async def expand(card):
 async def main():
  OUT.mkdir(parents=True,exist_ok=True)
  media=OUT/'media';media.mkdir(exist_ok=True)
- subprocess.run(['ffmpeg','-y','-hide_banner','-loglevel','error','-f','lavfi','-i','smptebars=size=320x180:rate=10','-t','8','-c:v','libx264','-g','10','-f','hls','-hls_time','1','-hls_list_size','0',str(media/'preview.m3u8')],check=True)
+ subprocess.run([os.environ.get('PHROLOVA_FFMPEG','ffmpeg'),'-y','-hide_banner','-loglevel','error','-f','lavfi','-i','smptebars=size=320x180:rate=10','-t','8','-c:v','libx264','-g','10','-f','hls','-hls_time','1','-hls_list_size','0',str(media/'preview.m3u8')],check=True)
  FIX['imports']=[]
  for c,name in zip(FIX['channels'],['게임 채널','라이브 스튜디오','라이브 채널']):
   c.update(channel_name=name,title='오늘의 라이브 · 함께 즐기는 게임' if c['is_live'] else '',category='게임',tags=['즐겨찾기'],last_error='')
@@ -50,9 +50,9 @@ async def main():
    await expand(cards.first)
    assert await cards.first.locator('video').count()==0
    off=await shot(page,f'{w}-offline',cards.first)
-   assert off['panels'][0]['height']<120,off
+   assert abs(off['panels'][0]['width']/off['panels'][0]['height']-16/9)<.02,off
    await expand(cards.nth(1));await cards.nth(1).get_by_role('button',name='다시 시도',exact=True).wait_for()
-   unavail=await shot(page,f'{w}-unavailable',cards.nth(1));assert max(x['height'] for x in unavail['panels'])<140,unavail
+   unavail=await shot(page,f'{w}-unavailable',cards.nth(1));assert all(abs(x['width']/x['height']-16/9)<.02 for x in unavail['panels']),unavail
    resolver=[];gate=asyncio.Event()
    if w!=390:gate.set()
    async def resolve(route):
@@ -67,7 +67,8 @@ async def main():
    await page.wait_for_function('document.querySelector("video")?.readyState >= 2')
    await page.locator('.channel-preview-player').wait_for(state='visible')
    active=await shot(page,f'{w}-active',cards.nth(1))
-   assert active['players'][0]['width']<=560 and active['players'][0]['height']<=316,active
+   assert abs(active['players'][0]['width']/active['players'][0]['height']-16/9)<.02,active
+   assert await page.locator('.channel-preview-player').evaluate('(p)=>Math.abs(p.getBoundingClientRect().width-p.closest(".channel-live-preview").getBoundingClientRect().width)<1')
    video=page.locator('video');await video.evaluate('(v)=>window.retainedVideo=v');count=len(resolver)
    if w==1440:
     for width,height in [(820,1180),(1024,768),(390,844),(1440,900)]:

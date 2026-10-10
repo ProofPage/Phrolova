@@ -5,7 +5,7 @@
 각 모듈은 접두어 없는 라우터에 자기 경로만 단다.
 
   general.py        저장 경로·감시 주기·녹화 형식·전체 조회
-  media.py          다운로드·VOD·채팅
+  media.py          라이브 녹화·VOD 다운로드
   auth.py           쿠키와 인증 상태
   notifications.py  Discord와 알림
   _shared.py        여러 도메인이 함께 쓰는 헬퍼와 허용값

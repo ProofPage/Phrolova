@@ -24,7 +24,7 @@ def _to_composite_key(raw: str) -> str:
     - chzzk URL 형식도 extract_channel_id로 ID만 추출 후 chzzk 키로 변환
     """
     # 알려진 플랫폼 접두사가 있으면 composite_key로 간주
-    for prefix in ("chzzk:", "x_spaces:", "youtube:"):
+    for prefix in ("chzzk:", "youtube:", "soop:", "cime:"):
         if raw.startswith(prefix):
             return raw
     # 레거시: 순수 chzzk ID 또는 chzzk URL
@@ -33,6 +33,7 @@ def _to_composite_key(raw: str) -> str:
 
 
 # ── 요청 스키마 ──────────────────────────────────────────
+
 
 class AddChannelRequest(ChannelDownloadOptions):
     """채널 추가 요청."""
@@ -43,6 +44,7 @@ class AddChannelRequest(ChannelDownloadOptions):
 
 # ── 채널 관리 ────────────────────────────────────────────
 
+
 @router.post("/channels", summary="감시 채널 추가")
 async def add_channel(req: AddChannelRequest):
     """감시할 채널을 등록합니다."""
@@ -52,19 +54,49 @@ async def add_channel(req: AddChannelRequest):
 
     channel_id = extract_channel_id(req.channel_id)
     return service.add_platform_channel(
-        channel_id, platform=Platform.CHZZK, auto_record=req.auto_record,
-        download_condition=req.download_condition, watchalong_tags=req.watchalong_tags,
+        channel_id,
+        platform=Platform.CHZZK,
+        auto_record=req.auto_record,
+        download_condition=req.download_condition,
+        watchalong_tags=req.watchalong_tags,
+        **(
+            {"recording_quality": req.recording_quality}
+            if req.recording_quality is not None
+            else {}
+        ),
+        **(
+            {"output_format": req.output_format, "output_format_provided": True}
+            if "output_format" in req.model_fields_set
+            else {}
+        ),
     )
 
 
-@router.put("/channels/{channel_id}/download-options", summary="채널 다운로드 설정 수정")
+@router.put(
+    "/channels/{channel_id}/download-options", summary="채널 다운로드 설정 수정"
+)
 async def update_channel_download_options(channel_id: str, req: ChannelDownloadOptions):
     from app.main import get_recorder_service
 
     service = get_recorder_service()
     key = Conductor.make_composite_key(Platform.CHZZK, extract_channel_id(channel_id))
     try:
-        service.set_download_options(key, req.auto_record, req.download_condition, req.watchalong_tags)
+        service.set_download_options(
+            key,
+            req.auto_record,
+            req.download_condition,
+            req.watchalong_tags,
+            **(
+                {"recording_quality": req.recording_quality}
+                if req.recording_quality is not None
+                else {}
+            ),
+            **(
+                {"output_format": req.output_format, "output_format_provided": True}
+                if "output_format" in req.model_fields_set
+                else {}
+            ),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {"message": "채널 다운로드 설정이 저장되었습니다.", **req.model_dump()}
@@ -109,6 +141,7 @@ async def toggle_auto_record(channel_id: str):
 
 # ── 녹화 제어 ────────────────────────────────────────────
 
+
 @router.get("/preview/{channel_id:path}", summary="라이브 미리보기 주소 조회")
 async def live_preview(channel_id: str):
     from app.main import get_recorder_service
@@ -127,8 +160,50 @@ async def live_preview(channel_id: str):
         raise HTTPException(409, message) from None
     except Exception:
         # Resolver errors may contain signed URLs or upstream credentials.
-        raise HTTPException(502, "미리보기를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.") from None
+        raise HTTPException(
+            502, "미리보기를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요."
+        ) from None
     return JSONResponse({"url": url}, headers={"Cache-Control": "no-store"})
+
+
+@router.get("/preview-frame/{channel_id:path}", summary="라이브 미리보기 이미지")
+async def live_preview_frame(channel_id: str):
+    import asyncio
+    from app.main import get_recorder_service
+    from fastapi.responses import Response
+    from app.engine.preview_frames import frame_previews
+
+    platform, identifier = Conductor.parse_composite_key(channel_id)
+    if platform not in (Platform.SOOP, Platform.CIME):
+        raise HTTPException(400, "이 플랫폼은 영상 미리보기를 사용합니다.")
+    conductor = get_recorder_service()._conductor
+    key = Conductor.make_composite_key(platform, identifier)
+    task = conductor._channels.get(key)
+    if task is None:
+        raise HTTPException(404, "채널을 찾을 수 없습니다.")
+    if not task.is_live:
+        raise HTTPException(409, "현재 방송 중이 아닙니다.")
+    try:
+        data, width, height = await asyncio.wait_for(
+            frame_previews.get_frame(
+                key, platform.value, identifier, conductor._get_engine(platform)
+            ),
+            timeout=50,
+        )
+    except Exception:
+        raise HTTPException(
+            502, "미리보기를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요."
+        ) from None
+    return Response(
+        data,
+        media_type="image/jpeg",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Preview-Width": str(width),
+            "X-Preview-Height": str(height),
+        },
+    )
+
 
 @router.post("/record/{channel_id:path}/start", summary="수동 녹화 시작")
 async def start_recording(channel_id: str):
@@ -161,6 +236,7 @@ async def stop_recording(channel_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/record/stop-all", summary="모든 녹화 중지")
 async def stop_all_recordings():
     """현재 진행 중인 모든 채널의 녹화를 중지합니다."""
@@ -174,6 +250,7 @@ async def stop_all_recordings():
 
 
 # ── Conductor 제어 ───────────────────────────────────────
+
 
 @router.post("/monitor/start", summary="전체 감시 시작")
 async def start_monitoring():

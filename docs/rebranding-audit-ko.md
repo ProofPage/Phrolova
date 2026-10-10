@@ -11,7 +11,6 @@
 - Linux APP_NAME/SERVICE_NAME은 phrolova, 기본 설치 디렉터리는 별도 상수 `~/Phrolova`입니다. 명시적 INSTALL_DIR → 실행 중인 저장소 → 기존 기본 설치 디렉터리 순으로 결정합니다. 구형 디렉터리는 이동·삭제하지 않습니다.
 - 새 명령 링크가 등록된 후 동일 설치본의 manage.sh를 가리키는 구형 링크만 제거합니다. 실제 파일·다른 설치본 링크는 보존합니다. 심볼릭 링크로 명령을 호출해도 실제 스크립트 경로를 해석합니다.
 - systemd Description은 `Phrolova - Live Stream Recorder`. 구형 유닛의 활성화·실행 상태를 기록하고 중지한 뒤 새 유닛을 등록합니다. 등록 또는 /health 확인 실패 시 새 유닛을 복구/제거하고 이전 상태를 복원합니다. 이전 유닛 파일은 비활성 상태로 보존합니다. 경로에 공백이 있어도 unit 경로를 따옴표로 처리합니다.
-- 백엔드 제품 헤더를 정리했습니다. 라우트·환경 변수·테이블·설정 모델은 그대로 유지합니다. CHZZK 라이브 Streamlink → FFmpeg, CHZZK VOD yt-dlp, CDN, YouTube, X Spaces 및 Discord 처리 로직을 변경하지 않았습니다.
 
 ## DB 이전과 복구
 
@@ -84,7 +83,6 @@
 - `CONTRIBUTING.md`
 - `README.md`
 - `backend/app/api/archive.py`
-- `backend/app/api/chat.py`
 - `backend/app/api/platforms.py`
 - `backend/app/api/setup.py`
 - `backend/app/api/stats.py`
@@ -99,7 +97,6 @@
 - `backend/app/engine/auth.py`
 - `backend/app/engine/base.py`
 - `backend/app/engine/channel.py`
-- `backend/app/engine/chat.py`
 - `backend/app/engine/conductor.py`
 - `backend/app/engine/downloader.py`
 - `backend/app/engine/events.py`

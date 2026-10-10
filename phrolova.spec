@@ -92,8 +92,6 @@ hidden_imports = [
     "pydantic_settings",
     "pydantic_core",
     "pydantic_core._pydantic_core",
-    # chzzkpy
-    "chzzkpy",
     # discord
     "discord",
     "discord.ext.commands",

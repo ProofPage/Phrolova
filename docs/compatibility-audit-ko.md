@@ -19,7 +19,6 @@
 
 후속 종료 보완은 POSIX FFmpeg를 별도 세션에서 시작하고 SSE가 서버 종료 요청을 감지하도록 합니다. 서버 진입 경로를 재사용하고 연결 종료 유예를 10초로 제한했습니다. 단말 로그에서는 Ctrl+C 후 녹화 완료 처리, DB 종료, Application shutdown complete 및 Finished server process까지 약 1초 안에 도달했습니다. 종료 요청 직후의 Streamlink EOF 경고는 이후 정상 완료 로그와 구분해야 합니다.
 
-사용자는 추가 VOD·YouTube·X Spaces 및 장시간 백그라운드 검증도 완료했다고 보고했습니다. 이 항목들은 사용자 확인으로 기록하며, 상세 조건·길이·성공 로그가 없는 상태에서 자동화 검증 결과로 취급하지 않습니다. 아래 기능별 표의 외부 서비스 미검증 표기는 검수 컨테이너에서 수행한 검사 범위입니다.
 
 후속 Linux 회귀 결과는 **354 passed, 29 skipped, 2 warnings**입니다. GitHub 반영 전 재실행에서도 동일한 통과 수를 확인했고 TypeScript 검사 및 프론트엔드 빌드가 성공했습니다. 테스트 종료 시 MagicMock stderr의 await 처리에서 수거되지 않은 태스크 예외가 출력되었습니다. 테스트 종료 코드는 0이지만 이 모의 프로세스 경고를 무경고 검증으로 취급하지 않습니다. SSE 연결을 유지한 종료 및 프로세스 그룹 신호 검사도 성공했습니다. ARM64 GNU/Linux, proot 및 Windows 실환경 실행은 여전히 미검증입니다.
 
@@ -33,7 +32,6 @@
 | 높음 | `backend/app/core/config.py: resolve_ytdlp_path`, `resolve_ffmpeg_path`; `backend/run.py: _find_*` | POSIX에서도 bin의 .exe 선택, 파일 존재만 확인하고 실행 권한 미검사 | 플랫폼별 후보와 POSIX X_OK 검사 |
 | 높음 | `backend/requirements.txt` | `uvicorn[standard]`의 uvloop/httptools/watchfiles 네이티브 빌드가 Android에 추가 설치 장벽 | 공통 의존성 재사용, Native에 기본 uvicorn 제공. 서버 기능·SSE 유지 |
 | 높음 | `backend/app/core/config.py: Settings.host`, `.env.example` | 인증 없는 API가 기본 0.0.0.0에서 노출됨. 다운로드·서버 파일 탐색·설정 쓰기 API 존재 | 새 기본값 127.0.0.1. 기존 HOST는 유지. 외부 인증은 여전히 별도 필요 |
-| 높음 | `backend/app/engine/vod.py: _download_x_spaces_replay`, `cancel_download` | 취소 플래그가 직접 FFmpeg 프로세스에 전달되지 않음. Linux/Windows/Android 공통 | 프로세스 추적, terminate 및 10초 후 kill, 대기/정리 |
 | 높음 | `backend/app/main.py: lifespan`, `VodEngine` | 종료 시 VOD 작업을 정리하기 전에 DB가 닫히고 yt-dlp 워커는 계속될 수 있음 | VOD shutdown 추가, 협력 취소 및 작업 완료 대기 후 DB 종료. 네트워크 재시도로 종료 지연 가능 |
 | 높음 | `backend/app/engine/vod.py: download`, `_save_history`, `_load_history` | 완료/오류 작업만 저장하여 대기/진행 중 작업이 강제 종료 후 사라짐 | 작업 생성/실행 때 저장, 중단 작업을 오류로 복원하여 수동 재시도. 자동 바이트 단위 재개는 추가되지 않음 |
 | 높음 | `backend/app/store/repositories.py: VodRepository.replace_all` | 전체 이력 삭제 후 개별 INSERT. 중간 실패하면 기존 이력 손실 위험 | 먼저 upsert 후 불필요한 행 제거. 중간 실패에는 기존 행이 남도록 변경. 전체 일괄 쓰기가 하나의 원자 트랜잭션이 된 것은 아님 |
@@ -51,7 +49,6 @@
 
 ### 전체 소스 확인 범위
 
-`backend/run.py`, `requirements*`, `app/main.py`, `core/`, `services/`(Discord 포함), `engine/`(CHZZK, YouTube, X Spaces, pipeline, VOD, updater), `api/`, `store/`, `frontend/src`, Vite/TS/npm 설정, `scripts/`, `.env.example`, PyInstaller 사양과 CI/release 워크플로를 조사했습니다. 173개 기존 주요 소스·설정·문서 파일의 해시와 Python import 목록은 `audit-evidence/source-inventory.json`에 있습니다. 이 목록은 파일 범위 증거이며 모든 분기가 실행되었다는 증거는 아닙니다.
 
 Windows CREATE_NO_WINDOW 및 이벤트 루프 정책은 OS 분기가 되어 있고 Path/subprocess 인자 목록 기반 실행이 대부분입니다. PowerShell/.bat/PyInstaller Windows 릴리스 경로는 유지했습니다. updater는 GitHub 릴리스 확인/알림만 하며 Linux에서 EXE를 교체하는 자동 업데이트가 아닙니다. 웹 UI 업데이트 모달은 환경별 절차를 안내합니다.
 
@@ -102,12 +99,10 @@ Windows의 standard 의존성, .exe 배포 경로, PowerShell FFmpeg 자동 설�
 | CHZZK VOD | 외부 VOD 다운로드 안 함 | 두 CDN 전환·완료 길이 검증·부분 파일 처리 단위 테스트. 실제 CDN 응답 미검증 |
 | 일반 VOD | 로컬 HTTP MP4를 실제 yt-dlp로 다운로드·취소 성공 | 실제 외부 사이트 보장 아님 |
 | YouTube | 실사이트 라이브/VOD 미검증 | 런타임 전달·쿠키 폴백·상태 판정·채널 수집 모의 테스트. Node/Deno가 빌드 후에도 필요할 수 있음 |
-| X Spaces | 실서비스 미검증 | 쿠키/API/독립 subprocess 경로 분석, 취소 프로세스 전달 회귀 테스트. 직접 FFmpeg replay는 pause/resume·정밀 진행률·속도 제한 없음 |
 | FFmpeg/FFprobe | 경로/버전 탐지, 실제 TS 저장, MP4/MKV remux, ffprobe 12.023초 확인 | 원격 스트림 및 Android 네이티브 바이너리 실행 미검증 |
 | Streamlink | 8.6.2 탐지 및 실제 로컬 HLS read→FFmpeg pipe 성공 | 유한 테스트 HLS EOF는 기존 정책에 따라 ERROR로 표시됨. 파일은 정상 생성/파싱되고 cleanup은 성공. 이를 정상 장시간 라이브 종료로 주장하지 않음 |
 | yt-dlp | CLI 2026.08.19 탐지 및 Python VOD 실제 동작 | 모듈 VOD와 CLI live 모두 사용. Node runtime 전달 회귀 포함 |
 | HLS/DASH | HLS 실제 실행 | DASH parse_manifest/화질 분기 존재, 관련 단위 테스트. DASH 실제 네트워크 실행 미검증 |
-| TS/MP4/MKV | TS 파이프라인 및 MP4/MKV remux 성공 | live MP4는 fragmented MP4 옵션 사용. 파일 포맷 강제 변환의 모든 경우를 보장하지 않음. X Spaces는 M4A |
 | 자동 감시 | 서버 부팅 시 Conductor/업데이터 시작, 단위 테스트 | 실제 방송 전환·장시간 예약 감시 미검증 |
 | 저장·복구 | 태그·완료 VOD 기록·.env 설정 재시작 후 유지, SQLite/WAL 단위 테스트 | 중단 작업은 오류로 복원/수동 retry. .part의 동일 파일명·정확한 이어받기 보장은 없음 |
 | 권한/경로 | POSIX 실행 권한 선택과 UTF-8 긴 파일명 회귀 검증 | 비루팅 Android 공유 저장소 실측 미검증. 내부 HOME 사용은 코드상 가능 |

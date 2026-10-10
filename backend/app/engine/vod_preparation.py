@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import re
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 
 from app.core.config import get_settings
 
@@ -21,14 +21,64 @@ def canonical_vod_url(value: str) -> str:
 
 
 def quality_options(info: dict) -> list[dict]:
+    from app.engine.platform_media import media_platform
+    if media_platform(info.get('url', '')) == 'cime':
+        formats = [f for f in info.get('formats', []) if f.get('height') and f.get('vcodec') != 'none']
+        result, seen = [], set()
+        for f in sorted(formats, key=lambda f: (f['height'], f.get('fps') or 0, f.get('tbr') or 0), reverse=True):
+            key = (f['height'], f.get('fps') or 0)
+            if key in seen: continue
+            seen.add(key)
+            fps = f.get('fps') or 0
+            result.append({'value': f['format_id'], 'label': f"{f['height']}p" + (f' {fps:g}fps' if fps else ''),
+                           'height': f['height'], 'width': f.get('width'), 'fps': fps or None, 'bitrate': (f.get('tbr') or 0)*1000 or None})
+        return result
     heights = {f.get('height') for f in info.get('formats', [])
                if isinstance(f.get('height'), int) and f['height'] > 0
                and f.get('vcodec') != 'none'}
     return [{'value': f'{height}p', 'label': f'{height}p'} for height in sorted(heights, reverse=True)]
 
 
+def canonical_prepared_url(value: str, source: str = 'chzzk') -> str:
+    from app.engine.platform_media import media_platform, canonical_platform_video
+    detected = media_platform(value)
+    if detected in ('soop', 'cime'):
+        return canonical_platform_video(value)
+    if source in ('soop', 'cime'):
+        raise ValueError('선택한 플랫폼의 다시보기 또는 클립 링크를 입력하세요.')
+    if source == 'auto':
+        source = detected
+    if source == 'chzzk':
+        return canonical_vod_url(value)
+    from app.engine.vod import VodEngine, NonRetryableDownloadError
+    value = value.strip()
+    if source == 'youtube' and re.fullmatch(r'[A-Za-z0-9_-]{11}', value):
+        value = f'https://www.youtube.com/watch?v={value}'
+    try:
+        VodEngine._validate_media_url(value)
+    except NonRetryableDownloadError as exc:
+        raise ValueError(str(exc)) from None
+    parts = urlsplit(value)
+    host = parts.hostname.lower()
+    if source == 'youtube':
+        if host == 'youtu.be':
+            video_id = parts.path.strip('/')
+        elif host in ('youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtube-nocookie.com', 'www.youtube-nocookie.com'):
+            video_id = parse_qs(parts.query).get('v', [''])[0] if parts.path == '/watch' else parts.path.rstrip('/').split('/')[-1] if parts.path.startswith(('/shorts/', '/embed/', '/live/')) else ''
+        else:
+            raise ValueError('유튜브 영상 URL을 입력하세요.')
+        if not re.fullmatch(r'[A-Za-z0-9_-]{11}', video_id):
+            raise ValueError('채널 링크는 다운로드 시작으로 추가하세요.')
+        return f'https://www.youtube.com/watch?v={video_id}'
+    if source != 'external':
+        raise ValueError('지원하지 않는 다운로드 소스입니다.')
+    if host == 'chzzk.naver.com':
+        return canonical_vod_url(value)
+    return parts._replace(fragment='').geturl()
+
+
 class VodPreparation:
-    def prepare_vods(self, urls: list[str]) -> dict:
+    def prepare_vods(self, urls: list[str], source: str = 'chzzk') -> dict:
         from app.engine.vod import VodDownloadTask
         if self._shutting_down:
             raise ValueError('서버가 종료 중입니다.')
@@ -37,7 +87,7 @@ class VodPreparation:
         results = []
         for value in urls:
             try:
-                url = canonical_vod_url(value)
+                url = canonical_prepared_url(value, source)
             except ValueError as exc:
                 results.append({'url': value, 'error': str(exc)})
                 continue
@@ -50,9 +100,10 @@ class VodPreparation:
                 results.append({'url': url, 'error': '다운로드 대기 목록은 최대 1,000건까지 추가할 수 있습니다.'})
                 continue
             settings = get_settings()
+            is_chzzk = self._is_chzzk_url(url)
             task = VodDownloadTask(url=url, title=url.rsplit('/', 1)[-1], prepared=True,
                                    phase='metadata', quality=settings.vod_default_quality, cdn=settings.chzzk_vod_cdn,
-                                   output_dir=settings.effective_vod_download_dir(True), max_retries=5)
+                                   output_dir=settings.effective_vod_download_dir(is_chzzk), max_retries=5 if is_chzzk else 3)
             self._tasks[task.task_id] = task
             self._schedule_metadata(task)
             results.append({'url': url, 'task_id': task.task_id, 'duplicate': False})
@@ -80,6 +131,9 @@ class VodPreparation:
             if self._tasks.get(task.task_id) is not task:
                 return
             options = quality_options(info)
+            if not options and not self._is_chzzk_url(task.url) and any(fmt.get('vcodec') != 'none' for fmt in info.get('formats', [])):
+                # Direct video URLs may have no advertised height; use a real yt-dlp selector.
+                options = [{'value': 'best', 'label': '최고 화질'}]
             if not options:
                 raise ValueError('사용 가능한 영상 화질을 가져오지 못했습니다.')
             task.title = info.get('title') or task.title
@@ -88,13 +142,17 @@ class VodPreparation:
             task.metadata['qualities'] = options
             available = [option['value'] for option in options]
             preference = task.quality
-            if preference == 'worst':
+            if available == ['best']:
+                task.quality = 'best'
+                if preference not in ('best', 'worst'):
+                    task.metadata['quality_fallback'] = True
+            elif preference == 'worst':
                 task.quality = available[-1]
             elif preference in available:
                 task.quality = preference
             else:
                 target = int(preference[:-1]) if re.fullmatch(r'[0-9]+p', preference) else None
-                task.quality = next((v for v in available if target and int(v[:-1]) <= target), available[-1] if target else available[0])
+                task.quality = next((o['value'] for o in options if target and (o.get('height') or (int(o['value'][:-1]) if re.fullmatch(r'\d+p', o['value']) else 0)) <= target), available[-1] if target else available[0])
                 if target:
                     task.metadata['quality_fallback'] = True
             task.error_message = None

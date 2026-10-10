@@ -52,7 +52,7 @@ async def main():
   await page.goto(BASE+'/vod')
   rows = page.locator('.download-row')
   await rows.first.wait_for()
-  await page.get_by_role('button',name='일시정지 2',exact=True).click()
+  await page.get_by_role('button',name='일시정지 (2)',exact=True).click()
   assert await rows.count() == 2
   await rows.first.locator('.download-mobile-menu').tap()
   dialog = page.get_by_role('dialog')

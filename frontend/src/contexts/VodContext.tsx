@@ -31,8 +31,15 @@ export function VodProvider({ children }: { children: ReactNode }) {
 
     const applyStatus = useCallback((data: VodStatusResponse) => {
         setLoadError(false);
-        setTasks(data.tasks);
-        setImports(data.imports ?? []);
+        setTasks(previous => {
+            const byId = new Map(previous.map(task => [task.task_id, task]));
+            const next = data.tasks.map(task => {
+                const prior = byId.get(task.task_id);
+                return prior && JSON.stringify(prior) === JSON.stringify(task) ? prior : task;
+            });
+            return previous.length === next.length && previous.every((task, index) => task === next[index]) ? previous : next;
+        });
+        setImports(previous => JSON.stringify(previous) === JSON.stringify(data.imports ?? []) ? previous : data.imports ?? []);
         setActiveCount(data.active_count);
     }, []);
 
@@ -62,9 +69,9 @@ export function VodProvider({ children }: { children: ReactNode }) {
         return () => clearInterval(interval);
     }, [refreshTasks]);
 
-    const addTask = async (url: string, quality = "best") => {
+    const addTask = async (url: string, quality?: string) => {
         const settings = await api.getSettings();
-        const result = await api.downloadVod(url, quality, undefined, settings.chzzk_vod_cdn ?? "default");
+        const result = await api.downloadVod(url, quality ?? settings.vod_default_quality ?? 'best', undefined, settings.chzzk_vod_cdn ?? "default");
         await refreshTasks();
         return result;
     };

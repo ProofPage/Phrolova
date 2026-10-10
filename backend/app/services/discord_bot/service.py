@@ -18,13 +18,11 @@ NOTE: discord.py 라이브러리가 필요합니다.
 """
 
 from __future__ import annotations
-
 import asyncio
 import math
 import platform
 import random
 from typing import TYPE_CHECKING, Callable, Optional
-
 from app.core.config import get_settings
 from app.core.logger import logger
 from app.services.notifications import (
@@ -36,8 +34,6 @@ from app.services.notifications import (
 
 if TYPE_CHECKING:
     from app.services.recorder import RecorderService
-
-# discord.py가 설치되어 있는지 확인
 try:
     import discord
     from discord import app_commands
@@ -46,20 +42,10 @@ try:
     HAS_DISCORD = True
 except ImportError:
     HAS_DISCORD = False
-
 from app.services.discord_bot.authorization import _DENIED_MESSAGE, _is_authorized
 
-# 재연결 백오프 (초) — 고정 대기 대신 지수 증가로 API 남용을 피한다.
 _RECONNECT_BASE_DELAY = 5.0
 _RECONNECT_MAX_DELAY = 300.0
-
-
-
-
-
-
-
-
 
 
 def _make_embed(
@@ -88,7 +74,7 @@ def _make_embed(
         for key, value in list(fields.items())[:25]:
             embed.add_field(
                 name=truncate(str(key), 256),
-                value=truncate(str(value), MAX_FIELD_VALUE) or "​",
+                value=truncate(str(value), MAX_FIELD_VALUE) or "\u200b",
                 inline=False,
             )
     return embed
@@ -107,7 +93,6 @@ class DiscordBotService:
         stop  [channel_id] — 녹화 중지 + 자동 녹화 OFF
     """
 
-    #: NotificationService에 등록될 때의 채널 이름.
     name = "discord_bot"
 
     def __init__(
@@ -120,10 +105,9 @@ class DiscordBotService:
         self._task: Optional[asyncio.Task] = None
         self._stopping = False
         self._on_ready = on_ready
-        # 대상 채널 객체 캐시 — 매 알림마다 fetch_channel을 호출하지 않기 위함.
         self._channel_cache: dict[int, object] = {}
         self._reconnect_failures = 0
-        self._notifier = None  # NotificationService — 진단 커맨드용 (순환 참조 방지로 후주입)
+        self._notifier = None
 
     def set_notifier(self, notifier) -> None:
         """진단 커맨드가 알림 큐 상태를 읽을 수 있도록 서비스를 연결한다."""
@@ -133,18 +117,14 @@ class DiscordBotService:
         """Discord Bot을 시작한다."""
         if not HAS_DISCORD:
             logger.warning(
-                "discord.py가 설치되지 않았습니다. "
-                "Discord Bot 기능을 사용하려면 'pip install discord.py'를 실행하세요."
+                "discord.py가 설치되지 않았습니다. Discord Bot 기능을 사용하려면 'pip install discord.py'를 실행하세요."
             )
             return
-
         settings = get_settings()
         token = settings.discord_bot_token
-
         if not token:
             logger.info("Discord Bot 토큰이 설정되지 않았습니다. Bot을 건너뜁니다.")
             return
-
         self._stopping = False
         self._task = asyncio.create_task(self._run_with_reconnect(token))
 
@@ -158,14 +138,14 @@ class DiscordBotService:
                 channel_id = interaction.channel_id
                 if _is_authorized(interaction.user.id, channel_id):
                     return True
-
                 command_name = interaction.command.name if interaction.command else "?"
                 logger.warning(
-                    f"Discord 명령어 권한 거부 (슬래시): user={interaction.user} "
-                    f"({interaction.user.id}) channel={channel_id} command={command_name}"
+                    f"Discord 명령어 권한 거부 (슬래시): user={interaction.user} ({interaction.user.id}) channel={channel_id} command={command_name}"
                 )
                 try:
-                    await interaction.response.send_message(_DENIED_MESSAGE, ephemeral=True)
+                    await interaction.response.send_message(
+                        _DENIED_MESSAGE, ephemeral=True
+                    )
                 except Exception:
                     pass
                 return False
@@ -180,13 +160,12 @@ class DiscordBotService:
                 defer만 하고 followup을 못 보내면 Discord는 "생각 중" 상태에
                 영원히 머문다. 사용자 입장에서는 원인을 알 길이 없다.
                 """
-                # 권한 거부는 이미 안내를 보냈으므로 중복으로 알리지 않는다.
                 if isinstance(error, app_commands.CheckFailure):
                     return
-
                 command_name = interaction.command.name if interaction.command else "?"
-                logger.error(f"Discord 명령 처리 실패 ({command_name}): {error}", exc_info=error)
-
+                logger.error(
+                    f"Discord 명령 처리 실패 ({command_name}): {error}", exc_info=error
+                )
                 notice = "⚠️ 명령을 처리하지 못했습니다. 서버 로그를 확인하세요."
                 try:
                     if interaction.response.is_done():
@@ -198,12 +177,9 @@ class DiscordBotService:
 
         intents = discord.Intents.default()
         bot = commands.Bot(
-            # 프리픽스 명령을 쓰지 않으므로 메시지 본문을 읽을 필요가 없다.
-            # message_content는 privileged intent라, 빼면 봇 설정 단계가 하나 줄어든다.
             command_prefix=commands.when_mentioned,
             intents=intents,
             tree_cls=_AuthorizedCommandTree,
-            # 빌트인 !help도 프리픽스 명령이라 슬래시 전용에서는 끈다.
             help_command=None,
         )
         self._register_commands(bot)
@@ -220,18 +196,15 @@ class DiscordBotService:
             bot = self._build_bot()
             self._bot = bot
             self._channel_cache.clear()
-
             try:
                 logger.info("🤖 Discord Bot 시작 중...")
                 await bot.start(token)
-                # 정상 반환 = 연결이 닫힘. 종료 요청이 아니면 재연결 대상이다.
                 if self._stopping:
                     break
                 logger.warning("Discord Bot 연결이 종료되었습니다. 재연결합니다.")
             except discord.LoginFailure:
                 logger.error(
-                    "Discord Bot 로그인 실패: 토큰이 올바르지 않습니다. "
-                    "재연결을 중단합니다. 설정에서 토큰을 다시 확인하세요."
+                    "Discord Bot 로그인 실패: 토큰이 올바르지 않습니다. 재연결을 중단합니다. 설정에서 토큰을 다시 확인하세요."
                 )
                 break
             except asyncio.CancelledError:
@@ -247,19 +220,18 @@ class DiscordBotService:
                     try:
                         await bot.close()
                     except BaseException:
-                        # 종료 중 취소된 상태에서도 정리는 조용히 마친다.
                         pass
-
             if self._stopping:
                 break
-
-            # on_ready에서 0으로 리셋되므로, 오래 붙어 있다가 끊긴 경우엔
-            # 다시 짧은 간격부터 재시도한다.
             self._reconnect_failures += 1
             failures = self._reconnect_failures
-            delay = min(_RECONNECT_BASE_DELAY * (2 ** (failures - 1)), _RECONNECT_MAX_DELAY)
+            delay = min(
+                _RECONNECT_BASE_DELAY * 2 ** (failures - 1), _RECONNECT_MAX_DELAY
+            )
             delay += random.uniform(0, delay * 0.2)
-            logger.info(f"🤖 {delay:.0f}초 후 Discord 재연결을 시도합니다. (시도 {failures}회)")
+            logger.info(
+                f"🤖 {delay:.0f}초 후 Discord 재연결을 시도합니다. (시도 {failures}회)"
+            )
             try:
                 await asyncio.sleep(delay)
             except asyncio.CancelledError:
@@ -268,28 +240,26 @@ class DiscordBotService:
     async def stop(self) -> None:
         """Discord Bot을 종료한다."""
         self._stopping = True
-
         bot = self._bot
-        if bot is not None and not bot.is_closed():
+        if bot is not None and (not bot.is_closed()):
             await bot.close()
             logger.info("🤖 Discord Bot 종료.")
-
         task = self._task
-        if task is not None and not task.done():
+        if task is not None and (not task.done()):
             task.cancel()
             try:
                 await task
             except (asyncio.CancelledError, Exception):
                 pass
 
-    # ── NotificationTransport 구현 ───────────────────────
-
     def is_configured(self) -> bool:
         """봇 토큰과 알림 채널 ID가 모두 설정되어 있는지."""
         if not HAS_DISCORD:
             return False
         settings = get_settings()
-        return bool(settings.discord_bot_token and settings.discord_notification_channel_id)
+        return bool(
+            settings.discord_bot_token and settings.discord_notification_channel_id
+        )
 
     def is_available(self) -> bool:
         """지금 즉시 메시지를 보낼 수 있는 상태인지."""
@@ -306,15 +276,12 @@ class DiscordBotService:
         cached = self._channel_cache.get(channel_id)
         if cached is not None:
             return cached
-
         bot = self._bot
         if bot is None:
             return None
-
         channel = bot.get_channel(channel_id)
         if channel is None:
             channel = await bot.fetch_channel(channel_id)
-
         self._channel_cache[channel_id] = channel
         return channel
 
@@ -322,24 +289,19 @@ class DiscordBotService:
         """NotificationService가 호출하는 실제 전송 진입점."""
         if not HAS_DISCORD:
             return DeliveryResult.UNAVAILABLE
-
         bot = self._bot
         if bot is None or not bot.is_ready():
             return DeliveryResult.UNAVAILABLE
-
         channel_id_str = get_settings().discord_notification_channel_id
         if not channel_id_str:
             return DeliveryResult.UNAVAILABLE
-
         try:
             channel_id = int(str(channel_id_str).strip())
         except (TypeError, ValueError):
             logger.error(
-                f"Discord 알림 채널 ID가 숫자가 아닙니다: {channel_id_str!r}. "
-                "채널 우클릭 > 'ID 복사'로 얻은 값을 넣어주세요."
+                f"Discord 알림 채널 ID가 숫자가 아닙니다: {channel_id_str!r}. 채널 우클릭 > 'ID 복사'로 얻은 값을 넣어주세요."
             )
             return DeliveryResult.PERMANENT_FAIL
-
         embed = discord.Embed(
             title=payload.title,
             description=payload.description,
@@ -347,30 +309,28 @@ class DiscordBotService:
         )
         for name, value in payload.fields:
             embed.add_field(name=name, value=value, inline=False)
-
         try:
             channel = await self._resolve_channel(channel_id)
             if channel is None or not hasattr(channel, "send"):
                 logger.error(f"Discord 채널 {channel_id}에 메시지를 보낼 수 없습니다.")
                 return DeliveryResult.PERMANENT_FAIL
-
-            await channel.send(  # type: ignore[union-attr]
+            await channel.send(
                 content=payload.mention or None,
                 embed=embed,
                 allowed_mentions=discord.AllowedMentions(everyone=True, roles=True),
             )
             return DeliveryResult.DELIVERED
-
         except discord.Forbidden:
             self._channel_cache.pop(channel_id, None)
             logger.error(
-                f"Discord 채널 {channel_id}에 메시지 전송 권한이 없습니다. "
-                "봇에게 '메시지 보내기' 및 '링크 첨부' 권한을 부여하세요."
+                f"Discord 채널 {channel_id}에 메시지 전송 권한이 없습니다. 봇에게 '메시지 보내기' 및 '링크 첨부' 권한을 부여하세요."
             )
             return DeliveryResult.PERMANENT_FAIL
         except discord.NotFound:
             self._channel_cache.pop(channel_id, None)
-            logger.error(f"Discord 채널 {channel_id}을(를) 찾을 수 없습니다. 채널 ID를 확인하세요.")
+            logger.error(
+                f"Discord 채널 {channel_id}을(를) 찾을 수 없습니다. 채널 ID를 확인하세요."
+            )
             return DeliveryResult.PERMANENT_FAIL
         except discord.HTTPException as e:
             self._channel_cache.pop(channel_id, None)
@@ -391,18 +351,16 @@ class DiscordBotService:
     def _register_commands(self, bot: commands.Bot) -> None:
         """Bot 명령어를 등록한다 (프리픽스 + 슬래시)."""
 
-        # ── 공통 로직 헬퍼 ──────────────────────────────────
-
         def _get_status_embed() -> discord.Embed:
             channels = self._service.get_channels()
             recording_count = sum(
-                1
-                for ch in channels
-                if ch.get("recording") and ch["recording"].get("state") == "recording"
+                (
+                    1
+                    for ch in channels
+                    if ch.get("recording")
+                    and ch["recording"].get("state") == "recording"
+                )
             )
-            # ImportError만 잡으면 psutil이 다른 이유로 실패했을 때 예외가 그대로
-            # 올라가 핸들러가 죽고, 사용자에게는 "생각 중"만 남는다.
-            # 시스템 정보는 부가 정보이므로 실패해도 나머지는 보여준다.
             try:
                 import psutil
 
@@ -413,10 +371,13 @@ class DiscordBotService:
             except Exception as e:
                 logger.warning(f"시스템 정보 조회 실패: {e}")
                 sys_info = f"OS: {platform.system()} {platform.release()}"
-
             embed = discord.Embed(
                 title="📊 Phrolova 상태",
-                color=discord.Color.green() if recording_count > 0 else discord.Color.grey(),
+                color=(
+                    discord.Color.green()
+                    if recording_count > 0
+                    else discord.Color.grey()
+                ),
             )
             embed.add_field(name="감시 채널", value=str(len(channels)), inline=True)
             embed.add_field(name="녹화 중", value=str(recording_count), inline=True)
@@ -427,8 +388,7 @@ class DiscordBotService:
             """(embed, error_message) 반환. 채널 없으면 embed=None."""
             channels = self._service.get_channels()
             if not channels:
-                return None, "📭 등록된 채널이 없습니다."
-
+                return (None, "📭 등록된 채널이 없습니다.")
             lines: list[str] = []
             for ch in channels:
                 live_status = "🔴 LIVE" if ch["is_live"] else "⚫ OFF"
@@ -441,13 +401,12 @@ class DiscordBotService:
                         dur = ch["recording"].get("duration_seconds", 0)
                         rec = f" | 🎬 녹화 중 ({dur:.0f}s)"
                 lines.append(f"{live_status} **{name}** `({channel_id})`{rec}")
-
             embed = discord.Embed(
                 title="📋 채널 목록",
                 description="\n".join(lines),
                 color=discord.Color.blue(),
             )
-            return embed, None
+            return (embed, None)
 
         def _find_channel(channel_id: str) -> dict | None:
             for ch in self._service.get_channels():
@@ -455,22 +414,16 @@ class DiscordBotService:
                     return ch
             return None
 
-        # ── 프리픽스 명령어 ──────────────────────────────────
-
         @bot.event
         async def on_ready() -> None:
             logger.info(f"🤖 Discord Bot 로그인: {bot.user}")
             self._channel_cache.clear()
-            self._reconnect_failures = 0  # 연결 성공 → 백오프 초기화
-
-            # 연결이 살아났으니 대기 중인 알림을 즉시 흘려보낸다.
+            self._reconnect_failures = 0
             if self._on_ready is not None:
                 try:
                     self._on_ready()
                 except Exception as e:
                     logger.error(f"알림 큐 flush 트리거 실패: {e}")
-
-            # 글로벌 sync()는 전파에 최대 1시간 소요 → 서버별 즉시 동기화로 대체
             total = 0
             for guild in bot.guilds:
                 try:
@@ -481,9 +434,9 @@ class DiscordBotService:
                     logger.error(f"슬래시 커맨드 동기화 실패 ({guild.name}): {e}")
             logger.info(f"🤖 슬래시 커맨드 동기화 완료: {total}개 (서버별 즉시 적용)")
 
-        # ── 슬래시 커맨드 ────────────────────────────────────
-
-        @bot.tree.command(name="status", description="현재 녹화 상태와 시스템 리소스를 확인합니다")
+        @bot.tree.command(
+            name="status", description="현재 녹화 상태와 시스템 리소스를 확인합니다"
+        )
         async def slash_status(interaction: discord.Interaction) -> None:
             await interaction.response.defer()
             embed = await asyncio.to_thread(_get_status_embed)
@@ -498,11 +451,13 @@ class DiscordBotService:
             else:
                 await interaction.followup.send(embed=embed)
 
-        @bot.tree.command(name="start", description="채널 녹화를 시작하고 자동 녹화를 ON으로 설정합니다")
+        @bot.tree.command(
+            name="start",
+            description="채널 녹화를 시작하고 자동 녹화를 ON으로 설정합니다",
+        )
         @app_commands.describe(channel_id="감시 중인 채널 ID (/list에서 확인)")
         async def slash_start(
-            interaction: discord.Interaction,
-            channel_id: str,
+            interaction: discord.Interaction, channel_id: str
         ) -> None:
             await interaction.response.defer()
             ch = await asyncio.to_thread(_find_channel, channel_id)
@@ -511,21 +466,20 @@ class DiscordBotService:
                     f"❌ 등록되지 않은 채널 ID입니다: `{channel_id}`", ephemeral=True
                 )
                 return
-
             display_name = ch.get("channel_name") or channel_id
             composite_key = ch["composite_key"]
-
             await self._service.start_channel(composite_key)
             await interaction.followup.send(
-                embed=_make_embed("🎬 녹화 시작", f"**{display_name}**\n자동 녹화 ON", "green")
+                embed=_make_embed(
+                    "🎬 녹화 시작", f"**{display_name}**\n자동 녹화 ON", "green"
+                )
             )
 
-        @bot.tree.command(name="stop", description="채널 녹화를 중지하고 자동 녹화를 OFF로 설정합니다")
+        @bot.tree.command(
+            name="stop", description="채널 녹화를 중지하고 자동 녹화를 OFF로 설정합니다"
+        )
         @app_commands.describe(channel_id="감시 중인 채널 ID (/list에서 확인)")
-        async def slash_stop(
-            interaction: discord.Interaction,
-            channel_id: str,
-        ) -> None:
+        async def slash_stop(interaction: discord.Interaction, channel_id: str) -> None:
             await interaction.response.defer()
             ch = await asyncio.to_thread(_find_channel, channel_id)
             if ch is None:
@@ -533,54 +487,47 @@ class DiscordBotService:
                     f"❌ 등록되지 않은 채널 ID입니다: `{channel_id}`", ephemeral=True
                 )
                 return
-
             display_name = ch.get("channel_name") or channel_id
             composite_key = ch["composite_key"]
-
             await self._service.stop_channel(composite_key)
             await interaction.followup.send(
-                embed=_make_embed("⏹ 녹화 중지", f"**{display_name}**\n자동 녹화 OFF", "blue")
+                embed=_make_embed(
+                    "⏹ 녹화 중지", f"**{display_name}**\n자동 녹화 OFF", "blue"
+                )
             )
-
-        # ── 알림 진단 커맨드 ────────────────────────────────
 
         def _get_diag_embed() -> discord.Embed:
             """알림 파이프라인 상태를 보여준다 (알림 누락 원인 추적용)."""
-            # 연결 전에는 latency가 nan이므로 유한값일 때만 표시한다.
             raw_latency = bot.latency
             latency = (
                 f"{raw_latency * 1000:.0f}ms"
                 if isinstance(raw_latency, float) and math.isfinite(raw_latency)
                 else "N/A"
             )
-            embed = discord.Embed(title="🩺 알림 파이프라인 진단", color=discord.Color.blue())
+            embed = discord.Embed(
+                title="🩺 알림 파이프라인 진단", color=discord.Color.blue()
+            )
             embed.add_field(name="게이트웨이 지연", value=latency, inline=True)
-
             settings = get_settings()
             embed.add_field(
                 name="알림 채널 ID",
                 value=f"`{settings.discord_notification_channel_id or '미설정'}`",
                 inline=True,
             )
-
             if self._notifier is None:
                 embed.add_field(name="알림 큐", value="서비스 미연결", inline=False)
                 return embed
-
             stats = self._notifier.get_stats()
             embed.add_field(
                 name="큐 상태",
-                value=(
-                    f"대기 `{stats['pending']}` · 전송 `{stats['delivered']}` · "
-                    f"폐기 `{stats['dropped']}` · 만료 `{stats['expired']}`"
-                ),
+                value=f"대기 `{stats['pending']}` · 전송 `{stats['delivered']}` · 폐기 `{stats['dropped']}` · 만료 `{stats['expired']}`",
                 inline=False,
             )
             transports = "\n".join(
-                f"{'🟢' if t['available'] else ('🟡' if t['configured'] else '⚪')} "
-                f"**{t['name']}** — 설정 {'O' if t['configured'] else 'X'} / "
-                f"가용 {'O' if t['available'] else 'X'}"
-                for t in stats["transports"]
+                (
+                    f"{('🟢' if t['available'] else '🟡' if t['configured'] else '⚪')} **{t['name']}** — 설정 {('O' if t['configured'] else 'X')} / 가용 {('O' if t['available'] else 'X')}"
+                    for t in stats["transports"]
+                )
             )
             embed.add_field(name="전송 채널", value=transports or "없음", inline=False)
             embed.add_field(
@@ -590,7 +537,9 @@ class DiscordBotService:
             )
             return embed
 
-        @bot.tree.command(name="diag", description="알림 큐와 전송 채널 상태를 진단합니다")
+        @bot.tree.command(
+            name="diag", description="알림 큐와 전송 채널 상태를 진단합니다"
+        )
         async def slash_diag(interaction: discord.Interaction) -> None:
             await interaction.response.defer()
             embed = await asyncio.to_thread(_get_diag_embed)
@@ -611,151 +560,19 @@ class DiscordBotService:
             )
             return "📨 테스트 알림을 큐에 넣었습니다. 알림 채널을 확인하세요."
 
-        @bot.tree.command(name="notify-test", description="알림 채널로 테스트 알림을 보냅니다")
+        @bot.tree.command(
+            name="notify-test", description="알림 채널로 테스트 알림을 보냅니다"
+        )
         async def slash_notify_test(interaction: discord.Interaction) -> None:
             await interaction.response.defer()
             message = await asyncio.to_thread(_send_test_notification)
             await interaction.followup.send(message)
 
-        # ── X Spaces 전용 커맨드 ────────────────────────────
-
-        @bot.tree.command(name="rescan", description="설정된 폴링 주기를 무시하고 모든 채널을 즉시 스캔합니다")
+        @bot.tree.command(
+            name="rescan",
+            description="설정된 폴링 주기를 무시하고 모든 채널을 즉시 스캔합니다",
+        )
         async def slash_rescan(interaction: discord.Interaction) -> None:
             await interaction.response.defer()
             await asyncio.to_thread(self._service.scan_now)
             await interaction.followup.send("🔍 전체 채널 즉시 스캔을 시작했습니다.")
-
-        @bot.tree.command(name="spaces", description="캡처된 X Spaces m3u8 URL 목록을 표시합니다")
-        async def slash_spaces(interaction: discord.Interaction) -> None:
-            await interaction.response.defer()
-            embed, err = await asyncio.to_thread(_get_spaces_embed)
-            if err:
-                await interaction.followup.send(err)
-            else:
-                await interaction.followup.send(embed=embed)
-
-        @bot.tree.command(name="download-space", description="X Spaces m3u8 URL로 다운로드를 시작합니다")
-        @app_commands.describe(url="m3u8 URL (캡처된 URL 또는 직접 입력)")
-        async def slash_download_space(
-            interaction: discord.Interaction,
-            url: str,
-        ) -> None:
-            await interaction.response.defer()
-            embed = await _do_download_space(url)
-            await interaction.followup.send(embed=embed)
-
-        @bot.tree.command(name="capture-space", description="X Spaces m3u8 URL을 즉시 1회 조회합니다 (자동 감지 대체)")
-        @app_commands.describe(username="X 계정 핸들 (@ 제외, 예: KalserianT)")
-        async def slash_capture_space(
-            interaction: discord.Interaction,
-            username: str,
-        ) -> None:
-            await interaction.response.defer()
-            embed = await _do_capture_space(username)
-            await interaction.followup.send(embed=embed)
-
-        # ── Spaces 헬퍼 ──────────────────────────────────────────
-
-        def _get_spaces_embed() -> tuple[discord.Embed | None, str | None]:
-            """캡처된 Space URL 목록 Embed를 반환한다 (master_url 우선)."""
-            channels = self._service.get_channels()
-            spaces = [
-                ch for ch in channels
-                if ch.get("platform") == "x_spaces"
-                and (ch.get("master_url") or ch.get("captured_m3u8_url"))
-            ]
-            if not spaces:
-                return None, "📭 캡처된 X Spaces URL이 없습니다."
-
-            embed = discord.Embed(
-                title="🎙️ 캡처된 X Spaces",
-                color=discord.Color.blue(),
-            )
-            for sp in spaces:
-                name = sp.get("channel_name") or sp["channel_id"]
-                title = sp.get("title") or "제목 없음"
-                # master_url 우선, 없으면 dynamic m3u8 URL 사용
-                url = sp.get("master_url") or sp.get("captured_m3u8_url", "")
-                captured_at_raw = sp.get("master_url_captured_at") or sp.get("captured_m3u8_at", "")
-                captured_at = captured_at_raw[:19].replace("T", " ") if captured_at_raw else "N/A"
-                url_label = "Master URL" if sp.get("master_url") else "m3u8 URL"
-                embed.add_field(
-                    name=f"@{name} — {title}",
-                    value=(
-                        f"캡처 시각: `{captured_at}`\n"
-                        f"{url_label}: `{url}`\n"
-                        f"다운로드: `/download-space url:<위 URL>`"
-                    ),
-                    inline=False,
-                )
-            return embed, None
-
-        async def _do_download_space(url: str) -> discord.Embed:
-            """Space URL 또는 m3u8 URL로 다운로드를 시작하고 결과 Embed를 반환한다."""
-            try:
-                # Space URL (https://x.com/i/spaces/...) 인 경우 새 엔진으로 처리
-                if "/i/spaces/" in url:
-                    result = await self._service.download_space(url)
-                    if "error" in result:
-                        return _make_embed("❌ 다운로드 실패", result["error"], "red")
-                    from app.engine.x_spaces import SPACE_STATE_RUNNING
-                    state_str = "🔴 라이브 중" if result.get("state") == SPACE_STATE_RUNNING else "📼 종료된 Space"
-                    return _make_embed(
-                        "⬇️ Space 다운로드 시작",
-                        f"**{result.get('title', 'X Spaces')}** — {state_str}",
-                        "green",
-                        fields={
-                            "space_id": result.get("space_id", ""),
-                            "저장 경로": result.get("output", "")[-60:],
-                        },
-                    )
-                # 기존 m3u8 URL → VodEngine으로 처리
-                task_id = await self._service.download_vod(url=url)
-                return _make_embed(
-                    "⬇️ 다운로드 시작",
-                    f"X Spaces 다운로드가 시작되었습니다.",
-                    "green",
-                    fields={"task_id": str(task_id), "URL": url[:100]},
-                )
-            except Exception as e:
-                return _make_embed(
-                    "❌ 다운로드 실패",
-                    f"오류: {str(e)[:200]}",
-                    "red",
-                )
-
-        async def _do_capture_space(username: str) -> discord.Embed:
-            """X Spaces m3u8 URL을 즉시 1회 조회하고 결과 Embed를 반환한다."""
-            try:
-                result = await self._service.capture_space(username)
-            except Exception as e:
-                return _make_embed("❌ 캡처 실패", f"오류: {str(e)[:200]}", "red")
-
-            if "error" in result:
-                return _make_embed("❌ 캡처 실패", result["error"], "red")
-
-            if result.get("captured") and result.get("m3u8_url"):
-                channel_name = result.get("channel_name") or username
-                title = result.get("title") or "제목 없음"
-                m3u8_url = result["m3u8_url"]
-                return _make_embed(
-                    "🎙️ m3u8 URL 캡처 완료",
-                    f"**@{channel_name}** — {title}",
-                    "green",
-                    fields={
-                        "m3u8 URL": m3u8_url,
-                        "다운로드": f"`/download-space url:{m3u8_url}`",
-                    },
-                )
-            elif result.get("is_live"):
-                return _make_embed(
-                    "⚠️ 라이브 중이지만 m3u8 캡처 실패",
-                    f"@{username} Space가 진행 중이나 m3u8 URL을 가져오지 못했습니다.\n잠시 후 다시 시도하세요.",
-                    "yellow",
-                )
-            else:
-                return _make_embed(
-                    "📴 Space 없음",
-                    f"@{username}가 현재 Space를 진행하고 있지 않습니다.",
-                    "blue",
-                )
