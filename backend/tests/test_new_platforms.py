@@ -381,7 +381,9 @@ def test_streamlink_master_selects_requested_fps(local_hls):
 
 @pytest.mark.asyncio
 async def test_preview_timeout_kills_and_reaps_process(monkeypatch):
+    from app.core.config import Settings
     from app.engine.preview_frames import FramePreviewService
+    monkeypatch.setattr(Settings, 'resolve_ffmpeg_path', lambda self: 'ffmpeg')
     preview=FramePreviewService();engine=type('Engine',(),{})()
     engine.get_qualities=AsyncMock(return_value=[])
     engine.resolve_stream=AsyncMock(return_value=('https://cdn.example/live.m3u8',{},None))
