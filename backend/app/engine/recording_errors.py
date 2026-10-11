@@ -29,6 +29,8 @@ def classify_recording_error(error: Exception) -> RecordingError:
         and error.errno in (errno.ENOSPC, errno.EROFS)
     ):
         return RecordingError("storage", "저장 위치의 권한과 남은 공간을 확인하세요.")
+    if getattr(error, 'status', None) in (401, 403):
+        return RecordingError('authentication', '방송 접근 권한을 확인하지 못했습니다. 설정 → 인증을 확인하세요.')
     text = str(error).lower()
     if "javascript runtime" in text:
         return RecordingError(

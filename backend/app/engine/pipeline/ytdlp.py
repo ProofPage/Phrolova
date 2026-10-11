@@ -53,6 +53,7 @@ class YtdlpLivePipeline:
         self._intentional_stop = False
         self._source_resolver = None
         self._source_page_url = ""
+        self._cookie_str = None
         self._closed = True
         self._ended_at = None
         self._readers = []
@@ -72,6 +73,10 @@ class YtdlpLivePipeline:
         self.capture_format = "ts"
         self.cdn = None
         self.warning_message = None
+        self.continuity_resume = None
+        self.continuity_source = {}
+        self.continuity_events = []
+        self._continuity_active = False
         from app.engine.native_clock import NativeClock
 
         self._native_clock = NativeClock()
@@ -441,6 +446,7 @@ class YtdlpLivePipeline:
             await asyncio.to_thread(session.http.close)
             raise
         self._streamlink_session, self._readers = session, readers
+        self._continuity_active = any(getattr(getattr(r, 'stream', None), 'continuity', None) for r in readers)
         while len(self._source_files) < len(readers):
             self._source_files.append(
                 self._output_path + f".audio{len(self._source_files)}.part"
@@ -482,6 +488,28 @@ class YtdlpLivePipeline:
             if not self._capture_ready.done():
                 self._capture_ready.set_exception(error)
 
+    def _accept_continuity_event(self, event):
+        from app.engine.chzzk_continuity_events import EVENT_PREFIX, parse_event
+        import json
+        safe = parse_event(EVENT_PREFIX + json.dumps(event))
+        if safe is None:
+            return
+        self.continuity_events.append(safe)
+        del self.continuity_events[:-64]
+        kind = safe['kind']
+        if kind == 'source':
+            role = 'selected' if safe['state'] == 'selected' else 'standby'
+            self.continuity_source[role] = {k: safe[k] for k in ('cdn', 'mode', 'state')}
+            if role == 'selected':
+                self.cdn = 'akamai' if safe['cdn'] == 'akamai' else 'default'
+        elif kind == 'recovery_started' and self._state == RecordingState.RECORDING:
+            self._state = RecordingState.RECONNECTING
+        elif kind == 'recovery_completed' and self._state == RecordingState.RECONNECTING:
+            self._state = RecordingState.RECORDING
+        elif kind == 'gap':
+            self.warning_message = '복구하지 못한 녹화 구간이 있습니다. 원본을 구간별 파일로 보관합니다.'
+        logger.debug(f"[{self._channel_id}] 치지직 수신 상태: {json.dumps(safe, ensure_ascii=False)}")
+
     def _measure_ts(self, data):
         """Measure the MPEG-TS PCR clock without decoding or invoking FFmpeg."""
         data = self._ts_tail + data
@@ -506,9 +534,13 @@ class YtdlpLivePipeline:
         self._ts_tail = data[limit:]
 
     async def _open_raw_readers(self, *args):
+        loop = asyncio.get_running_loop()
         def open_sources():
             session, stream = self._create_streamlink_stream(
-                *args, source_page_url=self._source_page_url
+                *args, source_page_url=self._source_page_url,
+                continuity_resume=self.continuity_resume,
+                continuity_callback=lambda event: loop.call_soon_threadsafe(self._accept_continuity_event, event),
+                api_cookie=self._cookie_str,
             )
             readers = []
             try:
@@ -554,6 +586,20 @@ class YtdlpLivePipeline:
                                     "unsupported_container",
                                     "선택된 스트림의 원본 형식을 확인할 수 없습니다.",
                                 )
+                            continuity = getattr(getattr(reader, 'stream', None), 'continuity', None)
+                            boundary = getattr(continuity, 'boundary_event', None)
+                            if boundary and boundary.get('reason') != 'broadcast_ended':
+                                resume_from = boundary.get('resume_from')
+                                if resume_from and self._start_time is not None:
+                                    self.continuity_resume = {
+                                        'live_id': boundary['live_id'], 'rendition': boundary['rendition'],
+                                        'from': resume_from, 'after_gap': boundary.get('after_gap', False),
+                                    }
+                                    self.end_reason = 'continuity_boundary'
+                                    return True
+                                raise RecordingError('continuity_gap', '필요한 녹화 구간을 복구하지 못했습니다. 저장된 원본을 확인하고 다시 시작하세요.')
+                            if continuity is not None and (continuity.ended or getattr(continuity.primary.playlist, 'is_endlist', False)):
+                                return True
                             if self._stall_detected or not self._hls_finished(reader):
                                 raise RuntimeError(
                                     "라이브 연결이 중단되었습니다. 재연결을 시도합니다."
@@ -675,7 +721,7 @@ class YtdlpLivePipeline:
             self._state = RecordingState.ERROR
             self.error_message = str(failure)
             self.error_code = failure.code
-            self.retryable = failure.retryable
+            self.retryable = failure.retryable and not self._continuity_active
             self.end_reason = failure.code
             self._ended_at = self._last_data_at
             if self._capture_ready and not self._capture_ready.done():
@@ -711,7 +757,8 @@ class YtdlpLivePipeline:
             ):
                 self._on_capture_error(self)
         if completed and self._start_time is not None:
-            self.end_reason = "manual" if self._intentional_stop else "broadcast_ended"
+            self.end_reason = ("manual" if self._intentional_stop else
+                               "continuity_boundary" if self.continuity_resume else "broadcast_ended")
             await self._seal_sources()
             if not self._intentional_stop and getattr(self, "_on_capture_ended", None):
                 asyncio.create_task(self._on_capture_ended(self))
@@ -809,6 +856,9 @@ class YtdlpLivePipeline:
         force_restart: bool,
         quality: str,
         source_page_url: str = "",
+        continuity_resume=None,
+        continuity_callback=None,
+        api_cookie=None,
     ) -> tuple[object, object]:
         """Create a fresh Streamlink HLS reader without an FFmpeg muxer."""
         from streamlink import Streamlink
@@ -873,6 +923,27 @@ class YtdlpLivePipeline:
             from streamlink.plugins.soop import SoopHLSStream
 
             stream_type = SoopHLSStream
+        if YtdlpLivePipeline._is_chzzk_live_page(source_page_url):
+            from app.engine.chzzk_stream import ChzzkHLSStream
+            channel_id = urlsplit(source_page_url).path.rstrip('/').rsplit('/', 1)[-1]
+            def make_stream(uri, **kwargs):
+                video = ChzzkHLSStream(
+                    session, uri, channel_id, event_callback=continuity_callback,
+                    api_cookie=api_cookie, resume=continuity_resume,
+                    recording_time_machine=force_restart,
+                    capture_start_offset=float(max(0, start_offset)), **kwargs,
+                )
+                video.initialize_sources()
+                if continuity_resume and continuity_resume['live_id'] != video.continuity.live_id:
+                    raise RecordingError('broadcast_changed', '방송이 변경되어 이전 녹화 위치에서 이어갈 수 없습니다. 다시 시작하세요.')
+                media_manifest = session.http.get(uri).text
+                video.continuity.primary.mode = ('llhls' if any(tag in media_manifest for tag in ('#EXT-X-PART:', '#EXT-X-PART-INF:')) else 'hls')
+                from app.engine.chzzk_continuity import SourcePath
+                video.continuity.paths[0] = SourcePath(uri, False, video.continuity.primary.mode, video.continuity.primary.cdn)
+                return video
+        else:
+            def make_stream(uri, **kwargs):
+                return stream_type(session, uri, **kwargs)
         try:
             response = session.http.get(hls_url)
             response.raise_for_status()
@@ -918,8 +989,7 @@ class YtdlpLivePipeline:
                     if "#EXT-X-MAP" not in child.text:
                         selected = candidate
                         break
-                video = stream_type(
-                    session,
+                video = make_stream(
                     selected.uri,
                     multivariant=manifest,
                     start_offset=float(max(0, start_offset)),
@@ -936,8 +1006,7 @@ class YtdlpLivePipeline:
                     stream = SimpleNamespace(
                         substreams=[
                             video,
-                            stream_type(
-                                session,
+                            make_stream(
                                 choice.uri,
                                 start_offset=float(max(0, start_offset)),
                             ),
@@ -946,8 +1015,8 @@ class YtdlpLivePipeline:
                 else:
                     stream = video
             else:
-                stream = stream_type(
-                    session, hls_url, start_offset=float(max(0, start_offset))
+                stream = make_stream(
+                    hls_url, start_offset=float(max(0, start_offset))
                 )
             if force_restart:
                 session.set_option("hls-live-restart", True)
@@ -1338,7 +1407,7 @@ class YtdlpLivePipeline:
                 self._update_statistics()
                 if (
                     self._last_data_at
-                    and (datetime.now() - self._last_data_at).total_seconds() > 90
+                    and (datetime.now() - self._last_data_at).total_seconds() > (95 if self._continuity_active else 90)
                     and not self._stall_detected
                 ):
                     self._stall_detected = True
@@ -1368,6 +1437,8 @@ class YtdlpLivePipeline:
             "capture_format": self.capture_format,
             "cdn": self.cdn,
             "warning_message": self.warning_message,
+            "continuity_source": dict(self.continuity_source),
+            "continuity_events": list(self.continuity_events),
             "has_data": self._start_time is not None and self._file_size_bytes > 0,
             "retryable": self.retryable,
             "error_code": self.error_code,

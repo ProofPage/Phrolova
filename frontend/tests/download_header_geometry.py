@@ -216,6 +216,61 @@ async def main():
                     measurements.append({'width':width,'mode':mode,'cards':geometry})
                     await page.screenshot(path=str(OUT/f'geometry-{mode}-{width}.png'),full_page=True)
 
+            # Detail expansion must not feed the card height back into its summary.
+            for width in WIDTHS:
+                await page.set_viewport_size({'width':width,'height':1000})
+                for mode,label in (('grid','카드로 보기'),('list','목록으로 보기')):
+                    await page.get_by_role('button',name=label,exact=True).click()
+                    active=page.locator('[data-task-id="active"]')
+                    paused=page.locator('[data-task-id="paused"]')
+                    def disclosure(card):
+                        return card.locator('.download-task-management > button').first
+                    before=await paused.bounding_box()
+                    await disclosure(active).click()
+                    await expect(active.locator('.download-task-details')).to_be_visible()
+                    await expect(paused.locator('.download-task-details')).to_be_hidden()
+                    after=await paused.bounding_box()
+                    assert after['height'] <= before['height']+1, (width,mode,'neighbour stretched',before,after)
+                    await disclosure(paused).click()
+                    await expect(paused.locator('.download-task-details')).to_be_visible()
+                    if mode=='grid':
+                        pairs=await page.locator('.download-task-list').evaluate("e=>({columns:getComputedStyle(e).gridTemplateColumns.split(' ').length,cards:[...e.querySelectorAll('.download-task')].map(c=>({height:c.getBoundingClientRect().height,buttons:c.querySelector('.download-actions').getBoundingClientRect().bottom-c.getBoundingClientRect().top}))})")
+                        if pairs['columns']==2:
+                            for i in range(0,len(pairs['cards'])-1,2):
+                                a,b=pairs['cards'][i:i+2]
+                                assert abs(a['height']-b['height'])<1, (width,'expanded pair height',a,b)
+                                assert abs(a['buttons']-b['buttons'])<1, (width,'expanded action baseline',a,b)
+
+                    for card in (active,paused):
+                        geometry=await card.evaluate("""e=>{
+                            const r=s=>e.querySelector(s).getBoundingClientRect();
+                            const status=r('.download-task-status'), footer=r('.download-task-footer');
+                            const summary=r('.download-task-summary'), details=r('.download-task-details');
+                            return {gap:footer.top-status.bottom,detailGap:details.top-(getComputedStyle(e.querySelector('.download-task-summary')).display==='contents'?footer.bottom:summary.bottom)};
+                        }""")
+                        assert abs(geometry['gap']-8)<1, (width,mode,'blank summary area',geometry)
+                        assert 0 <= geometry['detailGap'] <= 8.1, (width,mode,'disconnected details',geometry)
+                    if width==1440 and mode=='grid':
+                        await page.locator('.download-task-list').screenshot(path=str(OUT/'download-both-expanded-1440.png'))
+                    await disclosure(active).click()
+                    await expect(active.locator('.download-task-details')).to_be_hidden()
+                    await expect(paused.locator('.download-task-details')).to_be_visible()
+                    await disclosure(paused).click()
+                    for task in tasks:
+                        card=page.locator(f'[data-task-id="{task["task_id"]}"]')
+                        header_before=await card.evaluate(GEOMETRY)
+                        await disclosure(card).click()
+                        await expect(card.locator('.download-task-details')).to_be_visible()
+                        await expect(card.locator('.download-thumbnail')).to_be_visible()
+                        slot=await card.locator('.download-thumbnail').bounding_box()
+                        assert slot['width']>0 and slot['height']>0, (width,mode,task['task_id'],'missing expanded thumbnail')
+                        if task['task_id'] in ('active','paused'):
+                            assert await placeholder_centered(card), (width,mode,'expanded image fallback')
+                        header=await card.evaluate(GEOMETRY)
+                        same_header(header,header_before,(width,mode,task['task_id'],'expanded header'))
+                        await disclosure(card).click()
+                    assert await page.evaluate('document.documentElement.scrollWidth<=innerWidth'), (width,mode,'expanded overflow')
+
             # Recover the same failed slot when a later metadata response has a valid URL.
             await page.set_viewport_size({'width':1440,'height':1000})
             await page.get_by_role('button',name='목록으로 보기',exact=True).click()
@@ -246,7 +301,7 @@ async def main():
             assert await placeholder_centered(ready)
             assert not errors, errors
             (OUT/'header-geometry.json').write_text(json.dumps(measurements,ensure_ascii=False,indent=2),encoding='utf-8')
-            print('Download header geometry PASS: five states, real/missing/broken/delayed thumbnails, centered fallback, image load/source recovery, long/missing metadata, queued→active→complete, seven widths x grid/list; no header shift or page overflow')
+            print('Download header geometry PASS: five states, real/missing/broken/delayed thumbnails, centered fallback, image load/source recovery, long/missing metadata, queued→active→complete, seven widths x grid/list, independent single/multiple detail expansion with intact thumbnails; no header shift, blank summary area or page overflow')
         except Exception:
             await page.screenshot(path=str(OUT/'geometry-failure.png'),full_page=True)
             raise

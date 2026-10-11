@@ -11,6 +11,7 @@ export const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
 
 const messages: Record<Exclude<Language, "ko">, Record<string, string>> = {
     en: {
+        "수신 경로": "Receiving source", "예비 CDN": "Standby CDN", "국내 CDN": "Korean CDN", "준비 완료": "Ready", "제공되지 않음": "Not provided", "연결 확인 실패": "Connection check failed",
         "파일 검사 완료": "File inspection complete",
         "파일 확인 필요": "File needs attention",
         "검사 대기": "Inspection pending",
@@ -228,6 +229,7 @@ const messages: Record<Exclude<Language, "ko">, Record<string, string>> = {
         "라이브 파일명 형식": "Live recording filename format", "{name}/{channel_name}, {title}/{live_title}, {channel_uid}, {category}, {date_year}, {live_date_year}, {download_date_year}, {live_date_month}, {live_date_day}, {live_date_hour}, {live_date_minute}, {live_date_second}, {quality}, {extension} 사용 가능. 확장자는 자동 추가됩니다.": "Available fields: {name}/{channel_name}, {title}/{live_title}, {channel_uid}, {category}, {date_year}, {live_date_year}, {download_date_year}, {live_date_month}, {live_date_day}, {live_date_hour}, {live_date_minute}, {live_date_second}, {quality}, and {extension}. The extension is added automatically.", "라이브 설정 저장": "Save live settings", "라이브 설정이 저장되었습니다.": "Live settings saved.", "라이브 설정 저장에 실패했습니다.": "Could not save live settings.",
     },
     ja: {
+        "수신 경로": "受信経路", "예비 CDN": "予備CDN", "국내 CDN": "韓国CDN", "준비 완료": "準備完了", "제공되지 않음": "提供なし", "연결 확인 실패": "接続確認失敗",
         "파일 검사 완료": "ファイル検査完了",
         "파일 확인 필요": "ファイルの確認が必要",
         "검사 대기": "検査待ち",

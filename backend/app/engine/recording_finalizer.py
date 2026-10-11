@@ -298,6 +298,11 @@ class RecordingFinalizer:
             duration_seconds=pipeline.duration_seconds,
             file_size_bytes=pipeline.file_size_bytes,
         )
+        status = pipeline.get_status()
+        if status.get('continuity_events'):
+            job.setdefault('diagnostics', {})['continuity'] = status['continuity_events']
+        if status.get('continuity_source'):
+            job['continuity_source'] = status['continuity_source']
         if (
             not Path(job["source_paths"][0]).is_file()
             or Path(job["source_paths"][0]).stat().st_size == 0

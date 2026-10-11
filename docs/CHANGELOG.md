@@ -8,6 +8,24 @@
 
 ## [Unreleased]
 
+## [2.0.56] - 2026-10-11
+
+### Changed
+- 치지직 LL-HLS 연속 수신, 검증된 CDN 대기 경로, 제한된 구간 복구 및 안전한 파일 경계 처리를 적용했습니다.
+- Streamlink 원본 수신과 종료 후 FFmpeg·FFprobe 후처리 구조를 유지했습니다.
+- 라이브 녹화 상세에 실제 수신 경로와 CDN 대기 상태를 표시합니다.
+
+### Fixed
+- 라이브 미리보기 확장 시 옆 카드가 불필요하게 늘어나는 문제를 수정했습니다.
+- 다운로드 그리드의 빈 공간과 대기 카드 높이·버튼 정렬을 수정했습니다.
+
+### Validation
+- Python 746 passed, 6 skipped, 4 subtests passed.
+- TypeScript·프론트엔드 빌드와 반응형 브라우저·다운로드 제어 회귀 검사 통과.
+- 공개 치지직 일반·타임머신 녹화 및 MKV 후처리 검증 통과.
+
+
+
 ## [2.0.55] - 2026-10-11
 
 ### Fixed
@@ -756,7 +774,7 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.55...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.56...HEAD
 [2.0.55]: https://github.com/ProofPage/Phrolova/compare/v2.0.54...v2.0.55
 [2.0.54]: https://github.com/ProofPage/Phrolova/compare/v2.0.53...v2.0.54
 [2.0.53]: https://github.com/ProofPage/Phrolova/compare/v2.0.52...v2.0.53
@@ -815,3 +833,5 @@
 [2.0.0]: https://github.com/eruminyu/Rookery/compare/v1.1.7...v2.0.0
 [1.1.0]: https://github.com/eruminyu/Rookery/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/eruminyu/Rookery/releases/tag/v1.0.0
+
+[2.0.56]: https://github.com/ProofPage/Phrolova/compare/v2.0.55...v2.0.56

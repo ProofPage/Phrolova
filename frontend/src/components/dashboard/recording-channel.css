@@ -92,17 +92,18 @@
 @media (min-width:1024px) { .recording-history-row { grid-template-columns: minmax(220px,1fr) minmax(0,2fr); align-items: start; } .recording-history-row .recording-processing { border: 0; padding: 0; } }
 
 .recording-processing-diagnostics { grid-column: 1 / -1; }
-/* Neighbouring grid cards share real content row heights, including errors. */
+/* Align collapsed summaries only. Expanded details and previews must not
+   contribute shared row heights to neighbouring cards. */
 @supports (grid-template-rows: subgrid) {
   @container dashboard (min-width:1052px) {
-    .dashboard-channel-grid > .recording-channel--grid { display: grid; grid-template-columns: minmax(0,1fr) auto; grid-template-rows: subgrid; grid-row: span 4; container-type: normal; container-name: none; align-self: stretch; padding: 14px; gap: 12px; }
-    .recording-channel--grid .recording-channel-summary { display: contents; }
-    .recording-channel--grid .recording-channel-identity { grid-area: auto; grid-column: 1; grid-row: 1; }
-    .recording-channel--grid .recording-channel-management { grid-area: auto; grid-column: 2; grid-row: 1; }
-    .recording-channel--grid .recording-metrics { grid-template-columns: repeat(4,minmax(0,1fr)); grid-area: auto; grid-column: 1 / -1; grid-row: 2; }
-    .recording-channel--grid .recording-channel-controls { grid-area: auto; grid-column: 1 / -1; grid-row: 3; }
-    .recording-channel--grid .recording-channel-extra { grid-column: 1 / -1; grid-row: 4; min-width: 0; }
-    .recording-channel--grid .recording-channel-postprocess { padding: 0; }
+    .dashboard-channel-grid:not(:has(.recording-channel.is-selected)) > .recording-channel--grid { display: grid; grid-template-columns: minmax(0,1fr) auto; grid-template-rows: subgrid; grid-row: span 4; container-type: normal; container-name: none; align-self: stretch; padding: 14px; gap: 12px; }
+    .dashboard-channel-grid:not(:has(.recording-channel.is-selected)) > .recording-channel--grid .recording-channel-summary { display: contents; }
+    .dashboard-channel-grid:not(:has(.recording-channel.is-selected)) > .recording-channel--grid .recording-channel-identity { grid-area: auto; grid-column: 1; grid-row: 1; }
+    .dashboard-channel-grid:not(:has(.recording-channel.is-selected)) > .recording-channel--grid .recording-channel-management { grid-area: auto; grid-column: 2; grid-row: 1; }
+    .dashboard-channel-grid:not(:has(.recording-channel.is-selected)) > .recording-channel--grid .recording-metrics { grid-template-columns: repeat(4,minmax(0,1fr)); grid-area: auto; grid-column: 1 / -1; grid-row: 2; }
+    .dashboard-channel-grid:not(:has(.recording-channel.is-selected)) > .recording-channel--grid .recording-channel-controls { grid-area: auto; grid-column: 1 / -1; grid-row: 3; }
+    .dashboard-channel-grid:not(:has(.recording-channel.is-selected)) > .recording-channel--grid .recording-channel-extra { grid-column: 1 / -1; grid-row: 4; min-width: 0; }
+    .dashboard-channel-grid:not(:has(.recording-channel.is-selected)) > .recording-channel--grid .recording-channel-postprocess { padding: 0; }
   }
 }
 @media (min-width:1440px) {

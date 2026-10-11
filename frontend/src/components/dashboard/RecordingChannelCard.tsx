@@ -136,6 +136,8 @@ function RecordingChannelDetails({ channel }: { channel: Channel }) {
             {url && <div><dt>{t('방송 URL')}</dt><dd><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></dd></div>}
             {recording?.output_path && <div><dt>{t('녹화 파일')}</dt><dd>{recording.output_path}</dd></div>}
             {recording?.start_time && <div><dt>{t('녹화 시작 시각')}</dt><dd>{new Date(recording.start_time).toLocaleString()}</dd></div>}
+            {recording?.continuity_source?.selected && <div><dt>{t('수신 경로')}</dt><dd>{t(recording.continuity_source.selected.cdn === 'akamai' ? 'Akamai CDN' : recording.continuity_source.selected.cdn === 'korean' ? '국내 CDN' : '기본 CDN')} · {recording.continuity_source.selected.mode === 'llhls' ? 'LL-HLS' : 'HLS'}</dd></div>}
+            {recording?.continuity_source?.standby && <div><dt>{t('예비 CDN')}</dt><dd>Akamai CDN · {t(({ ready: '준비 완료', absent: '제공되지 않음', unavailable: '연결 확인 실패' })[recording.continuity_source.standby.state])}</dd></div>}
             {channel.recording_quality && <div><dt>{t('녹화 화질')}</dt><dd>{channel.recording_quality === 'best' ? t('최고 화질') : channel.recording_quality}</dd></div>}
             {channel.recording_inspection && <div><dt>{t('파일 검사')}</dt><dd className={channel.recording_inspection.state === 'passed' ? 'text-ok' : 'text-warn'} role="status">{channel.recording_inspection.message}</dd></div>}
             {channel.download_condition && <div><dt>{t('녹화 조건')}</dt><dd>{t(({ all: '모든 방송 녹화', watchalong: '같이보기 방송만 녹화', exclude_watchalong: '같이보기 방송 제외' })[channel.download_condition])}</dd></div>}

@@ -59,6 +59,10 @@ export interface Channel {
         capture_format?: string;
         cdn?: string;
         warning_message?: string;
+        continuity_source?: {
+            selected?: { cdn: 'korean' | 'akamai' | 'unknown'; mode: 'hls' | 'llhls'; state: 'selected' };
+            standby?: { cdn: 'akamai'; mode: 'hls' | 'llhls'; state: 'ready' | 'absent' | 'unavailable' };
+        };
         data_received_at?: string;
         is_recording: boolean;
         state: string;

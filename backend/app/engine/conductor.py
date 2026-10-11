@@ -900,8 +900,9 @@ class Conductor:
         title: Optional[str] = None,
         is_retry: bool = False,
         automatic: bool = False,
+        continuation=None,
     ) -> None:
-        """채널의 녹화를 시작한다."""
+        """Start a session, or continue a closed CHZZK container boundary."""
         task = self._channels.get(composite_key)
         if task is None:
             return
@@ -919,7 +920,7 @@ class Conductor:
                 return
             task.retry_count += 1
             self._persist_retry(task)
-        if (automatic or is_retry) and (not self._can_auto_record(task)):
+        if continuation is None and (automatic or is_retry) and (not self._can_auto_record(task)):
             return
         if task.pipeline is not None:
             if task.pipeline.state in (
@@ -934,7 +935,8 @@ class Conductor:
             self._reset_retry(task)
         try:
             settings = get_settings()
-            quality = task.recording_quality or settings.recording_quality or "best"
+            quality = (continuation["quality"] if continuation is not None else
+                       task.recording_quality or settings.recording_quality or "best")
             await self.finalizer.start()
             engine = self._get_engine(task.platform)
             live_url = engine.get_stream_url(task.channel_id)
@@ -947,17 +949,18 @@ class Conductor:
                 if automatic and (not self._can_auto_record(task)):
                     return
             pipeline = YtdlpLivePipeline(channel_id=task.channel_id)
-            if automatic or is_retry:
-                pipeline._start_guard = lambda: self._running and self._can_auto_record(
-                    task
-                )
+            if continuation is not None:
+                pipeline.continuity_resume = continuation['resume']
+                pipeline._start_guard = lambda: self._running and not pipeline._intentional_stop
+            elif automatic or is_retry:
+                pipeline._start_guard = lambda: self._running and self._can_auto_record(task)
             task.pipeline = pipeline
             task.recording_job_id = None
             task.last_recording_status = None
             from app.engine.recording_finalizer import recording_policy
 
-            policy = recording_policy()
-            if task.output_format:
+            policy = continuation['policy'] if continuation is not None else recording_policy()
+            if continuation is None and task.output_format:
                 policy = {**policy, "output_format": task.output_format}
 
             def registered(capture):
@@ -979,10 +982,21 @@ class Conductor:
                             task.recording_job_id, capture
                         )
                     task.last_recording_status = capture.get_status()
-                    task.broadcast_ended = True
+                    boundary = (capture.end_reason == 'continuity_boundary'
+                                and getattr(capture, 'continuity_resume', None)
+                                and not capture._intentional_stop)
+                    task.broadcast_ended = not bool(boundary)
                     self._persist_retry(task)
                     task.pipeline = None
                     self._broadcast_status()
+                    if boundary and self._running and self._channels.get(composite_key) is task:
+                        # This continues an existing recording after closing its
+                        # previous writer. Auto-OFF does not stop an active session.
+                        # The new file/job has a unique session ID and the same policy.
+                        await self._start_recording_locked(
+                            composite_key, channel_name=task.channel_name, title=task.title,
+                            is_retry=True, continuation={'resume': capture.continuity_resume, 'policy': policy, 'quality': quality},
+                        )
 
             pipeline._on_capture_ended = capture_ended
             extra = {}

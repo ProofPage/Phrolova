@@ -106,6 +106,11 @@ async def main():
             )
         )
 
+    channels[0]['recording']['continuity_source'] = {
+        'selected': {'cdn': 'korean', 'mode': 'llhls', 'state': 'selected'},
+        'standby': {'cdn': 'akamai', 'mode': 'hls', 'state': 'ready'},
+    }
+
     fail_auto = True
 
     async def route_api(route):
@@ -273,6 +278,42 @@ async def main():
                 )
         await page.set_viewport_size({"width": 1440, "height": 1000})
         running = page.locator('[data-channel-key="chzzk:repair-0"]')
+        # Expanded details must never stretch a collapsed neighbouring card.
+        for width in (360, 390, 768, 1024, 1440, 1920):
+            await page.set_viewport_size({"width": width, "height": 1000})
+            for name, mode in [("카드로 보기", "grid"), ("목록으로 보기", "list")]:
+                await page.get_by_role("button", name=name, exact=True).click()
+                first_button = running.locator(".recording-detail-action")
+                second_button = failed.locator(".recording-detail-action")
+                before = await failed.bounding_box()
+                await first_button.click()
+                await expect(first_button).to_have_attribute("aria-expanded", "true")
+                await expect(running.locator(".recording-channel-details")).to_be_visible()
+                await expect(running.locator('.recording-channel-details')).to_contain_text('국내 CDN · LL-HLS')
+                await expect(running.locator('.recording-channel-details')).to_contain_text('Akamai CDN · 준비 완료')
+                await expect(failed.locator(".recording-channel-details")).to_have_count(0)
+                after = await failed.bounding_box()
+                assert after["height"] <= before["height"] + 1, (width, mode, before, after)
+                if width == 1440 and mode == "grid":
+                    await page.locator(".dashboard-channel-grid").screenshot(
+                        path=str(OUT / "preview-first-expanded-1440.png")
+                    )
+                await second_button.click()
+                await expect(second_button).to_have_attribute("aria-expanded", "true")
+                await expect(failed.locator(".recording-channel-details")).to_be_visible()
+                await first_button.click()
+                await expect(running.locator(".recording-channel-details")).to_have_count(0)
+                await expect(failed.locator(".recording-channel-details")).to_be_visible()
+                # A collapsed card contains its summary only, with no blank detail area.
+                compact = await running.bounding_box()
+                summary = await running.locator(".recording-channel-summary").bounding_box()
+                assert abs(compact["height"] - summary["height"] - 2) < 1, (width, mode, compact, summary)
+                assert await page.evaluate("document.documentElement.scrollWidth <= innerWidth"), (width, mode)
+                await second_button.click()
+                await expect(second_button).to_have_attribute("aria-expanded", "false")
+                await expect(failed.locator(".recording-channel-details")).to_have_count(0)
+        await page.set_viewport_size({"width": 1440, "height": 1000})
+        await page.get_by_role("button", name="목록으로 보기", exact=True).click()
         toggle = running.get_by_role("switch")
         await toggle.click()
         await expect(toggle).to_be_disabled()
@@ -383,7 +424,7 @@ async def main():
         )
         assert not errors, errors
         print(
-            "PASS: grid/list at 360/390/768/1024/1440/1920, aligned management buttons, 0B failure metrics, grouped history, disabled unavailable actions, history clear IDs, live/VOD CDN save and restore, MKV default, no overflow or JS errors"
+            "PASS: grid/list at 360/390/768/1024/1440/1920, independent single/multiple detail expansion, aligned management buttons, 0B failure metrics, grouped history, disabled unavailable actions, history clear IDs, live/VOD CDN save and restore, MKV default, no overflow or JS errors"
         )
         await browser.close()
 

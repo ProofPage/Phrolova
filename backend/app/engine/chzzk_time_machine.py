@@ -48,7 +48,7 @@ def _is_trusted_media_url(url: str) -> bool:
 
 
 def _media_path(media_items: list[object], cdn: str = "default") -> str:
-    candidates: list[tuple[bool, str]] = []
+    candidates: list[tuple[bool, bool, str]] = []
     for item in media_items:
         if isinstance(item, dict):
             media_id = item.get("mediaId", "")
@@ -61,12 +61,12 @@ def _media_path(media_items: list[object], cdn: str = "default") -> str:
         if isinstance(path, str) and path and (
             str(media_id).upper() == "HLS" or str(protocol).upper() == "HLS"
         ):
-            candidates.append((str(media_id).upper() == "HLS", path))
+            candidates.append((str(media_id).upper() == "LLHLS", str(media_id).upper() == "HLS", path))
 
     # Choose only URLs actually returned by the platform; signed live URLs
     # cannot be changed with the VOD host replacement rule.
-    candidates.sort(key=lambda candidate: (cdn == 'akamai' and (urlsplit(candidate[1]).hostname or '').endswith('.akamaized.net'), candidate[0]), reverse=True)
-    for _, path in candidates:
+    candidates.sort(key=lambda candidate: (cdn == 'akamai' and (urlsplit(candidate[2]).hostname or '').endswith('.akamaized.net'), not (urlsplit(candidate[2]).hostname or '').endswith('.akamaized.net'), candidate[0], candidate[1]), reverse=True)
+    for _, _, path in candidates:
         if _is_trusted_media_url(path):
             return path
     raise TimeMachineUnavailableError("Chzzk did not return a supported HLS CDN URL.")
