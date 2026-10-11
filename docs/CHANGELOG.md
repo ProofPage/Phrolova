@@ -8,6 +8,17 @@
 
 ## [Unreleased]
 
+## [2.0.58] - 2026-10-12
+
+### Fixed
+- FFmpeg·FFprobe가 정상일 때 불필요한 설치 안내를 숨깁니다.
+- 미디어 도구 이름·상태·경로를 분리하고 긴 경로를 모바일에서도 자연스럽게 줄바꿈합니다.
+- 도구 누락·실행 실패 시에만 설치 및 경로 설정 안내를 펼쳐 볼 수 있습니다.
+
+### Validation
+- TypeScript 검사와 프런트엔드 빌드 통과.
+- 360/1280px 브라우저에서 정상·누락·요청 실패·재검사 복구 및 가로 넘침 검사 통과.
+
 ## [2.0.57] - 2026-10-12
 
 ### Fixed
@@ -787,7 +798,7 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.57...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.58...HEAD
 [2.0.55]: https://github.com/ProofPage/Phrolova/compare/v2.0.54...v2.0.55
 [2.0.54]: https://github.com/ProofPage/Phrolova/compare/v2.0.53...v2.0.54
 [2.0.53]: https://github.com/ProofPage/Phrolova/compare/v2.0.52...v2.0.53
@@ -849,3 +860,4 @@
 
 [2.0.56]: https://github.com/ProofPage/Phrolova/compare/v2.0.55...v2.0.56
 [2.0.57]: https://github.com/ProofPage/Phrolova/compare/v2.0.56...v2.0.57
+[2.0.58]: https://github.com/ProofPage/Phrolova/compare/v2.0.57...v2.0.58
