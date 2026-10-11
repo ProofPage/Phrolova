@@ -54,6 +54,12 @@ export interface Channel {
     thumbnail_url?: string;
     profile_image_url?: string;
     recording?: {
+        session_id?: string;
+        has_data?: boolean;
+        capture_format?: string;
+        cdn?: string;
+        warning_message?: string;
+        data_received_at?: string;
         is_recording: boolean;
         state: string;
         duration_seconds: number;
@@ -66,6 +72,10 @@ export interface Channel {
     };
     tags?: string[];
     last_error?: string;
+    error_detail?: string;
+    retry_blocked?: boolean;
+    retry_at?: string;
+    retry_count?: number;
 }
 
 export type ChzzkVodCdn = "default" | "akamai";
@@ -147,6 +157,7 @@ export interface Settings {
     keep_download_parts: boolean;
     max_record_retries: number;
     chzzk_time_machine_enabled: boolean;
+    chzzk_live_cdn?: ChzzkVodCdn;
     chzzk_stream_mode: "standard" | "request-timemachine" | "force-timemachine";
     chzzk_time_machine_shift: number;
     chzzk_time_machine_offset: number;
@@ -195,6 +206,8 @@ export interface PlatformStatus {
     cime?: { enabled: boolean; authenticated: boolean };
 }
 
+export type CookiePlatform = 'chzzk' | 'youtube' | 'soop' | 'cime';
+
 export interface PlatformCookieStatus {
     configured: boolean;
     valid: boolean | null;
@@ -237,6 +250,7 @@ export interface BrowseDirsResponse {
 }
 
 export interface VodSettingsUpdate {
+    vod_download_dir?: string;
     vod_filename_template?: string;
     vod_max_concurrent?: number;
     vod_default_quality?: string;
@@ -289,7 +303,7 @@ export interface NotificationStatus {
 
 
 
-export interface RecordingJob { id: string; composite_key: string; channel_name: string; state: string; target_format: string; progress: number | null; output_path: string | null; source_paths: string[]; error_message: string | null; inspection_state: string; diagnostics?: Record<string, unknown>; source_cleanup_warning?: string; }
+export interface RecordingJob { platform?: Platform; session_id?: string; capture_format?: string; started_at?: string; ended_at?: string; file_size_bytes?: number; source_available?: boolean; output_available?: boolean; can_open?: boolean; can_retry?: boolean; can_inspect?: boolean; hidden?: boolean; id: string; composite_key: string; channel_name: string; state: string; target_format: string; progress: number | null; output_path: string | null; source_paths: string[]; error_message: string | null; inspection_state: string; diagnostics?: Record<string, unknown>; source_cleanup_warning?: string; }
 export interface RecordingOutputSettings { output_format: 'mp4'|'mkv'|'ts'; keep_source_ts: boolean; max_concurrent: number; }
 
 // ── Stats Types ─────────────────────────────────────────
@@ -486,9 +500,13 @@ export const api = {
         save_live_preview: boolean,
         live_filename_template: string,
         recording_quality: string,
+        chzzk_live_cdn: ChzzkVodCdn = "default",
+        location?: { live_download_dir: string; monitor_interval: number },
     ) => {
         const res = await client.put("/settings/live", {
+            ...location,
             max_record_retries,
+            chzzk_live_cdn,
             chzzk_stream_mode,
             chzzk_time_machine_offset,
             save_live_preview,
@@ -554,14 +572,18 @@ export const api = {
         (await client.get(`/stream/preview-frame/${encodeURIComponent(channelKey)}`, { responseType: 'blob', signal, timeout: 60000 })).data,
     getPlatformQualities: async (platform: 'soop' | 'cime', channel_id: string, signal?: AbortSignal) =>
         (await client.get<{ qualities: LiveQuality[]; live?: boolean; message?: string }>(`/platforms/${platform}/${encodeURIComponent(channel_id)}/qualities`, { signal })).data,
-    getPlatformCookieStatus: async (platform: 'soop' | 'cime'): Promise<PlatformCookieStatus> =>
+    getPlatformCookieStatus: async (platform: CookiePlatform): Promise<PlatformCookieStatus> =>
         (await client.get<PlatformCookieStatus>(`/platforms/${platform}/cookie`)).data,
-    uploadPlatformCookie: async (platform: 'soop' | 'cime', file: File): Promise<PlatformCookieStatus> => {
+    checkPlatformCookies: async (platform: CookiePlatform): Promise<PlatformCookieStatus> =>
+        platform === 'chzzk'
+            ? (await client.post<PlatformCookieStatus>('/platforms/chzzk/cookie/check')).data
+            : (await client.get<PlatformCookieStatus>(`/platforms/${platform}/cookie`)).data,
+    uploadPlatformCookie: async (platform: CookiePlatform, file: File): Promise<PlatformCookieStatus> => {
         const form = new FormData();
         form.append('file', file);
         return (await client.post<PlatformCookieStatus>(`/platforms/${platform}/cookie`, form, { headers: { 'Content-Type': 'multipart/form-data' } })).data;
     },
-    deletePlatformCookie: async (platform: 'soop' | 'cime'): Promise<PlatformCookieStatus> =>
+    deletePlatformCookie: async (platform: CookiePlatform): Promise<PlatformCookieStatus> =>
         (await client.delete<PlatformCookieStatus>(`/platforms/${platform}/cookie`)).data,
     // Stats
     getStats: async (): Promise<StatsResponse> => {
@@ -600,6 +622,7 @@ export const api = {
 
     getRecordingOutputSettings: async (): Promise<RecordingOutputSettings> => (await client.get('/recordings/settings')).data,
     updateRecordingOutputSettings: async (data: RecordingOutputSettings) => (await client.put('/recordings/settings',data)).data,
+    clearRecordingHistory: async (jobIds: string[]) => (await client.post('/recordings/history/clear', {job_ids: jobIds})).data,
     getRecordingJobs: async (): Promise<{jobs: RecordingJob[]}> => (await client.get('/recordings/jobs')).data,
     retryRecording: async (id: string, output_format?: 'mp4'|'mkv') => (await client.post(`/recordings/${id}/retry`, {output_format})).data,
     inspectRecording: async (id: string) => (await client.post(`/recordings/${id}/inspect`)).data,

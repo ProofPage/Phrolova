@@ -15,7 +15,7 @@ from browser_fixtures import FIX, mock
 
 BASE = os.environ.get('PHROLOVA_TEST_URL', 'http://localhost:3000')
 OUT = Path(os.environ.get('PHROLOVA_TEST_OUTPUT', '/tmp/phrolova-download-thumbnail'))
-WIDTHS = (360, 390, 768, 1024, 1440, 1920)
+WIDTHS = (360, 390, 768, 1024, 1280, 1440, 1920)
 SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540"><rect width="960" height="540" fill="#355680"/><text x="480" y="270" text-anchor="middle" fill="white">Thumbnail fixture</text></svg>'
 GEOMETRY = """e => {
     const card=e.getBoundingClientRect();
@@ -159,7 +159,7 @@ async def main():
                         close(value['channel']['top']-value['title']['bottom'],4,(width,mode,'channel gap'))
                         close(value['media']['top']-value['channel']['bottom'],4,(width,mode,'media gap'))
                         close(value['header']['height'],62,(width,mode,'header height'))
-                        close(value['status']['top']-value['header']['bottom'],10,(width,mode,'status gap'))
+                        assert 6 <= value['status']['top']-value['header']['bottom'] <= 8.1, (width,mode,'compact status gap')
                         assert len(value['buttons']) == 3, (width,mode,'management button count')
                         for button in value['buttons']:
                             close(button['center'],value['buttons'][0]['center'],(width,mode,'button center'))
@@ -179,6 +179,40 @@ async def main():
                         same_header(value,geometry['ready'],(width,mode,identifier,'state geometry'))
                     assert await page.evaluate('document.documentElement.scrollWidth<=innerWidth'), (width,mode,'page overflow')
                     assert await page.locator('.downloads-page').evaluate('e=>e.scrollWidth<=e.clientWidth'), (width,mode,'page content overflow')
+                    for card in await page.locator('[data-task-id]').all():
+                        if await card.locator('.download-task-warning').count():
+                            warning=await card.locator('.download-task-warning').bounding_box()
+                            metrics=await card.locator('.download-task-metrics').bounding_box()
+                            assert warning['y'] >= metrics['y']+metrics['height'], (width,mode,'warning overlaps metrics')
+                    if mode=='grid':
+                        heights=await page.locator('[data-task-id]').evaluate_all("es=>es.map(e=>({subgrid:getComputedStyle(e).gridTemplateRows.includes('subgrid'),height:e.getBoundingClientRect().height}))")
+                        for i in range(0,len(heights)-1,2):
+                            if heights[i]['subgrid']:
+                                assert abs(heights[i]['height']-heights[i+1]['height'])<1, (width,heights)
+                    for card in await page.locator('[data-task-id]').all():
+                        if await card.locator('.download-progress').count():
+                            ratio=await card.evaluate("e=>e.querySelector('.download-progress').getBoundingClientRect().width/e.querySelector('.download-task-status').getBoundingClientRect().width")
+                            assert ratio>.95, (width,mode,'short progress',ratio)
+                            assert '%' not in await card.locator('.download-status-heading').inner_text()
+                        if await card.locator('.download-task-metrics').count():
+                            metrics=await card.locator('.download-task-metrics').bounding_box()
+                            controls=await card.locator('.download-task-controls').bounding_box()
+                            assert controls['y']>=metrics['y']+metrics['height'] or controls['x']>=metrics['x']+metrics['width'], (width,mode,'overlap')
+                        if await card.locator('.download-task-warning').count():
+                            warning=await card.locator('.download-task-warning').bounding_box()
+                            metrics=await card.locator('.download-task-metrics').bounding_box()
+                            assert warning['y'] >= metrics['y']+metrics['height'], (width,mode,'warning overlaps metrics')
+                    ready=page.locator('[data-task-id="ready"]')
+                    await expect(ready.locator('.download-quality-option')).to_have_count(2)
+                    await expect(ready.locator('.download-quality-option').first).to_be_visible()
+                    assert await ready.evaluate("e=>Math.abs(e.querySelector('.download-quality-segments').getBoundingClientRect().left-e.querySelector('.download-task-header').getBoundingClientRect().left)<1"), (width,mode,'quality left')
+                    if mode=='grid':
+                        aligned=await page.locator('.download-task-list').evaluate("e=>({columns:getComputedStyle(e).gridTemplateColumns.split(' ').length,cards:[...e.querySelectorAll('.download-task')].map(c=>({height:c.getBoundingClientRect().height,buttons:c.querySelector('.download-actions').getBoundingClientRect().bottom-c.getBoundingClientRect().top}))})")
+                        if aligned['columns']==2:
+                            for i in range(0,len(aligned['cards'])-1,2):
+                                a,b=aligned['cards'][i:i+2]
+                                assert abs(a['height']-b['height'])<1, (width,'unequal grid cards',a,b)
+                                assert abs(a['buttons']-b['buttons'])<1, (width,'unequal bottom actions',a,b)
                     measurements.append({'width':width,'mode':mode,'cards':geometry})
                     await page.screenshot(path=str(OUT/f'geometry-{mode}-{width}.png'),full_page=True)
 
@@ -212,7 +246,7 @@ async def main():
             assert await placeholder_centered(ready)
             assert not errors, errors
             (OUT/'header-geometry.json').write_text(json.dumps(measurements,ensure_ascii=False,indent=2),encoding='utf-8')
-            print('Download header geometry PASS: five states, real/missing/broken/delayed thumbnails, centered fallback, image load/source recovery, long/missing metadata, queued→active→complete, six widths x grid/list; no header shift or page overflow')
+            print('Download header geometry PASS: five states, real/missing/broken/delayed thumbnails, centered fallback, image load/source recovery, long/missing metadata, queued→active→complete, seven widths x grid/list; no header shift or page overflow')
         except Exception:
             await page.screenshot(path=str(OUT/'geometry-failure.png'),full_page=True)
             raise

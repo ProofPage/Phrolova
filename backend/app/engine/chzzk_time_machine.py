@@ -1,4 +1,4 @@
-"""Resolve a Chzzk live time-machine HLS stream for FFmpeg."""
+"""Resolve a Chzzk live time-machine HLS stream for Streamlink."""
 
 from __future__ import annotations
 
@@ -26,6 +26,9 @@ class TimeMachineStream:
     url: str
     headers: dict[str, str]
     live_start_index: int | None
+    master_url: str | None = None
+    cdn: str = "default"
+    warning: str | None = None
 
 
 def _is_trusted_media_url(url: str) -> bool:
@@ -44,7 +47,7 @@ def _is_trusted_media_url(url: str) -> bool:
     )
 
 
-def _media_path(media_items: list[object]) -> str:
+def _media_path(media_items: list[object], cdn: str = "default") -> str:
     candidates: list[tuple[bool, str]] = []
     for item in media_items:
         if isinstance(item, dict):
@@ -60,7 +63,10 @@ def _media_path(media_items: list[object]) -> str:
         ):
             candidates.append((str(media_id).upper() == "HLS", path))
 
-    for _, path in sorted(candidates, key=lambda candidate: candidate[0], reverse=True):
+    # Choose only URLs actually returned by the platform; signed live URLs
+    # cannot be changed with the VOD host replacement rule.
+    candidates.sort(key=lambda candidate: (cdn == 'akamai' and (urlsplit(candidate[1]).hostname or '').endswith('.akamaized.net'), candidate[0]), reverse=True)
+    for _, path in candidates:
         if _is_trusted_media_url(path):
             return path
     raise TimeMachineUnavailableError("Chzzk did not return a supported HLS CDN URL.")
@@ -158,6 +164,7 @@ async def resolve_time_machine_stream(
     quality: str,
     offset_seconds: int,
     cookie_header: str | None = None,
+    cdn: str = "default",
 ) -> TimeMachineStream:
     """Resolve the selected live HLS variant and start offset using Chzzk's API."""
     if not channel_id or not channel_id.strip():
@@ -212,7 +219,7 @@ async def resolve_time_machine_stream(
         raise TimeMachineUnavailableError(f"Chzzk time-machine request failed: {last_error}")
 
     playback = content.get("playback") or {}
-    master_url = _media_path(playback.get("media") or [])
+    master_url = _media_path(playback.get("media") or [], cdn)
     cdn_headers = {
         "User-Agent": USER_AGENT,
         "Origin": "https://chzzk.naver.com",
@@ -236,4 +243,28 @@ async def resolve_time_machine_stream(
         url=selected_url,
         headers=cdn_headers,
         live_start_index=live_start_index,
+        master_url=master_url,
+        cdn="akamai" if (urlsplit(master_url).hostname or "").endswith(".akamaized.net") else "default",
+        warning=_cdn_warning(master_url, cdn),
     )
+
+
+def _cdn_warning(url, requested):
+    if requested == 'akamai' and not (urlsplit(url).hostname or '').endswith('.akamaized.net'):
+        return '이 방송은 Akamai CDN을 제공하지 않아 기본 CDN으로 연결했습니다.'
+    return None
+
+
+async def resolve_live_cdn_stream(channel_id, quality, cookie_header=None, cdn='default'):
+    """Select a trusted HLS URL from the current live-detail API."""
+    import json
+    headers={'User-Agent': USER_AGENT, 'Origin':'https://chzzk.naver.com', 'Referer':'https://chzzk.naver.com/'}
+    if cookie_header:headers['Cookie']=cookie_header
+    response=await get_http_client().get(LIVE_DETAIL_URL.format(channel_id=channel_id),headers=headers,timeout=20)
+    response.raise_for_status()
+    detail=response.json().get('content') or {}
+    if detail.get('status') != 'OPEN':raise TimeMachineUnavailableError('치지직 방송이 종료되었습니다.')
+    playback=json.loads(detail.get('livePlaybackJson') or '{}')
+    url=_media_path(playback.get('media') or [],cdn)
+    headers.pop('Cookie',None)
+    return TimeMachineStream(url,headers,None,url,'akamai' if (urlsplit(url).hostname or '').endswith('.akamaized.net') else 'default',_cdn_warning(url,cdn))

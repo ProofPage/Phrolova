@@ -8,6 +8,8 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime
 from pathlib import Path
+import json
+from datetime import timedelta
 from typing import TYPE_CHECKING, Optional
 from app.core.config import get_settings
 from app.core.logger import logger
@@ -20,6 +22,7 @@ from app.engine.events import EventBus
 from app.engine.pipeline import YtdlpLivePipeline, RecordingState
 from app.services.notifications import NotificationKind
 from app.store.repositories import ChannelRepository, LiveHistoryRepository
+from app.engine.recording_errors import classify_recording_error
 
 if TYPE_CHECKING:
     from app.services.notifications import NotificationService
@@ -259,6 +262,7 @@ class Conductor:
                 (output_format, composite_key),
             )
             task.output_format = output_format
+        self._reset_retry(task)
         self._broadcast_status()
         self.trigger_scan_now(composite_key)
 
@@ -266,6 +270,7 @@ class Conductor:
     def _can_auto_record(task: ChannelTask) -> bool:
         return (
             task.auto_record
+            and not task.retry_blocked
             and not task.broadcast_ended
             and Conductor._matches_download_condition(task)
         )
@@ -355,6 +360,11 @@ class Conductor:
         if task is None:
             raise ValueError(f"채널 '{composite_key}'을(를) 찾을 수 없습니다.")
         task.auto_record = not task.auto_record
+        if task.auto_record:
+            self._reset_retry(task)
+        else:
+            task.retry_at = None
+            self._persist_retry(task)
         logger.info(
             f"[{composite_key}] 자동 녹화 {('ON' if task.auto_record else 'OFF')}"
         )
@@ -506,6 +516,24 @@ class Conductor:
                 recording_quality=record.get("recording_quality"),
             )
             task.output_format = record.get("output_format")
+            row = self.finalizer.db.query_one(
+                "SELECT retry_state FROM channels WHERE composite_key=?",
+                (composite_key,),
+            )
+            if row:
+                saved = json.loads(row["retry_state"] or "{}")
+                for field in (
+                    "retry_count",
+                    "retry_blocked",
+                    "retry_at",
+                    "retry_code",
+                    "last_error",
+                    "error_detail",
+                    "live_started_at",
+                    "broadcast_ended",
+                ):
+                    if field in saved:
+                        setattr(task, field, saved[field])
             self._channels[composite_key] = task
             self._scan_events[composite_key] = asyncio.Event()
         if records:
@@ -524,7 +552,6 @@ class Conductor:
         ):
             task.broadcast_ended = False
         task.is_live = status["is_live"]
-        task.last_error = None
         task.channel_name = status.get("channel_name")
         task.title = status.get("title")
         task.category = status.get("category")
@@ -575,7 +602,7 @@ class Conductor:
                 title=task.title,
                 automatic=True,
             )
-            return 0
+            return task.retry_count
         if task.auto_record and task.platform == Platform.CHZZK:
             settings = get_settings()
             logger.info(
@@ -588,11 +615,79 @@ class Conductor:
         logger.info(f"[{composite_key}] ⚫ 방송 종료 감지.")
         await self._stop_recording(composite_key)
 
+    def _persist_retry(self, task):
+        values = {
+            key: getattr(task, key)
+            for key in (
+                "retry_count",
+                "retry_blocked",
+                "retry_at",
+                "retry_code",
+                "last_error",
+                "error_detail",
+                "live_started_at",
+                "broadcast_ended",
+            )
+        }
+        self.finalizer.db.execute(
+            "UPDATE channels SET retry_state=? WHERE composite_key=?",
+            (
+                json.dumps(values, ensure_ascii=False),
+                self.make_composite_key(task.platform, task.channel_id),
+            ),
+        )
+
+    def _reset_retry(self, task):
+        task.retry_count = 0
+        task.retry_blocked = False
+        task.retry_at = None
+        task.retry_code = None
+        task.last_error = None
+        task.error_detail = None
+        self._persist_retry(task)
+
+    def _record_failure(self, task, error):
+        from app.engine.platform_auth import redact_media_error
+
+        failure = classify_recording_error(error)
+        task.last_error = str(failure)
+        task.retry_code = failure.code
+        task.error_detail = redact_media_error(error)
+        task.retry_blocked = (
+            not failure.retryable
+            or task.retry_count >= get_settings().max_record_retries
+        )
+        task.retry_at = (
+            None
+            if task.retry_blocked or not task.auto_record
+            else (
+                datetime.now() + timedelta(seconds=min(300, 5 * 2**task.retry_count))
+            ).isoformat()
+        )
+        self._persist_retry(task)
+        self._broadcast_status()
+
     async def _retry_stalled_recording(
         self, composite_key: str, task: ChannelTask, retry_count: int, max_retries: int
     ) -> int:
         """방송은 켜져 있는데 녹화가 멈춘 경우 다시 시작한다. 새 재시도 횟수를 돌려준다."""
         pipe = task.pipeline
+        retry_count = max(retry_count, task.retry_count)
+        if not self._can_auto_record(task):
+            return retry_count
+        if getattr(pipe, "retryable", True) is False:
+            from app.engine.recording_errors import RecordingError
+
+            self._record_failure(
+                task,
+                RecordingError(
+                    pipe.error_code or "blocked",
+                    pipe.error_message or "녹화 설정을 확인하세요.",
+                ),
+            )
+            return retry_count
+        if task.retry_at and datetime.fromisoformat(task.retry_at) > datetime.now():
+            return retry_count
         if pipe is None or pipe.state not in (
             RecordingState.ERROR,
             RecordingState.COMPLETED,
@@ -600,17 +695,30 @@ class Conductor:
             return retry_count
         if retry_count < max_retries:
             retry_count += 1
+            task.retry_count = retry_count
+            self._persist_retry(task)
             logger.warning(
                 f"[{composite_key}] 녹화 중단 감지. 자동 재녹화 시도 ({retry_count}/{max_retries})..."
             )
-            await asyncio.sleep(5)
-            if not self._running:
+            if not self._running or not self._can_auto_record(task):
                 return retry_count
             if pipe.state == RecordingState.ERROR and hasattr(pipe, "reconnect"):
                 try:
-                    await pipe.reconnect()
+                    async with task.recording_lock:
+                        if task.pipeline is pipe and self._can_auto_record(task):
+                            await pipe.reconnect()
+                            if pipe.state in (
+                                RecordingState.RECORDING,
+                                RecordingState.COMPLETED,
+                            ):
+                                task.last_error = None
+                                task.error_detail = None
+                                task.retry_at = None
+                                self._persist_retry(task)
+                                self._broadcast_status()
                 except Exception as error:
-                    task.last_error = str(error)
+                    if getattr(error, "code", None) != "auto_record_disabled":
+                        self._record_failure(task, error)
             else:
                 await self._start_recording(
                     composite_key,
@@ -621,6 +729,10 @@ class Conductor:
         elif retry_count == max_retries:
             retry_count += 1
             task.last_error = "최대 재시도 횟수 초과로 녹화 중단됨"
+            task.retry_blocked = True
+            task.retry_at = None
+            task.retry_count = retry_count
+            self._persist_retry(task)
             await self._stop_recording(composite_key)
             logger.error(
                 f"[{composite_key}] 최대 재시도 횟수 초과. 녹화 시작 버튼으로 수동 재시작하세요."
@@ -649,7 +761,7 @@ class Conductor:
         settings = get_settings()
         task = self._channels.get(composite_key)
         interval = self._poll_interval_for(task)
-        retry_count = 0
+        retry_count = task.retry_count if task else 0
         max_retries = settings.max_record_retries
         logger.info(f"[{composite_key}] 감시 시작 (주기: {interval}초)")
         while self._running:
@@ -660,7 +772,30 @@ class Conductor:
                 engine = self._get_engine(task.platform)
                 status = await engine.check_live_status(task.channel_id)
                 was_live = task.is_live
+                if status.get("status_error"):
+                    from app.engine.recording_errors import RecordingError
+
+                    self._record_failure(
+                        task,
+                        RecordingError(
+                            "status_query",
+                            status["status_error"],
+                            retryable=status.get("status_error_retryable", True),
+                        ),
+                    )
+                    task.error_detail = status.get("error_detail")
+                    self._persist_retry(task)
+                    await self._wait_for_next_scan(composite_key, interval)
+                    continue
+                if not status["is_live"] or (
+                    status.get("live_started_at")
+                    and task.live_started_at
+                    and status["live_started_at"] != task.live_started_at
+                ):
+                    self._reset_retry(task)
+                    retry_count = 0
                 self._apply_status(task, status)
+                self._persist_retry(task)
                 self._broadcast_status()
                 if status["is_live"]:
                     self._record_live_detection(composite_key)
@@ -679,7 +814,7 @@ class Conductor:
                             title=task.title,
                             automatic=True,
                         )
-                        retry_count = 0
+                        retry_count = task.retry_count
                     else:
                         retry_count = await self._retry_stalled_recording(
                             composite_key, task, retry_count, max_retries
@@ -697,7 +832,18 @@ class Conductor:
                 else:
                     task.last_error = f"감시 오류: {str(e)}"
                     logger.error(f"[{composite_key}] 감시 오류: {e}", exc_info=e)
-            await self._wait_for_next_scan(composite_key, interval)
+            delay = interval
+            if task.retry_at and self._can_auto_record(task):
+                delay = min(
+                    interval,
+                    max(
+                        0.5,
+                        (
+                            datetime.fromisoformat(task.retry_at) - datetime.now()
+                        ).total_seconds(),
+                    ),
+                )
+            await self._wait_for_next_scan(composite_key, delay)
 
     async def _stop_recording(self, composite_key: str) -> None:
         task = self._channels.get(composite_key)
@@ -715,10 +861,14 @@ class Conductor:
         await pipe.stop_recording()
         if not getattr(pipe, "_closed", True):
             raise RuntimeError("녹화 파일 쓰기가 아직 종료되지 않았습니다.")
-        if task.recording_job_id:
+        if (
+            task.recording_job_id
+            and self.finalizer.get(task.recording_job_id)["state"] == "recording"
+        ):
             await self.finalizer.capture_finished(task.recording_job_id, pipe)
-        elif pipe.state == RecordingState.COMPLETED:
+        elif not task.recording_job_id and pipe.state == RecordingState.COMPLETED:
             self._save_live_history(composite_key, task, pipe.get_status())
+        task.last_recording_status = pipe.get_status()
         task.pipeline = None
         self._broadcast_status()
 
@@ -755,15 +905,33 @@ class Conductor:
         task = self._channels.get(composite_key)
         if task is None:
             return
+        if (
+            automatic
+            and task.pipeline is None
+            and task.last_error
+            and not task.retry_blocked
+        ):
+            if task.retry_at and datetime.fromisoformat(task.retry_at) > datetime.now():
+                return
+            if task.retry_count >= get_settings().max_record_retries:
+                task.retry_blocked = True
+                self._persist_retry(task)
+                return
+            task.retry_count += 1
+            self._persist_retry(task)
         if (automatic or is_retry) and (not self._can_auto_record(task)):
             return
         if task.pipeline is not None:
             if task.pipeline.state in (
                 RecordingState.RECORDING,
+                RecordingState.CONNECTING,
+                RecordingState.RECONNECTING,
                 RecordingState.STOPPING,
             ):
                 return
             await self._stop_recording_locked(composite_key)
+        if not automatic and not is_retry:
+            self._reset_retry(task)
         try:
             settings = get_settings()
             quality = task.recording_quality or settings.recording_quality or "best"
@@ -779,7 +947,13 @@ class Conductor:
                 if automatic and (not self._can_auto_record(task)):
                     return
             pipeline = YtdlpLivePipeline(channel_id=task.channel_id)
+            if automatic or is_retry:
+                pipeline._start_guard = lambda: self._running and self._can_auto_record(
+                    task
+                )
             task.pipeline = pipeline
+            task.recording_job_id = None
+            task.last_recording_status = None
             from app.engine.recording_finalizer import recording_policy
 
             policy = recording_policy()
@@ -792,6 +966,9 @@ class Conductor:
                 )
 
             pipeline._on_capture_started = registered
+            pipeline._on_capture_error = lambda capture: self._record_failure(
+                task, classify_recording_error(capture.last_exception)
+            )
 
             async def capture_ended(capture):
                 async with task.recording_lock:
@@ -801,7 +978,9 @@ class Conductor:
                         await self.finalizer.capture_finished(
                             task.recording_job_id, capture
                         )
+                    task.last_recording_status = capture.get_status()
                     task.broadcast_ended = True
+                    self._persist_retry(task)
                     task.pipeline = None
                     self._broadcast_status()
 
@@ -837,6 +1016,10 @@ class Conductor:
                 thumbnail_url=task.thumbnail_url,
                 **extra,
             )
+            task.last_error = None
+            task.error_detail = None
+            task.retry_at = None
+            self._persist_retry(task)
             logger.info(f"[{composite_key}] 자동 라이브 녹화 시작 (quality={quality}).")
             if not is_retry:
                 self._notify(
@@ -847,12 +1030,16 @@ class Conductor:
                     fields={"화질": quality, "플랫폼": task.platform.value},
                 )
         except Exception as e:
-            message = str(e)
-            if task.platform in (Platform.SOOP, Platform.CIME):
-                from app.engine.platform_auth import redact_media_error
+            if getattr(e, "code", None) == "auto_record_disabled":
+                task.pipeline = None
+                task.retry_at = None
+                self._persist_retry(task)
+                self._broadcast_status()
+                return
+            from app.engine.platform_auth import redact_media_error
 
-                message = redact_media_error(e)
-            task.last_error = f"녹화 시작 오류: {message}"
+            message = redact_media_error(e)
+            self._record_failure(task, e)
             logger.error(f"[{composite_key}] 녹화 시작 실패: {message}")
             self._notify(
                 NotificationKind.RECORDING_FAILED,
@@ -884,7 +1071,10 @@ class Conductor:
         await self._start_recording(composite_key)
         pipe = task.pipeline
         if pipe is not None:
-            return pipe.get_status()
+            return {
+                **pipe.get_status(),
+                **({"error": task.last_error} if task.last_error else {}),
+            }
         return {"error": "녹화 시작 실패."}
 
     async def stop_manual_recording(self, composite_key: str) -> dict:
@@ -943,7 +1133,7 @@ class Conductor:
                     else None
                 ),
                 "is_live": task.is_live,
-                "recording": None,
+                "recording": task.last_recording_status,
                 "channel_name": task.channel_name,
                 "title": task.title,
                 "category": task.category,
@@ -959,6 +1149,11 @@ class Conductor:
                 "auto_record_eligible": self._can_auto_record(task),
                 "download_hold_reason": self._download_hold_reason(task),
                 "last_error": getattr(task, "last_error", None),
+                "retry_count": task.retry_count,
+                "retry_blocked": task.retry_blocked,
+                "retry_at": task.retry_at,
+                "retry_code": task.retry_code,
+                "error_detail": task.error_detail,
             }
             pipe = task.pipeline
             if pipe is not None:

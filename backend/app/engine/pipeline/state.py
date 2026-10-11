@@ -12,6 +12,8 @@ class RecordingState(str, Enum):
     """녹화 상태."""
 
     IDLE = "idle"
+    CONNECTING = "connecting"
+    RECONNECTING = "reconnecting"
     RECORDING = "recording"
     STOPPING = "stopping"
     ERROR = "error"

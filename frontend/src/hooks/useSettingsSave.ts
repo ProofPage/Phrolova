@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useToast } from "../components/ui/Toast";
 import { getErrorMessage } from "../utils/error";
 
@@ -25,10 +25,13 @@ interface SaveOptions {
  */
 export function useSettingsSave(onSaved: () => void) {
     const [saving, setSaving] = useState(false);
+    const pending = useRef(false);
     const toast = useToast();
 
     const save = useCallback(
         async ({ request, success, failure, afterSuccess }: SaveOptions) => {
+            if (pending.current) return;
+            pending.current = true;
             setSaving(true);
             try {
                 await request();
@@ -38,6 +41,7 @@ export function useSettingsSave(onSaved: () => void) {
             } catch (error) {
                 toast.error(getErrorMessage(error, failure));
             } finally {
+                pending.current = false;
                 setSaving(false);
             }
         },

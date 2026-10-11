@@ -134,6 +134,11 @@ MIGRATIONS: list[tuple[int, str]] = [
             state TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL
         );
     """),
+    (6, """
+        ALTER TABLE channels ADD COLUMN retry_state TEXT NOT NULL DEFAULT '{}';
+        ALTER TABLE recording_jobs ADD COLUMN session_id TEXT;
+        CREATE UNIQUE INDEX IF NOT EXISTS recording_jobs_session ON recording_jobs(session_id);
+    """),
 ]
 
 #: 코드가 기대하는 최신 스키마 버전.

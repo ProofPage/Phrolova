@@ -1,3 +1,4 @@
+import { RECORDING_OUTPUT_FORMATS } from '../../utils/recordingFormats';
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { RefreshCw, SlidersHorizontal, X } from "lucide-react";
@@ -7,6 +8,7 @@ import { useToast } from "../ui/Toast";
 import { Button, Field, Input, Select, SettingRow, Switch } from "../ui/primitives";
 import { DOWNLOAD_CONDITIONS } from "./LiveDownloadCondition";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { RecordingSourceFormatField } from '../settings/RecordingSourceFormatField';
 
 interface Props {
     platform: Platform;
@@ -38,7 +40,7 @@ export function ChannelDownloadModal({ platform, name, channel, channelId, onClo
     const dirty = !channel || autoRecord !== channel.auto_record ||
         condition !== (channel.download_condition ?? "inherit") ||
         (condition === "watchalong" && tags !== initialTags) ||
-        (dynamicQuality && quality !== (channel?.recording_quality || 'best')) || outputFormat !== (channel?.output_format || 'inherit');
+        quality !== (channel?.recording_quality || 'best') || outputFormat !== (channel?.output_format || 'inherit');
     const toast = useToast();
 
     useEffect(() => {
@@ -80,7 +82,7 @@ export function ChannelDownloadModal({ platform, name, channel, channelId, onClo
                 auto_record: autoRecord,
                 download_condition: platform === "chzzk" && condition !== "inherit" ? condition : null,
                 watchalong_tags: platform === "chzzk" && condition === "watchalong" ? tags : null,
-                ...(dynamicQuality ? { recording_quality: quality } : {}),
+                recording_quality: quality,
                 output_format: outputFormat === 'inherit' ? null : outputFormat as 'mp4'|'mkv',
             });
             onClose();
@@ -115,8 +117,10 @@ export function ChannelDownloadModal({ platform, name, channel, channelId, onClo
                         <Button type="button" icon={RefreshCw} loading={qualityLoading} disabled={saving} aria-label={t('화질 목록 다시 조회')} title={t('화질 목록 다시 조회')} onClick={() => setQualityRefresh(value => value + 1)}>{t('다시 조회')}</Button>
                     </div>
                 </Field>}
+                {!dynamicQuality && <Field label="녹화 화질" htmlFor="channel-recording-quality" hint="변경 사항은 다음 녹화부터 적용됩니다."><Select id="channel-recording-quality" value={quality} disabled={saving} onChange={e=>setQuality(e.target.value)} options={['best','1080p','720p','480p'].map(value=>({value,label:value==='best'?'최고 화질':value}))}/></Field>}
+                <RecordingSourceFormatField label="녹화 원본 형식" />
                 <Field label="녹화 완료 후 저장 형식" htmlFor="channel-output-format" hint="변경 사항은 다음 녹화부터 적용됩니다.">
-                    <Select id="channel-output-format" value={outputFormat} disabled={saving} onChange={e=>setOutputFormat(e.target.value)} options={[{value:'inherit',label:'전역 설정 사용'},{value:'mkv',label:'MKV'},{value:'mp4',label:'MP4'}]} />
+                    <Select id="channel-output-format" value={outputFormat} disabled={saving} onChange={e=>setOutputFormat(e.target.value)} options={[{value:'inherit',label:'전역 설정 사용'},...RECORDING_OUTPUT_FORMATS]} />
                 </Field>
                 {platform === "chzzk" && <>
                     <Field label={t("녹화 조건")} htmlFor="channel-download-condition" hint={condition === "inherit" ? `${t("현재 기본값")}: ${t(defaultLabel)}` : t("이 채널에만 적용합니다.")}>

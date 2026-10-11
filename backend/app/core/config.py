@@ -179,7 +179,7 @@ class Settings(BaseSettings):
             return "force-timemachine"
         if self.chzzk_time_machine_enabled is False:
             return "standard"
-        return "request-timemachine"
+        return "force-timemachine"
 
     @property
     def effective_chzzk_time_machine_offset(self) -> int:
@@ -191,7 +191,7 @@ class Settings(BaseSettings):
         return 0
 
     # ── 녹화 포맷/품질 ─────────────────────────────────────
-    live_format: str = "mp4"           # 종료 후 저장 형식; 명시된 기존 TS 설정은 유지
+    live_format: str = "mkv"           # 종료 후 저장 형식; 명시된 기존 설정은 유지
     vod_filename_template: str = "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}"
 
     @field_validator("vod_filename_template")
@@ -200,12 +200,13 @@ class Settings(BaseSettings):
         from app.core.vod_filename import validate_vod_template
         return validate_vod_template(value)
 
+    chzzk_live_cdn: Literal["default", "akamai"] = "default"
     chzzk_vod_cdn: Literal["default", "akamai"] = "default"
     vod_format: str = "mp4"            # VOD 다운로드 포맷: mp4(권장), mkv, ts
     recording_quality: str = "best"    # 녹화 품질: best, 1080p, 720p, 480p
 
     # ── VOD 다운로드 설정 ──────────────────────────────────
-    vod_max_concurrent: int = 3        # 동시 다운로드 최대 개수
+    vod_max_concurrent: int = 5        # 동시 다운로드 최대 개수
     vod_default_quality: str = "best"  # 기본 화질: best, 1080p, 720p, 480p
     vod_max_speed: int = 0             # 최대 다운로드 속도 (MB/s, 0 = 무제한)
 

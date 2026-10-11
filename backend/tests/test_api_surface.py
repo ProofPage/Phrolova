@@ -25,6 +25,7 @@ from app.main import STATIC_DIR, app
 #: (HTTP 메서드, 경로). 메서드는 쉼표로 이어 붙이고 HEAD는 뺀다
 #: (FastAPI가 GET에 자동으로 붙여주는 것이라 계약이 아니다).
 EXPECTED_API_ROUTES = {
+    ("POST", "/api/recordings/history/clear"),
     ('GET','/api/recordings/settings'),('PUT','/api/recordings/settings'),('GET','/api/recordings/jobs'),
     ('POST','/api/recordings/{job_id}/retry'),('POST','/api/recordings/{job_id}/inspect'),
     ('GET','/api/recordings/{job_id}/file'),('POST','/api/recordings/{job_id}/open-location'),
@@ -44,6 +45,10 @@ EXPECTED_API_ROUTES = {
     ("GET", "/api/platforms/youtube/cookie"),
     ("POST", "/api/platforms/youtube/cookie"),
     ("DELETE", "/api/platforms/youtube/cookie"),
+    ("GET", "/api/platforms/chzzk/cookie"),
+    ("POST", "/api/platforms/chzzk/cookie"),
+    ("DELETE", "/api/platforms/chzzk/cookie"),
+    ("POST", "/api/platforms/chzzk/cookie/check"),
     ("GET", "/api/settings"),
     ("GET", "/api/settings/"),
     ("GET", "/api/settings/auth"),

@@ -180,7 +180,8 @@ class VodEngine(VodPreparation):
         self._repo = repo or VodRepository()
         settings = get_settings()
         self._max_concurrent = settings.vod_max_concurrent
-        self._semaphore = asyncio.Semaphore(self._max_concurrent)
+        from app.engine.download_slots import DownloadSlots
+        self._semaphore = DownloadSlots(self._max_concurrent)
         self._metadata_semaphore = asyncio.Semaphore(2)
         self._metadata_tasks: set[asyncio.Task] = set()
         self._inspection_tasks: set[asyncio.Task] = set()

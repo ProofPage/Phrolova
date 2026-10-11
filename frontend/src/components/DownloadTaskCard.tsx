@@ -1,4 +1,4 @@
-import { memo, useId, useRef, useState } from 'react';
+import { memo, useId, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp, ChevronDown, FileVideo, FolderOpen, GripVertical, Pause, Play, RotateCw, Square, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { client, type VodTask } from '../api/client';
@@ -41,10 +41,10 @@ export const DownloadTaskCard = memo(function DownloadTaskCard({ task, mode, ret
         try { await onAction(task, action, value); } finally { pendingRef.current = false; setPending(null); }
     };
     const move = (direction: number) => { if (!pendingRef.current) onMove(task.task_id, direction); };
-    const statistics = state === 'completed' ? [
+    const statistics: [string, ReactNode][] = state === 'completed' ? [
         ['파일 크기', known(task.file_size) ? formatBytes(task.file_size) : task.downloaded_bytes > 0 ? formatBytes(task.downloaded_bytes) : '—'],
         ['영상 길이', known(duration) && duration > 0 ? formatDuration(duration) : '—'],
-        ['완료 시각', task.completed_at ? new Date(task.completed_at).toLocaleString() : '—'],
+        ['완료 시각', task.completed_at ? <time dateTime={task.completed_at} className="download-completed-at"><span>{new Date(task.completed_at).toLocaleDateString()}</span><span>{new Date(task.completed_at).toLocaleTimeString()}</span></time> : '—'],
     ] : [
         ['다운로드 용량', known(task.downloaded_bytes) ? `${formatBytes(task.downloaded_bytes)}${task.total_bytes > 0 ? ` / ${formatBytes(task.total_bytes)}` : ' / —'}` : '—'],
         ['다운로드 속도', state === 'downloading' && known(task.download_speed) && task.download_speed > 0 ? `${task.download_speed.toFixed(2)} MB/s` : '—'],
@@ -68,15 +68,16 @@ export const DownloadTaskCard = memo(function DownloadTaskCard({ task, mode, ret
             </div>
             } />
             <div className="download-task-status" role="status" aria-live="polite">
-                <div className="download-status-heading"><Badge tone={tone}>{t(status)}{state === 'downloading' && percentage && ` · ${percentage}%`}</Badge>
-                    {!canQuality && task.quality && <span className="download-selected-quality"><span>{t('화질')}</span> {task.quality === 'best' ? t('최고 화질') : task.quality === 'worst' ? t('최저 화질') : task.quality}</span>}
+                <div className="download-status-heading"><Badge tone={tone}>{t(status)}</Badge>
+                    {!canQuality && task.quality && <span className="download-selected-quality">{task.quality === 'best' ? t('최고 화질') : task.quality === 'worst' ? t('최저 화질') : task.quality}</span>}
                 </div>
                 {['downloading', 'processing', 'paused'].includes(state) && <div className="download-progress"><div role="progressbar" aria-label={t('다운로드 진행률')} aria-valuenow={percentage ? Number(percentage) : undefined} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${percentage ?? 0}%` }} /></div><span className="tabular-nums">{percentage ? `${percentage}%` : '—'}</span></div>}
                 {state === 'processing' && <span className="text-xs text-ink-muted">{t('다운로드 후 처리를 진행하고 있습니다.')}</span>}
-                {task.state === 'completed' && <span className={clsx('text-xs', attention ? 'text-warn' : inspection === 'passed' ? 'text-ok' : 'text-ink-muted')}>{t(inspecting ? '파일 정보를 확인하고 있습니다.' : attention ? '파일 확인 필요' : inspection === 'passed' ? '파일 검사 완료' : '검사 대기')}</span>}
             </div>
             <div className={clsx('download-task-footer', canQuality && 'download-task-footer--ready')}>
             {!canQuality && <dl className="download-task-metrics">{statistics.map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd>{value}</dd></div>)}</dl>}
+            {task.state === 'completed' && <div className="download-file-verification"><span className={clsx('text-xs', attention ? 'text-warn' : inspection === 'passed' ? 'text-ok' : 'text-ink-muted')}>{t(inspecting ? '파일 정보를 확인하고 있습니다.' : attention ? '파일 확인 필요' : inspection === 'passed' ? '파일 검사 완료' : '검사 대기')}</span>{attention && <p className="download-task-warning text-xs break-words" role="status">{t(attention ? task.inspection_message || '다운로드는 완료되었지만 파일 정보를 확인하지 못했습니다.' : task.download_warning_message || downloadErrorMessage(task))}</p>}</div>}
+            {(state === 'failed' || task.download_warning_message) && <p className="download-task-warning text-xs break-words" role="status">{t(attention ? task.inspection_message || '다운로드는 완료되었지만 파일 정보를 확인하지 못했습니다.' : task.download_warning_message || downloadErrorMessage(task))}</p>}
             <div className="download-task-controls">
                 {canQuality && <div className="download-task-quality"><div className="download-quality-segments" role="group" aria-label={t('다운로드 해상도')}>{metadata?.qualities?.map(option => <button className={clsx('download-quality-option', task.quality === option.value && 'is-selected')} key={option.value} aria-pressed={task.quality === option.value} disabled={!!pending} onClick={() => void act('quality', option.value)}>{option.label}</button>)}</div></div>}
                 <div className="download-actions">
@@ -94,14 +95,13 @@ export const DownloadTaskCard = memo(function DownloadTaskCard({ task, mode, ret
                 </div>
             </div>
             </div>
-            {(attention || state === 'failed' || task.download_warning_message) && <p className="download-task-warning text-xs break-words" role="status">{t(attention ? task.inspection_message || '다운로드는 완료되었지만 파일 정보를 확인하지 못했습니다.' : task.download_warning_message || downloadErrorMessage(task))}</p>}
         </div>
         <div id={detailsId} hidden={!expanded} className="download-task-details">
             <dl><div><dt>{t('영상 제목')}</dt><dd>{task.title}</dd></div><div><dt>{t('영상 URL')}</dt><dd><a href={task.url} target="_blank" rel="noreferrer">{task.url}</a></dd></div>
                 {metadata?.id && <div><dt>{t(task.url.includes('/clips/') ? '클립 번호' : '영상 번호')}</dt><dd>{metadata.id}</dd></div>}
                 {task.output_path && <div><dt>{t('저장 위치')}</dt><dd>{task.output_path}</dd></div>}
                 {task.started_at && <div><dt>{t('다운로드 시작 시각')}</dt><dd>{new Date(task.started_at).toLocaleString()}</dd></div>}
-                {task.completed_at && <div><dt>{t('다운로드 완료 시각')}</dt><dd>{new Date(task.completed_at).toLocaleString()}</dd></div>}
+                {task.completed_at && <div><dt>{t('다운로드 완료 시각')}</dt><dd>{<time dateTime={task.completed_at} className="download-completed-at"><span>{new Date(task.completed_at).toLocaleDateString()}</span><span>{new Date(task.completed_at).toLocaleTimeString()}</span></time>}</dd></div>}
                 {task.cdn_applied && <div><dt>CDN</dt><dd>{task.cdn === 'akamai' ? 'Akamai CDN' : t('기본 CDN')}</dd></div>}
             </dl>
             {metadata?.quality_fallback && <p className="text-xs text-warn">{t('기본 화질이 제공되지 않아 사용 가능한 화질을 선택했습니다.')}</p>}

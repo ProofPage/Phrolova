@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 import json
+import asyncio
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 
@@ -21,12 +23,26 @@ from app.api.settings._shared import SETTINGS_PREFIX, SETTINGS_TAGS, VALID_FORMA
 router = APIRouter(prefix=SETTINGS_PREFIX, tags=SETTINGS_TAGS)
 
 
+async def validate_directory(value: str, label: str) -> str:
+    value = value.strip()
+    if not value:
+        raise HTTPException(400, f"{label}를 입력하세요.")
+    try:
+        await asyncio.to_thread(Path(value).mkdir, parents=True, exist_ok=True)
+    except OSError:
+        raise HTTPException(400, f"{label}를 사용할 수 없습니다. 경로와 접근 권한을 확인하세요.") from None
+    return value
+
+
 class DownloadSettingsUpdateRequest(BaseModel):
     """라이브 녹화 설정 업데이트 요청."""
+    live_download_dir: Optional[str] = Field(None, max_length=4096)
+    monitor_interval: Optional[int] = Field(None, ge=5, le=300)
 
     # /settings/download를 사용하는 구버전 앱 호환 필드. 신규 클라이언트는
     # VOD 설정 API를 통해 이 값을 저장한다.
     keep_download_parts: Optional[bool] = Field(None, description="구버전 클라이언트 호환 필드")
+    chzzk_live_cdn: Optional[Literal["default", "akamai"]] = None
     max_record_retries: int = Field(..., ge=0, le=100, description="라이브 녹화 자동 재시도 횟수")
     chzzk_stream_mode: Optional[str] = Field(
         None,
@@ -48,6 +64,7 @@ class DownloadSettingsUpdateRequest(BaseModel):
 
 class VodSettingsUpdateRequest(BaseModel):
     """VOD 다운로드 설정 업데이트 요청."""
+    vod_download_dir: Optional[str] = Field(None, max_length=4096)
 
     vod_filename_template: Optional[str] = Field(None, max_length=240)
 
@@ -87,58 +104,41 @@ async def update_live_condition(req: DefaultDownloadOptions):
 async def update_download_settings(req: DownloadSettingsUpdateRequest):
     """라이브 녹화 설정을 업데이트합니다. /download는 구버전 호환 경로입니다."""
     settings = get_settings()
-    if req.keep_download_parts is not None:
-        settings.keep_download_parts = req.keep_download_parts
-    settings.max_record_retries = req.max_record_retries
-    stream_mode = req.chzzk_stream_mode
-    if stream_mode is None and req.chzzk_time_machine_enabled is not None:
-        stream_mode = "force-timemachine" if req.chzzk_time_machine_enabled else "standard"
-    if stream_mode is not None:
-        settings.chzzk_stream_mode = stream_mode
-        settings.chzzk_time_machine_enabled = None
-    time_machine_offset = req.chzzk_time_machine_offset
-    if time_machine_offset is None:
-        time_machine_offset = req.chzzk_time_machine_shift
-    if time_machine_offset is not None:
-        settings.chzzk_time_machine_offset = time_machine_offset
-        settings.chzzk_time_machine_shift = None
-    if req.save_live_preview is not None:
-        settings.save_live_preview = req.save_live_preview
-    if req.live_filename_template is not None:
-        settings.live_filename_template = req.live_filename_template
-    if req.recording_quality is not None:
-        quality = req.recording_quality.lower()
+    updates = req.model_dump(exclude_none=True)
+    if "live_download_dir" in updates:
+        updates["live_download_dir"] = await validate_directory(updates["live_download_dir"], "라이브 저장 위치")
+    legacy_mode = updates.pop("chzzk_time_machine_enabled", None)
+    if "chzzk_stream_mode" not in updates and legacy_mode is not None:
+        updates["chzzk_stream_mode"] = "force-timemachine" if legacy_mode else "standard"
+    legacy_offset = updates.pop("chzzk_time_machine_shift", None)
+    if "chzzk_time_machine_offset" not in updates and legacy_offset is not None:
+        updates["chzzk_time_machine_offset"] = legacy_offset
+    if "recording_quality" in updates:
+        quality = updates["recording_quality"].lower()
         if quality not in VALID_QUALITIES:
-            raise HTTPException(
-                status_code=400,
-                detail=f"지원하지 않는 품질입니다. 사용 가능: {', '.join(VALID_QUALITIES)}",
-            )
-        settings.recording_quality = quality
-
-    env_updates = {"MAX_RECORD_RETRIES": str(req.max_record_retries)}
-    if req.keep_download_parts is not None:
-        env_updates["KEEP_DOWNLOAD_PARTS"] = str(req.keep_download_parts).lower()
-    if stream_mode is not None:
-        env_updates["CHZZK_STREAM_MODE"] = stream_mode
-    if time_machine_offset is not None:
-        env_updates["CHZZK_TIME_MACHINE_OFFSET"] = str(time_machine_offset)
-    if req.save_live_preview is not None:
-        env_updates["SAVE_LIVE_PREVIEW"] = str(req.save_live_preview).lower()
-    if req.live_filename_template is not None:
-        env_updates["LIVE_FILENAME_TEMPLATE"] = req.live_filename_template
-    if req.recording_quality is not None:
-        env_updates["RECORDING_QUALITY"] = settings.recording_quality
-
+            raise HTTPException(400, "지원하지 않는 녹화 화질입니다.")
+        updates["recording_quality"] = quality
+    env_updates = {
+        key.upper(): str(value).lower() if isinstance(value, bool) else str(value)
+        for key, value in updates.items()
+    }
     try:
-        _update_env_file(env_updates)
-    except Exception as e:
-        print(f"설정 파일 저장 실패: {e}")
+        _update_env_file(env_updates, raise_on_error=True)
+    except OSError as exc:
+        raise HTTPException(500, "라이브 녹화 설정을 저장하지 못했습니다.") from exc
+    for key, value in updates.items():
+        setattr(settings, key, value)
+    if "chzzk_stream_mode" in updates:
+        settings.chzzk_time_machine_enabled = None
+    if "chzzk_time_machine_offset" in updates:
+        settings.chzzk_time_machine_shift = None
 
     return {
         "message": "라이브 녹화 설정이 업데이트되었습니다.",
         "settings": {
             "keep_download_parts": settings.keep_download_parts,
             "max_record_retries": settings.max_record_retries,
+            "chzzk_live_cdn": settings.chzzk_live_cdn,
             "chzzk_stream_mode": settings.effective_chzzk_stream_mode,
             "chzzk_time_machine_enabled": settings.effective_chzzk_stream_mode != "standard",
             "chzzk_time_machine_offset": settings.effective_chzzk_time_machine_offset,
@@ -146,6 +146,8 @@ async def update_download_settings(req: DownloadSettingsUpdateRequest):
             "save_live_preview": settings.save_live_preview,
             "live_filename_template": settings.live_filename_template,
             "recording_quality": settings.recording_quality,
+            "live_download_dir": settings.effective_live_download_dir,
+            "monitor_interval": settings.monitor_interval,
         },
     }
 
@@ -155,6 +157,8 @@ async def update_vod_settings(req: VodSettingsUpdateRequest):
     """VOD 다운로드 설정을 업데이트합니다."""
     settings = get_settings()
     updates = req.model_dump(exclude_none=True)
+    if "vod_download_dir" in updates:
+        updates["vod_download_dir"] = await validate_directory(updates["vod_download_dir"], "영상 저장 위치")
     for key, allowed in (("vod_default_quality", VALID_QUALITIES), ("vod_format", VALID_FORMATS)):
         if key in updates:
             value = updates[key].lower()
@@ -173,12 +177,14 @@ async def update_vod_settings(req: VodSettingsUpdateRequest):
     for key, value in updates.items():
         setattr(settings, key, value)
 
-    # VodEngine의 세마포어를 업데이트하려면 재시작이 필요
-    # 현재는 런타임 중 반영 불가 (재시작 필요 안내)
+    if req.vod_max_concurrent is not None:
+        from app.main import get_recorder_service
+        get_recorder_service().set_vod_concurrency(req.vod_max_concurrent)
     return {
-        "message": "VOD 설정이 업데이트되었습니다. 일부 설정은 서버 재시작 후 적용됩니다.",
+        "message": "영상 다운로드 설정이 저장되었습니다. 동시 다운로드 개수는 즉시 적용됩니다.",
         "settings": {
             "vod_max_concurrent": settings.vod_max_concurrent,
+            "vod_download_dir": settings.vod_download_dir or settings.download_dir,
             "vod_default_quality": settings.vod_default_quality,
             "vod_max_speed": settings.vod_max_speed,
             "vod_format": settings.vod_format,

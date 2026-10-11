@@ -108,6 +108,7 @@ async def get_current_settings():
         "discord_bot_configured": bool(settings.discord_bot_token),
         "keep_download_parts": settings.keep_download_parts,
         "max_record_retries": settings.max_record_retries,
+        "chzzk_live_cdn": settings.chzzk_live_cdn,
         "chzzk_stream_mode": settings.effective_chzzk_stream_mode,
         "chzzk_time_machine_enabled": settings.effective_chzzk_stream_mode != "standard",
         "chzzk_time_machine_offset": settings.effective_chzzk_time_machine_offset,
@@ -164,7 +165,6 @@ async def update_general_settings(req: GeneralSettingsUpdateRequest):
             Path(value).mkdir(parents=True, exist_ok=True)
         except OSError as e:
             raise HTTPException(status_code=400, detail=f"{label}를 생성할 수 없습니다: {e}")
-        setattr(settings, field_name, value)
         env_updates[env_name] = value
 
     # ── download_dir ──
@@ -177,12 +177,10 @@ async def update_general_settings(req: GeneralSettingsUpdateRequest):
                 status_code=400,
                 detail=f"저장 경로를 생성할 수 없습니다: {e}",
             )
-        settings.download_dir = req.download_dir
         env_updates["DOWNLOAD_DIR"] = req.download_dir
 
     # ── monitor_interval ──
     if req.monitor_interval is not None:
-        settings.monitor_interval = req.monitor_interval
         env_updates["MONITOR_INTERVAL"] = str(req.monitor_interval)
 
     # ── live_format ──
@@ -193,7 +191,6 @@ async def update_general_settings(req: GeneralSettingsUpdateRequest):
                 status_code=400,
                 detail=f"지원하지 않는 포맷입니다. 사용 가능: {', '.join(VALID_FORMATS)}",
             )
-        settings.live_format = fmt
         env_updates["LIVE_FORMAT"] = fmt
 
     # ── recording_quality ──
@@ -204,12 +201,10 @@ async def update_general_settings(req: GeneralSettingsUpdateRequest):
                 status_code=400,
                 detail=f"지원하지 않는 품질입니다. 사용 가능: {', '.join(VALID_QUALITIES)}",
             )
-        settings.recording_quality = quality
         env_updates["RECORDING_QUALITY"] = quality
 
     # ── split_download_dirs ──
     if req.split_download_dirs is not None:
-        settings.split_download_dirs = req.split_download_dirs
         env_updates["SPLIT_DOWNLOAD_DIRS"] = str(req.split_download_dirs).lower()
 
     # ── vod_chzzk_dir ──
@@ -222,7 +217,6 @@ async def update_general_settings(req: GeneralSettingsUpdateRequest):
                     status_code=400,
                     detail=f"치지직 다시보기 저장 경로를 생성할 수 없습니다: {e}",
                 )
-        settings.vod_chzzk_dir = req.vod_chzzk_dir
         env_updates["VOD_CHZZK_DIR"] = req.vod_chzzk_dir
 
     # ── vod_external_dir ──
@@ -235,15 +229,20 @@ async def update_general_settings(req: GeneralSettingsUpdateRequest):
                     status_code=400,
                     detail=f"외부 다운로드 저장 경로를 생성할 수 없습니다: {e}",
                 )
-        settings.vod_external_dir = req.vod_external_dir
         env_updates["VOD_EXTERNAL_DIR"] = req.vod_external_dir
 
     # .env 영구 저장
     if env_updates:
         try:
-            _update_env_file(env_updates)
-        except Exception as e:
-            print(f"설정 파일 저장 실패: {e}")
+            _update_env_file(env_updates, raise_on_error=True)
+        except OSError as exc:
+            raise HTTPException(500, "일반 설정을 저장하지 못했습니다.") from exc
+    for env_name in env_updates:
+        field_name = env_name.lower()
+        value = getattr(req, field_name)
+        if field_name in ("live_format", "recording_quality"):
+            value = value.lower()
+        setattr(settings, field_name, value)
 
     return {
         "message": "설정이 업데이트되었습니다.",

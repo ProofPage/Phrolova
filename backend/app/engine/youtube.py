@@ -6,6 +6,7 @@ Phrolova: YouTube 라이브 엔진
 
 from __future__ import annotations
 
+import json
 import re
 import asyncio
 import httpx
@@ -15,11 +16,15 @@ logger = app_logger.getChild("youtube")
 from app.core.config import get_settings
 from app.core.http import get_http_client
 from app.engine.base import LiveStatus
-from app.engine.youtube_support import runtime_cli_options
+from app.engine.youtube_support import runtime_cli_options, with_youtube_cookie_fallback
 
 
 class YoutubeLiveEngine:
     """YouTube 라이브 감지 및 스트림 URL 매핑 엔진."""
+
+    def __init__(self):
+        self._live_urls = {}
+        self._metadata_errors = {}
 
     async def check_live_status(self, channel_id: str) -> LiveStatus:
         """유튜브 라이브 채널의 생방송 여부를 확인한다."""
@@ -29,26 +34,37 @@ class YoutubeLiveEngine:
             handle = channel_id if channel_id.startswith("@") else f"@{channel_id}"
             url = f"https://www.youtube.com/{handle}/live"
 
+        self._metadata_errors.pop(url, None)
         headers = {"Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"}
 
         # 1차 체크: 가벼운 HTML 스크래핑으로 감지
         is_live = False
         html = ""
-        redirected_url = url
+        player = {}
 
         try:
-            resp = await get_http_client().get(url, headers=headers, follow_redirects=True)
+            resp = await get_http_client().get(
+                url, headers=headers, follow_redirects=True
+            )
             if resp.status_code == 200:
                 html = resp.text
-                redirected_url = str(resp.url)
-                # "isLive":true 또는 "isLiveStreaming":true 확인
-                # 혹은 리다이렉트된 주소가 watch?v= 인 경우
-                if (
-                    '"isLive":true' in html
-                    or '"isLiveStreaming":true' in html
-                    or ("watch?v=" in redirected_url)
-                ):
-                    is_live = True
+                # Only the selected player's JSON describes this channel's live.
+                # Recommended live videos elsewhere in the page are unrelated.
+                match = re.search(r"(?:var\s+)?ytInitialPlayerResponse\s*=\s*", html)
+                if match:
+                    try:
+                        player = json.JSONDecoder().raw_decode(html[match.end() :])[0]
+                    except (ValueError, TypeError):
+                        player = {}
+                details = player.get("videoDetails") or {}
+                live = (
+                    player.get("microformat", {})
+                    .get("playerMicroformatRenderer", {})
+                    .get("liveBroadcastDetails", {})
+                )
+                is_live = (
+                    details.get("isLive") is True or live.get("isLiveNow") is True
+                ) and player.get("playabilityStatus", {}).get("status") == "OK"
         except httpx.RequestError as e:
             logger.error(f"[YouTube:{channel_id}] HTML 스크래핑 요청 실패: {e}")
 
@@ -56,6 +72,11 @@ class YoutubeLiveEngine:
         if not is_live:
             is_live, yt_info = await self._check_via_ytdlp(url)
             if is_live and yt_info:
+                video_id = yt_info.get("id", "")
+                if re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
+                    self._live_urls[channel_id] = (
+                        f"https://www.youtube.com/watch?v={video_id}"
+                    )
                 title = yt_info.get("title", "YouTube Live")
                 channel_name = yt_info.get("uploader", channel_id)
                 viewer_count = yt_info.get("concurrent_viewers", 0) or 0
@@ -73,11 +94,25 @@ class YoutubeLiveEngine:
                 )
 
         if not is_live:
-            return self._offline_status(channel_id)
+            status = self._offline_status(channel_id)
+            if url in self._metadata_errors:
+                failure, detail = self._metadata_errors[url]
+                status.update(
+                    status_error=str(failure),
+                    error_detail=detail,
+                    status_error_retryable=failure.retryable,
+                )
+            else:
+                self._live_urls.pop(channel_id, None)
+            return status
+
+        video_id = (player.get("videoDetails") or {}).get("videoId", "")
+        if re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
+            self._live_urls[channel_id] = f"https://www.youtube.com/watch?v={video_id}"
 
         # HTML 기반으로 1차 통과한 경우 메타데이터 파싱
         title = "YouTube Live"
-        title_match = re.search(r'<title>(.*?) - YouTube</title>', html)
+        title_match = re.search(r"<title>(.*?) - YouTube</title>", html)
         if title_match:
             title = title_match.group(1)
             # 대기 중/오프라인 안내 문구가 포함되어 있다면 오프라인 처리
@@ -93,7 +128,7 @@ class YoutubeLiveEngine:
         viewer_count = 0
         viewer_match = re.search(
             r'"viewCount":\{\"videoViewCountRenderer\":\{\"viewCount\":\{\"simpleText\":\"(?:시청자\s*)?([0-9,]+)명?\"\}',
-            html
+            html,
         )
         if viewer_match:
             try:
@@ -120,37 +155,58 @@ class YoutubeLiveEngine:
     async def _check_via_ytdlp(self, url: str) -> tuple[bool, dict | None]:
         """yt-dlp 메타데이터 조회를 통해 라이브 여부를 검증한다."""
         import json as _json
-        
+
         ytdlp_path = get_settings().resolve_ytdlp_path()
         # --simulate -j 옵션으로 스트림 다운로드 없이 JSON 메타데이터만 조회
-        cmd = [ytdlp_path, url, "--simulate", "-j", "--no-warnings", "--ignore-config", *runtime_cli_options()]
-        
-        proc = None
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
-            if proc.returncode == 0:
+        cmd = [
+            ytdlp_path,
+            url,
+            "--simulate",
+            "-j",
+            "--no-warnings",
+            "--ignore-config",
+            *runtime_cli_options(),
+        ]
+
+        async def query(cookie_file):
+            proc = None
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    *(["--cookies", cookie_file] if cookie_file else []),
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+                if proc.returncode:
+                    raise RuntimeError(stderr.decode(errors="replace")[-4000:])
                 info = _json.loads(stdout.decode())
-                # yt-dlp 응답의 is_live 플래그 검증
-                if info.get("is_live") is True:
-                    return True, info
+                return (info.get("is_live") is True, info)
+            finally:
+                if proc is not None and proc.returncode is None:
+                    proc.kill()
+                    await proc.communicate()
+
+        try:
+            return await with_youtube_cookie_fallback(query)
         except asyncio.CancelledError:
             raise
-        except Exception as e:
-            logger.debug(f"[YouTube] yt-dlp 메타데이터 조회 중 예외 발생: {e}")
-        finally:
-            if proc is not None and proc.returncode is None:
-                proc.kill()
-                await proc.communicate()
+        except Exception as error:
+            from app.engine.platform_auth import redact_media_error
+            from app.engine.recording_errors import classify_recording_error
+
+            self._metadata_errors[url] = (
+                classify_recording_error(error),
+                redact_media_error(error),
+            )
+            logger.debug(f"유튜브 방송 정보 조회 실패: {redact_media_error(error)}")
 
         return False, None
 
     def get_stream_url(self, channel_id: str) -> str:
         """라이브 스트림 다운로드 주소를 반환한다."""
+        if channel_id in self._live_urls:
+            return self._live_urls[channel_id]
         if channel_id.startswith("UC"):
             return f"https://www.youtube.com/channel/{channel_id}/live"
         else:

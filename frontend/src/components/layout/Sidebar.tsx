@@ -1,7 +1,7 @@
 import { useDialogKeyboard } from "../../hooks/useDialogKeyboard";
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { Menu, Tv, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { clsx } from "clsx";
 import { NAV_GROUPS } from "../../config/navigation";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -11,7 +11,7 @@ export function Sidebar() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const drawerRef = useRef<HTMLElement>(null);
     useDialogKeyboard(drawerRef, () => setMobileOpen(false), mobileOpen);
-    const { pageTitle, iconUrl } = useTheme();
+    const { pageTitle } = useTheme();
     const { t } = useLanguage();
 
     useEffect(() => {
@@ -32,9 +32,6 @@ export function Sidebar() {
     const navigation = (
         <>
             <Link to="/" onClick={() => setMobileOpen(false)} className="sidebar-brand" aria-label={pageTitle}>
-                <span className="brand-mark grid size-9 shrink-0 place-items-center overflow-hidden rounded-xl">
-                    {iconUrl ? <img src={iconUrl} alt="" className="size-full object-cover" /> : <Tv className="size-[18px]" />}
-                </span>
                 <span className="min-w-0">
                     <span className="block truncate text-[15px] font-bold tracking-[-0.03em] text-ink">{pageTitle}</span>
                 </span>

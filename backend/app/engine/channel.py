@@ -28,6 +28,7 @@ class ChannelTask:
     recording_job_id: Optional[str] = None
     broadcast_ended: bool = False
     recording_inspection: Optional[dict] = None
+    last_recording_status: Optional[dict] = None
     pipeline: Optional[YtdlpLivePipeline] = field(default=None, repr=False)
     monitor_task: Optional[asyncio.Task] = field(default=None, repr=False)
     # 수동 요청과 자동 감시가 동시에 같은 녹화 핸들을 덮어쓰지 않도록 보호한다.
@@ -47,6 +48,11 @@ class ChannelTask:
     download_condition: Optional[str] = None
     watchalong_tags: Optional[str] = None
     last_error: Optional[str] = None
+    retry_count: int = 0
+    retry_blocked: bool = False
+    retry_at: Optional[str] = None
+    retry_code: Optional[str] = None
+    error_detail: Optional[str] = None
     # ── 파생 상태 ────────────────────────────────────────
 
     @property

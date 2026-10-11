@@ -23,6 +23,9 @@ class LiveStatus(TypedDict, total=False):
     """플랫폼 공통 라이브 상태 정보."""
 
     channel_id: str
+    status_error: str
+    error_detail: str
+    status_error_retryable: bool
     is_live: bool
     channel_name: str
     title: str

@@ -8,6 +8,8 @@ import asyncio.subprocess
 import mimetypes
 import re
 import tempfile
+import uuid
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Callable, Awaitable
@@ -15,14 +17,18 @@ from urllib.parse import urlsplit, urlunsplit
 
 from app.core.config import get_settings
 from app.core.logger import logger
-from app.engine.chzzk_time_machine import resolve_time_machine_stream
-from app.engine.youtube_support import is_youtube_url, runtime_cli_options
+from app.engine.chzzk_time_machine import (
+    resolve_time_machine_stream,
+    resolve_live_cdn_stream,
+)
+from app.engine.youtube_support import is_youtube_url, require_runtime_cli_options
 
 from app.engine.pipeline.state import RecordingState
+from app.engine.recording_errors import RecordingError, classify_recording_error
 
 
 class YtdlpLivePipeline:
-    """Resolve live URLs, receive Streamlink TS packets and close writers.
+    """Resolve live URLs, receive native Streamlink media and close writers.
 
     Container conversion belongs exclusively to RecordingFinalizer.
     """
@@ -54,6 +60,21 @@ class YtdlpLivePipeline:
         self._resume_args = None
         self._quality = "best"
         self.end_reason = None
+        self.session_id = uuid.uuid4().hex
+        self.retryable = True
+        self.error_code = None
+        self.error_message = None
+        self._capture_ready = None
+        self._last_data_at = None
+        self._media_duration = None
+        self._pcr_last = None
+        self._ts_tail = b""
+        self.capture_format = "ts"
+        self.cdn = None
+        self.warning_message = None
+        from app.engine.native_clock import NativeClock
+
+        self._native_clock = NativeClock()
 
         # 녹화 통계 (FFmpegPipeline과 동일 구조)
         self._file_size_bytes: int = 0
@@ -79,7 +100,9 @@ class YtdlpLivePipeline:
         start = self._start_time
         if start is None:
             return 0.0
-        return ((self._ended_at or datetime.now()) - start).total_seconds()
+        if self._media_duration is not None:
+            return self._media_duration
+        return max(0, ((self._last_data_at or start) - start).total_seconds())
 
     @property
     def file_size_bytes(self) -> int:
@@ -111,7 +134,7 @@ class YtdlpLivePipeline:
             Callable[[str], Awaitable[tuple[str, dict, Optional[str]]]]
         ] = None,
     ) -> str:
-        """yt-dlp로 HLS URL을 추출한 뒤 ffmpeg으로 직접 녹화한다.
+        """Resolve HLS and save Streamlink packets; FFmpeg runs only after closure.
 
         Args:
             stream_obj: 라이브 URL 문자열 (예: https://chzzk.naver.com/live/{id})
@@ -138,7 +161,11 @@ class YtdlpLivePipeline:
         settings = get_settings()
         live_start_index: Optional[int] = None
 
-        save_dir = Path(output_dir or settings.effective_live_download_dir)
+        save_dir = (
+            Path(output_dir or settings.effective_live_download_dir)
+            .expanduser()
+            .resolve()
+        )
         save_dir.mkdir(parents=True, exist_ok=True)
 
         now = datetime.now()
@@ -222,6 +249,23 @@ class YtdlpLivePipeline:
 
         # 같은 채널/제목이 같은 분 안에 재시작되더라도 기존 파일을 덮어쓰지 않는다.
         filename = self._clean_filename(filename)
+        stem = (
+            Path(filename).stem.encode("utf-8")[:160].decode("utf-8", errors="ignore")
+        )
+        if os.name == "nt":
+            budget = (
+                240
+                - len(str(save_dir))
+                - len(self.session_id)
+                - len(" [].native.mp4.part")
+            )
+            if budget < 1:
+                raise RecordingError(
+                    "storage_path",
+                    "저장 폴더 경로가 너무 깁니다. 더 짧은 경로를 선택하세요.",
+                )
+            stem = stem[:budget]
+        filename = f"{stem} [{self.session_id}].ts"
         output_file = save_dir / filename
         suffix_number = 1
         preview_suffixes = (".jpg", ".jpeg", ".png", ".webp", ".avif")
@@ -254,8 +298,14 @@ class YtdlpLivePipeline:
                     quality=quality,
                     offset_seconds=settings.effective_chzzk_time_machine_offset,
                     cookie_header=cookie_str,
+                    cdn=settings.chzzk_live_cdn,
                 )
-                hls_url = time_machine_stream.url
+                self.cdn = getattr(time_machine_stream, "cdn", None)
+                self.warning_message = getattr(time_machine_stream, "warning", None)
+                hls_url = (
+                    getattr(time_machine_stream, "master_url", None)
+                    or time_machine_stream.url
+                )
                 http_headers = time_machine_stream.headers
                 live_start_index = time_machine_stream.live_start_index
                 time_machine_resolved = True
@@ -284,9 +334,22 @@ class YtdlpLivePipeline:
                 raise
         elif not time_machine_resolved:
             try:
-                hls_url, http_headers, _ = await self._extract_hls_url(
-                    page_url, quality, cookie_str
-                )
+                if self._is_chzzk_live_page(page_url):
+                    selected_cdn = settings.chzzk_live_cdn
+
+                    async def resolve_chzzk(selected_quality):
+                        stream = await resolve_live_cdn_stream(
+                            self._channel_id, selected_quality, cookie_str, selected_cdn
+                        )
+                        self.cdn, self.warning_message = stream.cdn, stream.warning
+                        return stream.url, stream.headers, None
+
+                    self._source_resolver = resolve_chzzk
+                    hls_url, http_headers, stream_cookies = await resolve_chzzk(quality)
+                else:
+                    hls_url, http_headers, _ = await self._extract_hls_url(
+                        page_url, quality, cookie_str
+                    )
             except Exception as e:
                 if not fallback_cookie_file:
                     self._state = RecordingState.ERROR
@@ -308,7 +371,8 @@ class YtdlpLivePipeline:
         self._closed = False
         self._ended_at = None
         self.end_reason = None
-        self._start_time = datetime.now()
+        self._start_time = None
+        self._state = RecordingState.CONNECTING
         self._source_files = [str(output_file) + ".part"]
         self._resume_args = (
             hls_url,
@@ -326,14 +390,18 @@ class YtdlpLivePipeline:
             # Exclusive creation reserves the filename without overwriting data.
             with open(self._source_files[0], "xb"):
                 pass
-            for attempt in range(3):
+            for attempt in range(2):
+                self._intentional_stop = False
                 try:
                     await self._begin_receiver()
                     break
-                except Exception:
-                    if attempt == 2:
+                except Exception as error:
+                    if (
+                        attempt
+                        or self._start_time is not None
+                        or not classify_recording_error(error).retryable
+                    ):
                         raise
-                    await asyncio.sleep(1)
                     if self._source_resolver:
                         url, headers, cookies = await asyncio.wait_for(
                             self._source_resolver(quality), 45
@@ -355,22 +423,87 @@ class YtdlpLivePipeline:
             self._closed = True
             raise
 
+    def _ensure_start_allowed(self):
+        guard = getattr(self, "_start_guard", None)
+        if guard is not None and not guard():
+            raise RecordingError(
+                "auto_record_disabled", "자동 녹화가 꺼져 연결 시도를 중단했습니다."
+            )
+
     async def _begin_receiver(self):
+        self._ensure_start_allowed()
         session, readers = await self._open_raw_readers(*self._resume_args)
+        try:
+            self._ensure_start_allowed()
+        except RecordingError:
+            for reader in readers:
+                await asyncio.to_thread(reader.close)
+            await asyncio.to_thread(session.http.close)
+            raise
         self._streamlink_session, self._readers = session, readers
         while len(self._source_files) < len(readers):
             self._source_files.append(
                 self._output_path + f".audio{len(self._source_files)}.part"
             )
         self._closed = False
-        if getattr(self, "_on_capture_started", None):
-            self._on_capture_started(self)
-            self._on_capture_started = None
-        self._state = RecordingState.RECORDING
+        self._capture_ready = asyncio.get_running_loop().create_future()
+        self._stall_detected = False
         self._feeder_task = asyncio.create_task(
             self._receive_packets(), name=f"streamlink-record-{self._channel_id}"
         )
         asyncio.create_task(self._update_statistics_loop())
+        try:
+            await asyncio.wait_for(asyncio.shield(self._capture_ready), 45)
+        except BaseException:
+            self._intentional_stop = True
+            for reader in list(self._readers):
+                await asyncio.to_thread(reader.close)
+            await asyncio.gather(self._feeder_task, return_exceptions=True)
+            if self._capture_ready.done() and not self._capture_ready.cancelled():
+                self._capture_ready.exception()
+            raise
+
+    def _capture_started(self):
+        if self._capture_ready.done():
+            return
+        try:
+            self._update_statistics()
+            if getattr(self, "_on_capture_started", None):
+                self._on_capture_started(self)
+                self._on_capture_started = None
+            self._state = RecordingState.RECORDING
+            self.error_code = None
+            self.error_message = None
+            self.end_reason = None
+            if not self._capture_ready.done():
+                self._capture_ready.set_result(True)
+        except Exception as error:
+            self._intentional_stop = True
+            if not self._capture_ready.done():
+                self._capture_ready.set_exception(error)
+
+    def _measure_ts(self, data):
+        """Measure the MPEG-TS PCR clock without decoding or invoking FFmpeg."""
+        data = self._ts_tail + data
+        limit = len(data) // 188 * 188
+        for pos in range(0, limit, 188):
+            if data[pos] != 0x47:
+                continue
+            if (data[pos + 3] >> 4) & 2 and data[pos + 4] >= 7 and data[pos + 5] & 0x10:
+                p = data[pos + 6 : pos + 12]
+                clock = (
+                    (p[0] << 25)
+                    | (p[1] << 17)
+                    | (p[2] << 9)
+                    | (p[3] << 1)
+                    | (p[4] >> 7)
+                )
+                if self._pcr_last is not None:
+                    delta = (clock - self._pcr_last) % (1 << 33) / 90000
+                    if delta < 60:
+                        self._media_duration = (self._media_duration or 0) + delta
+                self._pcr_last = clock
+        self._ts_tail = data[limit:]
 
     async def _open_raw_readers(self, *args):
         def open_sources():
@@ -403,38 +536,120 @@ class YtdlpLivePipeline:
 
     async def _receive_packets(self):
         readers = list(self._readers)
+        loop = asyncio.get_running_loop()
 
         async def receive(index, reader):
             def copy_packets():
                 checked = False
-                with open(self._source_files[index], "ab") as file:
-                    try:
-                        while not self._intentional_stop:
-                            data = reader.read(128 * 1024)
-                            if not data:
-                                if self._intentional_stop:
-                                    return False
-                                if not self._hls_finished(reader):
-                                    raise RuntimeError(
-                                        "라이브 연결이 중단되었습니다. 재연결을 시도합니다."
+                prefix = bytearray()
+                file = open(self._source_files[index], "ab")
+                try:
+                    while not self._intentional_stop:
+                        data = reader.read(128 * 1024)
+                        if not data:
+                            if self._intentional_stop:
+                                return False
+                            if index == 0 and prefix and not checked:
+                                raise RecordingError(
+                                    "unsupported_container",
+                                    "선택된 스트림의 원본 형식을 확인할 수 없습니다.",
+                                )
+                            if self._stall_detected or not self._hls_finished(reader):
+                                raise RuntimeError(
+                                    "라이브 연결이 중단되었습니다. 재연결을 시도합니다."
+                                )
+                            return True
+                        if index == 0 and not checked:
+                            prefix.extend(data)
+                            if len(prefix) >= 8 and prefix[4:8] in (
+                                b"ftyp",
+                                b"styp",
+                                b"moof",
+                            ):
+                                # Preserve the real container, never label MP4 as TS.
+                                # Native -> TS normalization belongs to the closed-job queue.
+                                from app.engine.recording_finalizer import publish_file
+
+                                file.close()
+                                native = str(
+                                    Path(self._output_path).with_suffix(".native.mp4")
+                                )
+                                if self.capture_format != "fmp4":
+                                    if Path(self._source_files[0]).stat().st_size:
+                                        raise RecordingError(
+                                            "container_changed",
+                                            "재연결된 스트림의 원본 형식이 달라졌습니다. 저장된 원본을 확인하세요.",
+                                        )
+                                    publish_file(
+                                        Path(self._source_files[0]),
+                                        Path(native + ".part"),
                                     )
-                                return True
-                            if index == 0 and not checked:
-                                # Do not disguise CMAF/DASH MP4 packets as a TS file.
-                                if (
-                                    len(data) < 188
-                                    or data[0] != 0x47
-                                    or len(data) >= 376
-                                    and data[188] != 0x47
-                                ):
-                                    raise RuntimeError(
-                                        "이 스트림은 TS 직접 저장을 지원하지 않습니다. HLS TS 화질을 선택하세요."
-                                    )
+                                    self._output_path = native
+                                    self._source_files[0] = native + ".part"
+                                self.capture_format = "fmp4"
+                                file = open(self._source_files[0], "ab")
+                                data = bytes(prefix)
                                 checked = True
-                            file.write(data)
-                    finally:
+                            elif len(prefix) < 376:
+                                continue
+                            # Reads need not align to packet boundaries. Strip a
+                            # bounded metadata prefix only after finding TS sync.
+                            if not checked:
+                                offset = next(
+                                    (
+                                        i
+                                        for i in range(min(len(prefix) - 188, 65536))
+                                        if prefix[i] == prefix[i + 188] == 0x47
+                                    ),
+                                    None,
+                                )
+                                if offset is None:
+                                    if len(prefix) < 65536:
+                                        continue
+                                    raise RecordingError(
+                                        "unsupported_container",
+                                        "선택된 스트림의 원본 형식을 확인할 수 없습니다.",
+                                    )
+                                if self.capture_format != "ts":
+                                    raise RecordingError(
+                                        "container_changed",
+                                        "재연결된 스트림의 원본 형식이 달라졌습니다. 저장된 원본을 확인하세요.",
+                                    )
+                                data = bytes(prefix[offset:])
+                                checked = True
+                        file.write(data)
+                        if index == 0:
+                            if self.capture_format == "ts":
+                                self._measure_ts(data)
+                                has_payload = True
+                            else:
+                                self._native_clock.feed(data)
+                                self._media_duration = self._native_clock.duration
+                                has_payload = self._native_clock.media_seen
+                            if has_payload:
+                                self._last_data_at = datetime.now()
+                            if (
+                                has_payload
+                                and self._capture_ready
+                                and not self._capture_ready.done()
+                            ):
+                                file.flush()
+                                if self._start_time is None:
+                                    self._start_time = self._last_data_at
+                                loop.call_soon_threadsafe(self._capture_started)
+                finally:
+                    if not file.closed:
+                        if (
+                            index == 0
+                            and self.capture_format == "fmp4"
+                            and self._intentional_stop
+                        ):
+                            # A native fragment interrupted mid-mdat cannot be finalized.
+                            # Retain only complete media boxes in our new capture file.
+                            file.truncate(self._native_clock.complete_media_end)
                         file.flush()
                         os.fsync(file.fileno())
+                        file.close()
                 return False
 
             try:
@@ -455,8 +670,16 @@ class YtdlpLivePipeline:
                 raise error
             completed = all(results) or self._intentional_stop
         except Exception as error:
+            self.last_exception = error
+            failure = classify_recording_error(error)
             self._state = RecordingState.ERROR
-            self.end_reason = "connection_error"
+            self.error_message = str(failure)
+            self.error_code = failure.code
+            self.retryable = failure.retryable
+            self.end_reason = failure.code
+            self._ended_at = self._last_data_at
+            if self._capture_ready and not self._capture_ready.done():
+                self._capture_ready.set_exception(failure)
             logger.warning(
                 f"[{self._channel_id}] {self._redact_streamlink_error(str(error))}"
             )
@@ -472,7 +695,22 @@ class YtdlpLivePipeline:
             self._streamlink_session = None
             self._closed = True
             self._update_statistics()
-        if completed:
+            if self._capture_ready and not self._capture_ready.done():
+                self.last_exception = RecordingError(
+                    "empty_stream",
+                    "녹화 데이터가 수신되지 않았습니다.",
+                    retryable=not completed,
+                )
+                self._state = RecordingState.ERROR
+                self.error_message = str(self.last_exception)
+                self.error_code = self.last_exception.code
+                self._capture_ready.set_exception(self.last_exception)
+            if (
+                getattr(self, "_on_capture_error", None)
+                and self._state == RecordingState.ERROR
+            ):
+                self._on_capture_error(self)
+        if completed and self._start_time is not None:
             self.end_reason = "manual" if self._intentional_stop else "broadcast_ended"
             await self._seal_sources()
             if not self._intentional_stop and getattr(self, "_on_capture_ended", None):
@@ -490,9 +728,10 @@ class YtdlpLivePipeline:
                 await asyncio.to_thread(publish_file, path, Path(target))
                 self._source_files[index] = target
         self._ended_at = datetime.now()
+        self._update_statistics()
         self._state = (
             RecordingState.COMPLETED
-            if Path(self._output_path).is_file()
+            if self._start_time is not None and Path(self._output_path).is_file()
             else RecordingState.ERROR
         )
 
@@ -500,6 +739,21 @@ class YtdlpLivePipeline:
         if not self._closed or self._state != RecordingState.ERROR:
             return
         self._intentional_stop = False
+        if not self.retryable:
+            raise RecordingError(
+                self.error_code or "blocked",
+                self.error_message or "녹화 설정을 확인하세요.",
+            )
+        self._state = RecordingState.RECONNECTING
+        if self.capture_format == "fmp4":
+            # Resume at a complete media-box boundary. A disconnected mdat tail
+            # must not absorb the next reader's initialization bytes.
+            with open(self._source_files[0], "r+b") as source:
+                source.truncate(self._native_clock.complete_media_end)
+            self._native_clock.buffer.clear()
+            self._native_clock.body.clear()
+            self._native_clock.remaining = 0
+            self._native_clock.position = self._native_clock.complete_media_end
         if self._source_resolver:
             url, headers, cookies = await asyncio.wait_for(
                 self._source_resolver(self._quality), 45
@@ -653,6 +907,17 @@ class YtdlpLivePipeline:
                 selected = (min if quality == "worst" else max)(
                     exact or eligible or variants, key=rank
                 )
+                # HLS is a protocol, not a container. Prefer a TS rendition
+                # before falling back to a correctly named native fMP4 capture.
+                ordered = sorted(
+                    exact or eligible or variants, key=rank, reverse=quality != "worst"
+                )
+                for candidate in ordered[:16]:
+                    child = session.http.get(candidate.uri)
+                    child.raise_for_status()
+                    if "#EXT-X-MAP" not in child.text:
+                        selected = candidate
+                        break
                 video = stream_type(
                     session,
                     selected.uri,
@@ -815,7 +1080,7 @@ class YtdlpLivePipeline:
             "--ignore-config",
         ]
         if is_youtube_url(page_url):
-            cmd.extend(runtime_cli_options())
+            cmd.extend(require_runtime_cli_options())
         if cookie_file:
             cmd.extend(["--cookies", cookie_file])
         # Never log the command: page/stream URLs and cookie paths may be sensitive.
@@ -892,7 +1157,7 @@ class YtdlpLivePipeline:
         ]
 
         if is_youtube_url(page_url):
-            cmd.extend(runtime_cli_options())
+            cmd.extend(require_runtime_cli_options())
 
         cookie_file_path: Optional[str] = None
         if cookie_file:
@@ -901,7 +1166,7 @@ class YtdlpLivePipeline:
             cookie_file_path = self._write_cookie_file(cookie_str)
             cmd += ["--cookies", cookie_file_path]
 
-        logger.debug(f"[{self._channel_id}] yt-dlp URL 추출 CMD: {' '.join(cmd)}")
+        logger.debug(f"[{self._channel_id}] yt-dlp 스트림 정보 조회")
 
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -926,7 +1191,7 @@ class YtdlpLivePipeline:
         if proc.returncode != 0:
             err = stderr.decode(errors="replace").strip()
             raise RuntimeError(
-                f"yt-dlp URL 추출 실패 (code={proc.returncode}): {err[-300:]}"
+                f"yt-dlp URL 추출 실패 (code={proc.returncode}): {err[-2000:]}"
             )
 
         info = _json.loads(stdout.decode())
@@ -1035,11 +1300,11 @@ class YtdlpLivePipeline:
         """파일 크기 기반 통계를 업데이트한다."""
         if not self._output_path:
             return
-        output_file = Path(self._output_path)
-        if not output_file.exists():
-            return
         try:
-            current_size = output_file.stat().st_size
+            paths = self._source_files or [self._output_path]
+            current_size = sum(
+                Path(path).stat().st_size for path in paths if Path(path).is_file()
+            )
             self._file_size_bytes = current_size
             now = datetime.now()
             if self._last_check_time is not None:
@@ -1049,6 +1314,9 @@ class YtdlpLivePipeline:
                     if size_diff > 0:
                         self._download_speed = (size_diff / elapsed) / (1024 * 1024)
                         self._bitrate = (size_diff * 8 / elapsed) / 1000
+                    else:
+                        self._download_speed = 0.0
+                        self._bitrate = 0.0
             self._last_size = current_size
             self._last_check_time = now
         except Exception as e:
@@ -1058,12 +1326,24 @@ class YtdlpLivePipeline:
         """녹화 중 통계를 주기적으로 업데이트한다."""
         try:
             for _ in range(10):
-                if self._output_path and Path(self._output_path).exists():
+                if any(Path(path).is_file() for path in self._source_files):
                     break
                 await asyncio.sleep(1.0)
 
-            while self._state == RecordingState.RECORDING:
+            while self._state in (
+                RecordingState.CONNECTING,
+                RecordingState.RECONNECTING,
+                RecordingState.RECORDING,
+            ):
                 self._update_statistics()
+                if (
+                    self._last_data_at
+                    and (datetime.now() - self._last_data_at).total_seconds() > 90
+                    and not self._stall_detected
+                ):
+                    self._stall_detected = True
+                    for reader in list(self._readers):
+                        await asyncio.to_thread(reader.close)
                 await asyncio.sleep(2.0)
         except asyncio.CancelledError:
             pass
@@ -1084,6 +1364,17 @@ class YtdlpLivePipeline:
             "source_paths": list(self._source_files),
             "writer_closed": self._closed,
             "end_reason": self.end_reason,
+            "session_id": self.session_id,
+            "capture_format": self.capture_format,
+            "cdn": self.cdn,
+            "warning_message": self.warning_message,
+            "has_data": self._start_time is not None and self._file_size_bytes > 0,
+            "retryable": self.retryable,
+            "error_code": self.error_code,
+            "error_message": self.error_message,
+            "data_received_at": (
+                self._last_data_at.isoformat() if self._last_data_at else None
+            ),
             "output_file": self._output_path,  # conductor의 legacy 접근자 호환
             "duration_seconds": round(float(self.duration_seconds), 1),
             "start_time": start.isoformat() if start is not None else None,

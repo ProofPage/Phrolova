@@ -17,7 +17,6 @@ import { api, type Settings as SettingsType } from "../api/client";
 import { AppearanceTab } from "../components/settings/AppearanceTab";
 import { AuthTab } from "../components/settings/AuthTab";
 import { DownloadTab } from "../components/settings/DownloadTab";
-import { GeneralTab } from "../components/settings/GeneralTab";
 import { InfoTab } from "../components/settings/InfoTab";
 import { NotificationsTab } from "../components/settings/NotificationsTab";
 import { SystemTab } from "../components/settings/SystemTab";
@@ -25,10 +24,9 @@ import { useConfirm } from "../components/ui/ConfirmModal";
 import { Badge, Button, Card, PageHeader } from "../components/ui/primitives";
 import { useLanguage } from "../contexts/LanguageContext";
 
-type TabId = "general" | "download" | "auth" | "notifications" | "appearance" | "system" | "info";
+type TabId = "download" | "auth" | "notifications" | "appearance" | "system" | "info";
 
 const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
-    { id: "general", label: "일반", icon: SettingsIcon },
     { id: "download", label: "다운로드", icon: Download },
     { id: "auth", label: "인증", icon: KeyRound },
     { id: "notifications", label: "알림", icon: Bell },
@@ -38,7 +36,6 @@ const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
 ];
 
 const EMPTY_DIRTY: Record<TabId, boolean> = {
-    general: false,
     download: false,
     auth: false,
     notifications: false,
@@ -51,7 +48,7 @@ export default function Settings() {
     const { t } = useLanguage();
     const [settings, setSettings] = useState<SettingsType | null>(null);
     const [loadError, setLoadError] = useState(false);
-    const [activeTab, setActiveTab] = useState<TabId>("general");
+    const [activeTab, setActiveTab] = useState<TabId>("download");
     const [dirtyTabs, setDirtyTabs] = useState<Record<TabId, boolean>>(EMPTY_DIRTY);
     const [updateAvailable, setUpdateAvailable] = useState(false);
     const confirm = useConfirm();
@@ -176,7 +173,6 @@ export default function Settings() {
                 })}
             </nav>
 
-            {activeTab === "general" && <GeneralTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("general", dirty)} />}
             {activeTab === "download" && <DownloadTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("download", dirty)} />}
             {activeTab === "auth" && <AuthTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("auth", dirty)} />}
             {activeTab === "notifications" && <NotificationsTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("notifications", dirty)} />}

@@ -1,3 +1,4 @@
+import os
 import shutil
 import sys
 import tempfile
@@ -19,8 +20,13 @@ def runtime_options():
     runtimes = {}
     for name in ("deno", "node"):
         executable = shutil.which(name)
-        for folder in (Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent)) / "bin",
-                       Path(sys.executable).parent / "bin", Path(sys.executable).parent):
+        for folder in (
+            Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent)) / "bin",
+            Path(sys.executable).parent / "bin",
+            Path(sys.executable).parent,
+            Path(__file__).resolve().parents[3] / "bin",
+            Path(os.environ.get("PREFIX", str(Path(sys.executable).parent))) / "bin",
+        ):
             candidate = folder / (name + (".exe" if sys.platform == "win32" else ""))
             if candidate.is_file():
                 executable = str(candidate)
@@ -37,6 +43,18 @@ def runtime_cli_options():
     return args
 
 
+def require_runtime_cli_options():
+    args = runtime_cli_options()
+    if not args:
+        from app.engine.recording_errors import RecordingError
+
+        raise RecordingError(
+            "youtube_runtime",
+            "유튜브 추출에 필요한 JavaScript 실행 도구를 찾을 수 없습니다. Deno 또는 Node.js 22 이상을 설치한 뒤 다시 시작하세요.",
+        )
+    return args
+
+
 @contextmanager
 def youtube_cookies():
     source = get_settings().youtube_cookie_file
@@ -44,7 +62,9 @@ def youtube_cookies():
         yield None
         return
     if not Path(source).is_file():
-        raise ValueError("유튜브 쿠키 파일이 없습니다. 설정 → 인증에서 다시 등록해 주세요.")
+        raise ValueError(
+            "유튜브 쿠키 파일이 없습니다. 설정 → 인증에서 다시 등록해 주세요."
+        )
     with tempfile.TemporaryDirectory(prefix="phrolova-youtube-") as folder:
         copy = Path(folder) / "cookies.txt"
         shutil.copyfile(source, copy)
@@ -58,15 +78,44 @@ class YouTubeAuthenticationError(ValueError):
 def youtube_auth_message(error, *, has_cookies=False):
     text = str(error).lower()
     if "private video" in text:
-        return ("등록된 YouTube 계정에 이 비공개 영상의 시청 권한이 있는지 확인해 주세요." if has_cookies else
-                "비공개 영상입니다. 시청 권한이 있는 계정의 YouTube 쿠키를 설정 → 인증 → 유튜브에 등록한 뒤 다시 시도해 주세요.")
-    if any(marker in text for marker in ("members-only", "members only", "available to members", "join this channel")):
-        return ("등록된 YouTube 계정에 이 영상의 멤버십 시청 권한이 있는지 확인해 주세요." if has_cookies else
-                "멤버십 전용 영상입니다. 시청 권한이 있는 계정의 YouTube 쿠키를 설정 → 인증 → 유튜브에 등록한 뒤 다시 시도해 주세요.")
-    if any(marker in text for marker in ("not a bot", "sign in to confirm", "login required", "login_required",
-                                        "age-restricted", "age restricted", "account required", "sign in to view", "sign in to watch")):
-        return ("YouTube 로그인을 확인하지 못했습니다. 설정 → 인증 → 유튜브에서 쿠키를 다시 등록하고 계정의 시청 권한을 확인해 주세요." if has_cookies else
-                "이 영상은 YouTube 로그인 확인이 필요합니다. 설정 → 인증 → 유튜브에서 쿠키를 등록한 뒤 다시 시도해 주세요.")
+        return (
+            "등록된 유튜브 계정에 이 비공개 영상의 시청 권한이 있는지 확인해 주세요."
+            if has_cookies
+            else "비공개 영상입니다. 시청 권한이 있는 계정의 유튜브 쿠키를 설정 → 인증 → 유튜브에 등록한 뒤 다시 시도해 주세요."
+        )
+    if any(
+        marker in text
+        for marker in (
+            "members-only",
+            "members only",
+            "available to members",
+            "join this channel",
+        )
+    ):
+        return (
+            "등록된 유튜브 계정에 이 영상의 멤버십 시청 권한이 있는지 확인해 주세요."
+            if has_cookies
+            else "멤버십 전용 영상입니다. 시청 권한이 있는 계정의 유튜브 쿠키를 설정 → 인증 → 유튜브에 등록한 뒤 다시 시도해 주세요."
+        )
+    if any(
+        marker in text
+        for marker in (
+            "not a bot",
+            "sign in to confirm",
+            "login required",
+            "login_required",
+            "age-restricted",
+            "age restricted",
+            "account required",
+            "sign in to view",
+            "sign in to watch",
+        )
+    ):
+        return (
+            "유튜브 로그인을 확인하지 못했습니다. 설정 → 인증 → 유튜브에서 쿠키를 다시 등록하고 계정의 시청 권한을 확인해 주세요."
+            if has_cookies
+            else "이 영상은 유튜브 로그인 확인이 필요합니다. 설정 → 인증 → 유튜브에서 쿠키를 등록한 뒤 다시 시도해 주세요."
+        )
     return None
 
 
@@ -86,7 +135,7 @@ def youtube_cookie_fallback(error):
                     jar.load(ignore_discard=True, ignore_expires=True)
         except (OSError, ValueError, UnicodeError):
             raise YouTubeAuthenticationError(
-                "등록된 YouTube 쿠키 파일을 읽을 수 없거나 형식이 올바르지 않습니다. 설정 → 인증 → 유튜브에서 다시 등록해 주세요."
+                "등록된 유튜브 쿠키 파일을 읽을 수 없거나 형식이 올바르지 않습니다. 설정 → 인증 → 유튜브에서 다시 등록해 주세요."
             ) from None
         if cookie_file is None:
             raise YouTubeAuthenticationError(message) from None

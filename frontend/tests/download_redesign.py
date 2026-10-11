@@ -168,7 +168,7 @@ async def main():
         await expect(failed.get_by_role('button',name='다시 시도',exact=True)).to_be_disabled()
         while await page.get_by_role('button',name='알림 닫기',exact=True).count():
             await page.get_by_role('button',name='알림 닫기',exact=True).first.click()
-        for width in (360,390,768,1024,1440,1920):
+        for width in (360,390,768,1024,1280,1440,1920):
             await page.set_viewport_size({'width':width,'height':1000})
             for mode,label in [('grid','카드로 보기'),('list','목록으로 보기')]:
                 await page.get_by_role('button',name=label,exact=True).click()
@@ -193,7 +193,7 @@ async def main():
                 if width < 640:
                     assert await ready_card.evaluate('e=>[...e.querySelectorAll(".download-task-management > button")].every(b=>{const r=b.getBoundingClientRect();return r.width>=44&&r.height>=44})'),(width,mode,'touch targets')
                 if 700 <= await page.locator('[data-task-id="active"]').evaluate('e=>e.clientWidth') < 1000:
-                    assert await page.locator('[data-task-id="active"]').evaluate('e=>{const m=e.querySelector(".download-task-metrics").getBoundingClientRect(),a=e.querySelector(".download-task-controls").getBoundingClientRect();return Math.abs((m.top+m.bottom)/2-(a.top+a.bottom)/2)<2}'),(width,mode,'footer')
+                    assert await page.locator('[data-task-id="active"]').evaluate('e=>{const m=e.querySelector(".download-task-metrics").getBoundingClientRect(),a=e.querySelector(".download-task-controls").getBoundingClientRect();return a.top>=m.bottom || (a.left>=m.right && Math.abs((m.top+m.bottom)/2-(a.top+a.bottom)/2)<2)}'),(width,mode,'footer')
                 await page.screenshot(path=str(OUT/f'{mode}-{width}.png'),full_page=True)
         await page.set_viewport_size({'width':1440,'height':1000})
         await paused.get_by_role('button',name='취소',exact=True).click()

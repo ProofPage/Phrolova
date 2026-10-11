@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { KeyRound, RefreshCw, Trash2, Upload } from 'lucide-react';
-import { api, PLATFORM_LABELS, type PlatformCookieStatus } from '../../api/client';
+import { api, PLATFORM_LABELS, type CookiePlatform, type PlatformCookieStatus } from '../../api/client';
 import { getErrorMessage } from '../../utils/error';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useConfirm } from '../ui/ConfirmModal';
 import { useToast } from '../ui/Toast';
 import { Badge, Button, Card, CardHeader } from '../ui/primitives';
 
-/** Cookie values stay in the uploaded file; only file status is returned to this UI. */
-export function PlatformCookieAuth({ platform, onSaved }: { platform: 'soop' | 'cime'; onSaved?: () => void }) {
+/** Only registration/validation status is returned; cookie values never enter UI state. */
+export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlatform; onSaved?: () => void }) {
     const { t } = useLanguage();
     const toast = useToast();
     const confirm = useConfirm();
@@ -31,10 +31,10 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: 'soop' | '
         setError('');
         try {
             const data = action === 'upload' && file ? await api.uploadPlatformCookie(platform, file)
-                : action === 'delete' ? await api.deletePlatformCookie(platform) : await api.getPlatformCookieStatus(platform);
+                : action === 'delete' ? await api.deletePlatformCookie(platform) : await api.checkPlatformCookies(platform);
             setStatus(data);
             if (action !== 'refresh') {
-                toast.success(t(action === 'upload' ? '쿠키 파일을 등록했습니다.' : '쿠키 파일이 삭제되었습니다.'));
+                toast.success(t(action === 'upload' ? '쿠키 파일을 등록했습니다.' : '등록된 쿠키를 삭제했습니다.'));
                 onSaved?.();
             }
         } catch (cause) {
@@ -49,10 +49,10 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: 'soop' | '
     };
     const remove = async () => {
         if (pending.current) return;
-        if (await confirm({ title: `${name} ${t('쿠키 파일 삭제')}`, message: t('등록된 쿠키 파일을 삭제하시겠습니까? 공개 콘텐츠는 쿠키 없이 이용할 수 있습니다.'), confirmText: t('삭제'), variant: 'danger' })) void change('delete');
+        if (await confirm({ title: `${name} ${t('쿠키 파일 삭제')}`, message: t('등록된 쿠키를 삭제하시겠습니까? 공개 콘텐츠는 쿠키 없이 이용할 수 있습니다.'), confirmText: t('삭제'), variant: 'danger' })) void change('delete');
     };
     const label = !status ? t('상태 확인 중') : status.expired ? t('쿠키 만료')
-        : status.configured && status.valid === false ? t('쿠키 파일 확인 필요') : status.configured ? t('쿠키 파일 등록됨') : t('등록된 쿠키 없음');
+        : status.configured && status.valid === false ? t('쿠키 파일 확인 필요') : status.configured ? t('쿠키 등록됨') : t('등록된 쿠키 없음');
     return <Card className="space-y-4" data-cookie-platform={platform} aria-busy={busy}>
         <CardHeader icon={KeyRound} title={t(name)} description={t('선택 사항 · 공개 콘텐츠는 쿠키 없이 이용합니다. 로그인이 필요한 콘텐츠에 사용할 Netscape 형식 쿠키 파일을 등록하세요.')}
             action={<Badge tone={status?.expired || (status?.configured && status.valid === false) ? 'warn' : status?.configured ? 'ok' : undefined}>{label}</Badge>} />

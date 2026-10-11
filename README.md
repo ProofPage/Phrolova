@@ -34,7 +34,7 @@ Self-hosted live recording and video downloads.
 
 - Monitor registered CHZZK, YouTube, SOOP and CIME channels and automatically record detected broadcasts when enabled for each channel.
 - Organize channels with tags, filters, and adjustable display order. Inspect live status, recording duration, output size, and errors.
-- Streamlink stores live HLS TS packets directly. After recording ends, FFmpeg copies streams into MKV or MP4 and FFprobe checks the result. Set global or per-channel output preferences; retain source TS by default. Use separate live and video download directories and customizable filenames.
+- Streamlink stores compatible HLS TS packets directly and preserves fMP4/CMAF streams in their native format when TS is unavailable. After recording ends, FFmpeg normalizes native captures to TS and copies streams into MKV or MP4; FFprobe checks the result. Set global or per-channel output preferences; retain source TS by default. Use separate live and video download directories and customizable filenames.
 - Preview CHZZK, YouTube, SOOP and CIME streams independently of recording, subject to upstream playback availability.
 - For CHZZK, choose standard streaming or time-machine playback, optionally save a preview image, and record all broadcasts, only matching watch-alongs, or broadcasts excluding watch-alongs.
 - Retry interrupted CHZZK and YouTube recordings while the broadcast remains live, up to the configured retry limit.
@@ -216,14 +216,14 @@ These defaults come from the current settings implementation, rather than older 
 | `VOD_DOWNLOAD_DIR` | Empty | Common video output directory; otherwise legacy directory rules apply |
 | `MONITOR_INTERVAL` | `60` | CHZZK/YouTube polling interval in seconds; Settings accepts 5–300 |
 | `RECORDING_QUALITY` | `best` | Live preference: `best`, `1080p`, `720p`, or `480p` |
-| `LIVE_FORMAT` | `ts` | Live container: `ts`, `mkv`, or `mp4` |
+| `LIVE_FORMAT` | `mkv` | Completed recording format; explicit legacy `ts`, `mkv`, and `mp4` settings are preserved |
 | `MAX_RECORD_RETRIES` | `3` | Automatic retries after an established CHZZK/YouTube recording stalls while live |
-| `CHZZK_STREAM_MODE` | `request-timemachine` (effective default) | `standard`, `request-timemachine`, or `force-timemachine` |
+| `CHZZK_STREAM_MODE` | `force-timemachine` (effective default) | `standard`, `request-timemachine`, or `force-timemachine` |
 | `CHZZK_TIME_MACHINE_OFFSET` | `0` (effective default) | Seconds skipped from the available time-machine stream's beginning; clamped to 0–86400 |
 | `SAVE_LIVE_PREVIEW` | `false` | Save a CHZZK preview image when recording starts |
 | `LIVE_DOWNLOAD_CONDITION` | `all` | CHZZK default: `all`, `watchalong`, or `exclude_watchalong` |
 | `WATCHALONG_TAGS` | Platform's Korean watch-along marker | Comma- or newline-separated matching tags for watch-along-only recording; editable in Settings |
-| `VOD_MAX_CONCURRENT` | `3` | Simultaneous video tasks; Settings accepts 1–10; restart to apply |
+| `VOD_MAX_CONCURRENT` | `5` | Simultaneous video tasks; Settings accepts 1–10; changes apply immediately without stopping active tasks |
 | `VOD_DEFAULT_QUALITY` | `best` | Default video quality selection in the dashboard |
 | `VOD_FORMAT` | `mp4` | Preferred video merge container: `mp4`, `mkv`, or `ts` |
 | `VOD_MAX_SPEED` | `0` | yt-dlp download limit in MB/s; `0` means unlimited |
@@ -422,7 +422,7 @@ The result is `dist/Phrolova.exe`. The release workflow renames it to a versione
 ### Known limitations
 
 - **YouTube web start/stop:** the current `/api/stream/record/…` route does not preserve the `youtube:` channel prefix. Use automatic recording or Discord `/start` and `/stop`, which call the conductor with the correct composite key. Do not assume the visible web buttons work for YouTube.
-- **Live containers:** TS HLS is received directly; DASH-only and fMP4/CMAF video streams require a compatible TS HLS rendition.
+- **Live containers:** Compatible TS HLS is preferred. When only fMP4/CMAF is available, Streamlink preserves native data and FFmpeg converts it after the writer has closed; data is never mislabeled as TS.
 - **Download controls:** pause/resume is implemented through yt-dlp progress callbacks. Paused yt-dlp tasks retain their concurrency slot.
 - **Task order and persistence:** display reordering does not reschedule already-created download coroutines. Interrupted video tasks require manual retry after a restart; channel imports are not restored.
 - **Availability:** a quality setting, cookie, retry, or captured URL cannot recover media that the upstream platform no longer supplies. No guarantee of gap-free recordings or complete platform coverage is made.
@@ -478,6 +478,6 @@ See [Linux instructions](docs/linux-guide.md), [Native Termux and proot instruct
 
 Live reception and file conversion are separate. Streamlink writes `.ts.part`; closed captures become `.ts`. No FFmpeg process receives a live recording stream. A durable SQLite queue starts stream-copy remuxing only after writers close, and validates container, codecs, dimensions, frame rate, duration and stream count before publishing the final file without overwriting existing files.
 
-Set **Recording output format**, **Keep original TS**, and conversion concurrency in Settings. Per-channel settings override the global format at the next recording start. A new installation defaults to MP4; explicitly configured legacy TS/MKV/MP4 preferences remain in effect. Interrupted jobs require review/retry, and failures retain the source and diagnostic information. Existing retired-platform history and chat files remain on disk and in the database; their execution and UI are removed.
+Set **Recording output format**, **Keep original TS**, and conversion concurrency in Settings. Per-channel settings override the global format at the next recording start. A new installation defaults to MKV; explicitly configured legacy TS/MKV/MP4 preferences remain in effect. Interrupted jobs require review/retry, and failures retain the source and diagnostic information. Existing retired-platform history and chat files remain on disk and in the database; their execution and UI are removed.
 
 CHZZK, YouTube, SOOP and CIME use the shared recording service. TS HLS is supported; DASH-only and fragmented MP4 live inputs are rejected rather than stored as mislabeled TS. Independently resolved preview frames/playback and existing VOD download engines remain separate. See [recording architecture](docs/recording-finalization.md).

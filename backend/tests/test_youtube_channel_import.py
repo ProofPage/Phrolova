@@ -123,7 +123,8 @@ def test_cookie_upload_validates_format_and_filters_other_domains(tmp_path, monk
     assert response.status_code == 200
     stored = (tmp_path / "youtube_cookies.txt").read_text()
     assert "synthetic" in stored and "unrelated" not in stored
-    assert client.get("/api/platforms/youtube/cookie").json() == {"configured": True}
+    status = client.get("/api/platforms/youtube/cookie").json()
+    assert status["configured"] is True and status["valid"] is True
     assert client.delete("/api/platforms/youtube/cookie").status_code == 200
     assert not (tmp_path / "youtube_cookies.txt").exists()
 

@@ -256,6 +256,7 @@ async def test_hls_endlist_automatically_enqueues_and_does_not_restart_old_broad
     get_settings().live_download_dir = str(directory / "autonomous")
     conductor = Conductor()
     conductor.add_channel("alice", platform=Platform.CIME)
+    conductor._running = True  # Automatic reconnect belongs to a running monitor.
     pipe = YtdlpLivePipeline("alice")
 
     async def resolve(channel, quality):

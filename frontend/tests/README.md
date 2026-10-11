@@ -34,3 +34,15 @@ python frontend/tests/vod_preparation.py
 
 - `vod_preparation.py`: 390/1440px에서 여러 URL 등록, URI/plain/HTML 드롭, 중복·잘못된 주소, 영상별 화질, 개별/전체 시작, 정보 재조회, 일시정지·재개·취소·재시도, 새로고침 유지, 완료/개별 이력 정리 및 영어·일본어 표시를 확인합니다. API는 모의 응답입니다.
 - `PHROLOVA_CHROMIUM_EXECUTABLE`: 이미 설치된 Chromium의 실행 파일을 지정할 수 있습니다. 생략하면 Playwright의 기본 Chromium을 사용합니다. 기존 회귀 검사도 같은 변수를 지원합니다.
+
+
+녹화 복구 및 CDN 설정 회귀 검사:
+
+```bash
+PHROLOVA_TEST_URL=http://127.0.0.1:3000 PHROLOVA_TEST_OUTPUT=/tmp/phrolova-repair python frontend/tests/recording_repair.py
+```
+
+- 360/390/768/1024/1440/1920px에서 그리드·목록 정렬과 가로 넘침을 확인합니다.
+- 파일 없는 시작 실패의 수치·버튼 상태, 반복 이력 묶음과 목록 정리 요청을 검사합니다.
+- 라이브·다운로드 CDN 선택을 각각 저장하고 새로고침 후 복원하는 API 연결을 검사합니다.
+- 브라우저 검사는 모의 API를 사용합니다. 실제 파일 검사·Streamlink 녹화·종료 후 변환은 `backend/tests/test_recording_log_regressions.py`에서 검증합니다.

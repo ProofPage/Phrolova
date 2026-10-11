@@ -13,7 +13,7 @@ async def main():
     jobs=[];channels=[];calls=[]
     policy=dict(output_format='mp4',keep_source_ts=True,max_concurrent=1)
     for index,(platform,state) in enumerate(zip(['chzzk','youtube','soop','cime'],['pending','converting','completed','failed'])):
-        job=dict(id=str(index),composite_key=platform+':sample',channel_name='[미리보기 샘플] '+platform,state=state,target_format='mp4',progress=42.7 if state=='converting' else None,
+        job=dict(id=str(index),composite_key=platform+':sample',channel_name='[미리보기 샘플] '+platform,state=state,platform=platform,target_format='mp4',source_available=True,output_available=state=='completed',can_open=True,can_retry=state=='failed',can_inspect=state in ('failed','completed'),progress=42.7 if state=='converting' else None,
                  source_paths=['/sample/한글 원본.ts'],output_path='/sample/final.mp4' if state=='completed' else None,
                  error_message='파일 검사 시간이 초과되었습니다. 원본 TS를 보관했습니다.' if state=='failed' else None,
                  inspection_state='failed' if state=='failed' else 'passed' if state=='completed' else 'pending',diagnostics={'detail':'fixture diagnostic'} if state=='failed' else {})
@@ -70,8 +70,8 @@ async def main():
         await page.get_by_role('combobox',name='녹화 완료 후 저장 형식',exact=True).select_option('mkv')
         await page.get_by_role('switch',name='변환 후 원본 TS 보관',exact=True).click()
         await page.get_by_role('combobox',name='동시 파일 변환 수',exact=True).select_option('2')
-        await page.get_by_role('button',name='녹화 저장 설정 저장',exact=True).click()
-        await expect(page.get_by_role('button',name='녹화 저장 설정 저장',exact=True)).to_be_disabled()
+        await page.get_by_role('button',name='파일 처리 설정 저장',exact=True).click()
+        await expect(page.get_by_role('button',name='파일 처리 설정 저장',exact=True)).to_be_disabled()
         assert policy==dict(output_format='mkv',keep_source_ts=False,max_concurrent=2)
         await page.reload();await page.get_by_role('button',name='다운로드',exact=True).click()
         await expect(page.get_by_role('combobox',name='녹화 완료 후 저장 형식',exact=True)).to_have_value('mkv')

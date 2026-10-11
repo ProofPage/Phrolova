@@ -12,7 +12,8 @@ from typing import Callable, Awaitable, TypeVar
 
 from app.core.config import get_settings
 
-DOMAINS = {'soop': ('sooplive.com', 'sooplive.co.kr', 'afreecatv.com'), 'cime': ('ci.me',)}
+DOMAINS = {'soop': ('sooplive.com', 'sooplive.co.kr', 'afreecatv.com'), 'cime': ('ci.me',),
+           'chzzk': ('naver.com',), 'youtube': ('youtube.com', 'google.com')}
 NAMES = {'soop': '숲', 'cime': '씨미'}
 T = TypeVar('T')
 
@@ -63,6 +64,24 @@ def platform_cookie_jar(platform: str) -> http.cookiejar.MozillaCookieJar:
         return http.cookiejar.MozillaCookieJar()
 
 
+def chzzk_login_values(jar: http.cookiejar.MozillaCookieJar) -> dict[str, str]:
+    """Import only unexpired Naver login cookies valid for both existing API hosts."""
+    from http.cookies import SimpleCookie
+    pairs = []
+    for url in ("https://api.chzzk.naver.com/", "https://comm-api.game.naver.com/"):
+        request = urllib.request.Request(url)
+        jar.add_cookie_header(request)
+        cookies = SimpleCookie()
+        cookies.load(request.get_header("Cookie", ""))
+        values = {name: cookies[name].value for name in ("NID_AUT", "NID_SES") if name in cookies}
+        if len(values) != 2 or any(not value or any(c in value for c in "\r\n;") for value in values.values()):
+            raise ValueError("Missing usable Naver login cookies")
+        pairs.append(values)
+    if pairs[0] != pairs[1]:
+        raise ValueError("Conflicting Naver login cookies")
+    return pairs[0]
+
+
 def get_platform_cookies(platform: str, request_url: str) -> dict[str, str]:
     from http.cookies import SimpleCookie
     jar = platform_cookie_jar(platform)
@@ -75,6 +94,11 @@ def get_platform_cookies(platform: str, request_url: str) -> dict[str, str]:
 
 def platform_cookie_status(platform: str) -> dict:
     source = _source(platform)
+    return cookie_file_status(source, platform)
+
+
+def cookie_file_status(source: Path | None, platform: str) -> dict:
+    """Inspect a scoped cookie file without returning credentials or contacting a service."""
     configured = bool(source and source.is_file())
     if not configured:
         return {'configured': False, 'valid': False, 'expired': False, 'message': '쿠키가 등록되지 않았습니다.'}

@@ -1,6 +1,6 @@
 /* Shared data and actions; container width chooses presentation density. */
 .recording-channel { container: recording / inline-size; border: 1px solid var(--color-line); background: var(--color-surface-1); border-radius: var(--radius-card); min-width: 0; align-self: start; }
-.recording-channel-summary { display: grid; grid-template-columns: minmax(0,1fr) auto; grid-template-areas: "identity management" "controls controls" "metrics metrics"; align-items: start; gap: 12px; padding: 14px; }
+.recording-channel-summary { display: grid; grid-template-columns: minmax(0,1fr) auto; grid-template-areas: "identity management" "metrics metrics" "controls controls"; align-items: start; gap: 12px; padding: 14px; }
 .recording-channel-identity { grid-area: identity; display: flex; align-items: start; gap: 10px; min-width: 0; }
 .recording-avatar { width: 38px; height: 38px; border-radius: 50%; flex: 0 0 38px; object-fit: cover; }
 .recording-avatar-fallback { display: grid; place-items: center; background: var(--color-surface-3); color: var(--color-ink-faint); }
@@ -20,16 +20,21 @@
 .recording-channel .recording-more { display: inline-flex; }
 .recording-channel-actions .tag-manager-labeled { width: 32px; height: 32px; padding: 0; border: 0; }
 .recording-channel-actions .tag-manager-labeled > span { display: none; }
-.recording-channel-controls { grid-area: controls; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.recording-control-state { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; min-width: 0; }
+.recording-channel-controls { grid-area: controls; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+.recording-channel-statuses { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 6px; }
+.recording-status-message { font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; margin-top: 5px; }
 .recording-status { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 11px; line-height: 20px; color: var(--color-ink-muted); }
 .recording-status i { width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
 .recording-status.is-ok { color: var(--color-ok); }
+.recording-status.is-info { color: var(--color-info); }
+.recording-status.is-warn { color: var(--color-warn); }
 .recording-status.is-danger { color: var(--color-danger); }
-.recording-auto-control { display: flex; align-items: center; gap: 5px; color: var(--color-ink-muted); font-size: 11px; white-space: nowrap; }
+.recording-auto-control { display: flex; align-items: center; gap: 7px; min-height: 32px; color: var(--color-ink-muted); font-size: 11px; white-space: nowrap; }
 .recording-saving { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: var(--color-info); }
-.recording-primary-controls { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.recording-primary-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .recording-primary-controls .ui-button { white-space: nowrap; }
+.recording-primary-controls .ui-button:first-child { min-width: 80px; }
+.recording-primary-controls .ui-button:nth-child(2) { min-width: 88px; }
 .recording-metrics { grid-area: metrics; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px 16px; min-width: 0; padding-top: 10px; border-top: 1px solid var(--color-line); }
 .recording-metrics > div { min-width: 0; }
 .recording-metrics dt { font-size: 10px; line-height: 16px; color: var(--color-ink-faint); white-space: nowrap; }
@@ -37,6 +42,8 @@
 .recording-metrics dd.text-ok { color: var(--color-ok); }
 .recording-metrics.is-inactive dd { color: var(--color-ink-muted); }
 .recording-channel-notices { padding: 0 14px 12px; }
+.recording-channel-postprocess { padding: 0 14px 14px; }
+.recording-channel-extra[hidden] { display: none; }
 .recording-detail-disclosure[hidden] { display: none; }
 .recording-channel-details { display: grid; grid-template-columns: minmax(0,1fr); align-items: start; gap: 18px; border-top: 1px solid var(--color-line); padding: 14px; animation: recording-details-enter 120ms ease-out; }
 .recording-details-copy { min-width: 0; }
@@ -56,27 +63,57 @@
   .recording-direct-actions { display: flex; }
   .recording-channel .recording-more { display: none; }
 }
-@container recording (min-width:800px) {
-  .recording-channel--list .recording-channel-summary { grid-template-columns: minmax(0,1fr) minmax(320px,1fr) auto; grid-template-areas: "identity metrics management" "controls controls management"; gap: 10px 20px; padding: 12px 14px; }
-  .recording-channel--list .recording-channel-actions { flex-wrap: wrap; max-width: 104px; }
-  .recording-channel--list .recording-direct-actions { display: contents; }
-  .recording-channel--list .recording-metrics { align-self: center; border: 0; padding: 0; }
-  .recording-channel--list .recording-primary-controls { margin-left: 0; }
-}
-@container recording (min-width:1050px) {
-  .recording-channel--list .recording-channel-summary { grid-template-columns: minmax(200px,1fr) minmax(320px,1.15fr) auto 104px; grid-template-areas: "identity metrics controls management"; align-items: center; column-gap: 20px; min-height: 106px; }
-  .recording-channel--list .recording-channel-controls { flex-direction: column; align-items: flex-start; gap: 8px; }
-  .recording-channel--list .recording-control-state { gap: 8px; }
+@container recording (min-width:1000px) {
+  .recording-channel--list .recording-channel-summary { grid-template-columns: minmax(0,1fr) minmax(260px,1.1fr) 320px; grid-template-areas: "identity metrics management" "identity metrics controls"; align-items: center; gap: 8px 16px; padding: 12px 14px; min-height: 108px; }
+  .recording-channel--list .recording-channel-actions { flex-wrap: nowrap; }
+  .recording-channel--list .recording-direct-actions { display: flex; }
+  .recording-channel--list .recording-metrics { border: 0; padding: 0; align-self: center; }
+  .recording-channel--list .recording-channel-controls { flex-wrap: nowrap; gap: 8px; }
+  .recording-channel--list .recording-channel-management { justify-self: end; }
 }
 @media (hover:none), (pointer:coarse), (max-width:639px) {
   .recording-channel .icon-button, .recording-channel-actions .tag-manager-labeled { min-width: 44px; width: 44px; min-height: 44px; height: 44px; }
   .recording-channel-summary { padding: 12px; gap: 12px; }
-  .recording-primary-controls { margin-left: 0; width: 100%; }
-  .recording-primary-controls .ui-button { flex: 1; }
+  .recording-primary-controls .ui-button { min-height: 44px; }
   .recording-metrics { gap: 12px; }
 }
 @container recording (max-width:379px) {
-  .recording-channel-summary { grid-template-columns: minmax(0,1fr); grid-template-areas: "identity" "management" "controls" "metrics"; }
+  .recording-channel-summary { grid-template-columns: minmax(0,1fr); grid-template-areas: "identity" "management" "metrics" "controls"; }
   .recording-channel-actions { justify-content: flex-end; }
-  .recording-control-state { width: 100%; }
+  .recording-auto-control { min-height: 44px; }
+}
+
+.recording-processing { display: grid; gap: 8px; border-top: 1px solid var(--color-line); padding-top: 10px; }
+.recording-channel-postprocess .recording-processing { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.recording-channel-postprocess .recording-processing-copy { flex: 1 1 160px; }
+.recording-channel-postprocess .recording-processing-actions { flex: 0 1 auto; max-width: 100%; margin-inline-start: auto; justify-content: flex-end; }
+.recording-channel-postprocess .recording-processing-diagnostics { flex-basis: 100%; }
+.recording-history-row { display: grid; grid-template-columns: minmax(0,1fr); gap: 10px; }
+@media (min-width:1024px) { .recording-history-row { grid-template-columns: minmax(220px,1fr) minmax(0,2fr); align-items: start; } .recording-history-row .recording-processing { border: 0; padding: 0; } }
+
+.recording-processing-diagnostics { grid-column: 1 / -1; }
+/* Neighbouring grid cards share real content row heights, including errors. */
+@supports (grid-template-rows: subgrid) {
+  @container dashboard (min-width:1052px) {
+    .dashboard-channel-grid > .recording-channel--grid { display: grid; grid-template-columns: minmax(0,1fr) auto; grid-template-rows: subgrid; grid-row: span 4; container-type: normal; container-name: none; align-self: stretch; padding: 14px; gap: 12px; }
+    .recording-channel--grid .recording-channel-summary { display: contents; }
+    .recording-channel--grid .recording-channel-identity { grid-area: auto; grid-column: 1; grid-row: 1; }
+    .recording-channel--grid .recording-channel-management { grid-area: auto; grid-column: 2; grid-row: 1; }
+    .recording-channel--grid .recording-metrics { grid-template-columns: repeat(4,minmax(0,1fr)); grid-area: auto; grid-column: 1 / -1; grid-row: 2; }
+    .recording-channel--grid .recording-channel-controls { grid-area: auto; grid-column: 1 / -1; grid-row: 3; }
+    .recording-channel--grid .recording-channel-extra { grid-column: 1 / -1; grid-row: 4; min-width: 0; }
+    .recording-channel--grid .recording-channel-postprocess { padding: 0; }
+  }
+}
+@media (min-width:1440px) {
+  .recording-history-row { grid-template-columns: minmax(220px,1fr) minmax(0,2.5fr); }
+  .recording-history-row .recording-processing { grid-template-columns: minmax(0,1fr) minmax(260px,auto); align-items: start; gap: 12px; }
+  .recording-history-row .recording-processing-actions { justify-content: flex-end; max-width: 460px; }
+}
+
+@supports (grid-template-rows: subgrid) {
+  @container dashboard (min-width:1144px) {
+    .recording-channel--grid .recording-direct-actions { display: flex; }
+    .recording-channel--grid .recording-more { display: none; }
+  }
 }

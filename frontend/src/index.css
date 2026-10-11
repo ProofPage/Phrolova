@@ -158,12 +158,16 @@ code, .font-mono { font-family: var(--font-mono); }
 .settings-tabs button[aria-current="page"] { color: var(--color-ink); border-bottom: 2px solid var(--primary); box-shadow: none; }
 .settings-page .ui-panel { padding: 20px 0; background: transparent; border: 0; border-bottom: 1px solid var(--color-line); border-radius: 0; }
 .settings-page .ui-panel:last-child { border-bottom: 0; }
-.settings-page .ui-panel > .ui-button { width: auto; margin-left: auto; display: flex; }
+.settings-page .ui-panel > .ui-button { width: auto; margin-left: 0; display: flex; }
 .settings-page .ui-panel .ui-section-header { margin-bottom: 20px; }
 .settings-page .ui-field { padding-block: 8px; }
 .settings-page .ui-field-control { max-width: 640px; }
 .settings-page .ui-field-control > input[type="number"] { max-width: 160px; }
 .settings-page .ui-panel > [class*="space-y-"] { min-width: 0; }
+.settings-page .settings-section { padding-block: 16px; }
+.settings-page .settings-section .ui-section-header { margin-bottom: 12px; }
+.settings-page .settings-section .ui-field { padding-block: 4px; }
+.settings-page .settings-section .ui-setting-row { padding-block: 8px; }
 .ui-popover { background: var(--color-surface-2); border: 1px solid var(--color-line-strong); border-radius: 6px; box-shadow: var(--shadow-pop); }
 .preview-dialog::backdrop { background: #000a; }
 .ui-empty { padding: 36px 16px; text-align: center; color: var(--color-ink-faint); }

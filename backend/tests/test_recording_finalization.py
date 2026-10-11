@@ -387,21 +387,21 @@ async def test_hevc_aac_stream_copy_into_mp4(tmp_path):
         await manager.close()
 
 
-def test_fresh_mp4_and_explicit_legacy_preferences(monkeypatch):
+def test_fresh_mkv_and_explicit_legacy_preferences(monkeypatch):
     import app.engine.recording_finalizer as module
     from app.core.config import Settings
 
     fresh = Settings(_env_file=None)
     fresh.model_fields_set.discard("live_format")
     monkeypatch.setattr(module, "get_settings", lambda: fresh)
-    assert module.recording_policy()["output_format"] == "mp4"
+    assert module.recording_policy()["output_format"] == "mkv"
     for fmt in ("ts", "mkv", "mp4"):
         previous = Settings(_env_file=None, live_format=fmt)
         monkeypatch.setattr(module, "get_settings", lambda: previous)
         assert module.recording_policy()["output_format"] == fmt
 
 
-def test_implicit_old_ts_preference_is_preserved(tmp_path, monkeypatch):
+def test_missing_old_preference_uses_mkv(tmp_path, monkeypatch):
     import app.core.utils as utils
     import app.engine.recording_finalizer as module
     from app.core.config import Settings
@@ -412,4 +412,4 @@ def test_implicit_old_ts_preference_is_preserved(tmp_path, monkeypatch):
     settings = Settings(_env_file=None)
     settings.model_fields_set.discard("live_format")
     monkeypatch.setattr(module, "get_settings", lambda: settings)
-    assert module.recording_policy()["output_format"] == "ts"
+    assert module.recording_policy()["output_format"] == "mkv"

@@ -186,8 +186,9 @@ else:
 
 @router.get("/youtube/cookie")
 async def youtube_cookie_status():
+    from app.engine.platform_auth import cookie_file_status
     source = get_settings().youtube_cookie_file
-    return {"configured": bool(source and Path(source).is_file())}
+    return cookie_file_status(Path(source) if source else None, "youtube")
 
 
 @router.post("/youtube/cookie")
@@ -231,7 +232,9 @@ async def upload_youtube_cookie(file: UploadFile = File(...)):
         temporary.replace(destination)
     _update_env_file({"YOUTUBE_COOKIE_FILE": str(destination)})
     get_settings.cache_clear()
-    return {"configured": True}
+    # Keep the existing configured field and add the shared status fields.
+    get_settings().youtube_cookie_file = str(destination)
+    return await youtube_cookie_status()
 
 
 @router.delete("/youtube/cookie")
@@ -239,7 +242,65 @@ async def delete_youtube_cookie():
     _COOKIE_SAVE_PATH.with_name("youtube_cookies.txt").unlink(missing_ok=True)
     _update_env_file({"YOUTUBE_COOKIE_FILE": ""})
     get_settings.cache_clear()
-    return {"configured": False}
+    get_settings().youtube_cookie_file = None
+    return await youtube_cookie_status()
+
+
+@router.get("/chzzk/cookie", summary="치지직 쿠키 등록 상태")
+async def chzzk_cookie_status():
+    settings = get_settings()
+    configured = bool(settings.nid_aut and settings.nid_ses)
+    return {
+        "configured": configured, "valid": None if configured else False,
+        "expired": False,
+        "message": "쿠키가 등록되었습니다. 상태 확인으로 로그인 여부를 확인하세요."
+        if configured else "쿠키가 등록되지 않았습니다.",
+    }
+
+
+@router.post("/chzzk/cookie", summary="치지직 쿠키 파일 등록")
+async def upload_chzzk_cookie(file: UploadFile = File(...)):
+    import tempfile
+    from app.engine.platform_auth import read_cookie_jar, chzzk_login_values
+    from app.main import get_recorder_service
+
+    content = await file.read(1024 * 1024 + 1)
+    if len(content) > 1024 * 1024:
+        raise HTTPException(400, "쿠키 파일은 1MB 이하여야 합니다.")
+    with tempfile.TemporaryDirectory(prefix="phrolova_chzzk_cookie_") as directory:
+        temporary = Path(directory) / "cookies.txt"
+        temporary.write_bytes(content)
+        try:
+            values = chzzk_login_values(read_cookie_jar(temporary, "chzzk"))
+        except (OSError, UnicodeError, ValueError):
+            raise HTTPException(400, "사용 가능한 치지직 로그인 쿠키가 포함된 Netscape 형식 파일을 선택하세요.") from None
+    # Reuse the existing authentication path for Streamlink, live detection and VOD.
+    get_recorder_service().update_cookies(values["NID_AUT"], values["NID_SES"])
+    return await chzzk_cookie_status()
+
+
+@router.post("/chzzk/cookie/check", summary="치지직 로그인 상태 확인")
+async def check_chzzk_cookie():
+    from app.api.settings.auth import test_cookies
+    status = await chzzk_cookie_status()
+    if not status["configured"]:
+        return status
+    try:
+        result = await test_cookies()
+    except HTTPException:
+        raise HTTPException(502, "치지직 로그인 상태를 확인하지 못했습니다. 잠시 후 다시 확인하세요.") from None
+    user = result.get("user_status") or {}
+    # An HTTP 200 response with empty/anonymous content is not a logged-in user.
+    valid = bool(result.get("valid") and user and user.get("loggedIn") is not False)
+    return {"configured": True, "valid": valid, "expired": not valid,
+            "message": "로그인 상태가 확인되었습니다." if valid else "쿠키가 만료되었거나 유효하지 않습니다. 쿠키 파일을 갱신하세요."}
+
+
+@router.delete("/chzzk/cookie", summary="치지직 쿠키 제거")
+async def delete_chzzk_cookie():
+    from app.main import get_recorder_service
+    get_recorder_service().update_cookies("", "")
+    return await chzzk_cookie_status()
 
 @router.get('/{platform}/{channel_id}/qualities', summary='현재 라이브 화질 조회')
 async def platform_qualities(platform: str, channel_id: str):

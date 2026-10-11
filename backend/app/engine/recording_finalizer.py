@@ -46,22 +46,22 @@ def recording_policy():
         "SELECT value FROM app_settings WHERE key='recording_output'"
     )
     if rows:
-        return json.loads(rows[0]["value"])
+        saved = json.loads(rows[0]["value"])
+        return {
+            "output_format": "mkv",
+            "keep_source_ts": True,
+            "max_concurrent": 1,
+            **saved,
+        }
     settings = get_settings()
     # An explicitly saved old TS/MKV/MP4 preference is preserved. Fresh installs
-    # use MP4; no existing recordings are rewritten by this migration.
+    # use MKV; no existing recordings are rewritten by this migration.
     legacy = (
         settings.live_format
         if "live_format" in settings.model_fields_set
         and settings.live_format in ("ts", "mkv", "mp4")
-        else "mp4"
+        else "mkv"
     )
-    if "live_format" not in settings.model_fields_set:
-        from app.core.utils import _get_env_path
-
-        # Older hand-written .env files could rely on the previous implicit TS default.
-        if _get_env_path().is_file():
-            legacy = "ts"
     return {"output_format": legacy, "keep_source_ts": True, "max_concurrent": 1}
 
 
@@ -85,9 +85,9 @@ class RecordingFinalizer:
 
     def list_jobs(self):
         return [
-            json.loads(row["payload"])
+            self._describe(json.loads(row["payload"]))
             for row in self.db.query(
-                "SELECT payload FROM recording_jobs ORDER BY updated_at DESC"
+                "SELECT payload FROM recording_jobs WHERE json_extract(payload,'$.hidden') IS NOT 1 ORDER BY updated_at DESC"
             )
         ]
 
@@ -95,7 +95,74 @@ class RecordingFinalizer:
         rows = self.db.query("SELECT payload FROM recording_jobs WHERE id=?", (job_id,))
         if not rows:
             raise ValueError("변환 작업을 찾을 수 없습니다.")
-        return json.loads(rows[0]["payload"])
+        return self._describe(json.loads(rows[0]["payload"]))
+
+    @staticmethod
+    def _describe(job):
+        def available(path):
+            try:
+                return (
+                    bool(path)
+                    and Path(path).is_file()
+                    and Path(path).stat().st_size > 0
+                )
+            except OSError:
+                return False
+
+        job["source_available"] = bool(job.get("source_paths")) and all(
+            available(p) for p in job["source_paths"]
+        )
+        job["output_available"] = available(job.get("output_path"))
+        # Old empty captures remain in the database, with an accurate category.
+        if (
+            job["state"] in ("failed", "attention")
+            and not job["source_available"]
+            and not job["output_available"]
+            and not job.get("processing_started_at")
+        ):
+            job["state"] = "capture_failed"
+            job["error_message"] = "녹화가 시작되지 않아 변환할 파일이 없습니다."
+        job["can_open"] = job["source_available"] or job["output_available"]
+        job["can_retry"] = job["source_available"] and job["state"] not in (
+            "recording",
+            "pending",
+            "normalizing",
+            "converting",
+            "verifying",
+            "completed",
+        )
+        job["can_inspect"] = job["can_open"] and job["state"] not in (
+            "recording",
+            "pending",
+            "normalizing",
+            "converting",
+            "verifying",
+        )
+        return job
+
+    def clear_history(self, job_ids):
+        """Hide terminal history entries; preserve every file and database record."""
+        with self.db.transaction() as conn:
+            for job_id in set(job_ids):
+                row = conn.execute(
+                    "SELECT payload FROM recording_jobs WHERE id=?", (job_id,)
+                ).fetchone()
+                if row:
+                    job = json.loads(row["payload"])
+                    if job["state"] not in (
+                        "recording",
+                        "pending",
+                        "normalizing",
+                        "converting",
+                        "verifying",
+                    ):
+                        job["hidden"] = True
+                        conn.execute(
+                            "UPDATE recording_jobs SET payload=? WHERE id=?",
+                            (json.dumps(job, ensure_ascii=False), job_id),
+                        )
+        if self.on_change:
+            self.on_change()
 
     def _save(self, job):
         job["updated_at"] = now()
@@ -114,14 +181,22 @@ class RecordingFinalizer:
             self.on_change()
 
     def register_capture(self, key, pipeline, channel, policy):
+        session_id = getattr(pipeline, "session_id", None) or uuid.uuid4().hex
+        rows = self.db.query(
+            "SELECT id FROM recording_jobs WHERE session_id=?", (session_id,)
+        )
+        if rows:
+            return rows[0]["id"]
         job = {
             "id": uuid.uuid4().hex,
+            "session_id": session_id,
+            "capture_format": getattr(pipeline, "capture_format", "ts"),
             "composite_key": key,
             "platform": channel.platform.value,
             "channel_id": channel.channel_id,
             "channel_name": channel.channel_name or channel.channel_id,
             "state": "recording",
-            "source_path": pipeline.output_path,
+            "source_path": str(Path(pipeline.output_path).resolve()),
             "source_paths": list(pipeline._source_files),
             "output_path": None,
             "target_format": policy["output_format"],
@@ -139,23 +214,69 @@ class RecordingFinalizer:
             "duration_seconds": 0,
             "file_size_bytes": 0,
         }
+        # Keep the source-path UNIQUE constraint and claim a session atomically.
+        with self.db.transaction() as conn:
+            existing = conn.execute(
+                "SELECT id FROM recording_jobs WHERE session_id=?", (session_id,)
+            ).fetchone()
+            if existing:
+                return existing["id"]
+            conn.execute(
+                "INSERT INTO recording_jobs(id,composite_key,source_path,state,payload,updated_at,session_id) VALUES(?,?,?,?,?,?,?)",
+                (
+                    job["id"],
+                    key,
+                    job["source_path"],
+                    job["state"],
+                    json.dumps(job, ensure_ascii=False),
+                    now(),
+                    session_id,
+                ),
+            )
         self._owned_captures.add(job["id"])
-        self._save(job)
+        if self.on_change:
+            self.on_change()
         return job["id"]
 
     async def start(self, recover=False):
         if recover and not self._recovered:
             for job in self.list_jobs():
                 if (
-                    job["state"] in ("recording", "converting", "verifying")
+                    job["state"]
+                    in (
+                        "recording",
+                        "pending",
+                        "normalizing",
+                        "converting",
+                        "verifying",
+                    )
                     and job["id"] not in self._owned_captures
                 ):
-                    job.update(
-                        state="attention",
-                        writer_closed=True,
-                        error_message="작업이 중단되었습니다. 원본을 보관했습니다. 파일을 확인한 뒤 다시 변환하세요.",
-                        progress=None,
-                    )
+                    if (
+                        job["source_available"]
+                        and job.get("writer_closed")
+                        and job["state"] != "recording"
+                    ):
+                        job.update(
+                            state="pending",
+                            recovered=True,
+                            progress=None,
+                            error_message=None,
+                        )
+                        # Reuse a final file published just before the interrupted
+                        # DB update. It must still pass the source comparison below.
+                        target = Path(job["source_paths"][0]).with_suffix(
+                            "." + job["target_format"]
+                        )
+                        if target.is_file() and target.stat().st_size > 0:
+                            job.update(output_path=str(target), inspect_only=True)
+                    else:
+                        job.update(
+                            state="attention",
+                            writer_closed=True,
+                            error_message="작업이 중단되었습니다. 저장된 원본을 확인한 뒤 다시 변환하세요.",
+                            progress=None,
+                        )
                     self._save(job)
             self._recovered = True
         self._stopping = False
@@ -166,6 +287,8 @@ class RecordingFinalizer:
         if not pipeline._closed:
             raise RuntimeError("Streamlink 파일 쓰기가 아직 종료되지 않았습니다.")
         job = self.get(job_id)
+        if job.get("writer_closed") and job["state"] != "recording":
+            return job
         job.update(
             source_paths=list(pipeline._source_files),
             writer_closed=True,
@@ -180,9 +303,13 @@ class RecordingFinalizer:
             or Path(job["source_paths"][0]).stat().st_size == 0
         ):
             job.update(
-                state="failed", error_message="녹화한 TS 파일이 없거나 비어 있습니다."
+                state="capture_failed",
+                error_message="녹화가 시작되지 않아 변환할 파일이 없습니다.",
+                progress=None,
             )
         self._save(job)
+        if job["state"] == "capture_failed":
+            return job
         self.db.execute(
             "INSERT OR IGNORE INTO live_history(composite_key,platform,channel_id,channel_name,started_at,ended_at,duration_seconds,file_size_bytes,output_path,recording_job_id) VALUES(?,?,?,?,?,?,?,?,?,?)",
             (
@@ -203,9 +330,13 @@ class RecordingFinalizer:
 
     async def retry(self, job_id, target_format=None, inspect_only=False):
         job = self.get(job_id)
-        if job["state"] in ("recording", "pending", "converting", "verifying") or (
-            job_id in self._active and not self._active[job_id].done()
-        ):
+        if job["state"] in (
+            "recording",
+            "pending",
+            "normalizing",
+            "converting",
+            "verifying",
+        ) or (job_id in self._active and not self._active[job_id].done()):
             raise ValueError("현재 작업이 진행 중입니다.")
         if target_format:
             job["target_format"] = target_format
@@ -314,6 +445,123 @@ class RecordingFinalizer:
                 == 1
             )
 
+    async def _normalize_ts(self, job, sources, inputs):
+        native_stats = [(p.stat().st_size, p.stat().st_mtime_ns) for p in sources]
+        candidate = sources[0].with_name(f".{uuid.uuid4().hex}.normalizing.ts")
+        job.update(
+            state="normalizing",
+            progress=None,
+            native_source_paths=[str(p) for p in sources],
+            processing_started_at=now(),
+        )
+        self._save(job)
+        cmd = [
+            get_settings().resolve_ffmpeg_path(),
+            "-hide_banner",
+            "-loglevel",
+            "warning",
+            "-nostdin",
+            "-n",
+        ]
+        for source in sources:
+            cmd += ["-i", str(source)]
+        cmd += ["-map", "0:v?"]
+        cmd += (
+            ["-map", "0:a?"]
+            if len(sources) == 1
+            else sum((["-map", f"{i}:a?"] for i in range(1, len(sources))), [])
+        )
+        cmd += ["-c", "copy", "-f", "mpegts", str(candidate)]
+        proc = None
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE
+            )
+
+            async def drain():
+                tail = bytearray()
+                while data := await proc.stderr.read(4096):
+                    tail.extend(data)
+                    if len(tail) > 65536:
+                        del tail[:-65536]
+                return bytes(tail)
+
+            drained = asyncio.create_task(drain())
+            try:
+                await asyncio.wait_for(proc.wait(), 21600)
+            finally:
+                if proc.returncode is None:
+                    proc.kill()
+                    await proc.wait()
+                stderr = await drained
+            job.setdefault("diagnostics", {})["native_to_ts"] = {
+                "returncode": proc.returncode,
+                "stderr": redact_media_error(stderr.decode(errors="replace")),
+            }
+            if proc.returncode:
+                raise RuntimeError(
+                    "원본 스트림을 TS로 변환하지 못했습니다. 실제 원본 파일은 보관되었습니다."
+                )
+            media = await asyncio.to_thread(probe_media, str(candidate))
+            before = [
+                t
+                for m in inputs
+                for t in m["tracks"]
+                if t.get("codec_type") in ("video", "audio")
+            ]
+            after = [
+                t for t in media["tracks"] if t.get("codec_type") in ("video", "audio")
+            ]
+            if (
+                "mpegts" not in media["format_name"]
+                or "video" not in media["streams"]
+                or media["size"] <= 0
+            ):
+                raise RuntimeError(
+                    "변환된 TS 원본 정보를 확인하지 못했습니다. 실제 원본 파일은 보관되었습니다."
+                )
+            fields = ("codec_type", "codec_name", "width", "height")
+            if [[t.get(f) for f in fields] for t in before] != [
+                [t.get(f) for f in fields] for t in after
+            ]:
+                raise RuntimeError(
+                    "TS 변환 후 스트림 정보가 달라졌습니다. 실제 원본 파일은 보관되었습니다."
+                )
+            native_duration = inputs[0]["duration"]
+            if job.get("capture_format") == "fmp4" and inputs[0].get("start_time"):
+                # Fragmented live MP4 reports an absolute decode-end timestamp.
+                # TS duration is a span, so compare the source span as well.
+                native_duration = max(
+                    0, (native_duration or 0) - float(inputs[0]["start_time"])
+                )
+            if native_duration and abs(
+                (media["duration"] or 0) - native_duration
+            ) > max(2, native_duration * 0.02):
+                raise RuntimeError(
+                    "TS 변환 후 영상 길이가 달라졌습니다. 실제 원본 파일은 보관되었습니다."
+                )
+            if native_stats != [
+                (p.stat().st_size, p.stat().st_mtime_ns) for p in sources
+            ]:
+                raise RuntimeError(
+                    "녹화 원본이 변경되어 TS 변환을 확정하지 않았습니다."
+                )
+            target = sources[0].with_name(sources[0].stem + ".ts")
+            if target.exists():
+                target = target.with_name(target.stem + f'.{job["id"][:12]}.ts')
+            await asyncio.to_thread(publish_file, candidate, target)
+            job.update(
+                source_paths=[str(target)],
+                source_format="ts",
+                normalized_source_path=str(target),
+            )
+            self._save(job)
+            return [target], [media]
+        finally:
+            if proc and proc.returncode is None:
+                proc.kill()
+                await proc.wait()
+
     async def _convert(self, job_id):
         if not self._claim(job_id):
             return
@@ -330,6 +578,13 @@ class RecordingFinalizer:
             inputs = await asyncio.gather(
                 *(asyncio.to_thread(probe_media, str(p)) for p in sources)
             )
+            if "mpegts" not in inputs[0]["format_name"]:
+                # The live receiver preserved native fMP4. Only now, after its
+                # writer has closed, create the actual TS original with stream copy.
+                sources, inputs = await self._normalize_ts(job, sources, inputs)
+                original_stats = [
+                    (p.stat().st_size, p.stat().st_mtime_ns) for p in sources
+                ]
             expected = {
                 kind
                 for media in inputs
@@ -358,13 +613,8 @@ class RecordingFinalizer:
                 candidate = sources[0]
             else:
                 target_format = job["target_format"]
-                stem = (
-                    sources[0]
-                    .stem.encode("utf-8")[:200]
-                    .decode("utf-8", errors="ignore")
-                )
                 candidate = sources[0].with_name(
-                    stem + f".{uuid.uuid4().hex}.converting.{target_format}"
+                    f".{uuid.uuid4().hex}.converting.{target_format}"
                 )
                 job["temporary_output"] = str(candidate)
                 self._save(job)

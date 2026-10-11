@@ -1,4 +1,4 @@
-import { memo, useEffect, useId, useRef, useState } from 'react';
+import { memo, useId, useRef } from 'react';
 import { Loader2, Play, Settings2, Square, Users } from 'lucide-react';
 import { RecordingPostprocess } from './RecordingPostprocess';
 import { clsx } from 'clsx';
@@ -42,14 +42,16 @@ function RecordingStatus({ channel, pendingAction }: Pick<ChannelItemProps, 'cha
     const state = channel.recording?.state;
     const [label, tone] = pendingAction === 'stop' || state === 'stopping' ? ['녹화 중지 중', 'neutral']
         : pendingAction === 'start' ? ['녹화 준비 중', 'neutral']
+        : state === 'connecting' ? ['스트림 연결 중', 'info']
+        : state === 'reconnecting' ? ['재연결 중', 'warn']
         : channel.recording?.is_recording ? ['녹화 중', 'ok']
-        : state === 'error' || channel.last_error ? ['녹화 오류', 'danger']
+        : state === 'error' || channel.last_error ? [channel.recording?.has_data === false || !channel.recording?.file_size_bytes ? '녹화 시작 실패' : '녹화 오류', 'danger']
         : state === 'completed' ? ['녹화 완료', 'ok']
-        : channel.is_live ? ['녹화 대기', 'neutral'] : ['오프라인', 'neutral'];
+        : ['녹화 대기', 'neutral'];
     return <span className={`recording-status is-${tone}`} role="status" aria-live="polite"><i aria-hidden="true" />{t(label)}</span>;
 }
 
-function RecordingChannelHeader({ channel }: { channel: Channel }) {
+function RecordingChannelHeader({ channel, pendingAction }: Pick<ChannelItemProps, 'channel' | 'pendingAction'>) {
     const { t } = useLanguage();
     const name = channel.channel_name || channel.channel_id;
     const tags = channel.tags || [];
@@ -64,6 +66,13 @@ function RecordingChannelHeader({ channel }: { channel: Channel }) {
                 {tags.slice(0, 2).map(tag => <span className="recording-tag" key={tag} title={tag}>{tag}</span>)}
                 {tags.length > 2 && <span className="recording-tag-overflow" title={tags.slice(2).join(', ')}>+{tags.length - 2}</span>}
             </div>}
+            <div className="recording-channel-statuses" aria-label={t('방송 및 녹화 상태')}>
+                <span className={clsx('recording-status', channel.is_live && 'is-info')} role="status"><i aria-hidden="true" />{t(channel.is_live ? '라이브' : '오프라인')}</span>
+                {(channel.is_live || channel.recording?.state || channel.last_error || pendingAction) && <RecordingStatus channel={channel} pendingAction={pendingAction} />}
+            </div>
+            {channel.download_hold_reason && <DownloadHoldStatus channel={channel} />}
+            {channel.recording?.warning_message && <p className="recording-status-message text-warn" role="status">{channel.recording.warning_message}</p>}
+            {channel.last_error && <p className="recording-status-message text-danger" role="status">{localizePlatformNames(channel.last_error)}{channel.retry_at && <span className="text-ink-muted"> · 재연결 대기</span>}</p>}
         </div>
     </header>;
 }
@@ -72,14 +81,12 @@ function RecordingControls(props: ChannelItemProps) {
     const { channel, pendingAction, isActionLoading, isAutoRecordLoading, onToggleAutoRecord, onStartRecord, onStopRecord, onEditDownloadSettings } = props;
     const { t } = useLanguage();
     const name = channel.channel_name || channel.channel_id;
-    const recording = channel.recording?.is_recording || channel.recording?.state === 'stopping';
+    const recording = channel.recording?.is_recording || ['connecting', 'reconnecting', 'stopping'].includes(channel.recording?.state || '');
     return <div className="recording-channel-controls">
-        <div className="recording-control-state"><RecordingStatus channel={channel} pendingAction={pendingAction} />
             <div className="recording-auto-control" aria-busy={!!isAutoRecordLoading}>
                 <span>{t('자동 녹화')}</span><Switch checked={channel.auto_record} disabled={isAutoRecordLoading || isActionLoading} onChange={() => onToggleAutoRecord(channel)} label={`${name} ${t('자동 녹화')}`} />
                 {isAutoRecordLoading && <span className="recording-saving" role="status"><Loader2 className="size-3 animate-spin" aria-hidden="true" />{t('저장 중')}</span>}
             </div>
-        </div>
         <div className="recording-primary-controls">
             <Button icon={Settings2} variant="ghost" disabled={isActionLoading} onClick={() => onEditDownloadSettings(channel)} title={t('녹화 설정')}>{t('녹화 설정')}</Button>
             {recording ? <Button variant="danger" icon={Square} disabled={isActionLoading || channel.recording?.state === 'stopping'} loading={pendingAction === 'stop'} onClick={() => onStopRecord(channel)}>{t(pendingAction === 'stop' || channel.recording?.state === 'stopping' ? '녹화 중지 중' : '녹화 중지')}</Button>
@@ -90,38 +97,25 @@ function RecordingControls(props: ChannelItemProps) {
 
 type Measurements = { duration?: number; size?: number; speed?: number; bitrate?: number };
 
-/** Only this child ticks. Server duration is authoritative, independent of time zones. */
+/** The server's media clock advances only while data is actually received. */
 const RecordingMetrics = memo(function RecordingMetrics({ recording }: { recording: Channel['recording'] }) {
     const { t } = useLanguage();
-    const [, tick] = useState(0);
     const last = useRef<Measurements>({});
     const session = useRef<string | null | undefined>(undefined);
-    const wasActive = useRef(false);
-    const clock = useRef({ seconds: undefined as number | undefined, received: performance.now() });
-    const active = recording?.is_recording === true;
-    if (active && (!wasActive.current || session.current !== recording?.start_time)) {
-        last.current = {}; clock.current.seconds = undefined;
-    }
-    wasActive.current = active; session.current = recording?.start_time;
-    if (finite(recording?.duration_seconds) && recording.duration_seconds !== clock.current.seconds) {
-        clock.current = { seconds: recording.duration_seconds, received: performance.now() };
-    }
-    if (finite(recording?.duration_seconds)) last.current.duration = active
-        ? recording.duration_seconds + Math.max(0, (performance.now() - clock.current.received) / 1000) : recording.duration_seconds;
+    const key = recording?.session_id || recording?.start_time;
+    if (recording && key !== session.current) { last.current = {}; session.current = key; }
+    const hasData = recording?.has_data ?? (finite(recording?.file_size_bytes) ? recording.file_size_bytes > 0 : (last.current.size || 0) > 0);
+    const active = recording?.is_recording === true && hasData;
+    if (hasData && finite(recording?.duration_seconds)) last.current.duration = recording.duration_seconds;
     if (finite(recording?.file_size_bytes)) last.current.size = recording.file_size_bytes;
-    if (finite(recording?.download_speed)) last.current.speed = recording.download_speed;
-    if (finite(recording?.bitrate)) last.current.bitrate = recording.bitrate;
-    useEffect(() => {
-        if (!active || !finite(recording?.duration_seconds)) return;
-        const timer = setInterval(() => tick(value => value + 1), 1000);
-        return () => clearInterval(timer);
-    }, [active, recording?.duration_seconds]);
+    if (hasData && finite(recording?.download_speed)) last.current.speed = recording.download_speed;
+    if (hasData && finite(recording?.bitrate)) last.current.bitrate = recording.bitrate;
     const value = last.current;
     const metrics = [
-        ['녹화 시간', finite(value.duration) ? formatDuration(Math.floor(value.duration)) : '—'],
+        ['녹화 시간', hasData && finite(value.duration) ? formatDuration(Math.floor(value.duration)) : '—'],
         ['파일 크기', finite(value.size) ? formatBytes(value.size) : '—'],
-        ['저장 속도', finite(value.speed) ? `${value.speed.toFixed(2)} MB/s` : '—'],
-        ['비트레이트', finite(value.bitrate) ? `${(value.bitrate / 1000).toFixed(2)} Mbps` : '—'],
+        ['저장 속도', hasData && finite(value.speed) ? `${value.speed.toFixed(2)} MB/s` : '—'],
+        ['비트레이트', hasData && finite(value.bitrate) ? `${(value.bitrate / 1000).toFixed(2)} Mbps` : '—'],
     ];
     return <dl className={clsx('recording-metrics', !active && 'is-inactive')} aria-label={t('녹화 정보')}>
         {metrics.map(([label, text]) => <div key={label}><dt>{t(label)}</dt><dd className={label === '녹화 시간' && active ? 'text-ok' : undefined}>{text}</dd></div>)}
@@ -147,7 +141,7 @@ function RecordingChannelDetails({ channel }: { channel: Channel }) {
             {channel.download_condition && <div><dt>{t('녹화 조건')}</dt><dd>{t(({ all: '모든 방송 녹화', watchalong: '같이보기 방송만 녹화', exclude_watchalong: '같이보기 방송 제외' })[channel.download_condition])}</dd></div>}
             {!!channel.tags?.length && <div><dt>{t('태그')}</dt><dd>{channel.tags.join(', ')}</dd></div>}
         </dl>
-        {channel.last_error && <details className="recording-error"><summary>{t('최근 녹화 오류')}</summary><p>{localizePlatformNames(channel.last_error)}</p></details>}
+        {channel.last_error && <details className="recording-error"><summary>{t('최근 녹화 오류')}</summary><p>{localizePlatformNames(channel.last_error)}</p>{channel.error_detail && <pre className="whitespace-pre-wrap break-words text-xs">{localizePlatformNames(channel.error_detail)}</pre>}</details>}
         </div>
         <LivePreview channelKey={getChannelKey(channel)} isLive={channel.is_live} name={name} poster={channel.thumbnail_url} />
     </div>;
@@ -159,13 +153,14 @@ export function RecordingChannelCard(props: ChannelItemProps & { mode: 'grid' | 
     const detailsId = useId();
     return <Card padded={false} className={clsx('channel-row-card recording-channel', `recording-channel--${props.mode}`, props.isSelected && 'is-selected', props.isDragging && 'opacity-45', props.isDropTarget && 'ring-2 ring-[var(--primary)]')} data-channel-key={getChannelKey(channel)}>
         <div className="recording-channel-summary">
-            <RecordingChannelHeader channel={channel} />
+            <RecordingChannelHeader channel={channel} pendingAction={props.pendingAction} />
             <div className="recording-channel-management"><ChannelActions {...props} detailsId={detailsId} tagControl={<TagManager compact busy={props.isTagLoading} availableTags={props.globalTags} selectedTags={channel.tags || []} onAddTag={tag => props.onAddTag(channel, tag)} onRemoveTag={tag => props.onRemoveTag(channel, tag)} onCreateTag={props.onCreateTag} triggerLabel={t('태그 관리')} />} /></div>
             <RecordingControls {...props} />
             <RecordingMetrics recording={channel.recording} />
         </div>
-        {channel.download_hold_reason && <div className="recording-channel-notices"><DownloadHoldStatus channel={channel} /></div>}
-        {channel.postprocess && <div className="px-3 pb-3"><RecordingPostprocess job={channel.postprocess}/></div>}
-        <div id={detailsId} className="recording-detail-disclosure" hidden={!props.isSelected}>{props.isSelected && <RecordingChannelDetails channel={channel} />}</div>
+        <div className="recording-channel-extra" hidden={!channel.postprocess && !props.isSelected}>
+            {channel.postprocess && <div className="recording-channel-postprocess"><RecordingPostprocess job={channel.postprocess}/></div>}
+            <div id={detailsId} className="recording-detail-disclosure" hidden={!props.isSelected}>{props.isSelected && <RecordingChannelDetails channel={channel} />}</div>
+        </div>
     </Card>;
 }

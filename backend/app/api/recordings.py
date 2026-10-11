@@ -27,6 +27,16 @@ class Retry(BaseModel):
     output_format: Literal["mp4", "mkv"] | None = None
 
 
+class ClearHistory(BaseModel):
+    job_ids: list[str] = Field(max_length=200)
+
+
+@router.post('/history/clear')
+async def clear_history(request: ClearHistory):
+    await asyncio.to_thread(manager().clear_history, request.job_ids)
+    return {'message':'이력을 목록에서 제거했습니다. 파일과 작업 기록은 보존됩니다.'}
+
+
 @router.get("/settings")
 async def get_output_settings():
     return recording_policy()
@@ -43,7 +53,7 @@ async def update_output_settings(request: OutputSettings):
 
 @router.get("/jobs")
 async def list_jobs():
-    return {"jobs": manager().list_jobs()}
+    return {"jobs": await asyncio.to_thread(manager().list_jobs)}
 
 
 @router.post("/{job_id}/retry")
@@ -67,8 +77,11 @@ def output(job_id):
         job = manager().get(job_id)
     except ValueError:
         raise HTTPException(404, "녹화 작업을 찾을 수 없습니다.") from None
-    path = Path(job.get("output_path") or job["source_paths"][0])
-    if not path.is_file():
+    candidates = [job.get("output_path"), *job["source_paths"]]
+    path = next((Path(p) for p in candidates if p and Path(p).is_file() and Path(p).stat().st_size > 0), None)
+    if path is None:
+        raise HTTPException(404, "녹화 파일을 찾을 수 없습니다.")
+    if not path.is_file() or path.stat().st_size == 0:
         raise HTTPException(404, "녹화 파일을 찾을 수 없습니다.")
     return path
 

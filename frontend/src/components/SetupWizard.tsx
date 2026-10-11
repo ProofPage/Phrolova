@@ -1,3 +1,4 @@
+import { RECORDING_OUTPUT_FORMATS } from '../utils/recordingFormats';
 import { useRef, useState } from "react";
 import { useDialogKeyboard } from "../hooks/useDialogKeyboard";
 import {
@@ -80,7 +81,7 @@ function StepIndicator({ current, total }: { current: Step; total: number }) {
 
 function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormData, v: string) => void }) {
     const qualities = ["best", "1080p", "720p", "480p"];
-    const formats = ["mp4", "mkv"];
+    const formats = ["mkv", "mp4"];
 
     return (
         <div className="space-y-6 max-sm:space-y-4">
@@ -154,7 +155,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (k: keyof FormDat
                                 : "bg-surface-3 border-line-strong text-ink-faint hover:border-[var(--primary)]"
                                 }`}
                         >
-                            .{f.toUpperCase()}
+                            {RECORDING_OUTPUT_FORMATS.find(option => option.value === f)?.label || f.toUpperCase()}
                         </button>
                     ))}
                 </div>
@@ -208,7 +209,7 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
     const [data, setData] = useState<FormData>(() => ({
         live_download_dir: defaultDirectories.live_download_dir,
         vod_download_dir: defaultDirectories.vod_download_dir,
-        output_format: "mp4",
+        output_format: "mkv",
         recording_quality: "best",
     }));
 

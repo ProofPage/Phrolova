@@ -275,6 +275,11 @@ class RecorderService:
         logger.info(f"[Service] VOD 파일 위치 열기 요청: {task_id}")
         return self._vod_engine.open_file_location(task_id)
 
+    def set_vod_concurrency(self, limit: int) -> None:
+        """Apply the new limit without replacing the queue or stopping active jobs."""
+        self._vod_engine._semaphore.set_limit(limit)
+        self._vod_engine._max_concurrent = limit
+
     # ── 인증 ─────────────────────────────────────────────
 
     def update_cookies(self, nid_aut: str, nid_ses: str) -> dict:
