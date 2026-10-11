@@ -128,6 +128,7 @@ function RecordingChannelDetails({ channel }: { channel: Channel }) {
     const recording = channel.recording;
     const url = channel.channel_url || ((channel.platform || 'chzzk') === 'chzzk' ? `https://chzzk.naver.com/live/${encodeURIComponent(channel.channel_id)}` : null);
     return <div className="recording-channel-details">
+        <LivePreview channelKey={getChannelKey(channel)} isLive={channel.is_live} name={name} poster={channel.thumbnail_url} />
         <div className="recording-details-copy">
         <dl className="recording-details-fields">
             <div><dt>{t('채널')}</dt><dd>{name}</dd></div>
@@ -145,7 +146,6 @@ function RecordingChannelDetails({ channel }: { channel: Channel }) {
         </dl>
         {channel.last_error && <details className="recording-error"><summary>{t('최근 녹화 오류')}</summary><p>{localizePlatformNames(channel.last_error)}</p>{channel.error_detail && <pre className="whitespace-pre-wrap break-words text-xs">{localizePlatformNames(channel.error_detail)}</pre>}</details>}
         </div>
-        <LivePreview channelKey={getChannelKey(channel)} isLive={channel.is_live} name={name} poster={channel.thumbnail_url} />
     </div>;
 }
 

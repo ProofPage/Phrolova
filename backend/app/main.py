@@ -30,6 +30,9 @@ from app.services.notifications import DiscordWebhookTransport, NotificationServ
 from app.engine.updater import UpdaterService
 from app.store import close_database, get_database, migrate_json_files
 from app.version import __version__
+from app.engine.media_http_compat import install_media_http_compat
+
+install_media_http_compat()
 
 # API Routers
 from app.api.stream import router as stream_router

@@ -45,8 +45,9 @@
 .recording-channel-postprocess { padding: 0 14px 14px; }
 .recording-channel-extra[hidden] { display: none; }
 .recording-detail-disclosure[hidden] { display: none; }
-.recording-channel-details { display: grid; grid-template-columns: minmax(0,1fr); align-items: start; gap: 18px; border-top: 1px solid var(--color-line); padding: 14px; animation: recording-details-enter 120ms ease-out; }
-.recording-details-copy { min-width: 0; }
+.recording-channel-details { display: grid; grid-template-columns: minmax(0,1fr); grid-template-areas: "preview" "details"; align-items: start; gap: 18px; border-top: 1px solid var(--color-line); padding: 14px; animation: recording-details-enter 120ms ease-out; }
+.recording-details-copy { grid-area: details; min-width: 0; }
+.recording-channel-details > .channel-live-preview { grid-area: preview; min-width: 0; }
 .recording-details-fields { display: grid; gap: 10px; font-size: 12px; line-height: 1.5; }
 .recording-details-fields > div { display: grid; grid-template-columns: 90px minmax(0,1fr); gap: 8px; }
 .recording-details-fields dt { color: var(--color-ink-faint); }
@@ -56,7 +57,7 @@
 .recording-error summary { cursor: pointer; }
 @keyframes recording-details-enter { from { opacity: .5; } to { opacity: 1; } }
 @media (prefers-reduced-motion:reduce) { .recording-channel-details { animation: none; } }
-@container recording (min-width:820px) { .recording-channel-details { grid-template-columns: minmax(250px,1fr) minmax(0,2fr); } }
+@container recording (min-width:820px) { .recording-channel-details { grid-template-columns: minmax(250px,1fr) minmax(0,2fr); grid-template-areas: "details preview"; } }
 @container recording (max-width:500px) { .recording-details-fields > div { grid-template-columns: 76px minmax(0,1fr); gap: 8px; } }
 @container recording (min-width:440px) { .recording-metrics { grid-template-columns: repeat(4,minmax(0,1fr)); } }
 @container recording (min-width:560px) {

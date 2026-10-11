@@ -1,4 +1,4 @@
-"""Chromium integration checks with isolated platform APIs and genuine frame bytes."""
+"""Chromium integration checks with isolated platform APIs and genuine HLS video segments."""
 import asyncio
 import copy
 import os
@@ -13,14 +13,15 @@ from download_redesign import make_task
 
 BASE = os.environ.get('PHROLOVA_TEST_URL', 'http://127.0.0.1:3001')
 OUT = Path(os.environ.get('PHROLOVA_TEST_OUTPUT', str(Path(tempfile.gettempdir()) / 'phrolova-platform-integration')))
-FRAME = OUT / 'fixture-frame.png'
+MEDIA = OUT / 'media'
 LABELS = dict(chzzk='치지직', youtube='유튜브', soop='숲', cime='씨미')
 
 async def main():
     OUT.mkdir(parents=True, exist_ok=True)
     bundled=Path(__file__).resolve().parents[4] / 'work/media-tools/ffmpeg-9.0.2-essentials_build/bin/ffmpeg.exe'
     ffmpeg=os.environ.get('PHROLOVA_FFMPEG') or shutil.which('ffmpeg') or (str(bundled) if bundled.exists() else 'ffmpeg')
-    subprocess.run([ffmpeg,'-y','-v','error','-f','lavfi','-i','testsrc2=size=1920x1080:rate=1','-frames:v','1','-threads','1',str(FRAME)],check=True)
+    MEDIA.mkdir(exist_ok=True)
+    subprocess.run([ffmpeg,'-y','-v','error','-f','lavfi','-i','testsrc2=size=640x360:rate=10','-t','20','-c:v','libx264','-g','10','-f','hls','-hls_time','1','-hls_list_size','0',str(MEDIA/'video.m3u8')],check=True)
     channels = []
     for platform in LABELS:
         channel = copy.deepcopy(FIX['channels'][1])
@@ -41,10 +42,10 @@ async def main():
         if path.endswith('/qualities'):
             return await route.fulfill(json={'live':True,'qualities':[{'value':str(h)+'p60','label':str(h)+'p60','width':h*16//9,'height':h,'fps':60} for h in (2160,1080,720)]})
         if path.endswith('/download-options'): return await route.fulfill(json={'status':'ok'})
-        if '/preview-frame/' in path:
+        if '/preview/' in path:
             key=path.split('/')[-1]; frames[key]=frames.get(key,0)+1
-            if fail_frame: return await route.fulfill(status=502,json={'detail':'미리보기 실패'})
-            return await route.fulfill(body=FRAME.read_bytes(),content_type='image/png')
+            if fail_frame: return await route.fulfill(status=401,json={'detail':'인증 오류'})
+            return await route.fulfill(json={'url':BASE+'/platform-media/video.m3u8'})
         if path in ('/api/platforms/soop/cookie','/api/platforms/cime/cookie'):
             platform=path.split('/')[-2]
             if request.method=='POST': cookie[platform]=True
@@ -63,6 +64,10 @@ async def main():
         context=await browser.new_context(viewport={'width':1440,'height':1000})
         await context.add_init_script("window.EventSource=class{close(){}};localStorage.setItem('dashboardViewMode','list')")
         await context.route('**/api/**',route_api)
+        async def media_route(route):
+            path=MEDIA/Path(urlparse(route.request.url).path).name
+            return await route.fulfill(body=path.read_bytes(),content_type='application/vnd.apple.mpegurl' if path.suffix=='.m3u8' else 'video/mp2t')
+        await context.route('**/platform-media/**',media_route)
         page=await context.new_page(); errors=[]; page.on('pageerror',lambda e:errors.append(str(e)))
         await page.goto(BASE)
         await expect(page.locator('[data-channel-key]')).to_have_count(4)
@@ -92,10 +97,13 @@ async def main():
             await dialog.get_by_role('button',name='설정 저장',exact=True).click()
             assert [call[2] for call in calls if call[0].endswith('/download-options')][-1]['recording_quality']=='720p60'
             await card.get_by_role('button',name='상세 보기: '+LABELS[platform]+' 샘플').click()
-            image=card.get_by_role('img',name=LABELS[platform]+' 샘플 방송 미리보기')
-            await expect(image).to_be_visible()
-            assert await image.evaluate('(image)=>image.naturalWidth')==1920
-        before=frames['soop:alice']; await asyncio.sleep(5.3); assert frames['soop:alice']>before
+            video=card.locator('video')
+            await expect(card.locator('.channel-preview-player')).to_be_visible()
+            assert await video.evaluate('v=>v.videoWidth')==640
+            assert await video.evaluate('v=>v.controls')
+        soop_video=page.locator('[data-channel-key="soop:alice"] video')
+        before=await soop_video.evaluate('v=>v.currentTime'); await asyncio.sleep(.5)
+        assert await soop_video.evaluate('v=>v.currentTime')>before
         for width in (360,390,768,1024,1440):
             await page.set_viewport_size({'width':width,'height':1000})
             for mode in ('카드로 보기','목록으로 보기'):
@@ -111,9 +119,9 @@ async def main():
         fail_frame=True
         card=page.locator('[data-channel-key="cime:alice"]')
         await card.get_by_role('button',name='상세 보기: 씨미 샘플').click()
-        await expect(card).to_contain_text('미리보기 연결에 실패했습니다. 다시 연결합니다.')
+        await expect(card.get_by_role('button',name='다시 시도',exact=True)).to_be_visible()
         fail_frame=False; await card.get_by_role('button',name='다시 시도',exact=True).click()
-        await expect(card.get_by_role('img',name='씨미 샘플 방송 미리보기')).to_be_visible()
+        await expect(card.locator('.channel-preview-player')).to_be_visible()
         await page.goto(BASE+'/vod')
         panel=page.get_by_test_id('vod-preparation')
         await panel.get_by_role('combobox').click()
@@ -141,7 +149,7 @@ async def main():
         assert not errors, errors
         await page.set_viewport_size({'width':1440,'height':1000})
         await page.screenshot(path=str(OUT/'auth-1440.png'),full_page=True)
-        print('PASS: 4 platforms, URL validation/normalization, dynamic qualities, shared cards, genuine 1080p frames, refresh/cleanup/retry, mixed VOD registration, cookies and responsive widths 360/390/768/1024/1440')
+        print('PASS: 4 platforms, URL validation/normalization, dynamic qualities, shared cards, genuine HLS video, controls/cleanup/retry, mixed VOD registration, cookies and responsive widths 360/390/768/1024/1440')
         await browser.close()
 
 if __name__=='__main__': asyncio.run(main())

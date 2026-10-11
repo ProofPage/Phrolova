@@ -9,6 +9,7 @@ from urllib.parse import urljoin, urlsplit, urlencode
 import ipaddress
 import httpx
 from app.core.http import USER_AGENT
+from app.engine.platform_auth import platform_cookie_jar
 from app.engine.preview_transport import preview_ca_bundle, SafeMediaLogFilter
 
 # HTTPX emits the complete upstream URL at INFO level. Apply the same
@@ -112,6 +113,12 @@ class PreviewProxy:
             raise KeyError("expired")
         node["time"] = time.monotonic()
         headers = {"User-Agent": USER_AGENT}
+        # Browser requests remain same-origin; platform headers and domain-scoped
+        # cookies are sent only by the verified server-side media transport.
+        origins = {"soop": "https://play.sooplive.com", "cime": "https://ci.me"}
+        origin = origins.get(node["platform"])
+        if origin:
+            headers.update({"Origin": origin, "Referer": origin + "/"})
         if range_header and re.fullmatch(r"bytes=\d+-\d*", range_header):
             headers["Range"] = range_header
         params = {
@@ -122,7 +129,8 @@ class PreviewProxy:
         }
         async with self.limit:
             async with httpx.AsyncClient(
-                verify=preview_ca_bundle(), timeout=15, follow_redirects=False
+                verify=preview_ca_bundle(), timeout=15, follow_redirects=False,
+                cookies=platform_cookie_jar(node["platform"]) if origin else None
             ) as client:
                 url = node["url"]
                 for _ in range(4):

@@ -102,7 +102,9 @@ async def main():
         ) as backend:
             async with async_playwright() as p:
                 browser = await p.chromium.launch()
-                for width in (320, 1440):
+                for platform, width in ((p, w) for p in ("chzzk", "soop", "cime") for w in (320, 1440)):
+                    channel.update(platform=platform, composite_key=f"{platform}:details-0")
+                    service._conductor._channels = {channel["composite_key"]: SimpleNamespace(is_live=True)}
                     context = await browser.new_context(
                         viewport={"width": width, "height": 1000}
                     )
@@ -161,8 +163,19 @@ async def main():
                             "document.documentElement.scrollWidth<=innerWidth"
                         )
                         await page.screenshot(
-                            path=str(OUT / f"{width}-{mode}.png"), full_page=True
+                            path=str(OUT / f"{platform}-{width}-{mode}.png"), full_page=True
                         )
+                    video = card.locator("video")
+                    assert await video.evaluate("v=>v.controls")
+                    await video.evaluate("v=>{v.pause();v.muted=false;v.volume=.25}")
+                    paused = await video.evaluate("v=>v.currentTime")
+                    await page.wait_for_timeout(400)
+                    assert abs(await video.evaluate("v=>v.currentTime") - paused) < .1
+                    assert await video.evaluate("v=>!v.muted && v.volume===.25")
+                    await video.evaluate("v=>v.play()")
+                    await page.wait_for_timeout(500)
+                    assert await video.evaluate("v=>v.currentTime") > paused
+                    assert not any("preview-frame" in path for path in responses)
                     assert not errors, errors
                     assert any(path.endswith(".ts") for path in responses), responses
                     assert all("SECRET" not in path for path in responses)
@@ -173,13 +186,14 @@ async def main():
             {
                 "passed": True,
                 "widths": [320, 1440],
+                "platforms": ["chzzk", "soop", "cime"],
                 "modes": ["grid", "list"],
                 "upstream_requests": len(upstream_requests),
             }
         )
     )
     print(
-        "Opaque proxy: master, variant and TS routes decoded real 640x360 HLS in four browser combinations."
+        "Opaque proxy: master, variant and TS routes decoded real 640x360 HLS with working controls across three platforms and twelve browser combinations."
     )
 
 

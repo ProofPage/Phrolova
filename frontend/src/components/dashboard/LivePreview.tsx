@@ -5,11 +5,10 @@ import { api } from "../../api/client";
 import { Button } from "../ui/primitives";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { preferredNativePreviewUrl, preferredPreviewLevel } from "../../utils/livePreviewQuality";
-import { LiveFramePreview } from './LiveFramePreview';
 
 type PreviewProps = { channelKey: string; isLive: boolean; name: string; poster?: string };
 export function LivePreview(props: PreviewProps) {
-    return /^(soop|cime):/.test(props.channelKey) ? <LiveFramePreview {...props} /> : <HlsLivePreview {...props} />;
+    return <HlsLivePreview {...props} />;
 }
 function HlsLivePreview({ channelKey, isLive, name, poster }: PreviewProps) {
     const { t } = useLanguage();
@@ -97,7 +96,6 @@ function HlsLivePreview({ channelKey, isLive, name, poster }: PreviewProps) {
             try {
                 const { url } = await api.getLivePreview(channelKey, abort.signal);
                 if (stopped) return;
-                video.muted = true;
                 if (Hls.isSupported()) {
                     hls = new Hls({
                         autoStartLoad: false,
@@ -116,7 +114,7 @@ function HlsLivePreview({ channelKey, isLive, name, poster }: PreviewProps) {
                         const level = preferredPreviewLevel(hls.levels);
                         if (level >= 0) {
                             hls.startLevel = level;
-                            hls.loadLevel = level;
+                            hls.autoLevelCapping = level;
                             console.info('[Phrolova] 미리보기 스트림 선택', { channel: channelKey, width: hls.levels[level].width, height: hls.levels[level].height });
                         }
                         hls.startLoad();
@@ -136,6 +134,10 @@ function HlsLivePreview({ channelKey, isLive, name, poster }: PreviewProps) {
                 const response = (error as { response?: { status?: number; data?: { detail?: string } } }).response;
                 // Never display resolver exceptions or signed URLs from upstream errors.
                 const detail = response?.data?.detail;
+                if (!response || response.status === 429 || (response.status || 0) >= 500) {
+                    recover();
+                    return;
+                }
                 fail(response?.status === 409 && (detail === "오프라인" || detail === "이 채널은 영상 미리보기를 지원하지 않습니다.") ? detail : undefined);
             }
         };
