@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+## [2.0.59] - 2026-10-12
+
 ### Fixed
 - 숲·씨미 라이브 미리보기를 HLS 동영상 플레이어로 전환해 재생·일시정지·음량·전체화면 조작을 제공합니다.
 - 미리보기 서버 요청에 플랫폼 Referer·Origin과 도메인별 쿠키를 적용합니다.
@@ -804,7 +806,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.58...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.59...HEAD
+[2.0.59]: https://github.com/ProofPage/Phrolova/compare/v2.0.58...v2.0.59
 [2.0.55]: https://github.com/ProofPage/Phrolova/compare/v2.0.54...v2.0.55
 [2.0.54]: https://github.com/ProofPage/Phrolova/compare/v2.0.53...v2.0.54
 [2.0.53]: https://github.com/ProofPage/Phrolova/compare/v2.0.52...v2.0.53
