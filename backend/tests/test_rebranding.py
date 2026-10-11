@@ -12,6 +12,22 @@ from app.store.db import DB_FILENAME, Database, _resolve_db_path
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def _bash_executable():
+    if os.name == 'nt':
+        # System32/bash.exe is a WSL launcher and may have no installed distro.
+        # Prefer the real Bash shipped with Git for Windows.
+        git = shutil.which('git')
+        candidates = ([Path(git).parent.parent / 'bin/bash.exe'] if git else [])
+        candidates.append(Path(os.environ.get('ProgramFiles', 'C:/Program Files')) / 'Git/bin/bash.exe')
+        for candidate in candidates:
+            if candidate.is_file():
+                return str(candidate)
+    return shutil.which('bash')
+
+
+BASH = _bash_executable()
+
+
 @pytest.mark.parametrize('name', ['rookery.db', 'signal_recorder.db'])
 def test_all_legacy_tables_preserved(tmp_path, name):
     original = Database(tmp_path / name)
@@ -72,13 +88,13 @@ def shell(tmp_path, body):
     # Relative script arguments and Bash's own PWD avoid Windows drive-path
     # interpretation. Git Bash must create native symlinks, not copy files.
     env = {**os.environ, 'MSYS': os.environ.get('MSYS', '') + ' winsymlinks:nativestrict'}
-    result = subprocess.run(['bash', script.name], cwd=tmp_path, capture_output=True,
+    result = subprocess.run([BASH, script.name], cwd=tmp_path, capture_output=True,
                             encoding='utf-8', env=env, timeout=30)
     assert result.returncode == 0, result.stdout + result.stderr
     return result.stdout
 
 
-@pytest.mark.skipif(shutil.which("bash") is None,reason="Bash unavailable on this Windows host")
+@pytest.mark.skipif(BASH is None,reason="Bash unavailable on this host")
 def test_install_dir_priority_and_legacy(tmp_path):
     (tmp_path / 'rookery/.git').mkdir(parents=True)
     # The sourced script lives outside a repository so path resolution is isolated.
@@ -92,7 +108,7 @@ INSTALL_DIR="$HOME/custom"; resolve_install_dir
     shell(tmp_path, 'unset INSTALL_DIR; resolve_install_dir; [ "$INSTALL_DIR" = "$HOME/Phrolova" ]')
 
 
-@pytest.mark.skipif(shutil.which("bash") is None,reason="Bash unavailable on this Windows host")
+@pytest.mark.skipif(BASH is None,reason="Bash unavailable on this host")
 def test_command_links_safe_transition(tmp_path):
     shell(tmp_path, '''
 SYSTEM_BINDIR="$HOME/bin"; USER_BINDIR="$HOME/userbin"; INSTALL_DIR="$HOME/install"
@@ -108,7 +124,7 @@ remove_legacy_commands
 
 
 @pytest.mark.parametrize('failure', [False, True])
-@pytest.mark.skipif(shutil.which("bash") is None,reason="Bash unavailable on this Windows host")
+@pytest.mark.skipif(BASH is None,reason="Bash unavailable on this host")
 def test_service_transition_and_rollback(tmp_path, failure):
     shell(tmp_path, '''
 INSTALL_DIR="$HOME/install"; SYSTEMD_RUNTIME_DIR="$HOME/runtime"; SYSTEMD_UNIT_DIR="$HOME/units"
@@ -147,7 +163,7 @@ grep -q 'Description=Phrolova - Live Stream Recorder' "$SYSTEMD_UNIT_DIR/phrolov
 ''')
 
 
-@pytest.mark.skipif(shutil.which("bash") is None,reason="Bash unavailable on this Windows host")
+@pytest.mark.skipif(BASH is None,reason="Bash unavailable on this host")
 def test_management_commands_and_update_restart(tmp_path):
     shell(tmp_path, '''
 INSTALL_DIR="$HOME/install"; SYSTEMD_UNIT_DIR="$HOME/units"; SUDO=""

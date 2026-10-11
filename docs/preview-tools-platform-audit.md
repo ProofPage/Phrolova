@@ -19,6 +19,7 @@ logs.txt의 18:15:22~18:19:04 구간 전체를 확인했다. CHZZK·SOOP·CIME �
 | 브라우저 서명 URL 노출 | CHZZK/YouTube HLS master·variant·segment·key·map·part 주소를 만료 토큰으로 대체. 검증된 TLS, 제한된 CDN 이동, 동시성/응답 크기 제한, byte range 유지 | preview_proxy.py, api/stream.py | 서명 쿼리 보존·사설 주소 차단·만료/종료 및 실제 Hls.js 디코딩 |
 | 공통 UI 정리 | 이미지 display와 preview align-self 명시, stale 프레임 안내, Toast/복사 타이머 정리 및 clipboard 실패 처리 | index.css, LiveFramePreview.tsx, Toast.tsx, UpdateModal.tsx | 반응형·플랫폼·설정·다운로드 브라우저 회귀 및 TS 빌드 |
 | 영어 Windows CI 인코딩 | 기존 관리 스크립트 fixture가 UTF-8 파일을 cp1252로 읽음. UTF-8/LF를 명시하고 Git Bash의 작업 디렉터리·네이티브 symlink를 사용. 자식 Python 출력도 UTF-8로 해석 | test_rebranding.py, test_bug_audit.py | PYTHONUTF8=0 + Windows Git Bash: 기존 기대값을 유지한 31개 테스트 통과 |
+| Windows CI Bash 탐색 | PATH의 bash가 배포판 없는 System32 WSL 실행기로 해석됨. Windows에서는 설치된 Git의 실제 Bash 실행 파일을 우선 선택 | test_rebranding.py | 기본 PATH에서도 Git Bash로 관리 테스트 실행; 테스트 비활성화 없음 |
 
 ## 녹화·파일 보호
 
@@ -48,7 +49,7 @@ logs.txt의 18:15:22~18:19:04 구간 전체를 확인했다. CHZZK·SOOP·CIME �
 - frontend/tests/recording_finalization.py
 - frontend/tests/settings_consistency.py
 
-브라우저 테스트는 합성 API·실제 JPEG/HLS 미디어로 사용자 DB/녹화와 분리했다. 실제 공개 방송 프레임 검증도 별도로 실행했다. 2026-10-12 최종 전체 백엔드는 786 passed, 6 skipped, 4 subtests passed였다. 프록시 종료·만료·byte range·HTTPX 진단 로그 마스킹도 별도 검증한다. TypeScript/Vite 빌드, Ruff 오류 검사 및 compileall도 통과했다. 320/1440px × 그리드/목록에서 실제 백엔드 프록시 master → variant → TS 응답을 Hls.js로 디코딩하고 재생 시간 증가를 확인했다.
+브라우저 테스트는 합성 API·실제 JPEG/HLS 미디어로 사용자 DB/녹화와 분리했다. 실제 공개 방송 프레임 검증도 별도로 실행했다. 2026-10-12 로컬 최종 전체 백엔드(Git Bash 포함, PYTHONUTF8=0)는 791 passed, 1 skipped, 4 subtests passed였다. 대용량 검사는 별도로 1 passed다. 최신 OS별 CI 결과는 PR #2의 체크와 본문에 기록한다. 프록시 종료·만료·byte range·HTTPX 진단 로그 마스킹도 별도 검증한다. TypeScript/Vite 빌드, Ruff 오류 검사 및 compileall도 통과했다. 320/1440px × 그리드/목록에서 실제 백엔드 프록시 master → variant → TS 응답을 Hls.js로 디코딩하고 재생 시간 증가를 확인했다.
 
 ## 환경별 결과와 남은 검증
 
