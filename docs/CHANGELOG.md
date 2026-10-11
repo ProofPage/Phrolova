@@ -8,6 +8,19 @@
 
 ## [Unreleased]
 
+## [2.0.57] - 2026-10-12
+
+### Fixed
+- CIME 중첩 HLS 미리보기의 TLS 인증서 검증과 오류별 자동 복구를 개선했습니다.
+- FFmpeg·FFprobe 독립 탐색·실행 검사, 설치 안내 및 원본 보존 후 재검사·재변환을 개선했습니다.
+- 미리보기 표시 영역·타이머·프로세스 정리와 서명 URL·진단 로그 마스킹을 보강했습니다.
+- VOD 누락 fragment 처리, 제한된 재시도·백오프와 메타데이터 timeout 재시도를 개선했습니다.
+
+### Validation
+- Windows·Ubuntu x64·Ubuntu ARM64 CI에서 각각 790개 테스트와 추가 하위 테스트 4개 통과.
+- TypeScript·프런트엔드 빌드 및 반응형·다운로드·녹화 후처리 브라우저 회귀 통과.
+- 실제 CIME·SOOP 미리보기, TLS 신뢰 복구와 3GiB 초과 TS 파일 검사 통과.
+
 ## [2.0.56] - 2026-10-11
 
 ### Changed
@@ -774,7 +787,7 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.56...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.57...HEAD
 [2.0.55]: https://github.com/ProofPage/Phrolova/compare/v2.0.54...v2.0.55
 [2.0.54]: https://github.com/ProofPage/Phrolova/compare/v2.0.53...v2.0.54
 [2.0.53]: https://github.com/ProofPage/Phrolova/compare/v2.0.52...v2.0.53
@@ -835,3 +848,4 @@
 [1.0.0]: https://github.com/eruminyu/Rookery/releases/tag/v1.0.0
 
 [2.0.56]: https://github.com/ProofPage/Phrolova/compare/v2.0.55...v2.0.56
+[2.0.57]: https://github.com/ProofPage/Phrolova/compare/v2.0.56...v2.0.57
