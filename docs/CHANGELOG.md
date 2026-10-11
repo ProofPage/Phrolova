@@ -8,6 +8,24 @@
 
 ## [Unreleased]
 
+## [2.0.55] - 2026-10-11
+
+### Fixed
+- TS 호환 스트림을 우선 선택하고 TS가 제공되지 않으면 Streamlink 원본 fMP4를 실제 형식으로 저장합니다. 녹화 종료 후 TS 정규화 및 MKV/MP4 변환·검사를 수행합니다.
+- 녹화 세션과 파일 경로 충돌, 같은 채널의 중복 시작, 빈 파일의 잘못된 변환 작업, 재시도 폭주와 파일 처리 이력 중복을 방지합니다.
+- 실제 데이터 수신 전 녹화 시간이 증가하지 않도록 하고 유튜브 런타임·인증 오류 처리를 개선합니다.
+- 다운로드 진행률의 전체 너비와 통계·버튼 영역을 분리하고 완료 시각, 파일 검사 안내, 화질 옵션 및 그리드 하단 정렬을 수정합니다.
+
+### Changed
+- 신규 기본 완료 형식은 MKV, 치지직 녹화 방식은 강제 타임머신, 동시 다운로드 개수는 5입니다. 명시된 기존 설정은 보존합니다.
+- 다운로드 동시 제한 변경을 실행 중인 작업을 중단하지 않고 즉시 적용합니다.
+- 일반 설정을 제거하고 저장 위치와 라이브 확인 주기를 해당 다운로드·라이브 설정으로 이동합니다.
+- 플랫폼 쿠키 UI, 라이브 CDN 선택, MKV/MP4 표시 명칭 및 라이브 상태·제어 버튼 정렬을 통일합니다.
+- 사이드바의 Phrolova 이름 앞 아이콘을 제거합니다.
+
+### Validation
+- Windows 로컬 백엔드 테스트 685개 통과, 환경 조건에 따른 6개 테스트 제외. TypeScript·프론트엔드 빌드와 Chromium 반응형·기능 회귀 테스트 통과.
+
 ## [2.0.54] - 2026-10-11
 
 ### Added
@@ -738,7 +756,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.54...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.55...HEAD
+[2.0.55]: https://github.com/ProofPage/Phrolova/compare/v2.0.54...v2.0.55
 [2.0.54]: https://github.com/ProofPage/Phrolova/compare/v2.0.53...v2.0.54
 [2.0.53]: https://github.com/ProofPage/Phrolova/compare/v2.0.52...v2.0.53
 [2.0.52]: https://github.com/ProofPage/Phrolova/compare/v2.0.51...v2.0.52

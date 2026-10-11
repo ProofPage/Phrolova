@@ -75,7 +75,11 @@ jobs:
 
       - name: 릴리스 파일 이름 설정
         shell: pwsh
-        run: Move-Item dist/Phrolova.exe "dist/Phrolova-$env:RELEASE_TAG-windows-x64.exe"
+        run: |
+          $asset = "dist/Phrolova-$env:RELEASE_TAG-windows-x64.exe"
+          Move-Item dist/Phrolova.exe $asset
+          $hash = (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $(Split-Path -Leaf $asset)" | Set-Content -LiteralPath dist/SHA256SUMS.txt -Encoding ascii
 
       - name: GitHub Release 생성 및 Latest 갱신
         shell: pwsh
@@ -86,10 +90,11 @@ jobs:
           if (-not (Test-Path -LiteralPath $notesPath)) { throw "Release notes not found: $notesPath" }
           Get-Content -LiteralPath $notesPath -Raw -Encoding utf8 | Set-Content -Path release-notes.md -Encoding utf8
           $asset = "dist/Phrolova-$env:RELEASE_TAG-windows-x64.exe"
+          $checksums = "dist/SHA256SUMS.txt"
           $version = $env:RELEASE_TAG.TrimStart('v')
           if ($env:GITHUB_REF_TYPE -eq 'tag') {
-            gh release create $env:RELEASE_TAG $asset --title "Version $version" --notes-file release-notes.md --latest --verify-tag
+            gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --latest --verify-tag
           } else {
-            gh release create $env:RELEASE_TAG $asset --title "Version $version" --notes-file release-notes.md --latest --target $env:GITHUB_SHA
+            gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --latest --target $env:GITHUB_SHA
           }
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
