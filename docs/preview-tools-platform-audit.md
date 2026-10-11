@@ -47,7 +47,7 @@ logs.txt의 18:15:22~18:19:04 구간 전체를 확인했다. CHZZK·SOOP·CIME �
 - frontend/tests/recording_finalization.py
 - frontend/tests/settings_consistency.py
 
-브라우저 테스트는 합성 API·실제 JPEG/HLS 미디어로 사용자 DB/녹화와 분리했다. 실제 공개 방송 프레임 검증도 별도로 실행했다. 2026-10-12 재개 후 전체 백엔드는 784 passed, 6 skipped, 4 subtests passed였다. 이후 프록시 종료·만료·byte range 테스트 2개를 추가했고 관련 59개 테스트가 통과했다. TypeScript/Vite 빌드, Ruff 오류 검사 및 compileall도 통과했다. 320/1440px × 그리드/목록에서 실제 백엔드 프록시 master → variant → TS 응답을 Hls.js로 디코딩하고 재생 시간 증가를 확인했다.
+브라우저 테스트는 합성 API·실제 JPEG/HLS 미디어로 사용자 DB/녹화와 분리했다. 실제 공개 방송 프레임 검증도 별도로 실행했다. 2026-10-12 최종 전체 백엔드는 786 passed, 6 skipped, 4 subtests passed였다. 프록시 종료·만료·byte range·HTTPX 진단 로그 마스킹도 별도 검증한다. TypeScript/Vite 빌드, Ruff 오류 검사 및 compileall도 통과했다. 320/1440px × 그리드/목록에서 실제 백엔드 프록시 master → variant → TS 응답을 Hls.js로 디코딩하고 재생 시간 증가를 확인했다.
 
 ## 환경별 결과와 남은 검증
 

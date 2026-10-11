@@ -37,7 +37,7 @@ def test_unsafe_media_addresses_rejected(url):
 
 
 @pytest.mark.asyncio
-async def test_proxy_keeps_signed_query_and_limits_redirect_hosts(monkeypatch):
+async def test_proxy_keeps_signed_query_and_limits_redirect_hosts(monkeypatch, caplog):
     proxy = PreviewProxy()
     token = proxy.register(
         "chzzk:a", "chzzk", "https://live.navercdn.com/master.m3u8?token=SECRET"
@@ -58,9 +58,11 @@ async def test_proxy_keeps_signed_query_and_limits_redirect_hosts(monkeypatch):
         lambda **kwargs: client(transport=httpx.MockTransport(handler), **kwargs),
     )
     monkeypatch.setattr("app.engine.preview_proxy.preview_ca_bundle", lambda: True)
-    data, kind, status, _ = await proxy.fetch(
-        token, {"_HLS_msn": "123", "evil": "SECRET"}
-    )
+    with caplog.at_level('INFO', logger='httpx'):
+        data, kind, status, _ = await proxy.fetch(
+            token, {"_HLS_msn": "123", "evil": "SECRET"}
+        )
+    assert 'SECRET' not in caplog.text and '[영상 주소]' in caplog.text
     assert (
         "token=SECRET" in requests[0]
         and "_HLS_msn=123" in requests[0]

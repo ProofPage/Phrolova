@@ -1,6 +1,7 @@
 """Bounded, opaque HLS assets: signed upstream URLs stay on the server."""
 
 import asyncio
+import logging
 import re
 import time
 import uuid
@@ -8,7 +9,13 @@ from urllib.parse import urljoin, urlsplit, urlencode
 import ipaddress
 import httpx
 from app.core.http import USER_AGENT
-from app.engine.preview_transport import preview_ca_bundle
+from app.engine.preview_transport import preview_ca_bundle, SafeMediaLogFilter
+
+# HTTPX emits the complete upstream URL at INFO level. Apply the same
+# redaction as the Streamlink preview transport before handlers receive it.
+_http_logger = logging.getLogger("httpx")
+if not any(isinstance(item, SafeMediaLogFilter) for item in _http_logger.filters):
+    _http_logger.addFilter(SafeMediaLogFilter())
 
 
 class PreviewProxy:

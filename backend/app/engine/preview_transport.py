@@ -13,7 +13,7 @@ from streamlink.stream.hls import HLSStream
 from app.core.config import resolve_data_dir
 from app.engine.platform_auth import platform_cookie_jar, redact_media_error
 
-class _SafeStreamLog(logging.Filter):
+class SafeMediaLogFilter(logging.Filter):
     def filter(self, record):
         record.msg = redact_media_error(record.getMessage())
         record.args = ()
@@ -22,8 +22,8 @@ class _SafeStreamLog(logging.Filter):
 # Streamlink workers report failed requests separately from their byte reader.
 # Remove signed URLs at that reporting boundary, including requests exceptions.
 _stream_logger = logging.getLogger('streamlink.stream.hls')
-if not any(isinstance(item, _SafeStreamLog) for item in _stream_logger.filters):
-    _stream_logger.addFilter(_SafeStreamLog())
+if not any(isinstance(item, SafeMediaLogFilter) for item in _stream_logger.filters):
+    _stream_logger.addFilter(SafeMediaLogFilter())
 
 @lru_cache(maxsize=1)
 def preview_ca_bundle() -> str:
