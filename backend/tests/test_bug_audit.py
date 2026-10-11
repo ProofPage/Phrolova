@@ -118,7 +118,7 @@ importlib.reload(vod)
 from yt_dlp import YoutubeDL
 list(InfoExtractor(YoutubeDL({'quiet': True}))._parse_mpd_periods(ET.fromstring('<MPD/>')))
 '''
-    result = subprocess.run([sys.executable, '-c', script], cwd=Path(__file__).parents[1], capture_output=True, text=True, timeout=10)
+    result = subprocess.run([sys.executable, '-c', script], cwd=Path(__file__).parents[1], capture_output=True, encoding='utf-8', timeout=10)
     assert result.returncode == 0, result.stdout + result.stderr
 
 

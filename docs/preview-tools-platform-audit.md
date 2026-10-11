@@ -18,6 +18,7 @@ logs.txt의 18:15:22~18:19:04 구간 전체를 확인했다. CHZZK·SOOP·CIME �
 | 로그 URL 노출 | 모든 yt-dlp 플랫폼 로거, VOD 예외/트레이스 및 Streamlink HLS 오류 마스킹 | platform_media.py, platform_auth.py, preview_transport.py, vod.py | HTTPS 실패 로그에서 서명 제거 |
 | 브라우저 서명 URL 노출 | CHZZK/YouTube HLS master·variant·segment·key·map·part 주소를 만료 토큰으로 대체. 검증된 TLS, 제한된 CDN 이동, 동시성/응답 크기 제한, byte range 유지 | preview_proxy.py, api/stream.py | 서명 쿼리 보존·사설 주소 차단·만료/종료 및 실제 Hls.js 디코딩 |
 | 공통 UI 정리 | 이미지 display와 preview align-self 명시, stale 프레임 안내, Toast/복사 타이머 정리 및 clipboard 실패 처리 | index.css, LiveFramePreview.tsx, Toast.tsx, UpdateModal.tsx | 반응형·플랫폼·설정·다운로드 브라우저 회귀 및 TS 빌드 |
+| 영어 Windows CI 인코딩 | 기존 관리 스크립트 fixture가 UTF-8 파일을 cp1252로 읽음. UTF-8/LF를 명시하고 Git Bash의 작업 디렉터리·네이티브 symlink를 사용. 자식 Python 출력도 UTF-8로 해석 | test_rebranding.py, test_bug_audit.py | PYTHONUTF8=0 + Windows Git Bash: 기존 기대값을 유지한 31개 테스트 통과 |
 
 ## 녹화·파일 보호
 

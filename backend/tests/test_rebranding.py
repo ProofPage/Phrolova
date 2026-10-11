@@ -66,10 +66,14 @@ def test_invalid_legacy_never_creates_empty_new_db(tmp_path):
 
 def shell(tmp_path, body):
     # Source function definitions without invoking the command entry point.
-    source = (ROOT / 'scripts/manage.sh').read_text().rsplit('main "$@"', 1)[0]
+    source = (ROOT / 'scripts/manage.sh').read_text(encoding='utf-8').rsplit('main "$@"', 1)[0]
     script = tmp_path / 'functions.sh'
-    script.write_text(source + '\n' + body)
-    result = subprocess.run(['bash', str(script)], capture_output=True, text=True, env={**os.environ, 'HOME': str(tmp_path)})
+    script.write_text('export HOME="$PWD"\n' + source + '\n' + body, encoding='utf-8', newline='\n')
+    # Relative script arguments and Bash's own PWD avoid Windows drive-path
+    # interpretation. Git Bash must create native symlinks, not copy files.
+    env = {**os.environ, 'MSYS': os.environ.get('MSYS', '') + ' winsymlinks:nativestrict'}
+    result = subprocess.run(['bash', script.name], cwd=tmp_path, capture_output=True,
+                            encoding='utf-8', env=env, timeout=30)
     assert result.returncode == 0, result.stdout + result.stderr
     return result.stdout
 
