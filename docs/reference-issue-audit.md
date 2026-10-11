@@ -1,6 +1,6 @@
 # 참고 저장소 이슈 대조표
 
-2026-10-11 GitHub API 전체 페이지 조회: 실제 이슈 148건(열림 18·닫힘 130), PR 목록 205건. 댓글이 있는 53개 이슈의 댓글 134개와 이슈 번호를 언급한 PR 152개의 본문·변경 파일·패치를 수집했습니다. 수집 원문은 작업 산출물에 보관하고 서명 URL·인증 정보가 들어갈 수 있어 저장소에 게시하지 않습니다.
+2026-10-11 최초 GitHub API 전체 페이지 조회: 실제 이슈 148건(열림 18·닫힘 130), PR 목록 205건. 2026-10-12 재조회에서는 #346이 재개되어 열림 19·닫힘 129입니다. 댓글이 있는 53개 이슈의 댓글 136개(최초 134개 + #346 신규 2개)와 이슈 번호를 언급한 PR 152개의 본문·변경 파일·패치를 확인했습니다. 수집 원문은 작업 산출물에 보관하고 서명 URL·인증 정보가 들어갈 수 있어 저장소에 게시하지 않습니다.
 
 A 동일 재현 결함 / B 유사 결함에 대한 수정 / C 기존 보호 및 회귀 검증 / D 구조 차이·기능 제안으로 제외 / E 재현·실기 검증이 추가로 필요한 항목. C는 참고 프로그램의 재현 입력이 Phrolova 전체 경로에서 모두 통과한다는 의미가 아닙니다. E는 완료로 표시하지 않습니다.
 
@@ -11,7 +11,7 @@ Streamlink 라이브와 yt-dlp VOD를 유지합니다. 참고 프로그램의 Qt
 | 번호 | 상태 | 문제 | 분류 및 Phrolova 근거 | 댓글 | 연결 PR |
 |---|---|---|---|---|---|
 | [#347](https://github.com/honey720/chzzk-vod-downloader-v2/issues/347) | closed | [Bug] 대역이 찬 뒤에도 스레드가 상한까지 올라가 저속 재시작이 쏟아진다 | D: Qt/Nuitka/자체 다운로드 워커·구간 다운로드·제품 전용 구조. 동일 코드를 이식하지 않음. | 1 | [#354](https://github.com/honey720/chzzk-vod-downloader-v2/pull/354) [#349](https://github.com/honey720/chzzk-vod-downloader-v2/pull/349) [#348](https://github.com/honey720/chzzk-vod-downloader-v2/pull/348) |
-| [#346](https://github.com/honey720/chzzk-vod-downloader-v2/issues/346) | closed | [Bug] GUI 영상 다운 실패 | D: Qt/Nuitka/자체 다운로드 워커·구간 다운로드·제품 전용 구조. 동일 코드를 이식하지 않음. | 4 | 직접 번호 연결 없음 |
+| [#346](https://github.com/honey720/chzzk-vod-downloader-v2/issues/346) | open | [Bug] GUI 영상 다운 실패 | D: macOS 컴파일 Qt 앱의 프로세스 충돌은 웹 UI 구조에 직접 적용하지 않음. 2.10.3에서도 3회 중 2회 실패하여 재개됐고 종료 원인은 미확정. 저속 재시작 보강과 실제 충돌 해결을 구분. | 6 | 직접 번호 연결 없음 |
 | [#336](https://github.com/honey720/chzzk-vod-downloader-v2/issues/336) | open | [Bug] 짧은 변이 같은 원본 아닌 항목이 둘이면 카드의 기본 선택이 대역폭 낮은 쪽으로 바뀐다 | E: 이슈 입력에 대한 Phrolova 전용 재현 또는 해당 OS/장시간/대형 파일 검증이 추가로 필요함. | 0 | 직접 번호 연결 없음 |
 | [#334](https://github.com/honey720/chzzk-vod-downloader-v2/issues/334) | open | [Bug] 초기화 세그먼트가 HTTP 오류로 오면 잘린 세그먼트로 분류해 다시 받고 사유를 틀리게 표시한다 | C: 기존 파일 보호·원자적 저장·오류/경로 검증 경로와 기존 회귀 테스트 대조. 전체 Python 회귀 검사 대상. | 1 | 직접 번호 연결 없음 |
 | [#333](https://github.com/honey720/chzzk-vod-downloader-v2/issues/333) | open | [Bug] 세로값으로 변형을 찾을 때 마스터 플레이리스트가 STREAM-INF 줄로 끝나면 IndexError가 난다 | C: 기존 파일 보호·원자적 저장·오류/경로 검증 경로와 기존 회귀 테스트 대조. 전체 Python 회귀 검사 대상. | 0 | 직접 번호 연결 없음 |
