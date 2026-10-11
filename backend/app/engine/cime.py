@@ -348,6 +348,7 @@ class CimeLiveEngine:
         headers = cime_headers(self.get_stream_url(channel_id))
         cookie_header = "; ".join(f"{k}={v}" for k, v in stream_cookies.items()) or None
         return {"url": url, "headers": headers, "cookies": cookie_header,
+                "preview_url": selected['url'] if selected else str(response.url),
                 "video_index": selected["video_index"] if external_audio else None,
                 "width": selected["width"] if selected else None,
                 "height": selected["height"] if selected else None,

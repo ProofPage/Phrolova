@@ -6,6 +6,7 @@ Lifespan 컨텍스트 매니저를 통해 Conductor 라이프사이클을 관리
 from __future__ import annotations
 
 import sys
+import asyncio
 from pathlib import Path
 
 # NOTE: Windows 이벤트 루프 정책은 app/__init__.py에서 설정됨
@@ -76,12 +77,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     logger.info(f"🚀 {settings.app_name} 시작 중...")
 
-    # FFmpeg 경로 검증
-    try:
-        ffmpeg = settings.resolve_ffmpeg_path()
-        logger.info(f"✅ FFmpeg 확인: {ffmpeg}")
-    except FileNotFoundError as e:
-        logger.warning(f"⚠️ {e}")
+    # Discovery alone does not prove an executable can run (or its sibling exists).
+    from app.engine.media_tools import check_media_tool
+    for tool in ('ffmpeg', 'ffprobe'):
+        health = await asyncio.to_thread(check_media_tool, tool)
+        if health['available']:
+            logger.info(f"✅ {tool} 실행 확인: {health['path']}")
+        else:
+            logger.warning(f"⚠️ {health['message']} 프로그램 옆 bin 폴더에 FFmpeg와 FFprobe를 함께 설치하세요. 원본은 보관됩니다.")
 
     # yt-dlp 경로 검증 (Windows exe 환경에서 없으면 자동 다운로드)
     try:

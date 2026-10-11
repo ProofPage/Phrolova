@@ -1,5 +1,5 @@
 import { useDialogKeyboard } from "../../hooks/useDialogKeyboard";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, ExternalLink, Copy, CheckCircle2, Terminal } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { UpdateInfo } from "../../api/client";
@@ -27,11 +27,21 @@ const INSTALL_ONE_LINER =
 function CommandBlock({ command }: { command: string }) {
     const { t } = useLanguage();
     const [copied, setCopied] = useState(false);
+    const [copyError, setCopyError] = useState(false);
+    const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const mounted = useRef(true);
+    useEffect(() => { mounted.current = true; return () => { mounted.current = false; clearTimeout(timer.current); }; }, []);
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(command);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(command);
+            if (!mounted.current) return;
+            setCopyError(false); setCopied(true);
+            clearTimeout(timer.current);
+            timer.current = setTimeout(() => setCopied(false), 2000);
+        } catch {
+            if (mounted.current) setCopyError(true);
+        }
     };
 
     return (
@@ -48,6 +58,7 @@ function CommandBlock({ command }: { command: string }) {
             >
                 {copied ? <CheckCircle2 className="w-4 h-4 text-ok" /> : <Copy className="w-4 h-4" />}
             </button>
+            {copyError && <p role="status" className="mt-1 text-xs text-warn">클립보드에 복사하지 못했습니다. 명령을 선택해 직접 복사하세요.</p>}
         </div>
     );
 }

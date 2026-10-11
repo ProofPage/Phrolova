@@ -123,7 +123,7 @@ async def test_other_failures_do_not_trigger_cookie_fallback(engine, tmp_path, m
     monkeypatch.setattr(yt_dlp.YoutubeDL, "extract_info", denied)
     with pytest.raises(yt_dlp.utils.DownloadError):
         await engine.get_video_info(URL)
-    assert calls == [None]
+    assert calls == ([None, None] if message == 'Network timed out' else [None])
     assert youtube_auth_message(message) is None
 
 

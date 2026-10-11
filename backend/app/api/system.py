@@ -13,6 +13,13 @@ from app.core.logger import get_log_dir, logger
 
 router = APIRouter(prefix="/api/system", tags=["System"])
 
+@router.get('/media-tools')
+async def media_tools_status():
+    import asyncio
+    from app.engine.media_tools import check_media_tool
+    values = await asyncio.gather(*(asyncio.to_thread(check_media_tool, name) for name in ('ffmpeg', 'ffprobe')))
+    return dict(zip(('ffmpeg', 'ffprobe'), values))
+
 def _detect_environment() -> str:
     """현재 실행 환경을 감지한다."""
     # PyInstaller (Windows EXE 등)

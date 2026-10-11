@@ -266,7 +266,7 @@ class Settings(BaseSettings):
         """Resolve independently of FFmpeg, including a Termux PREFIX installation."""
         names = ("ffprobe.exe", "ffprobe") if sys.platform == "win32" else ("ffprobe",)
         candidates = [Path(self.ffprobe_path).expanduser()]
-        configured = shutil.which(self.ffprobe_path)
+        configured = shutil.which(self.ffprobe_path) if self.ffprobe_path != 'ffprobe' else None
         if configured:
             candidates.append(Path(configured))
         try:
@@ -276,6 +276,9 @@ class Settings(BaseSettings):
             pass
         base = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[3]
         candidates.extend(base / "bin" / name for name in names)
+        if getattr(sys, '_MEIPASS', None):
+            candidates.extend(Path(sys._MEIPASS) / 'bin' / name for name in names)
+        candidates.extend(Path(sys.executable).parent / name for name in names)
         system = shutil.which("ffprobe")
         if system:
             candidates.append(Path(system))
@@ -313,6 +316,13 @@ class Settings(BaseSettings):
             candidate = base_dir / "bin" / fname
             if candidate.is_file() and (sys.platform == "win32" or os.access(candidate, os.X_OK)):
                 return str(candidate)
+
+        names = ('ffmpeg.exe', 'ffmpeg') if sys.platform == 'win32' else ('ffmpeg',)
+        for directory in (Path(getattr(sys, '_MEIPASS', base_dir)) / 'bin', Path(sys.executable).parent):
+            for name in names:
+                candidate = directory / name
+                if candidate.is_file() and (sys.platform == 'win32' or os.access(candidate, os.X_OK)):
+                    return str(candidate)
 
         # 3) 시스템 PATH
         system_ffmpeg = shutil.which("ffmpeg")

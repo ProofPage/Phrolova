@@ -32,7 +32,7 @@ class SafeMediaLogger:
 def platform_ydl(url: str, options: dict):
     import yt_dlp
     opts = dict(options)
-    if media_platform(url) in ('soop', 'cime') and opts.get('logger'):
+    if opts.get('logger'):
         opts['logger'] = SafeMediaLogger(opts['logger'])
     if media_platform(url) == 'cime':
         from app.engine.cime_extractor import CimeIE

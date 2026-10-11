@@ -307,7 +307,7 @@ export interface NotificationStatus {
 
 
 
-export interface RecordingJob { platform?: Platform; session_id?: string; capture_format?: string; started_at?: string; ended_at?: string; file_size_bytes?: number; source_available?: boolean; output_available?: boolean; can_open?: boolean; can_retry?: boolean; can_inspect?: boolean; hidden?: boolean; id: string; composite_key: string; channel_name: string; state: string; target_format: string; progress: number | null; output_path: string | null; source_paths: string[]; error_message: string | null; inspection_state: string; diagnostics?: Record<string, unknown>; source_cleanup_warning?: string; }
+export interface RecordingJob { error_code?: string; processing_stage?: string; retryable?: boolean; platform?: Platform; session_id?: string; capture_format?: string; started_at?: string; ended_at?: string; file_size_bytes?: number; source_available?: boolean; output_available?: boolean; can_open?: boolean; can_retry?: boolean; can_inspect?: boolean; hidden?: boolean; id: string; composite_key: string; channel_name: string; state: string; target_format: string; progress: number | null; output_path: string | null; source_paths: string[]; error_message: string | null; inspection_state: string; diagnostics?: Record<string, unknown>; source_cleanup_warning?: string; }
 export interface RecordingOutputSettings { output_format: 'mp4'|'mkv'|'ts'; keep_source_ts: boolean; max_concurrent: number; }
 
 // ── Stats Types ─────────────────────────────────────────
@@ -572,8 +572,8 @@ export const api = {
         const res = await client.get<PlatformStatus>("/platforms/status");
         return res.data;
     },
-    getLivePreviewFrame: async (channelKey: string, signal?: AbortSignal): Promise<Blob> =>
-        (await client.get(`/stream/preview-frame/${encodeURIComponent(channelKey)}`, { responseType: 'blob', signal, timeout: 60000 })).data,
+    getLivePreviewFrame: async (channelKey: string, signal?: AbortSignal, force = false): Promise<Blob> =>
+        (await client.get(`/stream/preview-frame/${encodeURIComponent(channelKey)}`, { responseType: 'blob', signal, params: force ? { force: true } : undefined, timeout: 60000 })).data,
     getPlatformQualities: async (platform: 'soop' | 'cime', channel_id: string, signal?: AbortSignal) =>
         (await client.get<{ qualities: LiveQuality[]; live?: boolean; message?: string }>(`/platforms/${platform}/${encodeURIComponent(channel_id)}/qualities`, { signal })).data,
     getPlatformCookieStatus: async (platform: CookiePlatform): Promise<PlatformCookieStatus> =>
@@ -627,6 +627,7 @@ export const api = {
     getRecordingOutputSettings: async (): Promise<RecordingOutputSettings> => (await client.get('/recordings/settings')).data,
     updateRecordingOutputSettings: async (data: RecordingOutputSettings) => (await client.put('/recordings/settings',data)).data,
     clearRecordingHistory: async (jobIds: string[]) => (await client.post('/recordings/history/clear', {job_ids: jobIds})).data,
+    getMediaTools: async (signal?: AbortSignal): Promise<Record<string, { available: boolean; path?: string; version?: string; message?: string }>> => (await client.get('/system/media-tools', { signal })).data,
     getRecordingJobs: async (): Promise<{jobs: RecordingJob[]}> => (await client.get('/recordings/jobs')).data,
     retryRecording: async (id: string, output_format?: 'mp4'|'mkv') => (await client.post(`/recordings/${id}/retry`, {output_format})).data,
     inspectRecording: async (id: string) => (await client.post(`/recordings/${id}/inspect`)).data,

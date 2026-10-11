@@ -111,7 +111,7 @@ async def main():
         fail_frame=True
         card=page.locator('[data-channel-key="cime:alice"]')
         await card.get_by_role('button',name='상세 보기: 씨미 샘플').click()
-        await expect(card).to_contain_text('미리보기를 불러올 수 없습니다.')
+        await expect(card).to_contain_text('미리보기 연결에 실패했습니다. 다시 연결합니다.')
         fail_frame=False; await card.get_by_role('button',name='다시 시도',exact=True).click()
         await expect(card.get_by_role('img',name='씨미 샘플 방송 미리보기')).to_be_visible()
         await page.goto(BASE+'/vod')

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useMemo, useRef } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { CheckCircle, AlertCircle, AlertTriangle, X } from "lucide-react";
 import { clsx } from "clsx";
 import { localizePlatformNames } from '../../utils/platformNames';
@@ -68,8 +68,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     const [toasts, setToasts] = useState<Toast[]>([]);
     const [history, setHistory] = useState<ToastHistoryItem[]>([]);
     const counterRef = useRef(0);
+    const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+    useEffect(() => () => { for (const timer of timers.current.values()) clearTimeout(timer); timers.current.clear(); }, []);
 
     const removeToast = useCallback((id: string) => {
+        clearTimeout(timers.current.get(id));
+        timers.current.delete(id);
         setToasts((prev) => prev.filter((t) => t.id !== id));
     }, []);
 
@@ -84,7 +88,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 return newHistory.slice(0, 50);
             });
 
-            setTimeout(() => removeToast(id), 4000);
+            timers.current.set(id, setTimeout(() => removeToast(id), 4000));
         },
         [removeToast],
     );
@@ -94,6 +98,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const clearHistory = useCallback(() => {
+        for (const timer of timers.current.values()) clearTimeout(timer);
+        timers.current.clear();
         setHistory([]);
         setToasts([]);
     }, []);

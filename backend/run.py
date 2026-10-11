@@ -37,7 +37,7 @@ def _setup_ssl_certs() -> None:
     if getattr(sys, "frozen", False):
         try:
             import certifi
-            os.environ["SSL_CERT_FILE"] = certifi.where()
+            os.environ.setdefault("SSL_CERT_FILE", certifi.where())
         except ImportError:
             pass
 
@@ -166,6 +166,19 @@ def _run_dependency_check() -> bool:
         print("  [!!]  FFmpeg를 찾을 수 없습니다.")
         all_ok = False
 
+    from app.engine.media_tools import check_media_tool
+    ffmpeg_health = check_media_tool('ffmpeg')
+    if not ffmpeg_health['available']:
+        ffmpeg_path = None
+        all_ok = False
+        print('  [!!] FFmpeg 실행 확인에 실패했습니다.')
+    ffprobe_health = check_media_tool('ffprobe')
+    if ffprobe_health['available']:
+        print(f"  [OK]  FFprobe: {ffprobe_health['path']}")
+    else:
+        print("  [!!]  FFprobe 실행 확인 실패. 원본은 보관되며 후처리에는 FFprobe 설치가 필요합니다.")
+        print("        bin/ffprobe.exe 또는 FFPROBE_PATH를 설정하세요. 라이브 녹화는 계속 사용할 수 있습니다.")
+
     # ── Streamlink 확인 (라이브 녹화 필수) ──────────────────
     streamlink_version = _get_streamlink_version()
     if streamlink_version:
@@ -193,7 +206,7 @@ def _run_dependency_check() -> bool:
     print("=" * 60)
 
     if all_ok:
-        print("  ✅ 모든 의존성 확인 완료. 서버를 시작합니다...\n")
+        print("  ✅ 녹화 의존성 확인 완료. 서버를 시작합니다...\n" if not ffprobe_health['available'] else "  ✅ 모든 의존성 확인 완료. 서버를 시작합니다...\n")
         return True
 
     if sys.platform != "win32" or not sys.stdin.isatty():
@@ -211,7 +224,7 @@ def _run_dependency_check() -> bool:
         print("     설치 시 'Add Python to PATH' 체크박스를 반드시 선택하세요.")
         print()
 
-    if not ffmpeg_path:
+    if not ffmpeg_path or not ffprobe_health['available']:
         print("  📌 FFmpeg 설치 방법 (아래 중 하나 선택):")
         print()
         print("  [방법 1] winget으로 자동 설치 (Windows 10/11 권장)")
@@ -219,7 +232,7 @@ def _run_dependency_check() -> bool:
         print()
         print("  [방법 2] 수동 설치")
         print("     1. https://ffmpeg.org/download.html 에서 Windows 빌드 다운로드")
-        print("     2. 압축 해제 후 bin/ffmpeg.exe를 이 프로그램 옆 'bin' 폴더에 복사")
+        print("     2. 압축 해제 후 bin/ffmpeg.exe와 bin/ffprobe.exe를 이 프로그램 옆 'bin' 폴더에 복사")
         print("        또는 시스템 PATH에 추가")
         print()
 
@@ -231,8 +244,8 @@ def _run_dependency_check() -> bool:
             print("     backend/requirements.txt의 의존성을 설치한 뒤 다시 시작하세요.")
         print()
 
-    # FFmpeg 자동 설치 제안 (PowerShell 다운로드 및 압축 해제)
-    if not ffmpeg_path and _check_python_version():
+    # FFmpeg와 FFprobe를 검증한 후 함께 설치한다.
+    if (not ffmpeg_path or not ffprobe_health['available']) and _check_python_version():
         answer = input("  FFmpeg를 지금 자동으로 다운로드하고 설치할까요? [y/N]: ").strip().lower()
         if answer == "y":
             print()
@@ -246,40 +259,28 @@ def _run_dependency_check() -> bool:
                 
                 bin_dir.mkdir(parents=True, exist_ok=True)
 
-                # PowerShell로 다운로드 및 압축 해제 명령 (gyan.dev essentials 빌드)
-                ps_script = f"""
-                $ProgressPreference = 'SilentlyContinue'
-                $zipUrl = 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip'
-                $zipPath = '{bin_dir}\\ffmpeg.zip'
-                $extractPath = '{bin_dir}\\temp_extracted'
-                
-                Write-Host '다운로드 시작...'
-                Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
-                
-                Write-Host '압축 해제 중...'
-                Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-                
-                # 풀린 폴더 내에서 ffmpeg.exe 찾아서 bin 폴더로 이동
-                $exePath = Get-ChildItem -Path $extractPath -Recurse -Filter 'ffmpeg.exe' | Select-Object -First 1
-                if ($exePath) {{
-                    Move-Item -Path $exePath.FullName -Destination '{bin_dir}\\ffmpeg.exe' -Force
-                }}
-                
-                # 임시 파일 정리
-                Remove-Item -Path $zipPath -Force
-                Remove-Item -Path $extractPath -Recurse -Force
-                """
-                
-                result = subprocess.run(
-                    ["powershell", "-NoProfile", "-Command", ps_script],
-                    check=False,
-                )
-                
-                if result.returncode == 0 and (bin_dir / "ffmpeg.exe").exists():
-                    print()
-                    print("  ✅ FFmpeg 설치 완료! (bin 폴더에 배치됨)")
-                    print("  ⚠️  서버를 시작합니다...")
-                    return True  # 설치 성공 시 바로 계속 진행
+                # Read exactly the two approved ZIP entries; no extraction paths or shell interpolation.
+                import tempfile, urllib.request, zipfile
+                with tempfile.TemporaryDirectory(prefix='phrolova-tools-') as staging:
+                    archive = Path(staging) / 'ffmpeg.zip'
+                    with urllib.request.urlopen('https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip', timeout=30) as response, archive.open('wb') as output:
+                        shutil.copyfileobj(response, output)
+                    with zipfile.ZipFile(archive) as package:
+                        for name in ('ffmpeg.exe', 'ffprobe.exe'):
+                            matches = [item for item in package.infolist() if Path(item.filename).name == name and not item.is_dir()]
+                            if len(matches) != 1:
+                                raise RuntimeError(f'{name} not found uniquely in package')
+                            candidate = Path(staging) / name
+                            with package.open(matches[0]) as source, candidate.open('wb') as output:
+                                shutil.copyfileobj(source, output)
+                            checked = subprocess.run([str(candidate), '-version'], capture_output=True, timeout=5, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+                            if checked.returncode:
+                                raise RuntimeError(f'{name} execution failed')
+                        for name in ('ffmpeg.exe', 'ffprobe.exe'):
+                            shutil.copy2(Path(staging) / name, bin_dir / name)
+                if (bin_dir / 'ffmpeg.exe').is_file() and (bin_dir / 'ffprobe.exe').is_file():
+                    print("  ✅ FFmpeg와 FFprobe 설치 완료! (bin 폴더)")
+                    return bool(streamlink_version)
                 else:
                     print()
                     print("  ⚠️  자동 설치에 실패했습니다. 수동으로 설치해 주세요.")
