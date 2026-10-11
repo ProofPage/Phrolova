@@ -277,6 +277,9 @@ class VodEngine(VodPreparation):
             "socket_timeout": 60,
             "retries": 10,
             "fragment_retries": 10,
+            "skip_unavailable_fragments": False,
+            "concurrent_fragment_downloads": 2,
+            "retry_sleep_functions": {"http": lambda n: min(30, 2 ** min(n, 5)), "fragment": lambda n: min(30, 2 ** min(n, 5))},
             "extractor_retries": 5,
             "file_access_retries": 5,
         }
@@ -445,7 +448,20 @@ class VodEngine(VodPreparation):
             opts.pop("cookiefile", None)
             if cookie_file:
                 opts["cookiefile"] = cookie_file
-            return await asyncio.to_thread(_extract)
+            for attempt in range(2):
+                try:
+                    return await asyncio.to_thread(_extract)
+                except Exception as error:
+                    text = str(error).lower()
+                    timed_out = isinstance(error, TimeoutError) or 'timeout' in text or 'timed out' in text
+                    if not timed_out:
+                        raise
+                    if attempt:
+                        import yt_dlp
+                        if isinstance(error, yt_dlp.utils.DownloadError):
+                            raise yt_dlp.utils.DownloadError('영상 정보 요청 시간이 초과되었습니다. 잠시 후 다시 조회하세요.') from None
+                        raise ValueError('영상 정보 요청 시간이 초과되었습니다. 잠시 후 다시 조회하세요.') from None
+                    await asyncio.sleep(0.5)
 
         if media_platform(url) in ("soop", "cime"):
             try:
@@ -707,7 +723,7 @@ class VodEngine(VodPreparation):
                     task.error_message = error_msg
                     return False
                 if isinstance(e, NonRetryableDownloadError):
-                    logger.error(f"[{task_id}] 다운로드 불가: {e}")
+                    logger.error(f"[{task_id}] 다운로드 불가: {redact_media_error(e)}")
                     task.error_message = error_msg
                     task.state = VodDownloadState.ERROR
                     if not self._shutting_down and (
@@ -726,7 +742,7 @@ class VodEngine(VodPreparation):
                 else:
                     logger.error(f"[{task_id}] 최대 재시도 횟수 초과: {error_msg}")
                     logger.error(
-                        f"[{task_id}] 상세 트레이스:\n{traceback.format_exc()}"
+                        f"[{task_id}] 상세 트레이스:\n{redact_media_error(traceback.format_exc(), max_length=8000)}"
                     )
                     task.error_message = (
                         f"재시도 {task.max_retries}회 실패: {error_msg}"
@@ -1167,7 +1183,7 @@ class VodEngine(VodPreparation):
     @staticmethod
     def _format_download_error(exc: Exception) -> str:
         """Keep yt-dlp failures useful when its exception has an empty message."""
-        message = str(exc).strip()
+        message = redact_media_error(str(exc).strip())
         if message:
             return message
         return f"{type(exc).__name__}: 다운로드 도구가 상세 오류를 반환하지 않았습니다."

@@ -479,6 +479,9 @@ dialog.ui-dialog { top: calc(var(--ui-viewport-top, 0px) + var(--ui-viewport-hei
 .channel-preview-stage { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr); width: 100%; min-width: 0; aspect-ratio: 16 / 9; overflow: hidden; background: var(--color-surface-0); border-radius: var(--radius-control); }
 .channel-preview-player { grid-area: 1 / 1; width: 100%; height: 100%; min-width: 0; min-height: 0; }
 .channel-preview-player video { display: block; width: 100%; height: 100%; object-fit: contain; }
+.channel-preview-player img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.channel-live-preview { min-width: 0; align-self: start; }
+.channel-preview-status.channel-preview-stale { align-self: end; height: auto; background: var(--color-surface-0); }
 .channel-preview-status { grid-area: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 100%; min-width: 0; min-height: 0; padding: 12px; color: var(--color-ink-muted); text-align: center; font-size: 12px; line-height: 1.5; }
 .channel-preview-message { min-width: 0; max-width: 100%; font-weight: 500; overflow-wrap: anywhere; word-break: keep-all; }
 .channel-preview-status .ui-button { flex-shrink: 0; }

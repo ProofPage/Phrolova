@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Literal
 import asyncio, os, shutil
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from app.engine.recording_finalizer import recording_policy, save_recording_policy
@@ -78,7 +78,14 @@ def output(job_id):
     except ValueError:
         raise HTTPException(404, "녹화 작업을 찾을 수 없습니다.") from None
     candidates = [job.get("output_path"), *job["source_paths"]]
-    path = next((Path(p) for p in candidates if p and Path(p).is_file() and Path(p).stat().st_size > 0), None)
+    path = None
+    for candidate in candidates:
+        try:
+            if candidate and Path(candidate).is_file() and Path(candidate).stat().st_size > 0:
+                path = Path(candidate)
+                break
+        except OSError:
+            continue
     if path is None:
         raise HTTPException(404, "녹화 파일을 찾을 수 없습니다.")
     if not path.is_file() or path.stat().st_size == 0:
@@ -99,8 +106,15 @@ async def open_file(job_id: str):
 
 
 @router.post("/{job_id}/open-location")
-async def open_location(job_id: str):
+async def open_location(job_id: str, request: Request):
     folder = output(job_id).parent
+    import ipaddress
+    try:
+        local = bool(request.client and ipaddress.ip_address(request.client.host).is_loopback)
+    except ValueError:
+        local = False
+    if not local:
+        return {'message': f'서버 저장 위치: {folder}. 원격 브라우저에서는 파일 열기를 사용하세요.', 'path': str(folder), 'opened': False}
     if os.name == "nt":
         await asyncio.to_thread(os.startfile, str(folder))
         return {"message": "저장 폴더를 열었습니다.", "path": str(folder)}

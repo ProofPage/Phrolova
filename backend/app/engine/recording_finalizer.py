@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from app.core.config import get_settings
 from app.core.logger import logger
-from app.engine.media_inspection import probe_media
+from app.engine.media_inspection import probe_media, InspectionError
 from app.engine.platform_auth import redact_media_error
 from app.store.db import get_database
 
@@ -383,13 +383,15 @@ class RecordingFinalizer:
                 ) > max(2, previous["duration"] * 0.02):
                     raise RuntimeError("저장된 영상 길이와 다릅니다.")
                 job.update(
-                    state="completed", inspection_state="passed", error_message=None
+                    state="completed", inspection_state="passed", error_message=None, error_code=None
                 )
             except Exception as error:
                 job.update(
                     state="attention",
                     inspection_state="failed",
-                    error_message="파일 정보를 확인하지 못했습니다. 저장된 파일을 확인하세요.",
+                    error_message=str(error) if isinstance(error, InspectionError) else "파일 정보를 확인하지 못했습니다. 저장된 파일을 확인하세요.",
+                    error_code=error.code if isinstance(error, InspectionError) else "inspection_failed",
+                    processing_stage="output_inspection",
                 )
                 job["diagnostics"]["detail"] = redact_media_error(error)
             self._save(job)
@@ -407,6 +409,8 @@ class RecordingFinalizer:
             writer_closed=True,
             progress=None,
             error_message=None,
+            error_code=None,
+            processing_stage=None,
             inspection_state="pending",
             retry_count=job["retry_count"] + 1,
             inspect_only=inspect_only,
@@ -455,6 +459,7 @@ class RecordingFinalizer:
         candidate = sources[0].with_name(f".{uuid.uuid4().hex}.normalizing.ts")
         job.update(
             state="normalizing",
+            processing_stage="normalization",
             progress=None,
             native_source_paths=[str(p) for p in sources],
             processing_started_at=now(),
@@ -580,6 +585,7 @@ class RecordingFinalizer:
             original_stats = [(p.stat().st_size, p.stat().st_mtime_ns) for p in sources]
             if any(size <= 0 for size, _ in original_stats):
                 raise RuntimeError("녹화 파일이 비어 있습니다.")
+            job['processing_stage'] = 'source_inspection'
             inputs = await asyncio.gather(
                 *(asyncio.to_thread(probe_media, str(p)) for p in sources)
             )
@@ -601,6 +607,7 @@ class RecordingFinalizer:
             duration = inputs[0]["duration"]
             job.update(
                 state="converting",
+                processing_stage="conversion",
                 progress=None,
                 processing_started_at=now(),
                 error_message=None,
@@ -701,7 +708,7 @@ class RecordingFinalizer:
                     raise RuntimeError(
                         "파일을 변환하지 못했습니다. 원본 TS를 보관했습니다. 오류 상세를 확인하거나 MKV로 다시 변환하세요."
                     )
-            job.update(state="verifying", inspection_state="running")
+            job.update(state="verifying", inspection_state="running", processing_stage='output_inspection')
             self._save(job)
             media = await asyncio.to_thread(probe_media, str(candidate))
             if (
@@ -771,6 +778,8 @@ class RecordingFinalizer:
                 target = candidate
             job.update(
                 state="completed",
+                error_code=None,
+                processing_stage="completed",
                 output_path=str(target),
                 progress=100,
                 inspection_state="passed",
@@ -809,6 +818,13 @@ class RecordingFinalizer:
             self._save(job)
             raise
         except Exception as error:
+            job['error_code'] = error.code if isinstance(error, InspectionError) else 'processing_failed'
+            job['retryable'] = bool(job.get('writer_closed'))
+            if isinstance(error, InspectionError):
+                job['diagnostics']['inspection'] = {
+                    name: redact_media_error(value) if isinstance(value, str) else value
+                    for name, value in error.diagnostics.items()
+                }
             job.update(
                 state="failed",
                 progress=None,

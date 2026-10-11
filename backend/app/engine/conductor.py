@@ -405,6 +405,8 @@ class Conductor:
 
     async def remove_channel(self, composite_key: str) -> None:
         """채널을 감시 목록에서 제거한다."""
+        from app.engine.preview_frames import frame_previews
+        frame_previews.invalidate(composite_key)
         task = self._channels.get(composite_key)
         if task is None:
             logger.warning(f"채널 '{composite_key}'을(를) 찾을 수 없습니다.")
@@ -552,6 +554,9 @@ class Conductor:
         ):
             task.broadcast_ended = False
         task.is_live = status["is_live"]
+        if not task.is_live:
+            from app.engine.preview_frames import frame_previews
+            frame_previews.invalidate(task.composite_key)
         task.channel_name = status.get("channel_name")
         task.title = status.get("title")
         task.category = status.get("category")

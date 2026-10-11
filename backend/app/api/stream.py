@@ -5,7 +5,7 @@ Phrolova: Stream API Router
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import Field
 
 from app.core.utils import extract_channel_id
@@ -163,15 +163,46 @@ async def live_preview(channel_id: str):
         raise HTTPException(
             502, "미리보기를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요."
         ) from None
-    return JSONResponse({"url": url}, headers={"Cache-Control": "no-store"})
+    from app.engine.preview_proxy import preview_proxy
+    try:
+        token = preview_proxy.register(key, platform.value, url)
+    except ValueError:
+        raise HTTPException(502, "미리보기 주소가 올바르지 않습니다.") from None
+    return JSONResponse({"url": f'/api/stream/preview-media/{token}/asset.m3u8'}, headers={"Cache-Control": "no-store"})
+
+@router.get('/preview-media/{token}/asset.{extension}')
+async def preview_media(token: str, extension: str, request: Request):
+    from app.engine.preview_proxy import preview_proxy
+    from app.engine.preview_frames import preview_error
+    from fastapi.responses import Response, JSONResponse
+    node = preview_proxy.nodes.get(token)
+    if not node:
+        raise HTTPException(404, '미리보기 주소가 만료되었습니다.')
+    conductor = get_preview_conductor()
+    task = conductor._channels.get(node['key'])
+    if task is None or not task.is_live:
+        raise HTTPException(409, '방송이 종료되었습니다.')
+    try:
+        data, kind, status, headers = await preview_proxy.fetch(token, dict(request.query_params), request.headers.get('range'))
+    except KeyError:
+        raise HTTPException(404, '미리보기 주소가 만료되었습니다.') from None
+    except Exception as cause:
+        error = preview_error(cause)
+        return JSONResponse({'detail': str(error)}, status_code=error.status, headers={'Cache-Control':'no-store'})
+    return Response(data,media_type=kind,status_code=status,headers={'Cache-Control':'no-store',**headers})
+
+def get_preview_conductor():
+    from app.main import get_recorder_service
+    return get_recorder_service()._conductor
 
 
 @router.get("/preview-frame/{channel_id:path}", summary="라이브 미리보기 이미지")
-async def live_preview_frame(channel_id: str):
+async def live_preview_frame(channel_id: str, force: bool = False):
     import asyncio
     from app.main import get_recorder_service
     from fastapi.responses import Response
-    from app.engine.preview_frames import frame_previews
+    from app.engine.preview_frames import frame_previews, PreviewError
+    from fastapi.responses import JSONResponse
 
     platform, identifier = Conductor.parse_composite_key(channel_id)
     if platform not in (Platform.SOOP, Platform.CIME):
@@ -186,14 +217,24 @@ async def live_preview_frame(channel_id: str):
     try:
         data, width, height = await asyncio.wait_for(
             frame_previews.get_frame(
-                key, platform.value, identifier, conductor._get_engine(platform)
+                key, platform.value, identifier, conductor._get_engine(platform), force=force
             ),
             timeout=50,
         )
+    except PreviewError as error:
+        return JSONResponse({'detail': {'message': str(error), 'error_code': error.code,
+            'retryable': error.retryable, 'retry_after': error.retry_after}}, status_code=error.status,
+            headers={'Cache-Control': 'no-store', 'Retry-After': str(error.retry_after)})
+    except asyncio.CancelledError:
+        if conductor._channels.get(key) is not task or not task.is_live:
+            raise HTTPException(409, '방송이 종료되었거나 채널이 제거되었습니다.') from None
+        raise
     except Exception:
         raise HTTPException(
             502, "미리보기를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요."
         ) from None
+    if conductor._channels.get(key) is not task or not task.is_live:
+        raise HTTPException(409, '방송이 종료되었거나 채널이 제거되었습니다.')
     return Response(
         data,
         media_type="image/jpeg",

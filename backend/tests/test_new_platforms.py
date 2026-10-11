@@ -381,24 +381,32 @@ def test_streamlink_master_selects_requested_fps(local_hls):
 
 @pytest.mark.asyncio
 async def test_preview_timeout_kills_and_reaps_process(monkeypatch):
-    from app.core.config import Settings
-    from app.engine.preview_frames import FramePreviewService
-    monkeypatch.setattr(Settings, 'resolve_ffmpeg_path', lambda self: 'ffmpeg')
-    preview=FramePreviewService();engine=type('Engine',(),{})()
-    engine.get_qualities=AsyncMock(return_value=[])
-    engine.resolve_stream=AsyncMock(return_value=('https://cdn.example/live.m3u8',{},None))
+    from app.engine.preview_transport import decode_preview
+    from unittest.mock import Mock
+    reader=Mock();reader.read.return_value=b''
+    monkeypatch.setattr('app.engine.preview_transport.HLSStream.open',lambda self:reader)
+    monkeypatch.setattr('app.engine.preview_transport.preview_ca_bundle',lambda:'trusted.pem')
+    class Pipe:
+        async def read(self,n):await asyncio.sleep(30);return b''
+        def write(self,data):pass
+        async def drain(self):pass
+        def close(self):pass
     class Process:
-        returncode=None; killed=False; reaped=False
-        async def communicate(self):
-            if self.killed: self.reaped=True; return b'',b''
-            await asyncio.sleep(30)
-        def kill(self): self.killed=True;self.returncode=-9
-    proc=Process();monkeypatch.setattr(asyncio,'create_subprocess_exec',AsyncMock(return_value=proc))
-    original=asyncio.wait_for
-    async def fast_wait(awaitable,timeout): return await original(awaitable,.01 if timeout==25 else timeout)
-    monkeypatch.setattr(asyncio,'wait_for',fast_wait)
-    with pytest.raises(asyncio.TimeoutError): await preview.get_frame('soop:timeout','soop','timeout',engine)
+        returncode=None;killed=False;reaped=False
+        stdin=Pipe();stdout=Pipe();stderr=Pipe()
+        async def wait(self):
+            if not self.killed:await asyncio.sleep(30)
+            self.reaped=True
+        def kill(self):self.killed=True;self.returncode=-9
+    proc=Process();started=asyncio.Event()
+    async def start(*args, **kwargs): started.set(); return proc
+    monkeypatch.setattr(asyncio,'create_subprocess_exec',start)
+    running=asyncio.create_task(decode_preview(['ffmpeg'],'https://cdn.example/live.m3u8',{},'soop',False))
+    await started.wait()
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(running,.01)
     assert proc.killed and proc.reaped
+    reader.close.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_actual_mixed_platform_download_queue_concurrency_and_restore(local_hls,monkeypatch,tmp_path):

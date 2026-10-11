@@ -14,7 +14,7 @@ MESSAGES = {
     "missing_file": "다운로드한 파일을 찾을 수 없습니다.",
     "empty_file": "다운로드한 파일이 비어 있습니다.",
     "access_denied": "다운로드한 파일에 접근할 수 없습니다.",
-    "tool_missing": "파일 검사 도구를 찾을 수 없습니다.",
+    "tool_missing": "FFprobe를 찾을 수 없습니다. 원본 파일은 보관되었습니다. FFPROBE_PATH를 설정하거나 프로그램 옆 bin 폴더에 ffprobe를 설치한 뒤 다시 검사·변환하세요.",
     "tool_failed": "파일 검사 도구를 실행하지 못했습니다.",
     "timeout": "파일 검사 시간이 초과되었습니다.",
     "invalid_response": "파일 정보를 확인하지 못했습니다.",

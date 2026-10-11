@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Gift, RefreshCcw, Terminal } from "lucide-react";
 import { api, type Settings as SettingsType, type UpdateInfo } from "../../api/client";
 import { getErrorMessage } from "../../utils/error";
+import { MediaToolsCard } from './MediaToolsCard';
 import { UpdateModal } from "../ui/UpdateModal";
 import { useToast } from "../ui/Toast";
 import { Button, Card, CardHeader } from "../ui/primitives";
@@ -50,6 +51,7 @@ export function SystemTab({ onDirtyChange, onUpdateAvailabilityChange }: Props) 
 
     return (
         <>
+            <MediaToolsCard />
             <Card className="space-y-5">
                 <CardHeader icon={Terminal} title="프로그램 업데이트" />
                 <div className="bg-surface-3 p-4 rounded-[var(--radius-control)] border border-line flex flex-col items-start sm:flex-row sm:items-center justify-between gap-4 [overflow-wrap:anywhere]">
