@@ -16,6 +16,8 @@ OUT = Path(os.environ.get("PHROLOVA_TEST_OUTPUT", "/tmp/phrolova-setup-wizard"))
 LIVE = r"C:\Users\Administrator\Downloads\Phrolova\라이브 녹화 보관\긴 폴더 이름을 확인하는 저장 위치\Live"
 VIDEO = r"C:\Users\Administrator\Downloads\Phrolova\다시보기와 클립 보관\긴 폴더 이름을 확인하는 저장 위치\Video"
 CHOSEN = r"D:\선택한 폴더\라이브 녹화"
+DEFAULT_LIVE = r"C:\Users\Administrator\Downloads\Phrolova\Live"
+DEFAULT_VIDEO = r"C:\Users\Administrator\Downloads\Phrolova\Video"
 VIEWPORTS = ((320, 740), (390, 844), (640, 900), (1440, 1000), (844, 390))
 
 
@@ -30,8 +32,24 @@ async def visible_footer(page, dialog, label):
     assert await page.evaluate("document.documentElement.scrollWidth <= innerWidth"), "page horizontal overflow"
 
 
+async def aligned_directory(field, button_height, field_height=None):
+    sizes = await field.evaluate("""e => {
+        const input=e.getBoundingClientRect(),button=e.parentElement.querySelector('button').getBoundingClientRect(),style=getComputedStyle(e);
+        const top=parseFloat(style.paddingTop),bottom=parseFloat(style.paddingBottom);
+        const lineCenter=parseFloat(style.borderTopWidth)+top+parseFloat(style.lineHeight)/2;
+        return {height:input.height,buttonHeight:button.height,centers:Math.abs(input.top+input.height/2-button.top-button.height/2),
+            paddingDelta:Math.abs(top-bottom),lineCenterDelta:Math.abs(lineCenter-input.height/2)};
+    }""")
+    assert abs(sizes["buttonHeight"] - button_height) < 1, ("browse height", sizes)
+    if field_height is not None:
+        assert abs(sizes["height"] - field_height) < 1, ("bulky default path", sizes)
+        assert sizes["paddingDelta"] < 1 and sizes["lineCenterDelta"] <= 1, ("one-line path text is not vertically centered", sizes)
+    assert sizes["centers"] < 1, ("path/browse alignment", sizes)
+
+
 async def main():
     OUT.mkdir(parents=True, exist_ok=True)
+    default_directories = {"live_download_dir": DEFAULT_LIVE, "vod_download_dir": DEFAULT_VIDEO}
     posts = []
     save_started = asyncio.Event()
     release_save = asyncio.Event()
@@ -41,9 +59,7 @@ async def main():
     async def route_api(route):
         path = urlparse(route.request.url).path
         if path == "/api/setup/status":
-            return await route.fulfill(json={"needs_setup": True, "default_directories": {
-                "live_download_dir": LIVE, "vod_download_dir": VIDEO,
-            }})
+            return await route.fulfill(json={"needs_setup": True, "default_directories": default_directories})
         if path == "/api/settings/browse-dirs":
             return await route.fulfill(json={"current": CHOSEN, "parent": "D:\\", "dirs": []})
         if path == "/api/setup/complete":
@@ -68,6 +84,44 @@ async def main():
         errors = []
         page.on("pageerror", lambda error: errors.append(str(error)))
         try:
+            # Default Windows paths stay compact; narrowing and widening must resize the same controls.
+            await page.set_viewport_size({"width": 1440, "height": 1000})
+            await page.goto(BASE, wait_until="domcontentloaded")
+            dialog = page.get_by_role("dialog", name="기본 설정", exact=True)
+            await expect(dialog).to_be_visible()
+            fields = [dialog.get_by_role("textbox", name=label) for label in ("라이브 저장 위치", "영상 저장 위치")]
+            for field, value in zip(fields, (DEFAULT_LIVE, DEFAULT_VIDEO)):
+                await expect(field).to_have_value(value)
+                await expect(field).to_have_css("font-size", "13px")
+                await aligned_directory(field, 34, 34)
+            await visible_footer(page, dialog, "설정 확인")
+            await page.screenshot(path=str(OUT / "setup-default-desktop.png"))
+            await page.set_viewport_size({"width": 320, "height": 740})
+            await page.wait_for_function("[...document.querySelectorAll('#setup-live-dir,#setup-vod-dir')].every(e => e.getBoundingClientRect().height > 44)")
+            for field in fields:
+                await expect(field).to_have_css("font-size", "13px")
+                assert await field.evaluate("e => e.scrollWidth <= e.clientWidth"), "default path overflows after narrowing"
+                await aligned_directory(field, 44)
+            await visible_footer(page, dialog, "설정 확인")
+            await page.screenshot(path=str(OUT / "setup-default-mobile.png"))
+            for field, value in zip(fields, (r"C:\Live", r"C:\Video")):
+                await field.fill(value)
+            await page.wait_for_function("[...document.querySelectorAll('#setup-live-dir,#setup-vod-dir')].every(e => Math.abs(e.getBoundingClientRect().height - 44) < 1)")
+            for field in fields:
+                await aligned_directory(field, 44, 44)
+            await page.screenshot(path=str(OUT / "setup-short-mobile.png"))
+            for field, value in zip(fields, (DEFAULT_LIVE, DEFAULT_VIDEO)):
+                await field.fill(value)
+            await page.set_viewport_size({"width": 1440, "height": 1000})
+            await page.wait_for_function("[...document.querySelectorAll('#setup-live-dir,#setup-vod-dir')].every(e => Math.abs(e.getBoundingClientRect().height - 34) < 1)")
+            await page.screenshot(path=str(OUT / "setup-default-desktop-restored.png"))
+            for field, value in zip(fields, (LIVE, VIDEO)):
+                await field.fill(value)
+            await page.wait_for_function("[...document.querySelectorAll('#setup-live-dir,#setup-vod-dir')].every(e => e.getBoundingClientRect().height > 34)")
+            for field in fields:
+                assert await field.evaluate("e => e.scrollWidth <= e.clientWidth"), "long path overflows after editing"
+                await aligned_directory(field, 34)
+            default_directories.update(live_download_dir=LIVE, vod_download_dir=VIDEO)
             for width, height in VIEWPORTS:
                 await page.set_viewport_size({"width": width, "height": height})
                 await page.goto(BASE, wait_until="domcontentloaded")
@@ -102,16 +156,18 @@ async def main():
                 await expect(browse).to_be_focused()
                 await live.fill(LIVE)
 
-                # Native radio keyboard navigation chooses one value per group.
-                quality = dialog.get_by_role("radio", name="최고 화질", exact=True)
+                # The same native selects as the live/video settings support mouse and keyboard.
+                quality = dialog.get_by_role("combobox", name="라이브 녹화 화질", exact=True)
                 await quality.focus()
-                await page.keyboard.press("ArrowRight")
-                await expect(dialog.get_by_role("radio", name="1080p", exact=True)).to_be_checked()
-                await page.keyboard.press("ArrowRight")
-                await expect(dialog.get_by_role("radio", name="720p", exact=True)).to_be_checked()
-                await dialog.get_by_role("radio", name=re.compile(r"^MKV\b")).focus()
-                await page.keyboard.press("ArrowRight")
-                await expect(dialog.get_by_role("radio", name=re.compile(r"^MP4\b"))).to_be_checked()
+                await page.keyboard.press("ArrowDown")
+                await page.keyboard.press("Enter")
+                await expect(quality).to_have_value("1080p")
+                await quality.select_option("720p")
+                output_format = dialog.get_by_role("combobox", name="녹화 완료 후 저장 형식", exact=True)
+                await output_format.focus()
+                await page.keyboard.press("ArrowDown")
+                await page.keyboard.press("Enter")
+                await expect(output_format).to_have_value("mp4")
                 await dialog.get_by_role("button", name="설정 확인", exact=True).click()
                 confirmation = page.get_by_role("dialog", name="설정 확인", exact=True)
                 await expect(confirmation.get_by_role("heading", name="설정 확인", exact=True)).to_be_focused()
@@ -128,8 +184,8 @@ async def main():
                 await expect(dialog.get_by_role("heading", name="기본 설정", exact=True)).to_be_focused()
                 await expect(live).to_have_value(LIVE)
                 await expect(video).to_have_value(VIDEO)
-                await expect(dialog.get_by_role("radio", name="720p", exact=True)).to_be_checked()
-                await expect(dialog.get_by_role("radio", name=re.compile(r"^MP4\b"))).to_be_checked()
+                await expect(quality).to_have_value("720p")
+                await expect(output_format).to_have_value("mp4")
                 await live.fill("   ")
                 await expect(dialog.get_by_role("button", name="설정 확인", exact=True)).to_be_disabled()
                 await live.fill(LIVE)
@@ -164,7 +220,7 @@ async def main():
             release_save.set()
             await context.close()
             await browser.close()
-    print("PASS: setup paths/choices, nested folder focus, next/back, blank validation, save busy/failure/retry, 320/390/640/1440px and 844x390 landscape")
+    print("PASS: compact 34/44px paths, textarea resize/edit growth, shared settings selects, nested folder focus, next/back, blank validation, save busy/failure/retry, 320/390/640/1440px and 844x390 landscape")
 
 
 if __name__ == "__main__":

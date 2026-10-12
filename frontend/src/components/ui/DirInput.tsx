@@ -201,7 +201,8 @@ export function DirInput({
         if (!field) return;
         const resize = () => {
             field.style.height = "auto";
-            field.style.height = Math.min(144, Math.max(52, field.scrollHeight + 2)) + "px";
+            const minimum = parseFloat(getComputedStyle(field).minHeight) || 34;
+            field.style.height = Math.min(144, Math.max(minimum, field.scrollHeight + 2)) + "px";
         };
         resize();
         const observer = new ResizeObserver(resize);
@@ -215,7 +216,7 @@ export function DirInput({
                 {multiline ? <textarea
                     ref={pathRef}
                     id={id}
-                    rows={2}
+                    rows={1}
                     value={value}
                     required={required}
                     aria-describedby={describedBy}
@@ -235,8 +236,8 @@ export function DirInput({
                     aria-describedby={describedBy}
                     title={value}
                 />}
-                <Button type="button" icon={FolderOpen} onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setShowBrowser(true); }} className="px-3 shrink-0" title={t("폴더 찾아보기")} aria-label={t("폴더 찾아보기")}>
-                    <span className="hidden sm:inline">{t("찾아보기")}</span>
+                <Button type="button" icon={FolderOpen} onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setShowBrowser(true); }} className={multiline ? "dir-input-browse px-3 shrink-0" : "px-3 shrink-0"} title={t("폴더 찾아보기")} aria-label={t("폴더 찾아보기")}>
+                    <span className={multiline ? "dir-input-browse-label" : "hidden sm:inline"}>{t("찾아보기")}</span>
                 </Button>
             </div>
 
