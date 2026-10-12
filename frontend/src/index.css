@@ -568,8 +568,9 @@ dialog.ui-dialog { top: calc(var(--ui-viewport-top, 0px) + var(--ui-viewport-hei
 .media-add-form { width: 100%; min-width: 0; }
 .media-add-form .ui-input { font-size: 13px; min-height: 34px; }
 .media-add-form .ui-button { min-height: 34px; }
-.dashboard-add-channel.media-add-form > div > div:first-child > .ui-input { width: 120px; justify-content: space-between; }
+.media-platform-trigger { height: 34px; font-size: 13px; padding: 0 10px; }
 .channel-live-preview { max-width: 960px; }
 @media (max-width:639px), (pointer:coarse) {
   .media-add-form .ui-input, .media-add-form .ui-button { min-height: 44px; }
+  .media-platform-trigger { height: 44px; }
 }

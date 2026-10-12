@@ -79,11 +79,19 @@ class SoopLiveEngine:
                 raise RuntimeError('숲 방송 정보를 가져오지 못했습니다.')
             station = {}
             if str(channel.get('RESULT')) == '1':
-                info = await client.get('https://st.sooplive.com/api/get_station_status.php', params={'szBjId': cid})
-                if info.status_code == 200:
-                    body = info.json()
-                    station = body.get('DATA') or body
-                    if not isinstance(station, dict): station = {}
+                # Station totals do not contain current viewers. The official
+                # channel API supplies broad.current_sum_viewer for this live.
+                try:
+                    info = await client.get(f'https://chapi.sooplive.com/api/{cid}/station')
+                    if info.status_code == 200:
+                        body = info.json()
+                        if isinstance(body, dict):
+                            station = body.get('DATA') or body
+                            if not isinstance(station, dict): station = {}
+                except (httpx.HTTPError, ValueError):
+                    # Optional display metadata must not block live detection
+                    # or the independent Streamlink recording resolver.
+                    pass
         self._cache[cid] = (time.monotonic(), channel, station)
         channel['_requires_cookie'] = requires_cookie
         return channel, station
@@ -93,13 +101,20 @@ class SoopLiveEngine:
         c, s = await self._metadata(cid)
         live = str(c.get('RESULT')) == '1' and bool(c.get('BNO'))
         def count(value):
-            try: return max(0, int(value or 0))
-            except (ValueError, TypeError): return 0
+            if value is None or isinstance(value, bool): return None
+            try: return max(0, int(value))
+            except (ValueError, TypeError, OverflowError): return None
+        broad = s.get('broad') if isinstance(s.get('broad'), dict) else {}
+        station_info = s.get('station') if isinstance(s.get('station'), dict) else {}
+        current = count(broad.get('current_sum_viewer')) if str(broad.get('broad_no')) == str(c.get('BNO')) else None
+        if current is None:
+            current = next((parsed for value in (c.get('VIEW_CNT'), c.get('CURRENT_VIEW_CNT'), s.get('view_cnt'))
+                            if (parsed := count(value)) is not None), 0)
         return LiveStatus(channel_id=cid, is_live=live, channel_name=c.get('BJNICK') or s.get('station_name') or cid,
             title=c.get('TITLE') or s.get('station_title') or '', category=c.get('CATE') or s.get('category_name') or '',
-            viewer_count=count(c.get('VIEW_CNT') or c.get('CURRENT_VIEW_CNT') or s.get('view_cnt')),
+            viewer_count=current if live else 0,
             thumbnail_url=c.get('THUMB') or s.get('broad_thumb') or '',
-            profile_image_url=s.get('profile_image') or '', live_started_at=s.get('broad_start'))
+            profile_image_url=s.get('profile_image') or '', live_started_at=s.get('broad_start') or station_info.get('broad_start'))
 
     async def get_qualities(self, channel_id: str) -> list[dict]:
         channel, _ = await self._metadata(channel_id)

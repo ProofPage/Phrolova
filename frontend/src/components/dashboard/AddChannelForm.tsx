@@ -1,7 +1,8 @@
 import { useListboxPosition } from "../../hooks/useListboxPosition";
 import { useListboxKeyboard } from "../../hooks/useListboxKeyboard";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { ChevronDown, Lock, Plus } from "lucide-react";
+import { Lock, Plus } from "lucide-react";
+import { PlatformSelectTrigger } from "../ui/PlatformSelectTrigger";
 import { api, PLATFORM_LABELS, type ChannelDownloadOptions, type Platform, type PlatformStatus } from "../../api/client";
 import { ChannelDownloadModal } from "./ChannelDownloadModal";
 import { useToast } from "../ui/Toast";
@@ -97,19 +98,16 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
         <>
         <form onSubmit={handleSubmit} aria-label="감시 채널 추가" className="dashboard-add-channel media-add-form space-y-2">
             <div className="flex w-full min-w-0 flex-col items-stretch gap-2 sm:flex-row">
-            <div className="relative shrink-0" ref={dropdownRef}>
-                <button
-                    type="button"
+            <div className="relative min-w-0 shrink-0 w-full sm:w-[120px]" ref={dropdownRef}>
+                <PlatformSelectTrigger
+                    label={PLATFORM_LABELS[selectedPlatform]}
+                    dotClass={PLATFORM_DOT_STYLES[selectedPlatform]}
                     onClick={() => setDropdownOpen((open) => !open)}
-                    className="ui-input w-auto px-3 text-ink text-sm flex items-center gap-1.5 hover:bg-surface-3 transition-colors whitespace-nowrap"
+                    className="text-ink hover:bg-surface-3 transition-colors whitespace-nowrap"
                     aria-expanded={dropdownOpen}
                     aria-haspopup="listbox"
                     aria-label={`플랫폼 선택: ${PLATFORM_LABELS[selectedPlatform]}`}
-                >
-                    <span className={`inline-block w-2 h-2 rounded-full ${PLATFORM_DOT_STYLES[selectedPlatform]}`} />
-                    <span>{PLATFORM_LABELS[selectedPlatform]}</span>
-                    <ChevronDown className="w-3 h-3 text-ink-faint" />
-                </button>
+                />
 
                 {dropdownOpen && (
                     <div style={listboxPosition} className="ui-popover absolute top-full mt-2 left-0 z-20 rounded-[var(--radius-control)] min-w-[180px] max-h-[50dvh] overflow-y-auto" role="listbox">
