@@ -106,4 +106,13 @@ CPU·메모리·프로세스 누수의 수일 연속 실험, 수십 GB 실제 VO
 
 ## GitHub CI
 
-PR 제출 후 최신 commit의 Windows x64·Ubuntu x64·Ubuntu ARM64 backend 및 frontend 타입/build 결과를 기록한다.
+코드 커밋 `f81cd15388d1ef27a6e2a43cfbbc572803ba71ca`의 [GitHub Actions CI #101](https://github.com/ProofPage/Phrolova/actions/runs/38237997078) 전체 job이 통과했다. 아래 기록을 추가한 후속 커밋은 보고서만 변경하며 실행 코드는 같다.
+
+| GitHub Actions job | 결과 |
+|---|---|
+| Windows x64 backend | success |
+| Ubuntu x64 backend | success |
+| Ubuntu ARM64 backend | success |
+| frontend TypeScript / build | success |
+
+코드와 보고서는 [PR #9](https://github.com/ProofPage/Phrolova/pull/9)로 제출했다. main과 merge conflict 없음. CI는 자동 테스트이며 OS별 모든 실제 방송·장시간·파일매니저 실험을 대신하지 않는다.
