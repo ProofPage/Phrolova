@@ -533,9 +533,19 @@ class Conductor:
                     "error_detail",
                     "live_started_at",
                     "broadcast_ended",
+                    "monitor_error",
+                    "monitor_error_detail",
+                    "recent_errors",
                 ):
                     if field in saved:
                         setattr(task, field, saved[field])
+            if task.last_error and (task.last_error.startswith("감시 오류:") or task.retry_code == "status_query"):
+                self._remember_error(task, "monitor", task.last_error, task.error_detail)
+                task.last_error = None
+                task.error_detail = None
+                task.retry_code = None
+                task.retry_blocked = False
+                task.retry_at = None
             self._channels[composite_key] = task
             self._scan_events[composite_key] = asyncio.Event()
         if records:
@@ -554,6 +564,7 @@ class Conductor:
         ):
             task.broadcast_ended = False
         task.is_live = status["is_live"]
+        task.broadcast_status = "live" if task.is_live else "offline"
         if not task.is_live:
             from app.engine.preview_frames import frame_previews
             frame_previews.invalidate(task.composite_key)
@@ -632,6 +643,9 @@ class Conductor:
                 "error_detail",
                 "live_started_at",
                 "broadcast_ended",
+                "monitor_error",
+                "monitor_error_detail",
+                "recent_errors",
             )
         }
         self.finalizer.db.execute(
@@ -642,7 +656,32 @@ class Conductor:
             ),
         )
 
+    def _remember_error(self, task, kind, message, detail=None):
+        if task.recent_errors and task.recent_errors[-1].get("kind") == kind and task.recent_errors[-1].get("message") == message:
+            task.recent_errors[-1]["timestamp"] = datetime.now().isoformat()
+            task.recent_errors[-1]["count"] = task.recent_errors[-1].get("count", 1) + 1
+            task.recent_errors[-1]["detail"] = detail
+        else:
+            task.recent_errors.append(dict(kind=kind, message=message, detail=detail, timestamp=datetime.now().isoformat(), count=1))
+            task.recent_errors[:] = task.recent_errors[-10:]
+
+    def _monitor_failure(self, task, error, detail=None):
+        from app.engine.platform_auth import redact_media_error
+        message = redact_media_error(error)
+        task.monitor_status = "retry_wait"
+        task.broadcast_status = "error"
+        task.monitor_error = message
+        task.monitor_error_detail = redact_media_error(detail) if detail else None
+        self._remember_error(task, "monitor", message, task.monitor_error_detail)
+        self._persist_retry(task)
+        self._broadcast_status()
+        count = task.recent_errors[-1]["count"]
+        if count == 1 or count % 10 == 0:
+            logger.warning(f"[{task.composite_key}] 감시 오류 ({count}회): {message}")
+
     def _reset_retry(self, task):
+        if task.last_error:
+            self._remember_error(task, "recording", task.last_error, task.error_detail)
         task.retry_count = 0
         task.retry_blocked = False
         task.retry_at = None
@@ -658,6 +697,7 @@ class Conductor:
         task.last_error = str(failure)
         task.retry_code = failure.code
         task.error_detail = redact_media_error(error)
+        self._remember_error(task, "recording", str(failure), task.error_detail)
         task.retry_blocked = (
             not failure.retryable
             or task.retry_count >= get_settings().max_record_retries
@@ -774,24 +814,20 @@ class Conductor:
                 task = self._channels.get(composite_key)
                 if task is None:
                     break
+                interval = self._poll_interval_for(task)
+                max_retries = get_settings().max_record_retries
                 engine = self._get_engine(task.platform)
                 status = await engine.check_live_status(task.channel_id)
+                if self._channels.get(composite_key) is not task:
+                    break
                 was_live = task.is_live
                 if status.get("status_error"):
-                    from app.engine.recording_errors import RecordingError
-
-                    self._record_failure(
-                        task,
-                        RecordingError(
-                            "status_query",
-                            status["status_error"],
-                            retryable=status.get("status_error_retryable", True),
-                        ),
-                    )
-                    task.error_detail = status.get("error_detail")
-                    self._persist_retry(task)
+                    self._monitor_failure(task, status["status_error"], status.get("error_detail"))
                     await self._wait_for_next_scan(composite_key, interval)
                     continue
+                task.monitor_error = None
+                task.monitor_error_detail = None
+                task.monitor_status = "watching"
                 if not status["is_live"] or (
                     status.get("live_started_at")
                     and task.live_started_at
@@ -828,15 +864,8 @@ class Conductor:
                         break
             except asyncio.CancelledError:
                 break
-            except BaseException as e:
-                if task.platform in (Platform.SOOP, Platform.CIME):
-                    from app.engine.platform_auth import redact_media_error
-
-                    task.last_error = f"감시 오류: {redact_media_error(e)}"
-                    logger.error(f"[{composite_key}] {task.last_error}")
-                else:
-                    task.last_error = f"감시 오류: {str(e)}"
-                    logger.error(f"[{composite_key}] 감시 오류: {e}", exc_info=e)
+            except Exception as e:
+                self._monitor_failure(task, e)
             delay = interval
             if task.retry_at and self._can_auto_record(task):
                 delay = min(
@@ -1168,6 +1197,11 @@ class Conductor:
                 "auto_record_eligible": self._can_auto_record(task),
                 "download_hold_reason": self._download_hold_reason(task),
                 "last_error": getattr(task, "last_error", None),
+                "broadcast_status": task.broadcast_status,
+                "monitor_status": task.monitor_status if self._running else "paused",
+                "monitor_error": task.monitor_error,
+                "monitor_error_detail": task.monitor_error_detail,
+                "recent_errors": task.recent_errors,
                 "retry_count": task.retry_count,
                 "retry_blocked": task.retry_blocked,
                 "retry_at": task.retry_at,

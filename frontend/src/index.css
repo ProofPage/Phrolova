@@ -453,6 +453,11 @@ dialog.ui-dialog { top: calc(var(--ui-viewport-top, 0px) + var(--ui-viewport-hei
 .tag-popover { --tag-safe-left: env(safe-area-inset-left,0px); --tag-safe-right: env(safe-area-inset-right,0px); --tag-safe-top: env(safe-area-inset-top,0px); --tag-safe-bottom: env(safe-area-inset-bottom,0px); max-width: calc(var(--ui-viewport-width,100vw) - 24px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)); }
 .dashboard-page { container: dashboard / inline-size; }
 .dashboard-channel-grid { display: grid; min-width: 0; grid-template-columns: minmax(0,1fr); gap: 12px; }
+.dashboard-channel-list { display: grid; min-width: 0; gap: 12px; grid-template-columns: minmax(0,1fr); }
+.dashboard-channel-grid > *, .dashboard-channel-list > * { order: var(--channel-order); }
+.dashboard-channel-grid > .recording-detail-panel { grid-column: 1 / -1; }
+.dashboard-channel-grid > .recording-channel { align-self: stretch; }
+@container dashboard (min-width:1052px) { .dashboard-channel-grid > * { order: var(--channel-pair-order); } }
 /* 두 카드에 각각 520px을 확보해야 이름과 직접 노출한 조작을 함께 읽을 수 있다. */
 @container dashboard (min-width:1052px) { .dashboard-channel-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 /* 관리 조작은 좁은 카드에서 메뉴로 묶어 제목과 녹화 조작의 공간을 확보한다. */
@@ -555,4 +560,16 @@ dialog.ui-dialog { top: calc(var(--ui-viewport-top, 0px) + var(--ui-viewport-hei
   .channel-card-shell .channel-primary-actions, .channel-card-shell .channel-secondary-actions { display: contents; }
   .channel-card-shell .channel-card-name > img { display: block; }
   .channel-card-shell .channel-card-avatar { display: grid; }
+}
+
+/* Shared page and media registration constraints. */
+.product-page, .page-summary { min-width: 0; max-width: 100%; }
+.page-summary { flex: 0 1 auto; }
+.media-add-form { width: 100%; min-width: 0; }
+.media-add-form .ui-input { font-size: 13px; min-height: 34px; }
+.media-add-form .ui-button { min-height: 34px; }
+.dashboard-add-channel.media-add-form > div > div:first-child > .ui-input { width: 120px; justify-content: space-between; }
+.channel-live-preview { max-width: 960px; }
+@media (max-width:639px), (pointer:coarse) {
+  .media-add-form .ui-input, .media-add-form .ui-button { min-height: 44px; }
 }

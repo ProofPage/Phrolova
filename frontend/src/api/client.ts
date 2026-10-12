@@ -30,6 +30,11 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
 };
 
 export interface Channel {
+    broadcast_status?: 'checking' | 'live' | 'offline' | 'error';
+    monitor_status?: 'watching' | 'paused' | 'retry_wait';
+    monitor_error?: string | null;
+    monitor_error_detail?: string | null;
+    recent_errors?: {kind: string; message: string; detail?: string; timestamp: string; count?: number}[];
     output_format?: 'mp4' | 'mkv' | null;
     postprocess?: RecordingJob | null;
     recording_inspection?: {state: 'passed' | 'failed'; message: string; duration?: number; tracks?: {codec_type?: string; width?: number; height?: number; avg_frame_rate?: string}[]};
@@ -307,7 +312,7 @@ export interface NotificationStatus {
 
 
 
-export interface RecordingJob { error_code?: string; processing_stage?: string; retryable?: boolean; platform?: Platform; session_id?: string; capture_format?: string; started_at?: string; ended_at?: string; file_size_bytes?: number; source_available?: boolean; output_available?: boolean; can_open?: boolean; can_retry?: boolean; can_inspect?: boolean; hidden?: boolean; id: string; composite_key: string; channel_name: string; state: string; target_format: string; progress: number | null; output_path: string | null; source_paths: string[]; error_message: string | null; inspection_state: string; diagnostics?: Record<string, unknown>; source_cleanup_warning?: string; }
+export interface RecordingJob { warning_message?: string | null; error_code?: string; processing_stage?: string; retryable?: boolean; platform?: Platform; session_id?: string; capture_format?: string; started_at?: string; ended_at?: string; file_size_bytes?: number; source_available?: boolean; output_available?: boolean; can_open?: boolean; can_retry?: boolean; can_inspect?: boolean; hidden?: boolean; id: string; composite_key: string; channel_name: string; state: string; target_format: string; progress: number | null; output_path: string | null; source_paths: string[]; error_message: string | null; inspection_state: string; diagnostics?: Record<string, unknown>; source_cleanup_warning?: string; }
 export interface RecordingOutputSettings { output_format: 'mp4'|'mkv'|'ts'; keep_source_ts: boolean; max_concurrent: number; }
 
 // ── Stats Types ─────────────────────────────────────────
@@ -428,7 +433,7 @@ export const api = {
     retryVodMetadata: async (id: string) => { await client.post(`/vod/${id}/metadata`); },
     updateVodQuality: async (id: string, quality: string) => { await client.patch(`/vod/${id}/quality`, { quality }); },
     removeVodTask: async (id: string) => { await client.delete(`/vod/${id}`); },
-    downloadVod: async (url: string, quality: string = "best", output_dir?: string, cdn: ChzzkVodCdn = "default") => {
+    downloadVod: async (url: string, quality: string = "best", output_dir?: string, cdn: ChzzkVodCdn = "akamai") => {
         const res = await client.post<VodAddResult>("/vod/download", {
             url,
             quality,
@@ -456,7 +461,7 @@ export const api = {
         const res = await client.post(`/vod/${task_id}/resume`);
         return res.data;
     },
-    retryVodDownload: async (task_id: string, cdn: ChzzkVodCdn = "default") => {
+    retryVodDownload: async (task_id: string, cdn: ChzzkVodCdn = "akamai") => {
         const res = await client.post<{ message: string; old_task_id: string; new_task_id: string }>(`/vod/${task_id}/retry`, { cdn });
         return res.data;
     },
@@ -504,7 +509,7 @@ export const api = {
         save_live_preview: boolean,
         live_filename_template: string,
         recording_quality: string,
-        chzzk_live_cdn: ChzzkVodCdn = "default",
+        chzzk_live_cdn: ChzzkVodCdn = "akamai",
         location?: { live_download_dir: string; monitor_interval: number },
     ) => {
         const res = await client.put("/settings/live", {
@@ -632,7 +637,7 @@ export const api = {
     retryRecording: async (id: string, output_format?: 'mp4'|'mkv') => (await client.post(`/recordings/${id}/retry`, {output_format})).data,
     inspectRecording: async (id: string) => (await client.post(`/recordings/${id}/inspect`)).data,
     openRecordingLocation: async (id: string) => (await client.post(`/recordings/${id}/open-location`)).data,
-    recordingFileUrl: (id: string) => `${API_BASE_URL}/recordings/${id}/file`,
+    recordingFileUrl: (id: string, source = false) => `${API_BASE_URL}/recordings/${id}/file${source ? '?source=true' : ''}`,
     // System Logs
     getSystemLogFiles: async (): Promise<SystemLogFile[]> => {
         const res = await client.get<SystemLogFile[]>("/system/logs");

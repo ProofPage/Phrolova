@@ -68,7 +68,7 @@ async def main():
         await expect(card.locator('.recording-tag-overflow')).to_have_text('+1')
         # Details and state survive mode changes without remounting the card.
         await card.get_by_role('button', name='상세 보기: 강지').click()
-        await expect(card.locator('.recording-details-fields')).to_contain_text('/영상/한글 파일 [1080p].ts')
+        await expect(page.locator('[id="channel-details-chzzk%3Arecording-0"] .recording-details-fields')).to_contain_text('/영상/한글 파일 [1080p].ts')
         await card.evaluate('(c)=>c.dataset.testIdentity="preserved"')
         await page.get_by_role('button', name='카드로 보기', exact=True).click()
         assert await card.get_attribute('data-test-identity') == 'preserved'

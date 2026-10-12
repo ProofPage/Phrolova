@@ -477,6 +477,7 @@ async def test_concurrent_manual_auto_start_uses_one_capture(tmp_path, monkeypat
 
 def test_live_cdn_settings_saved_independently(api_client):
     from app.core.config import get_settings
+    previous_vod_cdn = get_settings().chzzk_vod_cdn
 
     result = api_client.put(
         "/api/settings/live", json={"max_record_retries": 3, "chzzk_live_cdn": "akamai"}
@@ -486,7 +487,7 @@ def test_live_cdn_settings_saved_independently(api_client):
         and result.json()["settings"]["chzzk_live_cdn"] == "akamai"
     )
     assert api_client.get("/api/settings").json()["chzzk_live_cdn"] == "akamai"
-    assert get_settings().chzzk_vod_cdn == "default"
+    assert get_settings().chzzk_vod_cdn == previous_vod_cdn
     assert (
         api_client.put(
             "/api/settings/live",
@@ -750,3 +751,21 @@ async def test_auto_off_during_resolution_does_not_open_stream(tmp_path, monkeyp
         await pipe.start_recording(output_dir=str(tmp_path), source_resolver=resolve)
     assert failure.value.code == "auto_record_disabled" and pipe.duration_seconds == 0
     opened.assert_not_called()
+
+
+@pytest.mark.parametrize("port", [57403, 5401, 403, 401])
+def test_url_numbers_do_not_become_authentication_status(port):
+    from app.engine.recording_errors import classify_recording_error
+    error = RuntimeError(f"Unable to open URL http://127.0.0.1:{port}/expired.m3u8: 404 Client Error: Not Found")
+    failure = classify_recording_error(error)
+    assert failure.code == "connection" and failure.retryable
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_http_cause_keeps_authentication_nonretryable(status):
+    from app.engine.recording_errors import classify_recording_error
+    from requests import HTTPError, Response
+    response = Response(); response.status_code = status
+    error = RuntimeError("Unable to open protected stream")
+    error.__cause__ = HTTPError("request failed", response=response)
+    failure = classify_recording_error(error)
+    assert failure.code == "authentication" and not failure.retryable

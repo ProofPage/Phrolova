@@ -1,5 +1,6 @@
 """New defaults preserve explicit settings and use the real engine entry points."""
 
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -100,6 +101,8 @@ async def test_default_chzzk_requires_time_machine(
     )
     if available:
         await pipeline.start_recording(**arguments)
+        assert Path(pipeline._output_path).name == "테스트.ts"
+        assert pipeline.session_id not in pipeline._output_path
         assert pipeline._resume_args[0] == stream.url
         assert pipeline._resume_args[4] is True
     else:

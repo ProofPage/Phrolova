@@ -1,4 +1,4 @@
-import { memo, useId, useRef } from 'react';
+import { memo, useRef, type CSSProperties } from 'react';
 import { Loader2, Play, Settings2, Square, Users } from 'lucide-react';
 import { RecordingPostprocess } from './RecordingPostprocess';
 import { clsx } from 'clsx';
@@ -20,6 +20,8 @@ export interface ChannelItemProps extends ReorderProps {
     channel: Channel;
     isSelected?: boolean;
     onSelect?: () => void;
+    detailsId?: string;
+    layoutStyle?: CSSProperties;
     onStartRecord: (channel: Channel) => void;
     onStopRecord: (channel: Channel) => void;
     onRemove: (channel: Channel) => void;
@@ -40,12 +42,13 @@ const finite = (value: unknown): value is number => typeof value === 'number' &&
 function RecordingStatus({ channel, pendingAction }: Pick<ChannelItemProps, 'channel' | 'pendingAction'>) {
     const { t } = useLanguage();
     const state = channel.recording?.state;
+    const error = channel.last_error && !channel.last_error.startsWith('감시 오류:') ? channel.last_error : null;
     const [label, tone] = pendingAction === 'stop' || state === 'stopping' ? ['녹화 중지 중', 'neutral']
         : pendingAction === 'start' ? ['녹화 준비 중', 'neutral']
         : state === 'connecting' ? ['스트림 연결 중', 'info']
         : state === 'reconnecting' ? ['재연결 중', 'warn']
         : channel.recording?.is_recording ? ['녹화 중', 'ok']
-        : state === 'error' || channel.last_error ? [channel.recording?.has_data === false || !channel.recording?.file_size_bytes ? '녹화 시작 실패' : '녹화 오류', 'danger']
+        : state === 'error' || error ? [channel.recording?.has_data === false || !channel.recording?.file_size_bytes ? '녹화 시작 실패' : '녹화 오류', 'danger']
         : state === 'completed' ? ['녹화 완료', 'ok']
         : ['녹화 대기', 'neutral'];
     return <span className={`recording-status is-${tone}`} role="status" aria-live="polite"><i aria-hidden="true" />{t(label)}</span>;
@@ -60,19 +63,21 @@ function RecordingChannelHeader({ channel, pendingAction }: Pick<ChannelItemProp
             : <span className="recording-avatar recording-avatar-fallback" aria-hidden="true"><Users className="size-4" /></span>}
         <div className="recording-channel-copy">
             <div className="recording-channel-name"><h3 title={name}>{name}</h3><PlatformBadge platform={channel.platform || 'chzzk'} /></div>
-            <p className="recording-broadcast-title" title={channel.title || undefined}>{channel.is_live && channel.title ? channel.title : t('현재 방송 중이 아닙니다.')}</p>
+            <p className="recording-broadcast-title" title={channel.title || undefined}>{channel.is_live && channel.title ? channel.title : t(channel.broadcast_status === 'checking' ? '방송 상태를 확인하는 중입니다.' : channel.broadcast_status === 'error' ? '방송 상태 확인에 실패했습니다.' : '현재 방송 중이 아닙니다.')}</p>
             {(channel.is_live || tags.length > 0) && <div className="recording-channel-meta">
                 {channel.is_live && finite(channel.viewer_count) && <span className="recording-viewers" title={`${t('시청자')}: ${channel.viewer_count.toLocaleString()}`}><Users className="size-3" aria-hidden="true" /><span>{t('시청자')} {channel.viewer_count.toLocaleString()}</span></span>}
                 {tags.slice(0, 2).map(tag => <span className="recording-tag" key={tag} title={tag}>{tag}</span>)}
                 {tags.length > 2 && <span className="recording-tag-overflow" title={tags.slice(2).join(', ')}>+{tags.length - 2}</span>}
             </div>}
             <div className="recording-channel-statuses" aria-label={t('방송 및 녹화 상태')}>
-                <span className={clsx('recording-status', channel.is_live && 'is-info')} role="status"><i aria-hidden="true" />{t(channel.is_live ? '라이브' : '오프라인')}</span>
-                {(channel.is_live || channel.recording?.state || channel.last_error || pendingAction) && <RecordingStatus channel={channel} pendingAction={pendingAction} />}
+                <span className={clsx('recording-status', channel.is_live && 'is-info')} role="status"><i aria-hidden="true" />{t(channel.broadcast_status === 'checking' ? '상태 확인 중' : channel.broadcast_status === 'error' ? '상태 확인 실패' : channel.is_live ? '라이브' : '오프라인')}</span>
+                {(channel.is_live || channel.recording?.state || (channel.last_error && !channel.last_error.startsWith('감시 오류:')) || pendingAction) && <RecordingStatus channel={channel} pendingAction={pendingAction} />}
+            {channel.monitor_status && <span className="recording-status">{t(channel.monitor_status === 'paused' ? '감시 일시 중지' : channel.monitor_status === 'retry_wait' ? '감시 재시도 대기' : '감시 중')}</span>}
             </div>
             {channel.download_hold_reason && <DownloadHoldStatus channel={channel} />}
             {channel.recording?.warning_message && <p className="recording-status-message text-warn" role="status">{channel.recording.warning_message}</p>}
-            {channel.last_error && <p className="recording-status-message text-danger" role="status">{localizePlatformNames(channel.last_error)}{channel.retry_at && <span className="text-ink-muted"> · 재연결 대기</span>}</p>}
+            {channel.monitor_error && <p className="recording-status-message text-danger" role="status">{t('감시 오류')}: {localizePlatformNames(channel.monitor_error)}</p>}
+            {channel.last_error && !channel.last_error.startsWith('감시 오류:') && <p className="recording-status-message text-danger" role="status">{localizePlatformNames(channel.last_error)}{channel.retry_at && <span className="text-ink-muted"> · 재연결 대기</span>}</p>}
         </div>
     </header>;
 }
@@ -128,7 +133,7 @@ function RecordingChannelDetails({ channel }: { channel: Channel }) {
     const recording = channel.recording;
     const url = channel.channel_url || ((channel.platform || 'chzzk') === 'chzzk' ? `https://chzzk.naver.com/live/${encodeURIComponent(channel.channel_id)}` : null);
     return <div className="recording-channel-details">
-        <LivePreview channelKey={getChannelKey(channel)} isLive={channel.is_live} name={name} poster={channel.thumbnail_url} />
+        <LivePreview channelKey={getChannelKey(channel)} isLive={channel.is_live} broadcastState={channel.broadcast_status} name={name} poster={channel.thumbnail_url} />
         <div className="recording-details-copy">
         <dl className="recording-details-fields">
             <div><dt>{t('채널')}</dt><dd>{name}</dd></div>
@@ -137,13 +142,14 @@ function RecordingChannelDetails({ channel }: { channel: Channel }) {
             {url && <div><dt>{t('방송 URL')}</dt><dd><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></dd></div>}
             {recording?.output_path && <div><dt>{t('녹화 파일')}</dt><dd>{recording.output_path}</dd></div>}
             {recording?.start_time && <div><dt>{t('녹화 시작 시각')}</dt><dd>{new Date(recording.start_time).toLocaleString()}</dd></div>}
-            {recording?.continuity_source?.selected && <div><dt>{t('수신 경로')}</dt><dd>{t(recording.continuity_source.selected.cdn === 'akamai' ? 'Akamai CDN' : recording.continuity_source.selected.cdn === 'korean' ? '국내 CDN' : '기본 CDN')} · {recording.continuity_source.selected.mode === 'llhls' ? 'LL-HLS' : 'HLS'}</dd></div>}
+            {recording?.continuity_source?.selected && <div><dt>{t('수신 경로')}</dt><dd>{t(recording.continuity_source.selected.cdn === 'akamai' ? 'Akamai CDN' : recording.continuity_source.selected.cdn === 'korean' ? 'Naver CDN' : '기본 CDN')} · {recording.continuity_source.selected.mode === 'llhls' ? 'LL-HLS' : 'HLS'}</dd></div>}
             {recording?.continuity_source?.standby && <div><dt>{t('예비 CDN')}</dt><dd>Akamai CDN · {t(({ ready: '준비 완료', absent: '제공되지 않음', unavailable: '연결 확인 실패' })[recording.continuity_source.standby.state])}</dd></div>}
             {channel.recording_quality && <div><dt>{t('녹화 화질')}</dt><dd>{channel.recording_quality === 'best' ? t('최고 화질') : channel.recording_quality}</dd></div>}
             {channel.recording_inspection && <div><dt>{t('파일 검사')}</dt><dd className={channel.recording_inspection.state === 'passed' ? 'text-ok' : 'text-warn'} role="status">{channel.recording_inspection.message}</dd></div>}
             {channel.download_condition && <div><dt>{t('녹화 조건')}</dt><dd>{t(({ all: '모든 방송 녹화', watchalong: '같이보기 방송만 녹화', exclude_watchalong: '같이보기 방송 제외' })[channel.download_condition])}</dd></div>}
             {!!channel.tags?.length && <div><dt>{t('태그')}</dt><dd>{channel.tags.join(', ')}</dd></div>}
         </dl>
+        {!!channel.recent_errors?.length && <details className="recording-error"><summary>{t('최근 오류 이력')}</summary>{channel.recent_errors.slice().reverse().map((error,index)=><div key={`${error.timestamp}-${index}`} className="mt-2"><p className="text-ink-muted">{new Date(error.timestamp).toLocaleString()} · {error.kind === 'monitor' ? t('감시') : t('녹화')}</p><p>{error.message}</p>{error.detail && <pre className="whitespace-pre-wrap break-words">{error.detail}</pre>}</div>)}</details>}
         {channel.last_error && <details className="recording-error"><summary>{t('최근 녹화 오류')}</summary><p>{localizePlatformNames(channel.last_error)}</p>{channel.error_detail && <pre className="whitespace-pre-wrap break-words text-xs">{localizePlatformNames(channel.error_detail)}</pre>}</details>}
         </div>
     </div>;
@@ -152,17 +158,26 @@ function RecordingChannelDetails({ channel }: { channel: Channel }) {
 export function RecordingChannelCard(props: ChannelItemProps & { mode: 'grid' | 'list' }) {
     const { channel } = props;
     const { t } = useLanguage();
-    const detailsId = useId();
-    return <Card padded={false} className={clsx('channel-row-card recording-channel', `recording-channel--${props.mode}`, props.isSelected && 'is-selected', props.isDragging && 'opacity-45', props.isDropTarget && 'ring-2 ring-[var(--primary)]')} data-channel-key={getChannelKey(channel)}>
+    const detailsId = props.detailsId || `channel-details-${encodeURIComponent(getChannelKey(channel))}`;
+    return <Card padded={false} className={clsx('channel-row-card recording-channel', `recording-channel--${props.mode}`, props.isSelected && 'is-selected', props.isDragging && 'opacity-45', props.isDropTarget && 'ring-2 ring-[var(--primary)]')} data-channel-key={getChannelKey(channel)} style={props.layoutStyle}>
         <div className="recording-channel-summary">
             <RecordingChannelHeader channel={channel} pendingAction={props.pendingAction} />
             <div className="recording-channel-management"><ChannelActions {...props} detailsId={detailsId} tagControl={<TagManager compact busy={props.isTagLoading} availableTags={props.globalTags} selectedTags={channel.tags || []} onAddTag={tag => props.onAddTag(channel, tag)} onRemoveTag={tag => props.onRemoveTag(channel, tag)} onCreateTag={props.onCreateTag} triggerLabel={t('태그 관리')} />} /></div>
             <RecordingControls {...props} />
             <RecordingMetrics recording={channel.recording} />
         </div>
-        <div className="recording-channel-extra" hidden={!channel.postprocess && !props.isSelected}>
+        <div className="recording-channel-extra" hidden={!channel.postprocess}>
             {channel.postprocess && <div className="recording-channel-postprocess"><RecordingPostprocess job={channel.postprocess}/></div>}
-            <div id={detailsId} className="recording-detail-disclosure" hidden={!props.isSelected}>{props.isSelected && <RecordingChannelDetails channel={channel} />}</div>
         </div>
     </Card>;
+}
+
+export function RecordingChannelPanel({ channel, id, selected, onClose, layoutStyle }: { channel: Channel; id: string; selected: boolean; onClose: () => void; layoutStyle: CSSProperties }) {
+    const { t } = useLanguage();
+    return <section id={id} className="recording-detail-panel" hidden={!selected} style={layoutStyle} aria-label={`${channel.channel_name || channel.channel_id} ${t('방송 상세')}`}>
+        {selected && <>
+            <div className="recording-detail-panel-heading"><strong>{channel.channel_name || channel.channel_id}</strong><PlatformBadge platform={channel.platform || 'chzzk'} /><Button onClick={onClose}>{t('상세 접기')}</Button></div>
+            <RecordingChannelDetails channel={channel} />
+        </>}
+    </section>;
 }

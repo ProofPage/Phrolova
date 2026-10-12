@@ -95,7 +95,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
 
     return (
         <>
-        <form onSubmit={handleSubmit} aria-label="감시 채널 추가" className="dashboard-add-channel space-y-2">
+        <form onSubmit={handleSubmit} aria-label="감시 채널 추가" className="dashboard-add-channel media-add-form space-y-2">
             <div className="flex w-full min-w-0 flex-col items-stretch gap-2 sm:flex-row">
             <div className="relative shrink-0" ref={dropdownRef}>
                 <button

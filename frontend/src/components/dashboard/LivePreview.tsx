@@ -6,11 +6,11 @@ import { Button } from "../ui/primitives";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { preferredNativePreviewUrl, preferredPreviewLevel } from "../../utils/livePreviewQuality";
 
-type PreviewProps = { channelKey: string; isLive: boolean; name: string; poster?: string };
+type PreviewProps = { channelKey: string; isLive: boolean; name: string; poster?: string; broadcastState?: string };
 export function LivePreview(props: PreviewProps) {
     return <HlsLivePreview {...props} />;
 }
-function HlsLivePreview({ channelKey, isLive, name, poster }: PreviewProps) {
+function HlsLivePreview({ channelKey, isLive, name, poster, broadcastState }: PreviewProps) {
     const { t } = useLanguage();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [attempt, setAttempt] = useState(0);
@@ -165,14 +165,14 @@ function HlsLivePreview({ channelKey, isLive, name, poster }: PreviewProps) {
         };
     }, [channelKey, isLive, attempt]);
 
-    return <div className="channel-live-preview" aria-label={`${name} ${t("방송 미리보기")}`}>
+    return <div className={`channel-live-preview${!isLive ? " is-offline" : ""}`} aria-label={`${name} ${t("방송 미리보기")}`}>
         <div className="channel-preview-stage">
         {isLive && <div className="channel-preview-player" hidden={state !== "ready"}>
             <video ref={videoRef} controls autoPlay muted playsInline poster={poster} className="size-full object-contain" aria-label={`${name} LIVE`} />
         </div>}
         {(!isLive || state !== "ready") && <div className="channel-preview-status" role="status" aria-busy={isLive && state === "loading"}>
             {isLive && state === "loading" ? <span className="size-5 shrink-0 animate-spin rounded-full border-2 border-line-strong border-t-info" aria-hidden="true" /> : isLive ? <CircleAlert className="size-5 text-ink-faint" aria-hidden="true" /> : <VideoOff className="size-5 text-ink-faint" aria-hidden="true" />}
-            <span className="channel-preview-message">{t(!isLive ? "현재 방송 중이 아닙니다." : state === "loading" ? "미리보기를 불러오는 중" : message)}</span>
+            <span className="channel-preview-message">{t(!isLive ? broadcastState === "checking" ? "방송 상태를 확인하는 중입니다." : broadcastState === "error" ? "방송 상태 확인에 실패했습니다." : "현재 방송 중이 아닙니다." : state === "loading" ? "미리보기를 불러오는 중" : message)}</span>
             {isLive && state === "error" && <Button type="button" aria-label={t("다시 시도")} onClick={() => { setState("loading"); setAttempt(value => value + 1); }}>{t("다시 시도")}</Button>}
         </div>}
         </div>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Plus } from 'lucide-react';
 import { api, type VodTask } from '../api/client';
 import { useVod } from '../contexts/VodContext';
-import { Button, Card } from './ui/primitives';
+import { Button } from './ui/primitives';
 import { DownloadSourceSelect } from './DownloadSourceSelect';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getErrorMessage } from '../utils/error';
@@ -66,7 +66,7 @@ export function DownloadInput({ tasks }: { tasks: VodTask[] }) {
         } catch (error) { errors.push(getErrorMessage(error, t('영상 추가에 실패했습니다.'))); }
         finally { setProblems(errors); busyRef.current = false; setBusy(null); }
     };
-    return <Card padded={false} className={`download-input-card ${dragging ? 'is-dragging' : ''}`} data-testid="vod-preparation"
+    return <div className={`download-input-card media-add-form ${dragging ? 'is-dragging' : ''}`} data-testid="vod-preparation"
         onDragOver={event => { if (event.dataTransfer.types.some(type => ['text/uri-list', 'text/plain', 'text/html'].includes(type))) { event.preventDefault(); setDragging(true); } }}
         onDragLeave={() => setDragging(false)} onDrop={event => { const input = droppedVodText(event.dataTransfer); setDragging(false); if (input && !busyRef.current) { event.preventDefault(); setText(input); setProblems([]); setResult(''); } }}>
         <div className="download-input-fields">
@@ -88,5 +88,5 @@ export function DownloadInput({ tasks }: { tasks: VodTask[] }) {
         </div>
         {result && <p role="status" className="text-xs text-ok">{result}</p>}
         {problems.length > 0 && <ul role="alert" className="text-xs text-warn break-words space-y-1">{problems.map((problem, index) => <li key={index}>{problem}</li>)}</ul>}
-    </Card>;
+    </div>;
 }

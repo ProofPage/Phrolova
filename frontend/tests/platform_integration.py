@@ -97,11 +97,12 @@ async def main():
             await dialog.get_by_role('button',name='설정 저장',exact=True).click()
             assert [call[2] for call in calls if call[0].endswith('/download-options')][-1]['recording_quality']=='720p60'
             await card.get_by_role('button',name='상세 보기: '+LABELS[platform]+' 샘플').click()
-            video=card.locator('video')
-            await expect(card.locator('.channel-preview-player')).to_be_visible()
+            panel=page.locator(f'[id="channel-details-{platform}%3Aalice"]')
+            video=panel.locator('video')
+            await expect(panel.locator('.channel-preview-player')).to_be_visible()
             assert await video.evaluate('v=>v.videoWidth')==640
             assert await video.evaluate('v=>v.controls')
-        soop_video=page.locator('[data-channel-key="soop:alice"] video')
+        soop_video=page.locator('[id="channel-details-soop%3Aalice"] video')
         before=await soop_video.evaluate('v=>v.currentTime'); await asyncio.sleep(.5)
         assert await soop_video.evaluate('v=>v.currentTime')>before
         for width in (360,390,768,1024,1440):
@@ -116,12 +117,13 @@ async def main():
         for platform in ('soop','cime'):
             await page.locator('[data-channel-key="'+platform+':alice"]').get_by_role('button',name='상세 접기: '+LABELS[platform]+' 샘플').click()
         before=dict(frames); await asyncio.sleep(5.3); assert frames==before
+        panel=page.locator('[id="channel-details-cime%3Aalice"]')
         fail_frame=True
         card=page.locator('[data-channel-key="cime:alice"]')
         await card.get_by_role('button',name='상세 보기: 씨미 샘플').click()
-        await expect(card.get_by_role('button',name='다시 시도',exact=True)).to_be_visible()
-        fail_frame=False; await card.get_by_role('button',name='다시 시도',exact=True).click()
-        await expect(card.locator('.channel-preview-player')).to_be_visible()
+        await expect(panel.get_by_role('button',name='다시 시도',exact=True)).to_be_visible()
+        fail_frame=False; await panel.get_by_role('button',name='다시 시도',exact=True).click()
+        await expect(panel.locator('.channel-preview-player')).to_be_visible()
         await page.goto(BASE+'/vod')
         panel=page.get_by_test_id('vod-preparation')
         await panel.get_by_role('combobox').click()

@@ -261,8 +261,7 @@ class YtdlpLivePipeline:
             budget = (
                 240
                 - len(str(save_dir))
-                - len(self.session_id)
-                - len(" [].native.mp4.part")
+                - len(" (999999).native.mp4.part")
             )
             if budget < 1:
                 raise RecordingError(
@@ -270,23 +269,8 @@ class YtdlpLivePipeline:
                     "저장 폴더 경로가 너무 깁니다. 더 짧은 경로를 선택하세요.",
                 )
             stem = stem[:budget]
-        filename = f"{stem} [{self.session_id}].ts"
+        filename = f"{stem}.ts"
         output_file = save_dir / filename
-        suffix_number = 1
-        preview_suffixes = (".jpg", ".jpeg", ".png", ".webp", ".avif")
-        while (
-            output_file.exists()
-            or Path(str(output_file) + ".part").exists()
-            or any(
-                (save_dir / f"{output_file.stem}{suffix}").exists()
-                for suffix in preview_suffixes
-            )
-        ):
-            output_file = (
-                save_dir
-                / f"{Path(filename).stem} ({suffix_number}){Path(filename).suffix}"
-            )
-            suffix_number += 1
         self._output_path = str(output_file)
 
         # ── Phase 1: 타임머신 또는 yt-dlp에서 HLS URL + HTTP 헤더 추출 ──
@@ -392,9 +376,11 @@ class YtdlpLivePipeline:
             quality,
         )
         try:
-            # Exclusive creation reserves the filename without overwriting data.
-            with open(self._source_files[0], "xb"):
-                pass
+            # Reserve after URL resolution. Concurrent sessions compete through
+            # exclusive creation, then use readable suffixes instead of UUIDs.
+            output_file = self._reserve_capture_file(output_file)
+            self._output_path = str(output_file)
+            self._source_files = [str(output_file) + ".part"]
             for attempt in range(2):
                 self._intentional_stop = False
                 try:
@@ -427,6 +413,27 @@ class YtdlpLivePipeline:
             self._state = RecordingState.ERROR
             self._closed = True
             raise
+
+    @staticmethod
+    def _reserve_capture_file(base: Path) -> Path:
+        """Reserve a human-readable capture name without replacing any file."""
+        family = ('.ts', '.ts.part', '.native.mp4', '.native.mp4.part',
+                  '.native.ts', '.native.mkv', '.mkv', '.mp4',
+                  '.ts.audio1', '.ts.audio1.part', '.native.mp4.audio1', '.native.mp4.audio1.part',
+                  '.jpg', '.jpeg', '.png', '.webp', '.avif')
+        number = 1
+        while True:
+            stem = base.stem if number == 1 else f"{base.stem} ({number})"
+            candidate = base.with_name(stem + base.suffix)
+            if any(base.with_name(stem + suffix).exists() for suffix in family):
+                number += 1
+                continue
+            try:
+                with Path(str(candidate) + '.part').open('xb'):
+                    pass
+                return candidate
+            except FileExistsError:
+                number += 1
 
     def _ensure_start_allowed(self):
         guard = getattr(self, "_start_guard", None)

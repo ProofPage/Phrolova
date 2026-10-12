@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Radio, WifiOff } from "lucide-react";
 import { api, type Channel, type PlatformStatus } from "../api/client";
 import { AddChannelForm } from "../components/dashboard/AddChannelForm";
 import { ChannelDownloadModal } from "../components/dashboard/ChannelDownloadModal";
 import { LiveDownloadCondition } from "../components/dashboard/LiveDownloadCondition";
-import { RecordingChannelCard } from "../components/dashboard/RecordingChannelCard";
+import { RecordingChannelCard, RecordingChannelPanel } from "../components/dashboard/RecordingChannelCard";
 import { RecordingJobsPanel } from "../components/dashboard/RecordingJobsPanel";
 import { DashboardFilters, type StatusFilter, type ViewMode } from "../components/dashboard/DashboardFilters";
 import { useConfirm } from "../components/ui/ConfirmModal";
@@ -12,7 +12,8 @@ import { Button, EmptyState, PageHeader } from "../components/ui/primitives";
 import { useToast } from "../components/ui/Toast";
 import { useChannelReorder } from "../hooks/useChannelReorder";
 import { useChannelStream } from "../hooks/useChannelStream";
-import { getChannelKey } from "../utils/channel";
+import { useCardGrid } from "../hooks/useCardGrid";
+import { getBroadcastStatus, getChannelKey } from "../utils/channel";
 import { getErrorMessage } from "../utils/error";
 import { useLanguage } from "../contexts/LanguageContext";
 
@@ -242,14 +243,16 @@ export default function Dashboard() {
         }
     };
 
-    const liveCount = channels.filter((channel) => channel.is_live).length;
+    const liveCount = channels.filter((channel) => getBroadcastStatus(channel) === 'live').length;
+    const offlineCount = channels.filter((channel) => getBroadcastStatus(channel) === 'offline').length;
     const recordingCount = channels.filter((channel) => channel.recording?.is_recording).length;
     const filteredChannels = orderedChannels.filter((channel) => {
         if (filter === "recording" && !channel.recording?.is_recording) return false;
-        if (filter === "live" && !channel.is_live) return false;
-        if (filter === "offline" && channel.is_live) return false;
+        if (filter === "live" && getBroadcastStatus(channel) !== 'live') return false;
+        if (filter === "offline" && getBroadcastStatus(channel) !== 'offline') return false;
         return selectedFilterTags.length === 0 || selectedFilterTags.some((tag) => (channel.tags || []).includes(tag));
     });
+    const gridRef = useCardGrid(viewMode === 'grid', filteredChannels.map(getChannelKey).join('|'));
 
     useEffect(() => {
         if (initialLoading) return;
@@ -272,7 +275,7 @@ export default function Dashboard() {
         onCreateTag: handleCreateGlobalTag,
     };
 
-    const renderChannel = (channel: Channel) => {
+    const renderChannel = (channel: Channel, index: number) => {
         const key = getChannelKey(channel);
         const props = { ...itemProps, channel, isSelected: expandedChannelKeys.has(key), onSelect: () => setExpandedChannelKeys(current => {
             const next = new Set(current);
@@ -280,8 +283,23 @@ export default function Dashboard() {
             else next.add(key);
             return next;
         }), ...getReorderProps(key, filteredChannels.map(getChannelKey)), isActionLoading: !!pendingActions[key], pendingAction: pendingActions[key], isAutoRecordLoading: autoLoading.has(key), isTagLoading: tagLoading.has(key) };
-        return <RecordingChannelCard key={key} {...props} mode={viewMode} />;
+        const id = `channel-details-${encodeURIComponent(key)}`;
+        const style = (detail: boolean) => ({ '--channel-order': index * 2 + Number(detail), '--channel-pair-order': Math.floor(index / 2) * 4 + (detail ? 2 : 0) + index % 2 }) as CSSProperties;
+        return [
+            <RecordingChannelCard key={key} {...props} detailsId={id} layoutStyle={style(false)} mode={viewMode} />,
+            <RecordingChannelPanel key={`${key}:details`} channel={channel} id={id} selected={props.isSelected} onClose={() => {
+                props.onSelect();
+                document.querySelector<HTMLElement>(`[aria-controls="${id}"]`)?.focus();
+            }} layoutStyle={style(true)} />,
+        ];
     };
+
+    const channelElements = filteredChannels.map(renderChannel);
+    const visibleChannelElements = channelElements.flatMap((row, index) => {
+        if (index % 2) return [];
+        const next = channelElements[index + 1];
+        return next ? [row[0], next[0], row[1], next[1]] : row;
+    });
 
     return (
         <div className="product-page dashboard-page space-y-4">
@@ -323,7 +341,7 @@ export default function Dashboard() {
                     recordingCount={recordingCount}
                     totalCount={channels.length}
                     liveCount={liveCount}
-                    offlineCount={channels.length - liveCount}
+                    offlineCount={offlineCount}
                     onScanNow={handleScanNow}
                     onStopAll={handleStopAll}
                 ><LiveDownloadCondition /></DashboardFilters>
@@ -331,7 +349,7 @@ export default function Dashboard() {
 
             {initialLoading ? <div className="space-y-2" aria-label={t("채널 정보를 불러오는 중")} aria-busy="true">{[1,2,3].map(item => <div key={item} className="flex items-center gap-3 border-b border-line py-3"><div className="skeleton size-8 rounded-full" /><div className="flex-1 space-y-2"><div className="skeleton h-3 w-1/3" /><div className="skeleton h-3 w-1/2" /></div></div>)}</div>
             : filteredChannels.length === 0 ? <EmptyState icon={Radio} title={channels.length === 0 ? "등록된 채널이 없습니다." : "필터 조건에 맞는 채널이 없습니다."} description={channels.length === 0 ? "채널을 추가하면 방송 상태를 확인하고 자동으로 녹화할 수 있습니다." : "상태 또는 태그 필터를 변경해 보세요."} action={channels.length > 0 ? <Button onClick={() => { setFilter("all"); setSelectedFilterTags([]); }}>필터 초기화</Button> : undefined} />
-            : <div className={viewMode === 'grid' ? 'dashboard-channel-grid' : 'min-w-0 space-y-2'}>{filteredChannels.map(renderChannel)}</div>}
+            : <div ref={gridRef} className={viewMode === 'grid' ? 'dashboard-channel-grid' : 'dashboard-channel-list'}>{visibleChannelElements}</div>}
             <RecordingJobsPanel visibleIds={filteredChannels.flatMap(channel=>channel.postprocess?[channel.postprocess.id]:[])}/>
             {editingChannel && <ChannelDownloadModal
                 platform={editingChannel.platform || "chzzk"}

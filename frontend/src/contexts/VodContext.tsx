@@ -71,7 +71,7 @@ export function VodProvider({ children }: { children: ReactNode }) {
 
     const addTask = async (url: string, quality?: string) => {
         const settings = await api.getSettings();
-        const result = await api.downloadVod(url, quality ?? settings.vod_default_quality ?? 'best', undefined, settings.chzzk_vod_cdn ?? "default");
+        const result = await api.downloadVod(url, quality ?? settings.vod_default_quality ?? 'best', undefined, settings.chzzk_vod_cdn ?? "akamai");
         await refreshTasks();
         return result;
     };
@@ -93,7 +93,7 @@ export function VodProvider({ children }: { children: ReactNode }) {
 
     const retryTask = async (taskId: string) => {
         const settings = await api.getSettings();
-        const { new_task_id } = await api.retryVodDownload(taskId, settings.chzzk_vod_cdn ?? "default");
+        const { new_task_id } = await api.retryVodDownload(taskId, settings.chzzk_vod_cdn ?? "akamai");
         await refreshTasks();
         return new_task_id;
     };
