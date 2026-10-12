@@ -8,6 +8,19 @@
 
 ## [Unreleased]
 
+## [2.0.61] - 2026-10-12
+
+### Fixed
+- 숲 라이브 카드에 공식 채널 API의 현재 시청자 수를 표시하고 방송 번호·캐시 갱신·실제 0명·방송 시작 시각을 확인합니다.
+- 라이브와 동영상 플랫폼 선택 버튼의 이름·점·화살표·여백·높이를 통일합니다.
+- 사이드바 메뉴와 다시보기 페이지 제목을 ‘동영상’으로 변경하고 상단 다운로드 개수·진행률 표시를 제거합니다.
+- 완료 카드의 파일·폴더 버튼 스타일과 간격을 맞추고 ‘파일 검사 완료’ 배지를 상단 상세보기 버튼 왼쪽에 배치합니다.
+- 시스템 설정 탭을 정보 탭에 통합해 미디어 도구 검사·프로그램 업데이트·시스템/프로그램 정보를 한곳에서 확인할 수 있게 합니다.
+
+### Validation
+- 전체 backend 873 passed, 1 skipped, 4 subtests passed. 숲 시청자 수 회귀 7 passed.
+- TypeScript·Vite 빌드, Chromium 플랫폼 선택·설정 검사/업데이트·동영상 버튼/API 및 반응형 배치 검증 통과.
+
 ## [2.0.60] - 2026-10-12
 
 ### Fixed
@@ -821,7 +834,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.60...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.61...HEAD
+[2.0.61]: https://github.com/ProofPage/Phrolova/compare/v2.0.60...v2.0.61
 [2.0.60]: https://github.com/ProofPage/Phrolova/compare/v2.0.59...v2.0.60
 [2.0.59]: https://github.com/ProofPage/Phrolova/compare/v2.0.58...v2.0.59
 [2.0.55]: https://github.com/ProofPage/Phrolova/compare/v2.0.54...v2.0.55
