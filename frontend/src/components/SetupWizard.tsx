@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, CheckCircle2, ChevronRight, ChevronLeft, FolderOpen } from "lucide-react";
+import { Check, CheckCircle2, ChevronRight, ChevronLeft } from "lucide-react";
 import { useDialogKeyboard } from "../hooks/useDialogKeyboard";
 import { DirInput } from "./ui/DirInput";
 import { Button, Field, Select } from "./ui/primitives";
@@ -55,17 +55,19 @@ function StepIndicator({ current }: { current: Step }) {
 function Step1({ data, onChange }: { data: FormData; onChange: (key: keyof FormData, value: string) => void }) {
     return <div className="setup-fields">
         <section className="setup-directories" aria-labelledby="setup-storage-title">
-            <h3 id="setup-storage-title"><FolderOpen size={16} aria-hidden="true" />저장 위치</h3>
+            <div className="setup-storage-heading">
+                <h3 id="setup-storage-title">저장 위치</h3>
+                <p className="setup-hint">폴더가 없으면 설정 완료 시 자동으로 만듭니다.</p>
+            </div>
             {([
                 { key: "live_download_dir", id: "setup-live-dir", label: "라이브 저장 위치", hint: "라이브 녹화 파일을 저장합니다." },
-                { key: "vod_download_dir", id: "setup-vod-dir", label: "영상 저장 위치", hint: "다시보기·클립 등 다운로드한 영상을 저장합니다." },
+                { key: "vod_download_dir", id: "setup-vod-dir", label: "동영상 저장 위치", hint: "다시보기·클립 등 다운로드한 동영상을 저장합니다." },
             ] as const).map(({ key, id, label, hint }) => <div className="setup-directory" key={key}>
                 <Field label={label} htmlFor={id}>
                     <DirInput id={id} value={data[key]} onChange={(value) => onChange(key, value)} multiline required describedBy={id + "-hint"} placeholder="저장할 폴더의 경로를 입력하세요" />
                 </Field>
                 <p id={id + "-hint"} className="ui-field-hint">{hint}</p>
             </div>)}
-            <p className="setup-hint">폴더가 없으면 설정 완료 시 자동으로 만듭니다.</p>
         </section>
         <section className="setup-recording-options" aria-labelledby="setup-recording-title">
             <h3 id="setup-recording-title">라이브 녹화 기본 옵션</h3>
@@ -86,7 +88,7 @@ function Step1({ data, onChange }: { data: FormData; onChange: (key: keyof FormD
 function Step2({ data }: { data: FormData }) {
     const rows = [
         { label: "라이브 저장 위치", value: data.live_download_dir.trim(), path: true },
-        { label: "영상 저장 위치", value: data.vod_download_dir.trim(), path: true },
+        { label: "동영상 저장 위치", value: data.vod_download_dir.trim(), path: true },
         { label: "라이브 녹화 화질", value: qualities.find((option) => option.value === data.recording_quality)?.label, path: false },
         { label: "녹화 완료 후 저장 형식", value: RECORDING_OUTPUT_FORMATS.find((option) => option.value === data.output_format)?.label, path: false },
     ];
@@ -151,7 +153,7 @@ export function SetupWizard({ defaultDirectories, onComplete }: SetupWizardProps
                 {error && <p ref={errorRef} tabIndex={-1} role="alert" className="setup-error">{error}</p>}
             </div>
             <footer className="setup-footer">
-                <p className="setup-hint">{!canNext ? "라이브와 영상의 저장 위치를 모두 입력하세요." : "설정은 나중에도 변경할 수 있습니다."}</p>
+                <p className="setup-hint">{!canNext ? "라이브와 동영상의 저장 위치를 모두 입력하세요." : "설정은 나중에도 변경할 수 있습니다."}</p>
                 <div className="setup-navigation">
                     {step === 2 && <Button type="button" icon={ChevronLeft} onClick={() => { setError(null); setStep(1); }} disabled={saving}>이전</Button>}
                     {step === 1 ? <Button type="button" variant="primary" disabled={!canNext} onClick={() => setStep(2)}>설정 확인<ChevronRight size={16} /></Button>

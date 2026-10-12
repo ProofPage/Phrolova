@@ -12,7 +12,7 @@
 .setup-fields { display: grid; gap: 20px; }
 .setup-directories, .setup-recording-options { display: grid; gap: 14px; }
 .setup-directories h3, .setup-recording-options h3 { display: flex; align-items: center; gap: 8px; color: var(--color-ink); font-size: 14px; font-weight: 600; }
-.setup-directories h3 svg { color: var(--primary); }
+.setup-storage-heading > .setup-hint { margin-top: 4px; }
 .setup-hint { color: var(--color-ink-faint); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .setup-directory .ui-input { font-family: var(--font-sans); font-size: 13px; font-weight: 400; }
 .setup-option-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }

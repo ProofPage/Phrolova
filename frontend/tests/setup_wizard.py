@@ -89,7 +89,7 @@ async def main():
             await page.goto(BASE, wait_until="domcontentloaded")
             dialog = page.get_by_role("dialog", name="기본 설정", exact=True)
             await expect(dialog).to_be_visible()
-            fields = [dialog.get_by_role("textbox", name=label) for label in ("라이브 저장 위치", "영상 저장 위치")]
+            fields = [dialog.get_by_role("textbox", name=label) for label in ("라이브 저장 위치", "동영상 저장 위치")]
             for field, value in zip(fields, (DEFAULT_LIVE, DEFAULT_VIDEO)):
                 await expect(field).to_have_value(value)
                 await expect(field).to_have_css("font-size", "13px")
@@ -129,7 +129,7 @@ async def main():
                 await expect(dialog).to_be_visible()
                 await expect(dialog.locator('ol[aria-label="설정 단계"] li[aria-current="step"]')).to_contain_text("기본 설정")
                 live = dialog.get_by_role("textbox", name="라이브 저장 위치")
-                video = dialog.get_by_role("textbox", name="영상 저장 위치")
+                video = dialog.get_by_role("textbox", name="동영상 저장 위치")
                 await expect(live).to_have_value(LIVE)
                 await expect(video).to_have_value(VIDEO)
                 for field in (live, video):
