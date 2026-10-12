@@ -57,7 +57,8 @@ def validate_geometry(g, ready=False):
     else:
         assert g["columns"] == 1, g
         assert close(g["preview"]["width"], g["copy"]["width"]), g
-        assert g["preview"]["y"] >= g["copy"]["bottom"] + 14, g
+        assert g["copy"]["y"] >= g["preview"]["bottom"] + 14, g
+        assert close(g["preview"]["y"], g["details"]["y"] + 15), g
     assert all(f["scroll"] <= f["client"] + 1 and f["right"] <= g["copy"]["right"] + 1 for f in g["fields"]), g
     assert all(close(label["x"], g["labels"][0]["x"]) for label in g["labels"]), g
     assert all(close(field["x"], g["fields"][0]["x"]) for field in g["fields"]), g
@@ -134,7 +135,7 @@ async def main():
                     if responses[index] == "loading":
                         await gate.wait()
                     if responses[index] == "error":
-                        return await route.fulfill(status=503, json={"detail": "isolated preview test failure"})
+                        return await route.fulfill(status=401, json={"detail": "isolated authentication failure"})
                     folder = "wide" if index == 0 else "standard"
                     return await route.fulfill(json={"url": BASE + f"/live-details-media/{folder}/preview.m3u8"})
                 return await mock(route)

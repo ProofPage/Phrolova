@@ -164,3 +164,31 @@ async def test_media_endpoint_stops_when_channel_removed_or_offline(monkeypatch)
         assert response.status_code == 409
         response = await client.get("/api/stream/preview-media/unknown/asset.m3u8")
         assert response.status_code == 404
+
+
+@pytest.mark.parametrize("platform,origin", [("soop", "https://play.sooplive.com"), ("cime", "https://ci.me")])
+@pytest.mark.asyncio
+async def test_platform_headers_and_cookies_stay_domain_scoped(monkeypatch, platform, origin):
+    from http.cookiejar import Cookie, CookieJar
+    jar = CookieJar()
+    jar.set_cookie(Cookie(0, "session", "PRIVATE", None, False, "media.cdn.example", False, False,
+                          "/", True, True, None, True, None, None, {}, False))
+    monkeypatch.setattr("app.engine.preview_proxy.platform_cookie_jar", lambda _: jar)
+    monkeypatch.setattr("app.engine.preview_proxy.preview_ca_bundle", lambda: True)
+    requests = []
+    async def handler(request):
+        requests.append(request)
+        if len(requests) == 1:
+            return httpx.Response(302, headers={"location": "https://cdn.akamaized.net/video.ts"})
+        return httpx.Response(200, content=b"video")
+    client = httpx.AsyncClient
+    monkeypatch.setattr("app.engine.preview_proxy.httpx.AsyncClient",
+                        lambda **kwargs: client(transport=httpx.MockTransport(handler), **kwargs))
+    proxy = PreviewProxy()
+    token = proxy.register(platform + ":a", platform, "https://media.cdn.example/video.ts")
+    data, _, status, _ = await proxy.fetch(token)
+    assert data == b"video" and status == 200
+    assert requests[0].headers["origin"] == origin
+    assert requests[0].headers["referer"] == origin + "/"
+    assert requests[0].headers["cookie"] == "session=PRIVATE"
+    assert "cookie" not in requests[1].headers
