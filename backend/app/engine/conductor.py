@@ -985,6 +985,7 @@ class Conductor:
             pipeline = YtdlpLivePipeline(channel_id=task.channel_id)
             if continuation is not None:
                 pipeline.continuity_resume = continuation['resume']
+                pipeline.continuity_buffer = continuation.get('buffer')
                 pipeline._start_guard = lambda: self._running and not pipeline._intentional_stop
             elif automatic or is_retry:
                 pipeline._start_guard = lambda: self._running and self._can_auto_record(task)
@@ -1029,7 +1030,7 @@ class Conductor:
                         # The new file/job has a unique session ID and the same policy.
                         await self._start_recording_locked(
                             composite_key, channel_name=task.channel_name, title=task.title,
-                            is_retry=True, continuation={'resume': capture.continuity_resume, 'policy': policy, 'quality': quality},
+                            is_retry=True, continuation={'resume': capture.continuity_resume, 'policy': policy, 'quality': quality, 'buffer': getattr(capture, 'continuity_buffer', None)},
                         )
 
             pipeline._on_capture_ended = capture_ended

@@ -18,7 +18,8 @@ export function RecordingPostprocess({job}:{job:RecordingJob}) {
     const hasSource=job.source_available===true;
     const warning = job.warning_message || (job.state === 'completed' && job.diagnostics?.returncode === 0 && job.diagnostics?.stderr ? '변환 결과 검사를 통과했지만 FFmpeg 경고가 있습니다.' : null);
     const log = readableLog(job.diagnostics || {});
-    const labels:Record<string,string>={pending:'변환 대기',normalizing:'원본 TS 변환 중',converting:`${job.target_format.toUpperCase()} 변환 중`,verifying:'파일 검사 중',completed:`녹화 완료 · ${job.target_format.toUpperCase()}${warning ? ' · 경고 있음' : ''}`,failed:job.error_code==='tool_missing'?'FFprobe 설치 필요':job.processing_stage==='source_inspection'?'원본 파일 검사 실패':`${job.target_format.toUpperCase()} 변환 실패`,attention:'파일 확인 필요',capture_failed:'녹화 원본 파일 없음'};
+    const completion = job.continuity_valid === false ? '변환 완료 · 녹화 데이터 확인 필요' : '녹화 완료';
+    const labels:Record<string,string>={pending:'변환 대기',normalizing:'원본 TS 변환 중',converting:`${job.target_format.toUpperCase()} 변환 중`,verifying:'파일 검사 중',completed:`${completion} · ${job.target_format.toUpperCase()}${warning ? ' · 경고 있음' : ''}`,failed:job.error_code==='tool_missing'?'FFprobe 설치 필요':job.processing_stage==='source_inspection'?'원본 파일 검사 실패':`${job.target_format.toUpperCase()} 변환 실패`,attention:'파일 확인 필요',capture_failed:'녹화 원본 파일 없음'};
     const copyLog = async () => {
         try {
             if (navigator.clipboard) await navigator.clipboard.writeText(log);
@@ -45,7 +46,7 @@ export function RecordingPostprocess({job}:{job:RecordingJob}) {
     return <div className="recording-processing min-w-0" aria-busy={active||busy}>
         <div className="recording-processing-copy min-w-0 space-y-2">
         <div className="flex flex-wrap items-center gap-2 text-xs" role="status" aria-live="polite">
-            <span className={job.state==='completed'?'text-ok':active?'text-info':job.state==='capture_failed'?'text-danger':'text-warn'}>{labels[job.state]||job.state}</span>
+            <span className={job.state==='completed'?(job.continuity_valid===false?'text-warn':'text-ok'):active?'text-info':job.state==='capture_failed'?'text-danger':'text-warn'}>{labels[job.state]||job.state}</span>
             {job.state==='failed'&&hasSource&&<span className="text-ink-muted">원본 파일 보관</span>}
             {job.state==='converting'&&job.progress!==null&&<span className="tabular-nums">{job.progress.toFixed(1)}%</span>}
         </div>

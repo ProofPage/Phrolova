@@ -291,8 +291,10 @@ class VodEngine(VodPreparation):
         if task.prepared and task.quality.endswith("p") and task.quality[:-1].isdigit():
             height = int(task.quality[:-1])
             opts["format"] = (
-                f"bestvideo*[height={height}]+bestaudio/best[height={height}]"
-            )
+                f"bestvideo*[height={height}][width>={height}]+bestaudio/"
+                f"bestvideo*[width={height}][height>={height}]+bestaudio/"
+                f"best[height={height}][width>={height}]/best[width={height}][height>={height}]"
+            ) if height in task.metadata.get('portrait_qualities', []) else f"bestvideo*[height={height}]+bestaudio/best[height={height}]"
         opts["postprocessor_hooks"] = [
             lambda d: (
                 setattr(task, "phase", "merging")
@@ -983,7 +985,7 @@ class VodEngine(VodPreparation):
         selected_cdn = task.cdn if chzzk_source else "default"
 
         def make_ydl(options):
-            if selected_cdn == "akamai":
+            if chzzk_source:
                 return ChzzkCdnYoutubeDL(options, cdn=selected_cdn)
             return platform_ydl(task.url, options)
 
@@ -1041,6 +1043,8 @@ class VodEngine(VodPreparation):
         if task.resolved_filename:
             expected_file = task.resolved_filename
         else:
+            from app.core.vod_filename import bounded_vod_path
+            expected_file = str(bounded_vod_path(expected_file))
             candidate = Path(expected_file)
             reserved = {
                 other.resolved_filename.casefold()
@@ -1060,13 +1064,14 @@ class VodEngine(VodPreparation):
                     in reserved
                 )
             ):
-                candidate = Path(expected_file).with_name(
+                candidate = bounded_vod_path(Path(expected_file).with_name(
                     f"{Path(expected_file).stem} ({index}){Path(expected_file).suffix}"
-                )
+                ), collision=index)
                 index += 1
             expected_file = str(candidate)
             task.resolved_filename = expected_file
         task.expected_part_file = expected_file + ".part"
+        self._save_history()  # Persist resume identity before any media is written.
         opts = self._build_ytdlp_options(
             task,
             progress_callback=self._make_progress_callback(task),
@@ -1502,6 +1507,12 @@ class VodEngine(VodPreparation):
             cdn=cdn,
         )
         old_task.retry_task_id = new_task_id
+        new_task = self._tasks[new_task_id]
+        if old_task.metadata.get('_resume_after_restart') and cdn == old_task.cdn:
+            new_task.resolved_filename = old_task.resolved_filename
+            new_task.expected_part_file = old_task.expected_part_file
+            new_task.filename_template = old_task.filename_template
+            new_task.filename_started_at = old_task.filename_started_at
         self._save_history()
         if old_task.prepared and new_task_id in self._tasks:
             new_task = self._tasks[new_task_id]
@@ -1824,6 +1835,10 @@ class VodEngine(VodPreparation):
                     media_duration=record.get("media_duration"),
                     output_dir=record.get("output_dir") or "",
                     output_path=record.get("output_path"),
+                    resolved_filename=record.get('resolved_filename'),
+                    expected_part_file=record.get('expected_part_file'),
+                    filename_template=record.get('filename_template'),
+                    filename_started_at=self._parse_dt(record.get('filename_started_at')),
                     error_message=(
                         "서버가 중단된 작업입니다. 다시 시도해 주세요."
                         if interrupted
@@ -1840,6 +1855,13 @@ class VodEngine(VodPreparation):
                 )
                 continue
             self._tasks[task.task_id] = task
+            if interrupted:
+                saved = Path(task.resolved_filename).absolute() if task.resolved_filename else None
+                if saved and saved.parent == Path(task.output_dir).expanduser().absolute() and not saved.exists():
+                    task.metadata['_resume_after_restart'] = True
+                else:
+                    task.resolved_filename = None
+                    task.expected_part_file = None
             restored += 1
         if restored:
             logger.info(f"다운로드 이력 로드 완료: {restored}개")
@@ -1877,6 +1899,10 @@ class VodEngine(VodPreparation):
                     "media_duration": task.media_duration,
                     "output_dir": task.output_dir,
                     "output_path": task.output_path,
+                    "resolved_filename": task.resolved_filename,
+                    "expected_part_file": task.expected_part_file,
+                    "filename_template": task.filename_template,
+                    "filename_started_at": task.filename_started_at.isoformat() if task.filename_started_at else None,
                     "error_message": task.error_message,
                     "created_at": task.created_at.isoformat(),
                     "started_at": (

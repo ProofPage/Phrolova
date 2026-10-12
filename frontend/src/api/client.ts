@@ -313,6 +313,7 @@ export interface NotificationStatus {
 
 
 export interface RecordingJob { warning_message?: string | null; error_code?: string; processing_stage?: string; retryable?: boolean; platform?: Platform; session_id?: string; capture_format?: string; started_at?: string; ended_at?: string; file_size_bytes?: number; source_available?: boolean; output_available?: boolean; can_open?: boolean; can_retry?: boolean; can_inspect?: boolean; hidden?: boolean; id: string; composite_key: string; channel_name: string; state: string; target_format: string; progress: number | null; output_path: string | null; source_paths: string[]; error_message: string | null; inspection_state: string; diagnostics?: Record<string, unknown>; source_cleanup_warning?: string; }
+export interface RecordingJob { continuity_valid?: boolean; }
 export interface RecordingOutputSettings { output_format: 'mp4'|'mkv'|'ts'; keep_source_ts: boolean; max_concurrent: number; }
 
 // ── Stats Types ─────────────────────────────────────────

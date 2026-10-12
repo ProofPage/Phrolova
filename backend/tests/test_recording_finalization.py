@@ -451,6 +451,8 @@ async def test_remux_warning_keeps_source_and_still_verifies_output(local_hls, m
         assert Path(job["output_path"]).is_file()
         assert job["can_retry"] and job["source_available"]
         assert job["diagnostics"]["returncode"] == 0
+        assert job['continuity_valid'] is False
+        assert job['diagnostics']['output_errors'] == ['corrupt_packet']
         job['diagnostics']['detail'] = 'old inspection error'
         manager._save(job)
         rechecked = await manager.retry(job_id, inspect_only=True)

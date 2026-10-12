@@ -1,15 +1,15 @@
-# Adapted from Chzzk-Rekoda commit 50424e50b56fca13a1a071983a4ddecdcb0f6ff2.
-# Copyright (c) 2024 munsy0227. MIT license: third_party/Chzzk-Rekoda-LICENSE.
-# Phrolova integration uses callbacks, native Streamlink files and post-capture conversion.
+# Adapted from Chzzk-Rekoda 449935d. Copyright (c) 2024 munsy0227.
+# MIT license: third_party/Chzzk-Rekoda-LICENSE.
 """Small, URL-free control protocol between the plugin and recorder."""
 
 import json
 import math
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 
 EVENT_PREFIX = "PHROLOVA_CHZZK_EVENT "
-KINDS = {"start", "recovery_started", "recovery_completed", "gap", "boundary", "diagnostic", "source"}
+KINDS = {"start", "checkpoint", "recovery_started", "recovery_completed",
+         "gap", "boundary", "diagnostic", "source", "recovery_snapshot", "buffer_status"}
 REASONS = {
     "resume_unavailable", "playlist_stalled", "playlist_unavailable",
     "broadcast_changed", "initialization_changed", "discontinuity",
@@ -36,13 +36,15 @@ def parse_event(line):
         event = json.loads(line[len(EVENT_PREFIX):])
     except (ValueError, TypeError):
         return None
-    if (not isinstance(event, dict) or event.get("version") != 1
+    if (not isinstance(event, dict) or type(event.get("version")) is not int or event.get("version") != 1
             or not isinstance(event.get("kind"), str) or event["kind"] not in KINDS
             or type(event.get("live_id")) is not int
             or not isinstance(event.get("rendition"), str)
             or len(event["rendition"]) > 32):
         return None
-    if any(not valid_time(event.get(key)) for key in ("at", "from", "to", "resume_from")):
+    if any(not valid_time(event.get(key)) for key in (
+            "at", "from", "to", "resume_from", "recovery_deadline",
+            "observed_at", "lookup_at", "window_from", "window_to", "target")):
         return None
     if event["kind"] in {"gap", "boundary"} and (
             not isinstance(event.get("reason"), str) or event["reason"] not in REASONS):
@@ -55,14 +57,43 @@ def parse_event(line):
                 or event.get("mode") not in {"hls", "llhls"}
                 or event.get("state") not in {"selected", "ready", "absent", "unavailable"}):
             return None
-        return {key: event[key] for key in ("version", "kind", "live_id", "rendition", "cdn", "mode", "state")}
+        if 'independent_cdn' in event and type(event['independent_cdn']) is not bool:
+            return None
+        return {key: event[key] for key in ("version", "kind", "live_id", "rendition", "cdn", "mode", "state", 'independent_cdn') if key in event}
+    if event['kind'] == 'buffer_status':
+        if event.get('state') != 'unavailable':
+            return None
+        return {key: event[key] for key in ('version', 'kind', 'live_id', 'rendition', 'state')}
+    if event['kind'] == 'recovery_snapshot':
+        if (any(not isinstance(event.get(key), str) for key in
+                ('cdn', 'mode', 'role', 'result', 'lookup_result'))
+                or event.get('cdn') not in {'korean', 'akamai', 'unknown'}
+                or event.get('mode') not in {'hls', 'llhls'}
+                or event.get('role') not in {'current', 'history'}
+                or event.get('result') not in {'started', 'waiting', 'completed', 'boundary', 'buffer_full', 'buffer_skipped'}
+                or event.get('lookup_result') not in {'available', 'unavailable', 'http', 'network', 'timeout',
+                                                     'truncated', 'invalid_media', 'initialization', 'dns', 'tls', 'connect', 'parse'}
+                or event.get('observed_at') is None
+                or type(event.get('elapsed_ms')) not in (int, float)
+                or not math.isfinite(event['elapsed_ms']) or not 0 <= event['elapsed_ms'] <= 86400000
+                or type(event.get('buffered_count')) is not int or not 0 <= event['buffered_count'] <= 2048
+                or type(event.get('buffered_bytes')) is not int or not 0 <= event['buffered_bytes'] <= 256 * 1024 * 1024):
+            return None
+        if 'buffer_reason' in event and (
+                not isinstance(event['buffer_reason'], str)
+                or event['buffer_reason'] not in {'already_output', 'time_limit', 'byte_limit', 'count_limit'}):
+            return None
+        start, end = event.get('window_from'), event.get('window_to')
+        if ((start is None) != (end is None)
+                or (start is not None and datetime.fromisoformat(end) <= datetime.fromisoformat(start))):
+            return None
     if event["kind"] == "diagnostic":
         if (any(not isinstance(event.get(key), str) for key in ("stage", "role", "category"))
                 or event["stage"] not in {"manifest", "api", "initialization", "media"}
                 or event.get("role") not in {"current", "history", "primary", "alternate"}
                 or event.get("category") not in {
                     "http", "network", "timeout", "truncated", "invalid_media",
-                    "initialization", "unavailable"}):
+                    "initialization", "unavailable", "dns", "tls", "connect", "parse"}):
             return None
         status, sequence = event.get("status"), event.get("sequence")
         if ((status is not None and (type(status) is not int or not 100 <= status <= 599))
@@ -70,14 +101,35 @@ def parse_event(line):
             return None
     if event["kind"] == "start":
         seconds = event.get("available_seconds")
-        if ((type(event.get("requested_seconds")) not in (int, float) or not 0 <= event["requested_seconds"] <= 86400)
+        if (type(event.get("requested_seconds")) not in (int, float)
+                or not 0 <= event["requested_seconds"] <= 86400
                 or type(seconds) not in (int, float)
                 or not math.isfinite(seconds) or seconds < 0):
             return None
-    fields = {"version", "kind", "live_id", "rendition", "at", "from", "to",
-              "resume_from", "after_gap", "reason", "requested_seconds", "available_seconds",
-              "time_machine_active", "stage", "role", "category", "status", "sequence"}
-    return {key: value for key, value in event.items() if key in fields}
+        if event.get("time_machine_active") is not None and type(event["time_machine_active"]) is not bool:
+            return None
+    if event["kind"] == "checkpoint":
+        if not {"from", "to"} <= event.keys():
+            return None
+        start, end = event["from"], event["to"]
+        if (start is None) != (end is None):
+            return None
+        if start is not None and datetime.fromisoformat(end) <= datetime.fromisoformat(start):
+            return None
+    # Only protocol fields may reach the UI or an optional persistent report.
+    fields = {
+        "start": {"at", "requested_seconds", "available_seconds", "time_machine_active"},
+        "checkpoint": {"from", "to"},
+        "recovery_started": {"at"}, "recovery_completed": {"at"},
+        "gap": {"from", "to", "reason"},
+        "boundary": {"reason", "resume_from", "after_gap", "recovery_deadline"},
+        "diagnostic": {"stage", "role", "category", "status", "sequence", "at"},
+        'recovery_snapshot': {'observed_at', 'lookup_at', 'cdn', 'mode', 'role', 'result', 'lookup_result', 'elapsed_ms',
+                              'window_from', 'window_to', 'target', 'recovery_deadline', 'buffered_count', 'buffered_bytes',
+                              'buffer_reason'},
+    }
+    allowed = {"version", "kind", "live_id", "rendition"} | fields[event["kind"]]
+    return {key: value for key, value in event.items() if key in allowed}
 
 
 def format_log_time(value):

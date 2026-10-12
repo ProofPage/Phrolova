@@ -306,6 +306,12 @@ class RecordingFinalizer:
             job.setdefault('diagnostics', {})['continuity'] = status['continuity_events']
         if status.get('continuity_source'):
             job['continuity_source'] = status['continuity_source']
+        if getattr(pipeline, 'output_errors', None):
+            job.setdefault('diagnostics', {})['output_errors'] = list(pipeline.output_errors)
+            job['continuity_valid'] = False
+            job.update(state='attention', error_code=pipeline.error_code,
+                       error_message=pipeline.error_message, processing_stage='capture_shutdown',
+                       keep_source_ts=True, progress=None)
         if (
             not Path(job["source_paths"][0]).is_file()
             or Path(job["source_paths"][0]).stat().st_size == 0
@@ -316,8 +322,8 @@ class RecordingFinalizer:
                 progress=None,
             )
         self._save(job)
-        if job["state"] == "capture_failed":
-            return job
+        if job["state"] in {"capture_failed", "attention"}:
+            return self.get(job_id)
         self.db.execute(
             "INSERT OR IGNORE INTO live_history(composite_key,platform,channel_id,channel_name,started_at,ended_at,duration_seconds,file_size_bytes,output_path,recording_job_id) VALUES(?,?,?,?,?,?,?,?,?,?)",
             (
@@ -787,6 +793,13 @@ class RecordingFinalizer:
                 target = candidate
             if job["diagnostics"].get("returncode") == 0 and str(job["diagnostics"].get("stderr") or "").strip():
                 job["warning_message"] = "변환 결과 검사를 통과했지만 FFmpeg 경고가 있습니다. 원본 파일은 보관합니다."
+            stderr_lower = str(job['diagnostics'].get('stderr') or '').lower()
+            output_errors = [category for token, category in (
+                ('packet corrupt', 'corrupt_packet'), ('corrupt input packet', 'corrupt_packet'),
+                ('partial file', 'partial_input')) if token in stderr_lower]
+            if output_errors:
+                job['diagnostics']['output_errors'] = sorted(set(output_errors))
+                job['continuity_valid'] = False
             job.update(
                 state="completed",
                 error_code=None,

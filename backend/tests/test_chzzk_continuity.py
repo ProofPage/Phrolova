@@ -362,8 +362,10 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(result, INITIALIZATION + MEDIA[0])
         self.assertIn("gap", [e["kind"] for e in self.events()])
         self.assertEqual(self.events()[-1]["resume_from"],
-                         (START + timedelta(seconds=8)).isoformat())
+                         (START + timedelta(seconds=4)).isoformat())
         self.assertTrue(self.events()[-1]["after_gap"])
+        # Retry the exact missing interval, not the first future segment.
+        self.assertIn('recovery_deadline', self.events()[-1])
 
     def test_partial_repair_preserves_prefix_without_duplicate_on_retry(self):
         self.cdn.playlist("primary", indices=(0, 3))
