@@ -413,3 +413,49 @@ def test_missing_old_preference_uses_mkv(tmp_path, monkeypatch):
     settings.model_fields_set.discard("live_format")
     monkeypatch.setattr(module, "get_settings", lambda: settings)
     assert module.recording_policy()["output_format"] == "mkv"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('invalid_output', [False, True])
+async def test_remux_warning_keeps_source_and_still_verifies_output(local_hls, monkeypatch, invalid_output):
+    import sys
+    import app.engine.recording_finalizer as module
+    _, directory = local_hls
+    source = directory / "경고 원본.ts"
+    source.write_bytes(b"".join(p.read_bytes() for p in sorted((directory/"480").glob("*.ts"))))
+    original = source.read_bytes()
+    real_create = asyncio.create_subprocess_exec
+    async def with_warning(*cmd, **kwargs):
+        code = "import subprocess,sys; p=subprocess.run(sys.argv[1:]);sys.stderr.write('Packet corrupt (stream = 0)\\n');sys.exit(p.returncode)"
+        return await real_create(sys.executable, "-c", code, *cmd, **kwargs)
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", with_warning)
+    if invalid_output:
+        real_probe = module.probe_media
+        def reject_output(path):
+            media = real_probe(path)
+            if '.converting.' in str(path):
+                raise InspectionError('timeout', stderr='output validation timed out')
+            return media
+        monkeypatch.setattr(module, 'probe_media', reject_output)
+    manager = RecordingFinalizer()
+    try:
+        job_id = await stopped_job(manager, source, fmt="mkv", keep=False)
+        job = await terminal(manager, job_id)
+        if invalid_output:
+            assert job['state'] == 'failed' and source.read_bytes() == original
+            assert not job.get('warning_message')
+            return
+        assert job["state"] == "completed", job
+        assert job["inspection_state"] == "passed" and job["warning_message"]
+        assert source.read_bytes() == original
+        assert Path(job["output_path"]).is_file()
+        assert job["can_retry"] and job["source_available"]
+        assert job["diagnostics"]["returncode"] == 0
+        assert job['continuity_valid'] is False
+        assert job['diagnostics']['output_errors'] == ['corrupt_packet']
+        job['diagnostics']['detail'] = 'old inspection error'
+        manager._save(job)
+        rechecked = await manager.retry(job_id, inspect_only=True)
+        assert rechecked['inspection_state'] == 'passed'
+        assert 'detail' not in rechecked['diagnostics'] and rechecked['warning_message']
+    finally: await manager.close()

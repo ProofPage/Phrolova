@@ -33,7 +33,7 @@ def quality_options(info: dict) -> list[dict]:
             result.append({'value': f['format_id'], 'label': f"{f['height']}p" + (f' {fps:g}fps' if fps else ''),
                            'height': f['height'], 'width': f.get('width'), 'fps': fps or None, 'bitrate': (f.get('tbr') or 0)*1000 or None})
         return result
-    heights = {f.get('height') for f in info.get('formats', [])
+    heights = {min(f['height'], f['width']) if isinstance(f.get('width'), int) and f['width'] > 0 else f['height'] for f in info.get('formats', [])
                if isinstance(f.get('height'), int) and f['height'] > 0
                and f.get('vcodec') != 'none'}
     return [{'value': f'{height}p', 'label': f'{height}p'} for height in sorted(heights, reverse=True)]
@@ -140,6 +140,9 @@ class VodPreparation:
             task.metadata = {key: info.get(key) for key in
                              ('id', 'duration', 'thumbnail', 'uploader', 'profile_image', 'upload_date')}
             task.metadata['qualities'] = options
+            task.metadata['portrait_qualities'] = sorted({f['width'] for f in info.get('formats', [])
+                if isinstance(f.get('width'), int) and isinstance(f.get('height'), int)
+                and 0 < f['width'] < f['height'] and f.get('vcodec') != 'none'})
             available = [option['value'] for option in options]
             preference = task.quality
             if available == ['best']:

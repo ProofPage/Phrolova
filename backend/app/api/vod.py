@@ -52,7 +52,7 @@ class VodDownloadRequest(BaseModel):
     url: str = Field(..., description="치지직 VOD/클립 URL 또는 유튜브 등 yt-dlp 지원 URL")
     quality: str = Field("best", description="화질 (best, worst, format_id)")
     output_dir: Optional[str] = Field(None, description="저장 디렉토리 (기본: settings)")
-    cdn: Literal["default", "akamai"] = "default"
+    cdn: Literal["default", "akamai"] = "akamai"
 
 
 # ── 엔드포인트 ───────────────────────────────────────────
@@ -163,7 +163,7 @@ async def resume_vod_download(task_id: str):
 
 
 class VodRetryRequest(BaseModel):
-    cdn: Literal["default", "akamai"] = "default"
+    cdn: Literal["default", "akamai"] = "akamai"
 
 
 @router.post("/{task_id}/inspect", summary="다운로드 파일 다시 검사", status_code=202)
@@ -183,7 +183,7 @@ async def retry_vod_download(task_id: str, req: Optional[VodRetryRequest] = None
     service = get_recorder_service()
 
     try:
-        new_task_id = await service.retry_vod(task_id, cdn=req.cdn if req else "default")
+        new_task_id = await service.retry_vod(task_id, cdn=req.cdn if req else "akamai")
         return {
             "message": "다운로드가 재시작되었습니다.",
             "old_task_id": task_id,

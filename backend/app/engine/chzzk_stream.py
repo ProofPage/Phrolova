@@ -68,6 +68,7 @@ class ChzzkHLSStream(HLSStream):
                  time_machine_active=None, source_mode='hls', source_cdn=None,
                  event_callback=None, api_cookie=None, capture_start_offset=0,
                  recording_time_machine=False,
+                 buffer_dir=None,
                  **kwargs):
         super().__init__(session, url, *args, **kwargs)
         self._url = url
@@ -75,6 +76,7 @@ class ChzzkHLSStream(HLSStream):
         self.api_cookie = api_cookie
         self.recording_time_machine = recording_time_machine
         self.capture_start_offset = capture_start_offset
+        self.buffer_dir = buffer_dir
         self.continuity = ContinuitySource(
             self, self._source_snapshot, live_id, source_paths,
             lookback=start_lookback, resume=resume,

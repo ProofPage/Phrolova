@@ -31,8 +31,8 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [vodMaxSpeed, setVodMaxSpeed] = useState(0);
     const [vodFilenameTemplate, setVodFilenameTemplate] = useState("[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}");
     const [vodFormat, setVodFormat] = useState("mp4");
-    const [liveCdn, setLiveCdn] = useState<"default" | "akamai">("default");
-    const [cdn, setCdn] = useState<"default" | "akamai">("default");
+    const [liveCdn, setLiveCdn] = useState<"default" | "akamai">("akamai");
+    const [cdn, setCdn] = useState<"default" | "akamai">("akamai");
     const initialized = useRef(false);
     // 세 영역이 각각 따로 저장되므로 훅도 따로 둔다 — 저장 중 표시가 서로 섞이지 않는다.
     const { saving: liveSaving, save: saveLive } = useSettingsSave(onSaved);
@@ -56,8 +56,8 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         setVodDefaultQuality(settings.vod_default_quality);
         setVodMaxSpeed(settings.vod_max_speed);
         setVodFormat(settings.vod_format || "mp4");
-        setLiveCdn(settings.chzzk_live_cdn ?? "default");
-        setCdn(settings.chzzk_vod_cdn ?? "default");
+        setLiveCdn(settings.chzzk_live_cdn ?? "akamai");
+        setCdn(settings.chzzk_vod_cdn ?? "akamai");
         setVodFilenameTemplate(settings.vod_filename_template || "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}");
     }, [settings]);
     const liveDirty = !!settings && (
@@ -65,7 +65,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         monitorInterval !== settings.monitor_interval ||
         maxRetries !== settings.max_record_retries ||
         recordingQuality !== (settings.recording_quality || "best") ||
-        liveCdn !== (settings.chzzk_live_cdn ?? "default") ||
+        liveCdn !== (settings.chzzk_live_cdn ?? "akamai") ||
         streamMode !== (settings.chzzk_stream_mode ?? (settings.chzzk_time_machine_enabled === false ? "standard" : "force-timemachine")) ||
         timeMachineOffset !== (settings.chzzk_time_machine_offset ?? settings.chzzk_time_machine_shift ?? 0) ||
         saveLivePreview !== (settings.save_live_preview ?? false) ||
@@ -78,7 +78,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         vodDefaultQuality !== settings.vod_default_quality ||
         vodMaxSpeed !== settings.vod_max_speed ||
         vodFormat !== (settings.vod_format || "mp4") ||
-        cdn !== (settings.chzzk_vod_cdn ?? "default") ||
+        cdn !== (settings.chzzk_vod_cdn ?? "akamai") ||
         vodFilenameTemplate !== (settings.vod_filename_template || "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}")
     );
     const dirty = outputDirty || liveDirty || vodDirty;
@@ -128,14 +128,14 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                         ]}
                     />
                 </Field>
-                <Field label="치지직 다운로드 CDN" hint={cdn === "akamai" ? "다운로드한 영상의 재생 시간이 비정상적이거나 영상에 문제가 발생한 경우 사용하세요. 기본 CDN보다 다운로드 속도가 느릴 수 있습니다." : "치지직 다시보기 다운로드에만 적용됩니다. 저장 후 시작하거나 다시 다운로드하는 작업부터 적용되며, 진행 중인 작업에는 영향을 주지 않습니다."}>
+                <Field label="치지직 다운로드 CDN" hint="기본값은 Akamai CDN입니다. 저장 후 시작하거나 다시 다운로드하는 치지직 영상에 적용됩니다.">
                     <Select
                         aria-label="치지직 다운로드 CDN"
                         value={cdn}
                         onChange={(event) => setCdn(event.target.value as typeof cdn)}
                         options={[
-                            { value: "default", label: "기본 CDN · 권장" },
-                            { value: "akamai", label: "Akamai CDN · 재생 오류 대안" },
+                            { value: "default", label: "Naver CDN" },
+                            { value: "akamai", label: "Akamai CDN" },
                         ]}
                     />
                 </Field>
@@ -176,8 +176,8 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                 <Field label="라이브 확인 주기 (초)" hint="등록한 채널의 방송 상태를 확인하는 간격입니다 (5~300초).">
                     <Input type="number" min={5} max={300} value={monitorInterval} onChange={event => setMonitorInterval(Number(event.target.value))} />
                 </Field>
-                <Field label="치지직 라이브 CDN" hint="다음 녹화부터 적용됩니다. 선택한 CDN이 제공되지 않는 방송은 기본 CDN을 사용하고 연결 결과를 안내합니다.">
-                    <Select aria-label="치지직 라이브 CDN" value={liveCdn} disabled={liveSaving} onChange={event=>setLiveCdn(event.target.value as typeof liveCdn)} options={[{value:'default',label:'기본 CDN · 권장'},{value:'akamai',label:'Akamai CDN 우선'}]}/>
+                <Field label="치지직 라이브 CDN" hint="기본값은 Akamai CDN입니다. 다음 녹화부터 적용되며, 제공되지 않는 방송은 Naver CDN으로 연결합니다.">
+                    <Select aria-label="치지직 라이브 CDN" value={liveCdn} disabled={liveSaving} onChange={event=>setLiveCdn(event.target.value as typeof liveCdn)} options={[{value:'default',label:'Naver CDN'},{value:'akamai',label:'Akamai CDN'}]}/>
                 </Field>
                 <Field label="라이브 녹화 화질" hint="녹화할 해상도를 선택합니다. 높은 해상도일수록 저장 공간을 더 사용합니다.">
                     <Select

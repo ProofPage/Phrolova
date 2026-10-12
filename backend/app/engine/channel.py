@@ -53,6 +53,17 @@ class ChannelTask:
     retry_at: Optional[str] = None
     retry_code: Optional[str] = None
     error_detail: Optional[str] = None
+    broadcast_status: str = "checking"
+    monitor_status: str = "paused"
+    monitor_error: Optional[str] = None
+    monitor_error_detail: Optional[str] = None
+    recent_errors: list[dict] = field(default_factory=list)
+
+    @property
+    def composite_key(self) -> str:
+        """Derive identity; legacy records need no new stored field."""
+        return f"{self.platform.value}:{self.channel_id}"
+
     # ── 파생 상태 ────────────────────────────────────────
 
     @property

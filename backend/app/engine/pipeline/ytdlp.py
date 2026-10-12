@@ -10,6 +10,7 @@ import re
 import tempfile
 import uuid
 import time
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Callable, Awaitable
@@ -34,6 +35,9 @@ class YtdlpLivePipeline:
     """
 
     # quality 문자열 → yt-dlp format 문자열 매핑
+    STOP_COOPERATIVE_SECONDS = 15
+    STOP_FORCE_SECONDS = 5
+    STOP_DRAIN_SECONDS = 10
     _QUALITY_MAP: dict[str, str] = {
         "best": "best",
         "1080p": "best[height<=1080]/best",
@@ -51,6 +55,10 @@ class YtdlpLivePipeline:
         self._output_path: Optional[str] = None
         self._start_time: Optional[datetime] = None
         self._intentional_stop = False
+        self._force_stop = threading.Event()
+        self._stop_task = None
+        self.output_errors = []
+        self.continuity_buffer = None
         self._source_resolver = None
         self._source_page_url = ""
         self._cookie_str = None
@@ -261,8 +269,7 @@ class YtdlpLivePipeline:
             budget = (
                 240
                 - len(str(save_dir))
-                - len(self.session_id)
-                - len(" [].native.mp4.part")
+                - len(" (999999).native.mp4.part")
             )
             if budget < 1:
                 raise RecordingError(
@@ -270,23 +277,8 @@ class YtdlpLivePipeline:
                     "저장 폴더 경로가 너무 깁니다. 더 짧은 경로를 선택하세요.",
                 )
             stem = stem[:budget]
-        filename = f"{stem} [{self.session_id}].ts"
+        filename = f"{stem}.ts"
         output_file = save_dir / filename
-        suffix_number = 1
-        preview_suffixes = (".jpg", ".jpeg", ".png", ".webp", ".avif")
-        while (
-            output_file.exists()
-            or Path(str(output_file) + ".part").exists()
-            or any(
-                (save_dir / f"{output_file.stem}{suffix}").exists()
-                for suffix in preview_suffixes
-            )
-        ):
-            output_file = (
-                save_dir
-                / f"{Path(filename).stem} ({suffix_number}){Path(filename).suffix}"
-            )
-            suffix_number += 1
         self._output_path = str(output_file)
 
         # ── Phase 1: 타임머신 또는 yt-dlp에서 HLS URL + HTTP 헤더 추출 ──
@@ -392,9 +384,11 @@ class YtdlpLivePipeline:
             quality,
         )
         try:
-            # Exclusive creation reserves the filename without overwriting data.
-            with open(self._source_files[0], "xb"):
-                pass
+            # Reserve after URL resolution. Concurrent sessions compete through
+            # exclusive creation, then use readable suffixes instead of UUIDs.
+            output_file = self._reserve_capture_file(output_file)
+            self._output_path = str(output_file)
+            self._source_files = [str(output_file) + ".part"]
             for attempt in range(2):
                 self._intentional_stop = False
                 try:
@@ -427,6 +421,27 @@ class YtdlpLivePipeline:
             self._state = RecordingState.ERROR
             self._closed = True
             raise
+
+    @staticmethod
+    def _reserve_capture_file(base: Path) -> Path:
+        """Reserve a human-readable capture name without replacing any file."""
+        family = ('.ts', '.ts.part', '.native.mp4', '.native.mp4.part',
+                  '.native.ts', '.native.mkv', '.mkv', '.mp4',
+                  '.ts.audio1', '.ts.audio1.part', '.native.mp4.audio1', '.native.mp4.audio1.part',
+                  '.jpg', '.jpeg', '.png', '.webp', '.avif')
+        number = 1
+        while True:
+            stem = base.stem if number == 1 else f"{base.stem} ({number})"
+            candidate = base.with_name(stem + base.suffix)
+            if any(base.with_name(stem + suffix).exists() for suffix in family):
+                number += 1
+                continue
+            try:
+                with Path(str(candidate) + '.part').open('xb'):
+                    pass
+                return candidate
+            except FileExistsError:
+                number += 1
 
     def _ensure_start_allowed(self):
         guard = getattr(self, "_start_guard", None)
@@ -477,6 +492,9 @@ class YtdlpLivePipeline:
             if getattr(self, "_on_capture_started", None):
                 self._on_capture_started(self)
                 self._on_capture_started = None
+            if self.output_errors:
+                self._capture_ready.set_exception(self.last_exception)
+                return
             self._state = RecordingState.RECORDING
             self.error_code = None
             self.error_message = None
@@ -541,6 +559,7 @@ class YtdlpLivePipeline:
                 continuity_resume=self.continuity_resume,
                 continuity_callback=lambda event: loop.call_soon_threadsafe(self._accept_continuity_event, event),
                 api_cookie=self._cookie_str,
+                continuity_buffer_dir=self._buffer_directory(),
             )
             readers = []
             try:
@@ -576,7 +595,9 @@ class YtdlpLivePipeline:
                 prefix = bytearray()
                 file = open(self._source_files[index], "ab")
                 try:
-                    while not self._intentional_stop:
+                    # Stop the producer first, then read through EOF. Accepted
+                    # RingBuffer bytes belong to the completed media segment.
+                    while not self._force_stop.is_set():
                         data = reader.read(128 * 1024)
                         if not data:
                             if self._intentional_stop:
@@ -595,6 +616,8 @@ class YtdlpLivePipeline:
                                         'live_id': boundary['live_id'], 'rendition': boundary['rendition'],
                                         'from': resume_from, 'after_gap': boundary.get('after_gap', False),
                                     }
+                                    if boundary.get('recovery_deadline'):
+                                        self.continuity_resume['recovery_deadline'] = boundary['recovery_deadline']
                                     self.end_reason = 'continuity_boundary'
                                     return True
                                 raise RecordingError('continuity_gap', '필요한 녹화 구간을 복구하지 못했습니다. 저장된 원본을 확인하고 다시 시작하세요.')
@@ -688,11 +711,14 @@ class YtdlpLivePipeline:
                         if (
                             index == 0
                             and self.capture_format == "fmp4"
-                            and self._intentional_stop
+                            and (self._native_clock.remaining or self._native_clock.buffer)
+                            and (self._intentional_stop or self._hls_finished(reader))
                         ):
-                            # A native fragment interrupted mid-mdat cannot be finalized.
-                            # Retain only complete media boxes in our new capture file.
-                            file.truncate(self._native_clock.complete_media_end)
+                            # Keep the exact captured bytes for manual recovery;
+                            # never certify an interrupted mdat as complete.
+                            self._record_output_error('partial_input')
+                        if index == 0 and self.capture_format == 'ts' and file.tell() % 188:
+                            self._record_output_error('partial_input')
                         file.flush()
                         os.fsync(file.fileno())
                         file.close()
@@ -707,10 +733,19 @@ class YtdlpLivePipeline:
                 raise
 
         completed = False
+        copies = [asyncio.create_task(receive(i, r)) for i, r in enumerate(readers)]
+        receiving = asyncio.gather(*copies, return_exceptions=True)
         try:
-            results = await asyncio.gather(
-                *(receive(i, r) for i, r in enumerate(readers)), return_exceptions=True
-            )
+            try:
+                results = await asyncio.shield(receiving)
+            except asyncio.CancelledError:
+                # Cancelling an asyncio wrapper does not stop its file-writing
+                # thread. Keep ownership until all copying threads have exited.
+                self._record_output_error('forced_stop')
+                self._force_stop.set()
+                for reader in readers:
+                    await asyncio.to_thread(reader.close)
+                results = await asyncio.shield(receiving)
             error = next((r for r in results if isinstance(r, BaseException)), None)
             if error:
                 raise error
@@ -757,7 +792,7 @@ class YtdlpLivePipeline:
             ):
                 self._on_capture_error(self)
         if completed and self._start_time is not None:
-            self.end_reason = ("manual" if self._intentional_stop else
+            self.end_reason = self.error_code if self.output_errors else ("manual" if self._intentional_stop else
                                "continuity_boundary" if self.continuity_resume else "broadcast_ended")
             await self._seal_sources()
             if not self._intentional_stop and getattr(self, "_on_capture_ended", None):
@@ -776,7 +811,7 @@ class YtdlpLivePipeline:
                 self._source_files[index] = target
         self._ended_at = datetime.now()
         self._update_statistics()
-        self._state = (
+        self._state = self._state if self._state == RecordingState.ERROR else (
             RecordingState.COMPLETED
             if self._start_time is not None and Path(self._output_path).is_file()
             else RecordingState.ERROR
@@ -813,18 +848,71 @@ class YtdlpLivePipeline:
         await self._begin_receiver()
 
     async def stop_recording(self):
-        previous_reason = self.end_reason
         self._intentional_stop = True
         if self._state == RecordingState.COMPLETED:
             return
-        self._state = RecordingState.STOPPING
-        for reader in list(self._readers):
-            await asyncio.to_thread(reader.close)
+        if self._stop_task and self._stop_task.done() and (
+            self._stop_task.cancelled() or self._stop_task.exception() is not None
+        ):
+            self._stop_task = None
+        if self._stop_task is None:
+            self._stop_task = asyncio.create_task(self._finish_stop())
+        try:
+            await asyncio.shield(self._stop_task)
+        except asyncio.CancelledError:
+            self._record_output_error('forced_stop')
+            await asyncio.shield(self._stop_task)
+            raise
+
+    async def _finish_stop(self):
+        previous_reason = self.end_reason
+        if self._state != RecordingState.ERROR:
+            self._state = RecordingState.STOPPING
+        readers = list(self._readers)
+        stopping = [asyncio.create_task(asyncio.to_thread(
+            getattr(reader, 'request_stop', reader.close))) for reader in readers]
+        if stopping:
+            _, pending = await asyncio.wait(stopping, timeout=self.STOP_COOPERATIVE_SECONDS)
+            if pending:
+                self._record_output_error('forced_stop')
+                self._force_stop.set()
+                forcing = [asyncio.create_task(asyncio.to_thread(reader.close)) for reader in readers]
+                await asyncio.wait(forcing, timeout=self.STOP_FORCE_SECONDS)
+            for task in stopping:
+                if task.done() and not task.cancelled() and task.exception():
+                    self._record_output_error('forced_stop')
         if self._feeder_task:
-            await asyncio.wait_for(asyncio.shield(self._feeder_task), 45)
+            try:
+                await asyncio.wait_for(asyncio.shield(self._feeder_task), self.STOP_DRAIN_SECONDS)
+            except (asyncio.TimeoutError, asyncio.CancelledError):
+                self._record_output_error('forced_stop')
+                self._force_stop.set()
+                # Never cancel the thread owner or publish a still-open file.
+                raise RecordingError('forced_stop', '녹화 종료가 완료되지 않았습니다. 원본 파일은 보관됩니다.')
         if self._closed:
             await self._seal_sources()
-            self.end_reason = previous_reason or "manual"
+            self.end_reason = self.error_code if self.output_errors else previous_reason or 'manual'
+
+    def _record_output_error(self, category):
+        if category not in self.output_errors:
+            self.output_errors.append(category)
+        self.error_code = category
+        self.error_message = '녹화 종료 중 데이터 손상이 감지되었습니다. 원본을 보관하고 파일 확인이 필요합니다.'
+        self.last_exception = RecordingError(category, self.error_message)
+        self.end_reason = category
+        self.retryable = False
+        self._state = RecordingState.ERROR
+
+    def _buffer_directory(self):
+        if 'chzzk.naver.com' not in self._source_page_url:
+            return None
+        if self.continuity_buffer is None:
+            try:
+                self.continuity_buffer = tempfile.TemporaryDirectory(
+                    prefix='phrolova-buffer-')
+            except OSError:
+                return '-'
+        return self.continuity_buffer.name
 
     @staticmethod
     def _hls_finished(reader) -> bool:
@@ -857,6 +945,7 @@ class YtdlpLivePipeline:
         quality: str,
         source_page_url: str = "",
         continuity_resume=None,
+        continuity_buffer_dir=None,
         continuity_callback=None,
         api_cookie=None,
     ) -> tuple[object, object]:
@@ -930,6 +1019,7 @@ class YtdlpLivePipeline:
                 video = ChzzkHLSStream(
                     session, uri, channel_id, event_callback=continuity_callback,
                     api_cookie=api_cookie, resume=continuity_resume,
+                    buffer_dir=continuity_buffer_dir,
                     recording_time_machine=force_restart,
                     capture_start_offset=float(max(0, start_offset)), **kwargs,
                 )
@@ -1439,6 +1529,7 @@ class YtdlpLivePipeline:
             "warning_message": self.warning_message,
             "continuity_source": dict(self.continuity_source),
             "continuity_events": list(self.continuity_events),
+            "output_errors": list(self.output_errors),
             "has_data": self._start_time is not None and self._file_size_bytes > 0,
             "retryable": self.retryable,
             "error_code": self.error_code,

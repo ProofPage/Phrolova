@@ -17,8 +17,9 @@ URL = 'https://chzzk.naver.com/video/123'
 
 def test_default_settings_and_api_schema():
     from app.api.vod import VodDownloadRequest, VodRetryRequest
-    assert Settings(_env_file=None).chzzk_vod_cdn == 'default'
-    assert VodDownloadRequest(url=URL).cdn == VodRetryRequest().cdn == 'default'
+    assert Settings(_env_file=None).chzzk_live_cdn == Settings(_env_file=None).chzzk_vod_cdn == 'akamai'
+    assert Settings(_env_file=None,chzzk_live_cdn='default',chzzk_vod_cdn='default').chzzk_vod_cdn == 'default'
+    assert VodDownloadRequest(url=URL).cdn == VodRetryRequest().cdn == 'akamai'
 
 
 @pytest.mark.parametrize('url', [
@@ -343,10 +344,14 @@ async def test_api_download_and_retry_pass_cdn_to_service(tmp_path, monkeypatch)
         assert client.post('/api/vod/download',json={'url':URL,'cdn':'akamai'}).status_code==200
         assert service.download_vod_batch.await_args.kwargs['cdn']=='akamai'
         assert client.post('/api/vod/download',json={'url':URL}).status_code==200
+        assert service.download_vod_batch.await_args.kwargs['cdn']=='akamai'
+        assert client.post('/api/vod/download',json={'url':URL,'cdn':'default'}).status_code==200
         assert service.download_vod_batch.await_args.kwargs['cdn']=='default'
         assert client.post('/api/vod/old/retry',json={'cdn':'akamai'}).status_code==200
         assert service.retry_vod.await_args.kwargs['cdn']=='akamai'
         assert client.post('/api/vod/old/retry').status_code==200
+        assert service.retry_vod.await_args.kwargs['cdn']=='akamai'
+        assert client.post('/api/vod/old/retry',json={'cdn':'default'}).status_code==200
         assert service.retry_vod.await_args.kwargs['cdn']=='default'
 
 

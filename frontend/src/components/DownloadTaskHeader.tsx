@@ -9,7 +9,7 @@ import { detectDownloadPlatform } from '../utils/downloads';
 export function DownloadTaskHeader({ task, duration, actions }: { task: VodTask; duration?: number | null; actions: ReactNode }) {
     const { t } = useLanguage();
     const length = typeof duration === 'number' && Number.isFinite(duration) && duration > 0 ? formatDuration(duration) : t('영상 길이 확인 중');
-    const media = length + (task.cdn_applied ? ` · ${task.cdn === 'akamai' ? 'Akamai CDN' : t('기본 CDN')}` : '');
+    const media = length + (task.cdn_applied ? ` · ${task.cdn === 'akamai' ? 'Akamai CDN' : 'Naver CDN'}` : '');
     const uploader = task.metadata?.uploader || t('채널 정보 확인 중');
     return <header className="download-task-header">
         <DownloadThumbnail src={task.metadata?.thumbnail} />

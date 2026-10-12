@@ -25,12 +25,13 @@ WIDTHS = (360, 390, 768, 1024, 1440, 1920)
 
 GEOMETRY = """card => {
  const rect = e => { const r=e.getBoundingClientRect(); return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom}; };
- const details=card.querySelector('.recording-channel-details'), copy=details.querySelector('.recording-details-copy');
+ const panel=document.getElementById(card.querySelector('.recording-detail-action').getAttribute('aria-controls')); const details=panel.querySelector('.recording-channel-details'), copy=details.querySelector('.recording-details-copy');
  const preview=details.querySelector('.channel-live-preview'), stage=preview.querySelector('.channel-preview-stage');
  const player=preview.querySelector('.channel-preview-player'), video=preview.querySelector('video');
  const fields=copy.querySelector('.recording-details-fields');
- return {card:rect(card),containerWidth:card.clientWidth,summary:rect(card.querySelector('.recording-channel-summary')),
+ return {card:rect(card),containerWidth:panel.clientWidth,summary:rect(card.querySelector('.recording-channel-summary')),
  details:rect(details),copy:rect(copy),preview:rect(preview),stage:rect(stage),player:player?rect(player):null,
+ offline:preview.classList.contains("is-offline"),
  columns:getComputedStyle(details).gridTemplateColumns.split(' ').length,
  overflow:document.documentElement.scrollWidth-innerWidth,
  mainOverflow:document.querySelector('#main-content').scrollWidth-document.querySelector('#main-content').clientWidth,
@@ -53,7 +54,7 @@ def validate_geometry(g, ready=False):
         assert g["columns"] == 2, g
         assert close(g["copy"]["y"], g["preview"]["y"]), g
         assert g["preview"]["x"] >= g["copy"]["right"] + 16, g
-        assert g["preview"]["width"] >= g["copy"]["width"] * 1.75, g
+        assert g["preview"]["width"] >= min(960, g["copy"]["width"] * 1.75), g
     else:
         assert g["columns"] == 1, g
         assert close(g["preview"]["width"], g["copy"]["width"]), g
@@ -154,29 +155,30 @@ async def main():
             page.on("pageerror", lambda error: errors.append(str(error)))
             await page.goto(BASE)
             cards = [page.locator(f'[data-channel-key="chzzk:details-{i}"]') for i in range(3)]
+            panels = [page.locator(f'[id="channel-details-chzzk%3Adetails-{i}"]') for i in range(3)]
             await cards[0].wait_for()
             compact = [await card.locator(".recording-channel-summary").evaluate("e=>({width:e.offsetWidth,height:e.offsetHeight})") for card in cards]
             for card in cards:
                 await card.locator(".recording-detail-action").click()
-            await expect(cards[0].get_by_text("미리보기를 불러오는 중", exact=True)).to_be_visible()
-            await expect(cards[1].get_by_role("button", name="다시 시도", exact=True)).to_be_visible()
-            await expect(cards[2].locator(".channel-preview-message")).to_have_text("현재 방송 중이 아닙니다.")
+            await expect(panels[0].get_by_text("미리보기를 불러오는 중", exact=True)).to_be_visible()
+            await expect(panels[1].get_by_role("button", name="다시 시도", exact=True)).to_be_visible()
+            await expect(panels[2].locator(".channel-preview-message")).to_have_text("현재 방송 중이 아닙니다.")
             initial = [await card.evaluate(GEOMETRY) for card in cards]
             for i, g in enumerate(initial):
                 validate_geometry(g)
                 assert close(g["summary"]["width"], compact[i]["width"]) and close(g["summary"]["height"], compact[i]["height"]), (compact[i], g)
             responses[0] = responses[1] = "ready"
             gate.set()
-            await cards[1].get_by_role("button", name="다시 시도", exact=True).click()
+            await panels[1].get_by_role("button", name="다시 시도", exact=True).click()
             await page.wait_for_function("[...document.querySelectorAll('video')].every(v=>v.readyState>=2&&v.videoWidth>0)")
-            await expect(cards[0].locator(".channel-preview-player")).to_be_visible()
-            await expect(cards[1].locator(".channel-preview-player")).to_be_visible()
+            await expect(panels[0].locator(".channel-preview-player")).to_be_visible()
+            await expect(panels[1].locator(".channel-preview-player")).to_be_visible()
             for i in range(2):
                 current = await cards[i].evaluate(GEOMETRY)
                 validate_geometry(current, ready=True)
                 assert_stage_unchanged(initial[i], current)
-            assert await cards[0].locator("video").evaluate("v=>v.videoWidth/v.videoHeight") == 16 / 9
-            assert await cards[1].locator("video").evaluate("v=>v.videoWidth/v.videoHeight") == 4 / 3
+            assert await panels[0].locator("video").evaluate("v=>v.videoWidth/v.videoHeight") == 16 / 9
+            assert await panels[1].locator("video").evaluate("v=>v.videoWidth/v.videoHeight") == 4 / 3
             assert 2 not in resolver_calls, resolver_calls
             await page.evaluate("window.preservedPlayers=[...document.querySelectorAll('video')]")
             expected_calls = list(resolver_calls)
@@ -193,8 +195,8 @@ async def main():
                 await page.screenshot(path=str(OUT / f"{mode}-{width}.png"), animations="disabled")
                 print(f"{width}px {mode}: layout/ratio/full-width/long-path PASS", flush=True)
             # Decode/play real media; the displayed video continues advancing.
-            previous = await cards[0].locator("video").evaluate("v=>v.currentTime")
-            frames = await cards[0].locator("video").evaluate("v=>v.getVideoPlaybackQuality().totalVideoFrames")
+            previous = await panels[0].locator("video").evaluate("v=>v.currentTime")
+            frames = await panels[0].locator("video").evaluate("v=>v.getVideoPlaybackQuality().totalVideoFrames")
             await page.wait_for_function("document.querySelector('video').currentTime > " + str(previous + .15))
             await page.wait_for_function("document.querySelector('video').getVideoPlaybackQuality().totalVideoFrames > " + str(frames))
             if width == 1920:
@@ -206,13 +208,13 @@ async def main():
                     for i, card in enumerate(cards):
                         validate_geometry(await card.evaluate(GEOMETRY), ready=i < 2)
             # A collapsed disclosure releases the media; reopening resolves fresh playback.
-            await cards[0].locator("video").evaluate("v=>window.closedPlayer=v")
+            await panels[0].locator("video").evaluate("v=>window.closedPlayer=v")
             await cards[0].locator(".recording-detail-action").click()
-            assert await cards[0].locator("video").count() == 0
+            assert await panels[0].locator("video").count() == 0
             assert await page.evaluate("!window.closedPlayer.isConnected&&!window.closedPlayer.hasAttribute('src')&&window.closedPlayer.paused")
             before_reopen = len(resolver_calls)
             await cards[0].locator(".recording-detail-action").click()
-            await expect(cards[0].locator(".channel-preview-player")).to_be_visible()
+            await expect(panels[0].locator(".channel-preview-player")).to_be_visible()
             assert len(resolver_calls) == before_reopen + 1
             assert not errors, errors
             await context.close()

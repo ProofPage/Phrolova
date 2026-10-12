@@ -17,7 +17,7 @@ async def shot(page,name,focus=None):
  centered=await page.locator('.channel-preview-status').evaluate_all('''panels=>panels.every(panel=>{
   const rect=panel.getBoundingClientRect(),style=getComputedStyle(panel);
   const children=[...panel.children].map(child=>child.getBoundingClientRect());
-  return style.textAlign==='center'&&children.every(child=>Math.abs((child.left+child.right)/2-(rect.left+rect.right)/2)<1)&&Math.abs((children[0].top-rect.top)-(rect.bottom-children.at(-1).bottom))<1;
+  return style.textAlign==='center'&&(style.flexDirection==='row' ? Math.abs((Math.min(...children.map(c=>c.left))+Math.max(...children.map(c=>c.right)))/2-(rect.left+rect.right)/2)<1 : children.every(child=>Math.abs((child.left+child.right)/2-(rect.left+rect.right)/2)<1))&&Math.abs((children[0].top-rect.top)-(rect.bottom-children.at(-1).bottom))<1;
  })''')
  assert centered,(name,'Preview status group is not centered')
  print(name,json.dumps(result),flush=True)
@@ -51,7 +51,8 @@ async def main():
    assert await cards.first.locator('video').count()==0
    off=await shot(page,f'{w}-offline',cards.first)
    assert abs(off['panels'][0]['width']/off['panels'][0]['height']-16/9)<.02,off
-   await expand(cards.nth(1));await cards.nth(1).get_by_role('button',name='다시 시도',exact=True).wait_for()
+   panel=page.locator('[id="'+await cards.nth(1).locator('.recording-detail-action').get_attribute('aria-controls')+'"]')
+   await expand(cards.nth(1));await panel.get_by_role('button',name='다시 시도',exact=True).wait_for()
    unavail=await shot(page,f'{w}-unavailable',cards.nth(1));assert all(abs(x['width']/x['height']-16/9)<.02 for x in unavail['panels']),unavail
    resolver=[];gate=asyncio.Event()
    if w!=390:gate.set()
@@ -61,9 +62,9 @@ async def main():
     file=media/route.request.url.rsplit('/',1)[-1]
     await route.fulfill(path=file,content_type='application/vnd.apple.mpegurl' if file.suffix=='.m3u8' else 'video/mp2t')
    await page.route('**/api/stream/preview/**',resolve);await page.route('**/preview-test/**',stream)
-   await cards.nth(1).get_by_role('button',name='다시 시도',exact=True).click()
+   await panel.get_by_role('button',name='다시 시도',exact=True).click()
    if w==390:
-    await cards.nth(1).get_by_text('미리보기를 불러오는 중',exact=True).wait_for();await shot(page,'390-loading',cards.nth(1));gate.set()
+    await panel.get_by_text('미리보기를 불러오는 중',exact=True).wait_for();await shot(page,'390-loading',cards.nth(1));gate.set()
    await page.wait_for_function('document.querySelector("video")?.readyState >= 2')
    await page.locator('.channel-preview-player').wait_for(state='visible')
    active=await shot(page,f'{w}-active',cards.nth(1))

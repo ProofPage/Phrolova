@@ -72,12 +72,12 @@ async def inspect_job(job_id: str):
         raise HTTPException(409, str(error)) from None
 
 
-def output(job_id):
+def output(job_id, source=False):
     try:
         job = manager().get(job_id)
     except ValueError:
         raise HTTPException(404, "녹화 작업을 찾을 수 없습니다.") from None
-    candidates = [job.get("output_path"), *job["source_paths"]]
+    candidates = job["source_paths"] if source else [job.get("output_path"), *job["source_paths"]]
     path = None
     for candidate in candidates:
         try:
@@ -94,14 +94,14 @@ def output(job_id):
 
 
 @router.get("/{job_id}/file")
-async def open_file(job_id: str):
+async def open_file(job_id: str, source: bool = False):
     try:
         job = manager().get(job_id)
     except ValueError:
         raise HTTPException(404, "녹화 작업을 찾을 수 없습니다.") from None
     if job["state"] not in ("completed", "failed", "attention"):
         raise HTTPException(409, "파일 처리 종료 후 열 수 있습니다.")
-    path = output(job_id)
+    path = output(job_id, source=source)
     return FileResponse(path, filename=path.name, content_disposition_type="inline")
 
 

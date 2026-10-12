@@ -93,6 +93,25 @@ class ChzzkCdnYoutubeDL(yt_dlp.YoutubeDL):
                     self.cdn_applied = True
         return super().urlopen(request)
 
+    def dl(self, name, info, subtitle=False, test=False):
+        from yt_dlp.downloader import get_suitable_downloader
+        from yt_dlp.downloader.hls import HlsFD
+        from yt_dlp.downloader.dash import DashSegmentsFD
+        from app.engine.vod_integrity import VerifiedHlsFD, VerifiedDashFD
+        if test or subtitle or not info.get('url'):
+            return super().dl(name, info, subtitle, test)
+        native = get_suitable_downloader(info, self.params, to_stdout=name == '-')
+        verified = {HlsFD: VerifiedHlsFD, DashSegmentsFD: VerifiedDashFD}.get(native)
+        if verified is None:
+            return super().dl(name, info, subtitle, test)
+        downloader = verified(self, self.params)
+        for hook in self._progress_hooks:
+            downloader.add_progress_hook(hook)
+        safe_info = self._copy_infodict(info)
+        if safe_info.get('http_headers') is None:
+            safe_info['http_headers'] = self._calc_headers(safe_info)
+        return downloader.download(name, safe_info, subtitle)
+
     def process_info(self, info_dict):
         # Native HLS can delegate unsupported playlists to FFmpeg, whose HTTP
         # requests bypass urlopen. Detect that case before starting media output.

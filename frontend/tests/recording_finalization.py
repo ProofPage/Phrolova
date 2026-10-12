@@ -48,6 +48,13 @@ async def main():
         await expect(page.get_by_text('MP4 변환 중',exact=True)).to_be_visible()
         await expect(page.get_by_text('42.7%',exact=True)).to_be_visible()
         await expect(page.get_by_text('녹화 완료 · MP4',exact=True)).to_be_visible()
+        # A valid remux must not certify capture continuity after packet errors.
+        jobs[2].update(continuity_valid=False, warning_message='손상 패킷 경고가 있습니다. 원본을 보관합니다.',
+                       diagnostics={'returncode': 0, 'stderr': 'Packet corrupt', 'output_errors': ['corrupt_packet']})
+        await page.reload()
+        await expect(page.get_by_text('변환 완료 · 녹화 데이터 확인 필요 · MP4 · 경고 있음', exact=True)).to_be_visible()
+        await expect(page.get_by_text('변환 완료 · 녹화 데이터 확인 필요 · MP4 · 경고 있음', exact=True)).to_have_class('text-warn')
+        await expect(page.get_by_text('녹화 완료 · MP4', exact=True)).to_have_count(0)
         await expect(page.get_by_text('녹화 파일 처리 이력',exact=True)).to_be_visible()
         await expect(page.get_by_text('[미리보기 샘플] 제거한 채널',exact=True)).to_be_visible()
         assert '채팅' not in await page.locator('body').inner_text()

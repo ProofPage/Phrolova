@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import errno
+import re
 
 
 class RecordingError(RuntimeError):
@@ -29,9 +30,19 @@ def classify_recording_error(error: Exception) -> RecordingError:
         and error.errno in (errno.ENOSPC, errno.EROFS)
     ):
         return RecordingError("storage", "저장 위치의 권한과 남은 공간을 확인하세요.")
-    if getattr(error, 'status', None) in (401, 403):
+    status = getattr(error, 'status', None)
+    cause = error
+    for _ in range(4):
+        response = getattr(cause, 'response', None)
+        if response is not None:
+            status = getattr(response, 'status_code', status)
+            break
+        cause = getattr(cause, '__cause__', None)
+        if cause is None:
+            break
+    if status in (401, 403):
         return RecordingError('authentication', '방송 접근 권한을 확인하지 못했습니다. 설정 → 인증을 확인하세요.')
-    text = str(error).lower()
+    text = re.sub(r'https?://\S+', '<url>', str(error).lower())
     if "javascript runtime" in text:
         return RecordingError(
             "youtube_runtime",
@@ -42,7 +53,8 @@ def classify_recording_error(error: Exception) -> RecordingError:
             "unsupported_container",
             "이 방송은 TS 호환 스트림을 제공하지 않습니다. 녹화 설정을 확인하세요.",
         )
-    if any(x in text for x in ("403", "401", "권한", "쿠키", "not a bot", "sign in")):
+    if ((status is None and re.search(r'(?<!\d)(?:401|403)(?!\d)', text))
+            or any(x in text for x in ("권한", "쿠키", "not a bot", "sign in"))):
         return RecordingError(
             "authentication",
             "방송 접근 권한을 확인하지 못했습니다. 설정 → 인증을 확인하세요.",

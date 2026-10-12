@@ -102,7 +102,7 @@ export const DownloadTaskCard = memo(function DownloadTaskCard({ task, mode, ret
                 {task.output_path && <div><dt>{t('저장 위치')}</dt><dd>{task.output_path}</dd></div>}
                 {task.started_at && <div><dt>{t('다운로드 시작 시각')}</dt><dd>{new Date(task.started_at).toLocaleString()}</dd></div>}
                 {task.completed_at && <div><dt>{t('다운로드 완료 시각')}</dt><dd>{<time dateTime={task.completed_at} className="download-completed-at"><span>{new Date(task.completed_at).toLocaleDateString()}</span><span>{new Date(task.completed_at).toLocaleTimeString()}</span></time>}</dd></div>}
-                {task.cdn_applied && <div><dt>CDN</dt><dd>{task.cdn === 'akamai' ? 'Akamai CDN' : t('기본 CDN')}</dd></div>}
+                {task.cdn_applied && <div><dt>CDN</dt><dd>{task.cdn === 'akamai' ? 'Akamai CDN' : 'Naver CDN'}</dd></div>}
             </dl>
             {metadata?.quality_fallback && <p className="text-xs text-warn">{t('기본 화질이 제공되지 않아 사용 가능한 화질을 선택했습니다.')}</p>}
             {task.error_message && <details className="text-xs text-danger"><summary>{t('오류 세부 정보')}</summary><p>{t(task.error_message)}</p></details>}

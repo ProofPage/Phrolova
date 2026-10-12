@@ -123,14 +123,17 @@ class RecordingFinalizer:
             job["state"] = "capture_failed"
             job["error_message"] = "녹화가 시작되지 않아 변환할 파일이 없습니다."
         job["can_open"] = job["source_available"] or job["output_available"]
+        diagnostics = job.get("diagnostics") or {}
+        if job["state"] == "completed" and diagnostics.get("returncode") == 0 and str(diagnostics.get("stderr") or "").strip():
+            if not job.get("warning_message"):
+                job["warning_message"] = "변환 결과 검사를 통과했지만 FFmpeg 경고가 있습니다."
         job["can_retry"] = job["source_available"] and job["state"] not in (
             "recording",
             "pending",
             "normalizing",
             "converting",
             "verifying",
-            "completed",
-        )
+        ) and (job["state"] != "completed" or bool(job.get("warning_message")))
         job["can_inspect"] = job["can_open"] and job["state"] not in (
             "recording",
             "pending",
@@ -303,6 +306,12 @@ class RecordingFinalizer:
             job.setdefault('diagnostics', {})['continuity'] = status['continuity_events']
         if status.get('continuity_source'):
             job['continuity_source'] = status['continuity_source']
+        if getattr(pipeline, 'output_errors', None):
+            job.setdefault('diagnostics', {})['output_errors'] = list(pipeline.output_errors)
+            job['continuity_valid'] = False
+            job.update(state='attention', error_code=pipeline.error_code,
+                       error_message=pipeline.error_message, processing_stage='capture_shutdown',
+                       keep_source_ts=True, progress=None)
         if (
             not Path(job["source_paths"][0]).is_file()
             or Path(job["source_paths"][0]).stat().st_size == 0
@@ -313,8 +322,8 @@ class RecordingFinalizer:
                 progress=None,
             )
         self._save(job)
-        if job["state"] == "capture_failed":
-            return job
+        if job["state"] in {"capture_failed", "attention"}:
+            return self.get(job_id)
         self.db.execute(
             "INSERT OR IGNORE INTO live_history(composite_key,platform,channel_id,channel_name,started_at,ended_at,duration_seconds,file_size_bytes,output_path,recording_job_id) VALUES(?,?,?,?,?,?,?,?,?,?)",
             (
@@ -383,8 +392,10 @@ class RecordingFinalizer:
                 ) > max(2, previous["duration"] * 0.02):
                     raise RuntimeError("저장된 영상 길이와 다릅니다.")
                 job.update(
-                    state="completed", inspection_state="passed", error_message=None, error_code=None
+                    state="completed", inspection_state="passed", error_message=None, error_code=None,
+                    processing_stage="completed",
                 )
+                job["diagnostics"].pop("detail", None)
             except Exception as error:
                 job.update(
                     state="attention",
@@ -411,6 +422,8 @@ class RecordingFinalizer:
             error_message=None,
             error_code=None,
             processing_stage=None,
+            warning_message=None,
+            diagnostics={},
             inspection_state="pending",
             retry_count=job["retry_count"] + 1,
             inspect_only=inspect_only,
@@ -557,8 +570,10 @@ class RecordingFinalizer:
                     "녹화 원본이 변경되어 TS 변환을 확정하지 않았습니다."
                 )
             target = sources[0].with_name(sources[0].stem + ".ts")
-            if target.exists():
-                target = target.with_name(target.stem + f'.{job["id"][:12]}.ts')
+            number = 2
+            while target.exists():
+                target = sources[0].with_name(sources[0].stem + f" ({number}).ts")
+                number += 1
             await asyncio.to_thread(publish_file, candidate, target)
             job.update(
                 source_paths=[str(target)],
@@ -767,7 +782,7 @@ class RecordingFinalizer:
                 raise RuntimeError("변환 중 원본 파일이 변경되었습니다.")
             if candidate not in sources and not job.get("output_path"):
                 target = sources[0].with_suffix("." + job["target_format"])
-                number = 1
+                number = 2
                 while target.exists():
                     target = sources[0].with_name(
                         sources[0].stem + f" ({number})." + job["target_format"]
@@ -776,6 +791,15 @@ class RecordingFinalizer:
                 await asyncio.to_thread(publish_file, candidate, target)
             else:
                 target = candidate
+            if job["diagnostics"].get("returncode") == 0 and str(job["diagnostics"].get("stderr") or "").strip():
+                job["warning_message"] = "변환 결과 검사를 통과했지만 FFmpeg 경고가 있습니다. 원본 파일은 보관합니다."
+            stderr_lower = str(job['diagnostics'].get('stderr') or '').lower()
+            output_errors = [category for token, category in (
+                ('packet corrupt', 'corrupt_packet'), ('corrupt input packet', 'corrupt_packet'),
+                ('partial file', 'partial_input')) if token in stderr_lower]
+            if output_errors:
+                job['diagnostics']['output_errors'] = sorted(set(output_errors))
+                job['continuity_valid'] = False
             job.update(
                 state="completed",
                 error_code=None,
@@ -797,7 +821,7 @@ class RecordingFinalizer:
                 "UPDATE live_history SET output_path=?,file_size_bytes=?,duration_seconds=? WHERE recording_job_id=?",
                 (str(target), job["file_size_bytes"], media["duration"], job_id),
             )
-            if not job["keep_source_ts"] and target not in sources:
+            if not job["keep_source_ts"] and not job.get("warning_message") and target not in sources:
                 for source in sources:
                     try:
                         await asyncio.to_thread(source.unlink)
