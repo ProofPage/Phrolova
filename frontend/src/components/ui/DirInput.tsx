@@ -1,5 +1,6 @@
 import { useDialogKeyboard } from "../../hooks/useDialogKeyboard";
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useLayoutEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Folder, FolderOpen, HardDrive, ArrowLeft, ChevronRight, X, Loader2 } from "lucide-react";
 import { api, BrowseDirsResponse, DirEntry } from "../../api/client";
 import { Button, Input } from "./primitives";
@@ -50,7 +51,7 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
 
     return (
         <div
-            className="ui-overlay fixed inset-0 z-[9998] flex items-center justify-center"
+            className="ui-overlay fixed inset-0 z-[9999] flex items-center justify-center"
             onClick={onClose}
         >
             <div className="absolute inset-0 bg-black/60 " />
@@ -176,6 +177,9 @@ interface DirInputProps {
     onChange: (v: string) => void;
     placeholder?: string;
     focusBorderColor?: string;
+    multiline?: boolean;
+    required?: boolean;
+    describedBy?: string;
 }
 
 export function DirInput({
@@ -184,32 +188,66 @@ export function DirInput({
     onChange,
     placeholder = "경로 입력...",
     focusBorderColor = "",
+    multiline = false,
+    required = false,
+    describedBy,
 }: DirInputProps) {
     const { t } = useLanguage();
     const [showBrowser, setShowBrowser] = useState(false);
+    const pathRef = useRef<HTMLTextAreaElement>(null);
+
+    useLayoutEffect(() => {
+        const field = pathRef.current;
+        if (!field) return;
+        const resize = () => {
+            field.style.height = "auto";
+            const minimum = parseFloat(getComputedStyle(field).minHeight) || 34;
+            field.style.height = Math.min(144, Math.max(minimum, field.scrollHeight + 2)) + "px";
+        };
+        resize();
+        const observer = new ResizeObserver(resize);
+        if (field.parentElement) observer.observe(field.parentElement);
+        return () => observer.disconnect();
+    }, [multiline, value]);
 
     return (
         <>
-            <div className="flex gap-2">
-                <Input
+            <div className={multiline ? "dir-input-row" : "flex gap-2"}>
+                {multiline ? <textarea
+                    ref={pathRef}
+                    id={id}
+                    rows={1}
+                    value={value}
+                    required={required}
+                    aria-describedby={describedBy}
+                    spellCheck={false}
+                    wrap="soft"
+                    onChange={(event) => onChange(event.target.value.replace(/[\r\n]/g, ""))}
+                    className={`ui-input input-focus dir-input-multiline font-mono ${focusBorderColor}`}
+                    placeholder={t(placeholder)}
+                /> : <Input
                     id={id}
                     type="text"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     className={`flex-1 font-mono text-sm ${focusBorderColor}`}
                     placeholder={t(placeholder)}
-                />
-                <Button type="button" icon={FolderOpen} onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setShowBrowser(true); }} className="px-3 shrink-0" title={t("폴더 찾아보기")} aria-label={t("폴더 찾아보기")}>
-                    <span className="hidden sm:inline">{t("찾아보기")}</span>
+                    required={required}
+                    aria-describedby={describedBy}
+                    title={value}
+                />}
+                <Button type="button" icon={FolderOpen} onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setShowBrowser(true); }} className={multiline ? "dir-input-browse px-3 shrink-0" : "px-3 shrink-0"} title={t("폴더 찾아보기")} aria-label={t("폴더 찾아보기")}>
+                    <span className={multiline ? "dir-input-browse-label" : "hidden sm:inline"}>{t("찾아보기")}</span>
                 </Button>
             </div>
 
-            {showBrowser && (
+            {/* 스크롤되는 설정 창 안에서도 폴더 선택 창이 잘리지 않게 한다. */}
+            {showBrowser && createPortal(
                 <DirBrowserModal
                     initialPath={value || undefined}
                     onSelect={onChange}
                     onClose={() => setShowBrowser(false)}
-                />
+                />, document.body
             )}
         </>
     );

@@ -46,3 +46,11 @@ PHROLOVA_TEST_URL=http://127.0.0.1:3000 PHROLOVA_TEST_OUTPUT=/tmp/phrolova-repai
 - 파일 없는 시작 실패의 수치·버튼 상태, 반복 이력 묶음과 목록 정리 요청을 검사합니다.
 - 라이브·다운로드 CDN 선택을 각각 저장하고 새로고침 후 복원하는 API 연결을 검사합니다.
 - 브라우저 검사는 모의 API를 사용합니다. 실제 파일 검사·Streamlink 녹화·종료 후 변환은 `backend/tests/test_recording_log_regressions.py`에서 검증합니다.
+
+초기 기본 설정 마법사 회귀 검사:
+
+```bash
+python frontend/tests/setup_wizard.py
+```
+
+- `setup_wizard.py`: 320/390/640/1440px와 844×390 가로 화면에서 기본 경로의 34/44px 높이·텍스트 중앙 정렬과 창 크기에 따른 자동 줄바꿈, 긴 한글 저장 경로, 폴더 선택과 키보드 초점, 공용 화질·형식 선택 상자의 키보드 조작, 이전/다음, 빈 경로, 저장 중 조작 잠금과 실패 후 재시도를 확인합니다. 설정·폴더 API는 모의 응답이며 실제 설정이나 폴더를 변경하지 않습니다.

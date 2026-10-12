@@ -1,0 +1,57 @@
+.setup-dialog { display: flex; flex-direction: column; width: 100%; max-width: 600px; min-width: 0; overflow: hidden; background: var(--color-surface-2); border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: var(--shadow-pop); }
+.setup-header { flex-shrink: 0; padding: 20px 24px 0; border-bottom: 1px solid var(--color-line); }
+.setup-header h2 { color: var(--color-ink); font-size: 21px; font-weight: 600; line-height: 1.35; letter-spacing: -.025em; }
+.setup-header h2:focus { outline: none; }
+.setup-header > p { margin-top: 6px; color: var(--color-ink-faint); font-size: 12px; line-height: 1.6; }
+.setup-steps { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin-top: 12px; }
+.setup-steps li { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 8px 0; color: var(--color-ink-faint); border-bottom: 2px solid transparent; font-size: 13px; }
+.setup-step-number { display: grid; min-width: 16px; flex-shrink: 0; place-items: center; font-weight: 500; font-variant-numeric: tabular-nums; }
+.setup-steps [aria-current="step"] { color: var(--color-ink); border-bottom-color: var(--primary); font-weight: 600; }
+.setup-steps [data-complete="true"] .setup-step-number { color: var(--primary); }
+.setup-body { flex: 1 1 auto; min-height: 0; padding: 16px 24px 20px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.setup-fields { display: grid; gap: 20px; }
+.setup-directories, .setup-recording-options { display: grid; gap: 14px; }
+.setup-directories h3, .setup-recording-options h3 { display: flex; align-items: center; gap: 8px; color: var(--color-ink); font-size: 14px; font-weight: 600; }
+.setup-storage-heading > .setup-hint { margin-top: 4px; }
+.setup-hint { color: var(--color-ink-faint); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.setup-directory .ui-input { font-family: var(--font-sans); font-size: 13px; font-weight: 400; }
+.setup-option-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.setup-review { display: grid; gap: 16px; }
+.setup-summary { border: 1px solid var(--color-line); border-radius: var(--radius-control); overflow: hidden; }
+.setup-summary > div { display: grid; grid-template-columns: 150px minmax(0,1fr); align-items: start; gap: 12px; padding: 14px; }
+.setup-summary > div + div { border-top: 1px solid var(--color-line); }
+.setup-summary dt { color: var(--color-ink-faint); font-size: 12px; line-height: 1.6; }
+.setup-summary dd { color: var(--color-ink); font-size: 13px; font-weight: 400; line-height: 1.6; overflow-wrap: anywhere; }
+.setup-error { margin-top: 16px; padding: 12px; color: var(--color-danger); border: 1px solid var(--color-danger); border-radius: var(--radius-control); font-size: 13px; line-height: 1.6; }
+.setup-footer { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 24px; border-top: 1px solid var(--color-line); }
+.setup-navigation { display: flex; flex-shrink: 0; gap: 8px; }
+.setup-navigation .ui-button { padding-left: 14px; padding-right: 14px; }
+.dir-input-row { display: flex; min-width: 0; align-items: center; gap: 8px; }
+.dir-input-multiline { --dir-input-height: 34px; flex: 1; min-width: 0; min-height: var(--dir-input-height); max-height: 144px; padding-block: calc((var(--dir-input-height) - 1.5em - 2px) / 2); resize: none; overflow-wrap: anywhere; white-space: pre-wrap; }
+.dir-input-browse { min-height: 34px; }
+.dir-input-browse-label { display: inline; }
+@media (max-width:639px) {
+  .setup-header { padding: 16px 16px 0; }
+  .setup-body { padding: 16px; }
+  .setup-option-fields { grid-template-columns: minmax(0,1fr); }
+  .setup-footer { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 16px; }
+  .setup-navigation .ui-button { flex: 1; }
+  .setup-summary > div { grid-template-columns: minmax(0,1fr); gap: 4px; }
+  .dir-input-multiline { --dir-input-height: 44px; }
+  .dir-input-browse { min-height: 44px; }
+}
+@media (max-width:430px) {
+  .dir-input-browse-label { display: none; }
+  .dir-input-browse { min-width: 44px; }
+}
+@media (hover:none), (pointer:coarse) {
+  .setup-directory .ui-input { font-size: 16px; }
+  .dir-input-multiline { --dir-input-height: 44px; }
+  .dir-input-browse { min-height: 44px; }
+}
+@media (max-height:500px) {
+  .setup-header { padding-top: 12px; }
+  .setup-header > p { display: none; }
+  .setup-steps { margin-top: 12px; }
+  .setup-footer { padding-top: 10px; padding-bottom: 10px; }
+}
