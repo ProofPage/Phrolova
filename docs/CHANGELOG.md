@@ -8,6 +8,21 @@
 
 ## [Unreleased]
 
+## [2.0.62] - 2026-10-13
+
+### Fixed
+- 기본 설정을 라이브·동영상과 같은 공통 UI로 맞추고 화질·형식 선택, 버튼, 글자 크기와 간격을 정리합니다.
+- 한 줄 저장 경로의 입력 높이·글자 세로 정렬·폴더 버튼을 맞추며 긴 경로의 자동 높이·줄바꿈·확인 단계 전체 표시를 지원합니다.
+- 폴더 선택창 잘림, 작은 화면의 이동 버튼, 단계 전환 초점과 저장 중 중복 조작을 개선합니다.
+- ‘동영상 저장 위치’ 명칭, 제목 아래 폴더 자동 생성 안내, 아이콘 없는 제목과 현재 단계 밑줄 표시를 적용합니다.
+
+### Changed
+- README의 지원 기능·설치·인증·CDN·정보 설정 안내를 현재 저장소 구현에 맞게 갱신합니다.
+
+### Validation
+- 전체 backend 873 passed, 1 skipped, 4 subtests passed. 릴리즈 버전·메타데이터 검사 통과.
+- TypeScript·Vite 빌드와 Chromium 기본 설정·기존 설정의 반응형·폴더 선택·키보드·저장 실패/재시도 검사 통과.
+
 ## [2.0.61] - 2026-10-12
 
 ### Fixed
@@ -834,7 +849,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.61...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.62...HEAD
+[2.0.62]: https://github.com/ProofPage/Phrolova/compare/v2.0.61...v2.0.62
 [2.0.61]: https://github.com/ProofPage/Phrolova/compare/v2.0.60...v2.0.61
 [2.0.60]: https://github.com/ProofPage/Phrolova/compare/v2.0.59...v2.0.60
 [2.0.59]: https://github.com/ProofPage/Phrolova/compare/v2.0.58...v2.0.59
