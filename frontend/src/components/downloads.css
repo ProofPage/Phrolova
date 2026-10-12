@@ -69,8 +69,6 @@
 .download-task-controls .download-actions { justify-content: flex-end; gap: 8px; }
 .download-task-controls .ui-button { min-height: 36px; padding: 6px 10px; gap: 6px; }
 .download-status-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
-.download-file-open { display: flex; align-items: center; gap: 8px; }
-.download-inspection-passed { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border: 1px solid var(--color-line); border-radius: 4px; background: var(--color-surface-2); color: var(--color-ink-muted); font-size: 10px; line-height: 16px; white-space: nowrap; }
 .download-selected-quality { color: var(--color-ink-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .download-selected-quality > span { color: var(--color-ink-faint); margin-right: 4px; }
 .download-task-controls .ui-button { font-size: 12px; }
@@ -115,7 +113,6 @@
     .download-task--list .download-task-summary { gap: 8px; padding: 12px; }
     .download-task--list .download-task-footer { gap: 8px 16px; }
     .download-task--list .download-task-footer:not(.download-task-footer--ready):not(:has(.download-file-verification)) { display: grid; grid-template-columns: minmax(0,1fr) 168px; align-items: center; }
-    .download-task--list .download-task-footer:not(.download-task-footer--ready):has(.download-inspection-passed) { grid-template-columns: minmax(0,1fr) auto; }
     .download-task--list .download-task-footer:not(:has(.download-file-verification)) .download-task-controls { grid-row: 1; grid-column: 2; }
     .download-task--list .download-task-footer--ready .download-task-controls { grid-column: 1; }
 }

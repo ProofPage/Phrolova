@@ -1,5 +1,5 @@
 import { memo, useId, useRef, useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowUp, ChevronDown, FileVideo, FolderOpen, GripVertical, Pause, Play, RotateCw, ShieldCheck, Square, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, FileVideo, FolderOpen, GripVertical, Pause, Play, RotateCw, Square, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { client, type VodTask } from '../api/client';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -88,10 +88,7 @@ export const DownloadTaskCard = memo(function DownloadTaskCard({ task, mode, ret
                 {['downloading', 'processing', 'paused'].includes(state) && <Button icon={Square} variant="danger" disabled={!!pending || task.state === 'cancelling'} loading={pending === 'cancel'} onClick={() => void act('cancel')}>{t('취소')}</Button>}
                 {state === 'failed' && task.phase !== 'metadata_error' && <Button icon={RotateCw} disabled={!!pending || retryActive} loading={pending === 'retry'} onClick={() => void act('retry')}>{t('다시 시도')}</Button>}
                 {task.state === 'completed' && task.output_path && <>
-                    <div className="download-file-open">
-                    {inspection === 'passed' && <span className="download-inspection-passed"><ShieldCheck className="size-3.5" aria-hidden="true" />{t('파일 검사 완료')}</span>}
                     <a className="ui-button btn-secondary" href={`${client.defaults.baseURL}/vod/${encodeURIComponent(task.task_id)}/file`} target="_blank" rel="noopener noreferrer"><FileVideo className="size-4" aria-hidden="true" />{t('파일 열기')}</a>
-                    </div>
                     <Button icon={FolderOpen} disabled={!!pending} onClick={() => void act('folder')}>{t('저장 폴더 열기')}</Button>
                     {attention && <Button icon={RotateCw} disabled={!!pending || inspecting} loading={pending === 'inspect'} onClick={() => void act('inspect')}>{t('다시 검사')}</Button>}
                 </>}
