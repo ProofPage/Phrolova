@@ -68,7 +68,9 @@ export const DownloadTaskCard = memo(function DownloadTaskCard({ task, mode, ret
             </div>
             } />
             <div className="download-task-status" role="status" aria-live="polite">
-                <div className="download-status-heading"><Badge tone={tone}>{t(status)}</Badge>
+                <div className="download-status-heading"><div className="download-status-labels"><Badge tone={tone}>{t(status)}</Badge>
+                    {task.state === 'completed' && inspection === 'passed' && <span className="text-xs text-ok">{t('파일 검사 완료')}</span>}
+                </div>
                     {!canQuality && task.quality && <span className="download-selected-quality">{task.quality === 'best' ? t('최고 화질') : task.quality === 'worst' ? t('최저 화질') : task.quality}</span>}
                 </div>
                 {['downloading', 'processing', 'paused'].includes(state) && <div className="download-progress"><div role="progressbar" aria-label={t('다운로드 진행률')} aria-valuenow={percentage ? Number(percentage) : undefined} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${percentage ?? 0}%` }} /></div><span className="tabular-nums">{percentage ? `${percentage}%` : '—'}</span></div>}
@@ -76,7 +78,7 @@ export const DownloadTaskCard = memo(function DownloadTaskCard({ task, mode, ret
             </div>
             <div className={clsx('download-task-footer', canQuality && 'download-task-footer--ready')}>
             {!canQuality && <dl className="download-task-metrics">{statistics.map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd>{value}</dd></div>)}</dl>}
-            {task.state === 'completed' && <div className="download-file-verification"><span className={clsx('text-xs', attention ? 'text-warn' : inspection === 'passed' ? 'text-ok' : 'text-ink-muted')}>{t(inspecting ? '파일 정보를 확인하고 있습니다.' : attention ? '파일 확인 필요' : inspection === 'passed' ? '파일 검사 완료' : '검사 대기')}</span>{attention && <p className="download-task-warning text-xs break-words" role="status">{t(attention ? task.inspection_message || '다운로드는 완료되었지만 파일 정보를 확인하지 못했습니다.' : task.download_warning_message || downloadErrorMessage(task))}</p>}</div>}
+            {task.state === 'completed' && inspection !== 'passed' && <div className="download-file-verification"><span className={clsx('text-xs', attention ? 'text-warn' : 'text-ink-muted')}>{t(inspecting ? '파일 정보를 확인하고 있습니다.' : attention ? '파일 확인 필요' : '검사 대기')}</span>{attention && <p className="download-task-warning text-xs break-words" role="status">{t(attention ? task.inspection_message || '다운로드는 완료되었지만 파일 정보를 확인하지 못했습니다.' : task.download_warning_message || downloadErrorMessage(task))}</p>}</div>}
             {(state === 'failed' || task.download_warning_message) && <p className="download-task-warning text-xs break-words" role="status">{t(attention ? task.inspection_message || '다운로드는 완료되었지만 파일 정보를 확인하지 못했습니다.' : task.download_warning_message || downloadErrorMessage(task))}</p>}
             <div className="download-task-controls">
                 {canQuality && <div className="download-task-quality"><div className="download-quality-segments" role="group" aria-label={t('다운로드 해상도')}>{metadata?.qualities?.map(option => <button className={clsx('download-quality-option', task.quality === option.value && 'is-selected')} key={option.value} aria-pressed={task.quality === option.value} disabled={!!pending} onClick={() => void act('quality', option.value)}>{option.label}</button>)}</div></div>}
