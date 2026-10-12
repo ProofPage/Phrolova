@@ -8,6 +8,21 @@
 
 ## [Unreleased]
 
+## [2.0.60] - 2026-10-12
+
+### Fixed
+- 라이브 중지 시 세그먼트 전달과 잔여 버퍼 저장을 완료한 뒤 파일을 확정하며, 강제 종료·부분 입력은 원본을 보존하고 확인 필요 상태로 표시합니다.
+- 치지직 재연결·파일 전환에 마지막 checkpoint와 제한된 디스크 버퍼를 인계해 누락 구간을 복구합니다.
+- 다시보기 HLS/DASH의 잘린 세그먼트 병합을 차단하고 HTTP 오류 원인을 보존하며 실패 요청·예약 큐를 제한합니다.
+- 세로 영상 화질 선택, 재시작 이어받기 파일명·part 경로 복원, 긴 Windows·한글 파일명 경로 처리를 보강합니다.
+- 플랫폼별 라이브 카드 공통 영역·확장 배치, 모니터 복구, Akamai CDN 기본값·표시 이름, 녹화 파일명 정리를 포함합니다.
+- 변환 성공과 녹화 데이터 손상 경고를 구분해 표시합니다.
+
+### Validation
+- 전체 backend 866 passed, 1 skipped, 4 subtests passed. Windows·Ubuntu x64/ARM64 및 frontend CI 통과.
+- TypeScript·Vite 빌드, Chromium 후처리·다운로드 버튼/반응형 검증, 공개 CHZZK 수신·MKV 변환·FFprobe 검사 2건 통과.
+- 참고 이슈 148건의 분류·적용·추가 실기 검증 항목은 통합 보고서에 기록합니다.
+
 ## [2.0.59] - 2026-10-12
 
 ### Fixed
@@ -806,7 +821,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.59...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.60...HEAD
+[2.0.60]: https://github.com/ProofPage/Phrolova/compare/v2.0.59...v2.0.60
 [2.0.59]: https://github.com/ProofPage/Phrolova/compare/v2.0.58...v2.0.59
 [2.0.55]: https://github.com/ProofPage/Phrolova/compare/v2.0.54...v2.0.55
 [2.0.54]: https://github.com/ProofPage/Phrolova/compare/v2.0.53...v2.0.54
