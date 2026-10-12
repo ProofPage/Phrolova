@@ -6,7 +6,6 @@ import {
     Download,
     Info,
     KeyRound,
-    MonitorCog,
     Palette,
     Loader2,
     RefreshCw,
@@ -19,19 +18,17 @@ import { AuthTab } from "../components/settings/AuthTab";
 import { DownloadTab } from "../components/settings/DownloadTab";
 import { InfoTab } from "../components/settings/InfoTab";
 import { NotificationsTab } from "../components/settings/NotificationsTab";
-import { SystemTab } from "../components/settings/SystemTab";
 import { useConfirm } from "../components/ui/ConfirmModal";
 import { Badge, Button, Card, PageHeader } from "../components/ui/primitives";
 import { useLanguage } from "../contexts/LanguageContext";
 
-type TabId = "download" | "auth" | "notifications" | "appearance" | "system" | "info";
+type TabId = "download" | "auth" | "notifications" | "appearance" | "info";
 
 const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
     { id: "download", label: "다운로드", icon: Download },
     { id: "auth", label: "인증", icon: KeyRound },
     { id: "notifications", label: "알림", icon: Bell },
     { id: "appearance", label: "외관", icon: Palette },
-    { id: "system", label: "시스템", icon: MonitorCog },
     { id: "info", label: "정보", icon: Info },
 ];
 
@@ -40,7 +37,6 @@ const EMPTY_DIRTY: Record<TabId, boolean> = {
     auth: false,
     notifications: false,
     appearance: false,
-    system: false,
     info: false,
 };
 
@@ -75,7 +71,7 @@ export default function Settings() {
 
     useEffect(() => {
         loadSettings();
-        // 시스템 탭을 열기 전에도 새 버전 표시를 놓치지 않도록 상태를 미리 읽는다.
+        // 정보 탭을 열기 전에도 새 버전 표시를 놓치지 않도록 상태를 미리 읽는다.
         api.getUpdateStatus()
             .then((info) => setUpdateAvailable(info.has_update))
             .catch(() => {});
@@ -167,7 +163,7 @@ export default function Settings() {
                             <Icon className="w-4 h-4" />
                             {t(tab.label)}
                             {dirtyTabs[tab.id] && <span className="size-2 shrink-0 rounded-full bg-warn" />}
-                            {tab.id === "system" && updateAvailable && <span className="size-2 shrink-0 rounded-full bg-ok" />}
+                            {tab.id === "info" && updateAvailable && <span className="size-2 shrink-0 rounded-full bg-ok" />}
                         </button>
                     );
                 })}
@@ -177,8 +173,7 @@ export default function Settings() {
             {activeTab === "auth" && <AuthTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("auth", dirty)} />}
             {activeTab === "notifications" && <NotificationsTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("notifications", dirty)} />}
             {activeTab === "appearance" && <AppearanceTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("appearance", dirty)} />}
-            {activeTab === "system" && <SystemTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("system", dirty)} onUpdateAvailabilityChange={setUpdateAvailable} />}
-            {activeTab === "info" && <InfoTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("info", dirty)} />}
+            {activeTab === "info" && <InfoTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("info", dirty)} onUpdateAvailabilityChange={setUpdateAvailable} />}
             </div>}
         </div>
     );

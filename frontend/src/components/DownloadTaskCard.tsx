@@ -76,7 +76,7 @@ export const DownloadTaskCard = memo(function DownloadTaskCard({ task, mode, ret
             </div>
             <div className={clsx('download-task-footer', canQuality && 'download-task-footer--ready')}>
             {!canQuality && <dl className="download-task-metrics">{statistics.map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd>{value}</dd></div>)}</dl>}
-            {task.state === 'completed' && <div className="download-file-verification"><span className={clsx('text-xs', attention ? 'text-warn' : inspection === 'passed' ? 'text-ok' : 'text-ink-muted')}>{t(inspecting ? '파일 정보를 확인하고 있습니다.' : attention ? '파일 확인 필요' : inspection === 'passed' ? '파일 검사 완료' : '검사 대기')}</span>{attention && <p className="download-task-warning text-xs break-words" role="status">{t(attention ? task.inspection_message || '다운로드는 완료되었지만 파일 정보를 확인하지 못했습니다.' : task.download_warning_message || downloadErrorMessage(task))}</p>}</div>}
+            {task.state === 'completed' && inspection !== 'passed' && <div className="download-file-verification"><span className={clsx('text-xs', attention ? 'text-warn' : 'text-ink-muted')}>{t(inspecting ? '파일 정보를 확인하고 있습니다.' : attention ? '파일 확인 필요' : '검사 대기')}</span>{attention && <p className="download-task-warning text-xs break-words" role="status">{t(attention ? task.inspection_message || '다운로드는 완료되었지만 파일 정보를 확인하지 못했습니다.' : task.download_warning_message || downloadErrorMessage(task))}</p>}</div>}
             {(state === 'failed' || task.download_warning_message) && <p className="download-task-warning text-xs break-words" role="status">{t(attention ? task.inspection_message || '다운로드는 완료되었지만 파일 정보를 확인하지 못했습니다.' : task.download_warning_message || downloadErrorMessage(task))}</p>}
             <div className="download-task-controls">
                 {canQuality && <div className="download-task-quality"><div className="download-quality-segments" role="group" aria-label={t('다운로드 해상도')}>{metadata?.qualities?.map(option => <button className={clsx('download-quality-option', task.quality === option.value && 'is-selected')} key={option.value} aria-pressed={task.quality === option.value} disabled={!!pending} onClick={() => void act('quality', option.value)}>{option.label}</button>)}</div></div>}
@@ -89,7 +89,7 @@ export const DownloadTaskCard = memo(function DownloadTaskCard({ task, mode, ret
                 {state === 'failed' && task.phase !== 'metadata_error' && <Button icon={RotateCw} disabled={!!pending || retryActive} loading={pending === 'retry'} onClick={() => void act('retry')}>{t('다시 시도')}</Button>}
                 {task.state === 'completed' && task.output_path && <>
                     <a className="ui-button btn-secondary" href={`${client.defaults.baseURL}/vod/${encodeURIComponent(task.task_id)}/file`} target="_blank" rel="noopener noreferrer"><FileVideo className="size-4" aria-hidden="true" />{t('파일 열기')}</a>
-                    <Button icon={FolderOpen} variant="ghost" disabled={!!pending} onClick={() => void act('folder')}>{t('저장 폴더 열기')}</Button>
+                    <Button icon={FolderOpen} disabled={!!pending} onClick={() => void act('folder')}>{t('저장 폴더 열기')}</Button>
                     {attention && <Button icon={RotateCw} disabled={!!pending || inspecting} loading={pending === 'inspect'} onClick={() => void act('inspect')}>{t('다시 검사')}</Button>}
                 </>}
                 </div>

@@ -1,30 +1,22 @@
 import { useEffect, useState } from "react";
 import { Gift, RefreshCcw, Terminal } from "lucide-react";
-import { api, type Settings as SettingsType, type UpdateInfo } from "../../api/client";
+import { api, type UpdateInfo } from "../../api/client";
 import { getErrorMessage } from "../../utils/error";
-import { MediaToolsCard } from './MediaToolsCard';
 import { UpdateModal } from "../ui/UpdateModal";
 import { useToast } from "../ui/Toast";
 import { Button, Card, CardHeader } from "../ui/primitives";
 import { useLanguage } from "../../contexts/LanguageContext";
 
 interface Props {
-    settings: SettingsType | null;
-    /** 시스템 탭은 서버 설정을 바꾸지 않지만 탭 props 형태를 통일한다. */
-    onSaved: () => void;
-    /** 시스템 탭에는 편집 폼이 없음을 상위에 알린다. */
-    onDirtyChange?: (dirty: boolean) => void;
     onUpdateAvailabilityChange?: (available: boolean) => void;
 }
 
-export function SystemTab({ onDirtyChange, onUpdateAvailabilityChange }: Props) {
+export function ProgramUpdateCard({ onUpdateAvailabilityChange }: Props) {
     const toast = useToast();
     const { t } = useLanguage();
     const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
     const [checkingUpdate, setCheckingUpdate] = useState(false);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
-
-    useEffect(() => onDirtyChange?.(false), [onDirtyChange]);
 
     useEffect(() => {
         api.getUpdateStatus()
@@ -51,7 +43,6 @@ export function SystemTab({ onDirtyChange, onUpdateAvailabilityChange }: Props) 
 
     return (
         <>
-            <MediaToolsCard />
             <Card className="space-y-5">
                 <CardHeader icon={Terminal} title="프로그램 업데이트" />
                 <div className="bg-surface-3 p-4 rounded-[var(--radius-control)] border border-line flex flex-col items-start sm:flex-row sm:items-center justify-between gap-4 [overflow-wrap:anywhere]">

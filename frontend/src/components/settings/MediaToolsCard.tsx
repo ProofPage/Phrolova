@@ -3,7 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import { api } from '../../api/client';
 import { Button, Card, CardHeader } from '../ui/primitives';
 
-export function MediaToolsCard() {
+export function MediaToolsCard({ ffmpegVersion }: { ffmpegVersion?: string | null }) {
     const [attempt, setAttempt] = useState(0);
     const [tools, setTools] = useState<Awaited<ReturnType<typeof api.getMediaTools>>>({});
     const [busy, setBusy] = useState(true);
@@ -27,6 +27,7 @@ export function MediaToolsCard() {
                     <span className={`inline-flex items-center gap-1.5 leading-5 ${busy || error ? 'text-ink-muted' : tools[name]?.available ? 'text-ok' : 'text-warn'}`}>
                         {!busy && !error && tools[name]?.available && <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />}
                         {busy ? '실행 확인 중' : error ? '도구 상태를 불러오지 못했습니다.' : tools[name]?.available ? '정상' : tools[name]?.message || '도구 상태를 확인할 수 없습니다.'}
+                        {!busy && !error && tools[name]?.available && (tools[name]?.version || (name === 'ffmpeg' && ffmpegVersion)) && <span className="[overflow-wrap:anywhere]"> · v{tools[name]?.version?.replace(/^(?:ffmpeg|ffprobe) version\s+(\S+).*$/i, '$1') || ffmpegVersion}</span>}
                     </span>
                     {!busy && !error && tools[name]?.available && tools[name]?.path && <p className="font-mono leading-relaxed text-ink-muted [overflow-wrap:anywhere]" title={tools[name].path}>{tools[name].path}</p>}
                 </dd>

@@ -291,13 +291,19 @@ async def main():
             tasks[0].update(state='completed',phase='completed',completed_at='2026-10-10T11:00:00Z',
                             output_path='/영상/복구 완료.mp4',file_size=4_000_000_000,inspection_state='passed')
             await expect(ready.get_by_role('link',name='파일 열기')).to_be_visible(timeout=6000)
-            same_header(await ready.evaluate(GEOMETRY),original,'downloading to completed')
+            completed = await ready.evaluate(GEOMETRY)
+            expected_completed = copy.deepcopy(original)
+            reserved = await ready.locator('.download-inspection-passed').evaluate('e=>e.getBoundingClientRect().width+8')
+            for element in ('title', 'channel', 'media'):
+                expected_completed[element]['width'] -= reserved
+            same_header(completed,expected_completed,'downloading to completed with inspection badge')
+            assert await ready.evaluate('e=>{const badge=e.querySelector(".download-inspection-passed").getBoundingClientRect(),group=e.querySelector(".download-task-management").getBoundingClientRect();return Math.abs(group.left-badge.right-8)<.5 && Math.abs((group.top+group.bottom-badge.top-badge.bottom)/2)<.5}')
             assert await ready.get_attribute('data-geometry-identity') == 'same'
             tasks[0]['metadata'].update(thumbnail=None,uploader=None,duration=None)
             tasks[0]['media_duration']=None
             tasks[0]['cdn_applied']=False
             await expect(ready.locator('.download-uploader')).to_have_text('채널 정보 확인 중',timeout=6000)
-            same_header(await ready.evaluate(GEOMETRY),original,'missing metadata rows')
+            same_header(await ready.evaluate(GEOMETRY),completed,'missing metadata rows')
             assert await placeholder_centered(ready)
             assert not errors, errors
             (OUT/'header-geometry.json').write_text(json.dumps(measurements,ensure_ascii=False,indent=2),encoding='utf-8')

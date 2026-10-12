@@ -154,7 +154,7 @@ export default function VodDownload() {
         finally { batchRef.current = false; setBatchBusy(false); }
     };
     return <div className="product-page downloads-page space-y-4">
-        <PageHeader icon={Download} title={t('다운로드')} description={t('다시보기와 클립 영상을 다운로드하고 관리합니다.')} variant="plain" meta={<div className="download-overview" aria-label={t('전체 작업 현황')}>
+        <PageHeader icon={Download} title={t('동영상')} description={t('다시보기와 클립 영상을 다운로드하고 관리합니다.')} variant="plain" meta={<div className="download-overview" aria-label={t('전체 작업 현황')}>
             {[[t('진행 중'), counts.downloading + counts.processing], [t('대기 중'), counts.queued], [t('완료'), counts.completed], [t('실패'), counts.failed]].map(([label, count]) => <span key={label}>{label} <strong className="tabular-nums">{count}</strong></span>)}
         </div>} actions={<DownloadInput tasks={tasks} />} actionsPlacement="below" />
         {loadError && <div role="status" className="download-load-error"><span>{t('다운로드 목록을 불러오지 못했습니다. 잠시 후 다시 시도하세요.')}</span><Button icon={RotateCw} onClick={() => void refreshTasks()}>{t('다시 시도')}</Button></div>}

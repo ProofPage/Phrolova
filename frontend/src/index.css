@@ -73,8 +73,8 @@ code, .font-mono { font-family: var(--font-mono); }
 .sidebar-nav-link-active { background: var(--color-surface-3); color: var(--color-ink); }
 .sidebar-nav-link-active svg { color: var(--primary); }
 .app-topbar { border-bottom: 1px solid var(--color-line); background: var(--color-surface-0); }
-.top-search, .download-pill { background: transparent; border: 1px solid transparent; border-radius: 5px; }
-.top-search:hover, .download-pill:hover { background: var(--color-surface-3); }
+.top-search { background: transparent; border: 1px solid transparent; border-radius: 5px; }
+.top-search:hover { background: var(--color-surface-3); }
 .top-search kbd { color: var(--color-ink-faint); border: 1px solid var(--color-line-strong); }
 .sidebar-mobile-trigger { position: fixed; z-index: 40; top: max(5px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); background: var(--color-surface-1); }
 .sidebar-mobile-overlay { position: fixed; z-index: 99; inset: 0; }
@@ -395,7 +395,7 @@ body:has(.settings-save) .toast-stack { bottom: calc(76px + env(safe-area-inset-
 .toast-stack > * { flex-shrink: 0; }
 .ui-chip { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 @media (hover: none), (pointer: coarse) {
-  .ui-button, .ui-input, .ui-chip, .sidebar-nav-link, .top-search, .download-pill, .dashboard-filter, .dashboard-options summary, .tag-option, .dir-browser button, .settings-tabs button { min-height: 44px; }
+  .ui-button, .ui-input, .ui-chip, .sidebar-nav-link, .top-search, .dashboard-filter, .dashboard-options summary, .tag-option, .dir-browser button, .settings-tabs button { min-height: 44px; }
   .ui-input { font-size: 16px; }
   .icon-button, .touch-control, .channel-row-card .channel-header-actions button, .tag-remove { min-width: 44px; min-height: 44px; }
   .tag-remove { width: 44px !important; height: 44px !important; }
@@ -415,8 +415,6 @@ body:has(.settings-save) .toast-stack { bottom: calc(76px + env(safe-area-inset-
   .theme-swatch { min-width: 44px; min-height: 44px; }
 }
 @media (max-width:430px) {
-  .download-pill-label, .download-pill-progress { display: none; }
-  .download-pill { flex-shrink: 1; padding-inline: 6px; gap: 4px; }
   .ui-info-row { grid-template-columns: minmax(0,1fr); gap: 4px; }
   .ui-info-row > :last-child { text-align: left; }
 }
@@ -440,7 +438,6 @@ dialog.ui-dialog { top: calc(var(--ui-viewport-top, 0px) + var(--ui-viewport-hei
 @media (hover: none), (pointer: coarse), (max-width:639px) { .command-code { min-height: 60px; } }
 
 @media (hover: none), (pointer: coarse), (max-width:639px) {
-  .download-pill { min-width: 44px; min-height: 44px; }
   .ui-disclosure { min-height: 44px; }
 }
 
@@ -568,8 +565,9 @@ dialog.ui-dialog { top: calc(var(--ui-viewport-top, 0px) + var(--ui-viewport-hei
 .media-add-form { width: 100%; min-width: 0; }
 .media-add-form .ui-input { font-size: 13px; min-height: 34px; }
 .media-add-form .ui-button { min-height: 34px; }
-.dashboard-add-channel.media-add-form > div > div:first-child > .ui-input { width: 120px; justify-content: space-between; }
+.media-platform-trigger { height: 34px; font-size: 13px; padding: 0 10px; }
 .channel-live-preview { max-width: 960px; }
 @media (max-width:639px), (pointer:coarse) {
   .media-add-form .ui-input, .media-add-form .ui-button { min-height: 44px; }
+  .media-platform-trigger { height: 44px; }
 }

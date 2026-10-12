@@ -1,6 +1,8 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Info } from "lucide-react";
-import { api, type Settings as SettingsType } from "../../api/client";
+import { type Settings as SettingsType } from "../../api/client";
+import { MediaToolsCard } from './MediaToolsCard';
+import { ProgramUpdateCard } from './ProgramUpdateCard';
 import { Card, CardHeader } from "../ui/primitives";
 import { useLanguage } from "../../contexts/LanguageContext";
 
@@ -13,6 +15,7 @@ interface Props {
     onSaved: () => void;
     /** 정보 탭에는 편집 폼이 없음을 상위에 알린다. */
     onDirtyChange?: (dirty: boolean) => void;
+    onUpdateAvailabilityChange?: (available: boolean) => void;
 }
 
 function InfoRow({ label, children, last = false }: { label: string; children: ReactNode; last?: boolean }) {
@@ -24,18 +27,10 @@ function InfoRow({ label, children, last = false }: { label: string; children: R
     );
 }
 
-export function InfoTab({ settings, onDirtyChange }: Props) {
+export function InfoTab({ settings, onDirtyChange, onUpdateAvailabilityChange }: Props) {
     const { t } = useLanguage();
-    const [version, setVersion] = useState<string | null>(null);
 
     useEffect(() => onDirtyChange?.(false), [onDirtyChange]);
-
-    useEffect(() => {
-        // 버전은 backend/app/version.py가 단일 출처다. 화면에 상수로 박아두면 어긋난다.
-        api.getUpdateStatus()
-            .then((info) => setVersion(info.current_version))
-            .catch(() => setVersion(null));
-    }, []);
 
     return (
         <div className="space-y-5">
@@ -43,19 +38,18 @@ export function InfoTab({ settings, onDirtyChange }: Props) {
                 <CardHeader icon={Info} title="시스템 정보" />
                 <div className="space-y-1 text-sm">
                     <InfoRow label={t("앱 이름")}><span className="text-ink-muted">{settings?.app_name || t("불러오는 중…")}</span></InfoRow>
-                    <InfoRow label={t("FFmpeg 버전")}><span className={settings?.ffmpeg_version ? "text-ok" : "text-ink-faint"}>{settings?.ffmpeg_version ? `${t("설치됨")} · v${settings.ffmpeg_version}` : t("버전을 확인할 수 없음")}</span></InfoRow>
                     <InfoRow label="Streamlink"><span className={settings?.streamlink_version ? "text-ok" : "text-ink-faint"}>{settings?.streamlink_version ? `${t("설치됨")} · v${settings.streamlink_version}` : t("설치되지 않음")}</span></InfoRow>
                     <InfoRow label={t("서버 주소")}><span className="text-ink-muted">{settings ? `${settings.host}:${settings.port}` : t("불러오는 중…")}</span></InfoRow>
                     <InfoRow label="Discord Bot"><span className={settings?.discord_bot_configured ? "text-ok" : "text-ink-faint"}>{settings?.discord_bot_configured ? t("연결됨") : t("미설정")}</span></InfoRow>
                 </div>
             </Card>
 
+            <MediaToolsCard ffmpegVersion={settings?.ffmpeg_version} />
+            <ProgramUpdateCard onUpdateAvailabilityChange={onUpdateAvailabilityChange} />
+
             <Card>
                 <CardHeader icon={Info} title="프로그램 정보" />
                 <div className="space-y-1 text-sm">
-                    <InfoRow label={t("버전")}>
-                        <span className="text-ink-muted font-mono">{version ? `v${version}` : t("확인 중...")}</span>
-                    </InfoRow>
                     <InfoRow label={t("만든 사람")}>
                         <span className="text-ink-muted">{AUTHOR}</span>
                     </InfoRow>
