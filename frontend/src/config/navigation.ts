@@ -34,7 +34,7 @@ export const NAV_GROUPS: NavGroup[] = [
         title: "모니터링",
         items: [
             { name: "라이브", to: "/", icon: LayoutDashboard },
-            { name: "다운로드", to: "/vod", icon: Download },
+            { name: "동영상", to: "/vod", icon: Download },
         ],
     },
     {
