@@ -1,10 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { AlertCircle, AlertTriangle, Bell, CheckCircle2, Gift, Search, Trash2 } from "lucide-react";
-import { Link, NavLink } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { clsx } from "clsx";
 import { api, type UpdateInfo } from "../../api/client";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { useVod } from "../../contexts/VodContext";
 import { useToastHistory } from "../ui/Toast";
 
 export function Topbar() {
@@ -14,10 +13,8 @@ export function Topbar() {
     const notificationTriggerRef = useRef<HTMLButtonElement>(null);
     const notificationId = useId();
     const { t } = useLanguage();
-    const { activeCount, tasks } = useVod();
     const { history, markAllRead, clearHistory } = useToastHistory();
     const unreadCount = history.filter((item) => !item.read).length;
-    const primaryTask = tasks.find((task) => task.state === "downloading");
 
     useEffect(() => { api.getUpdateStatus().then(setUpdateInfo).catch(() => {}); }, []);
 
@@ -42,9 +39,6 @@ export function Topbar() {
         <header className="app-topbar relative z-30 shrink-0">
             <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-50 focus:rounded-lg focus:bg-surface-3 focus:px-3 focus:py-2">{t("본문으로 이동")}</a>
             <div className="app-topbar-inner flex h-[54px] sm:h-11 items-center justify-end gap-2 px-3 sm:px-5 lg:px-6">
-                {activeCount > 0 && primaryTask && <Link to="/vod" className="download-pill flex min-w-0 max-w-52 items-center gap-2 rounded-full px-3 py-2 text-[11px] font-semibold text-ink-muted hover:text-ink" aria-label={`${t("다운로드")} ${activeCount}, ${Math.round(primaryTask.progress)}%`} title={primaryTask.title}>
-                    <span className="size-1.5 shrink-0 rounded-full bg-ok" /><span className="truncate"><span className="download-pill-label">{t("다운로드")} </span>{activeCount}</span><span className="download-pill-progress shrink-0 font-mono text-ok">{Math.round(primaryTask.progress)}%</span>
-                </Link>}
                 <button type="button" onClick={openSearch} className="top-search hidden items-center gap-2 rounded-[10px] px-3 py-2 text-[12px] text-ink-faint hover:text-ink sm:flex" aria-label={t("빠른 이동")}>
                     <Search className="size-4" /><span>{t("빠른 이동")}</span><kbd className="top-search-key ml-2 rounded px-1.5 py-0.5 text-[10px]">Ctrl K</kbd>
                 </button>

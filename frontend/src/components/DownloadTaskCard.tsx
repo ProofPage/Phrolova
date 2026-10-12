@@ -89,7 +89,7 @@ export const DownloadTaskCard = memo(function DownloadTaskCard({ task, mode, ret
                 {state === 'failed' && task.phase !== 'metadata_error' && <Button icon={RotateCw} disabled={!!pending || retryActive} loading={pending === 'retry'} onClick={() => void act('retry')}>{t('다시 시도')}</Button>}
                 {task.state === 'completed' && task.output_path && <>
                     <a className="ui-button btn-secondary" href={`${client.defaults.baseURL}/vod/${encodeURIComponent(task.task_id)}/file`} target="_blank" rel="noopener noreferrer"><FileVideo className="size-4" aria-hidden="true" />{t('파일 열기')}</a>
-                    <Button icon={FolderOpen} variant="ghost" disabled={!!pending} onClick={() => void act('folder')}>{t('저장 폴더 열기')}</Button>
+                    <Button icon={FolderOpen} disabled={!!pending} onClick={() => void act('folder')}>{t('저장 폴더 열기')}</Button>
                     {attention && <Button icon={RotateCw} disabled={!!pending || inspecting} loading={pending === 'inspect'} onClick={() => void act('inspect')}>{t('다시 검사')}</Button>}
                 </>}
                 </div>
