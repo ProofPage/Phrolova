@@ -69,7 +69,7 @@
 .download-task-controls .download-actions { justify-content: flex-end; gap: 8px; }
 .download-task-controls .ui-button { min-height: 36px; padding: 6px 10px; gap: 6px; }
 .download-status-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
-.download-status-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; margin-left: auto; }
+.download-file-size-value { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .download-inspection-passed { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border: 1px solid var(--color-line); border-radius: 4px; background: var(--color-surface-2); color: var(--color-ink-muted); font-size: 10px; line-height: 16px; white-space: nowrap; }
 .download-selected-quality { color: var(--color-ink-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .download-selected-quality > span { color: var(--color-ink-faint); margin-right: 4px; }
