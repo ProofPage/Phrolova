@@ -1,14 +1,12 @@
 # Phrolova
 
-Self-hosted live recording and video downloads.
-
-
+Self-hosted live recording and video downloads for **CHZZK, YouTube, SOOP and CIME**, with interactive previews, verified media conversion, a web dashboard and Discord integration.
 
 [![CI](https://github.com/ProofPage/Phrolova/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/ProofPage/Phrolova/actions/workflows/ci.yml)
 
 [Repository](https://github.com/ProofPage/Phrolova) · [Releases](https://github.com/ProofPage/Phrolova/releases) · [Changelog](docs/CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [MIT License](LICENSE)
 
-
+**Start here:** [Windows x64 download](https://github.com/ProofPage/Phrolova/releases/latest) · [Linux installation](#linux-management-script) · [Source installation](#manual-source-installation)
 
 ## Contents
 
@@ -33,9 +31,11 @@ Self-hosted live recording and video downloads.
 ### Live monitoring and recording
 
 - Monitor registered CHZZK, YouTube, SOOP and CIME channels and automatically record detected broadcasts when enabled for each channel.
-- Organize channels with tags, filters, and adjustable display order. Inspect live status, recording duration, output size, and errors.
+- Organize channels with tags, filters, and adjustable display order. Inspect live status, viewer count, recording duration, output size, speed, bitrate, and errors.
 - Streamlink stores compatible HLS TS packets directly and preserves fMP4/CMAF streams in their native format when TS is unavailable. After recording ends, FFmpeg normalizes native captures to TS and copies streams into MKV or MP4; FFprobe checks the result. Set global or per-channel output preferences; retain source TS by default. Use separate live and video download directories and customizable filenames.
 - Preview CHZZK, YouTube, SOOP and CIME streams independently of recording, subject to upstream playback availability.
+- Use playback, pause, volume and fullscreen controls in live previews. Offline previews keep the same 16:9 aspect ratio.
+- Stop CHZZK recording at a segment boundary, drain received data before finalization, and carry checkpoints and bounded disk buffers across reconnects and file changes. Interrupted or forced termination preserves the source and its diagnostic state.
 - For CHZZK, choose standard streaming or time-machine playback, optionally save a preview image, and record all broadcasts, only matching watch-alongs, or broadcasts excluding watch-alongs.
 - Retry interrupted CHZZK and YouTube recordings while the broadcast remains live, up to the configured retry limit.
 
@@ -43,14 +43,14 @@ Manual start/stop, automatic recording and per-channel quality/output preference
 
 ### Video downloads
 
-- Download CHZZK VODs and clips, and individual YouTube videos.
+- Download CHZZK VODs/clips, YouTube videos, SOOP VODs/multi-part videos, and CIME VODs/clips. An external-video option uses supported yt-dlp extractors.
+- Add links to the queue, inspect metadata and select an available quality before starting. Multiple links can be entered on separate lines.
 - Import available videos from a YouTube channel into the download queue in the background. Import skips entries identified as live or upcoming and avoids duplicates already represented by non-error tasks.
 - Track progress, speed, and estimated time where the downloader reports them. Pause, resume, cancel, and retry supported tasks.
 - Limit concurrent downloads and configure a download speed limit. Reorder the displayed task list and retain completed and failed task history.
 - For CHZZK VODs, alternate between Akamai and Naver CDN sources on retries and check downloaded duration with FFprobe to detect incomplete output.
-
-
-
+- Validate HLS/DASH fragments before appending them and preserve HTTP failure details. Manual retries restore the saved filename and partial-file path for supported continuation.
+- Open completed files, open their storage directory, inspect FFprobe results and retry file inspection. Download completion and file-verification results are shown separately.
 
 ### Dashboard and automation
 
@@ -58,17 +58,18 @@ Manual start/stop, automatic recording and per-channel quality/output preference
 - Color presets, a custom accent color, and browser-local title and favicon preferences.
 - Discord slash commands, bot notifications, and webhook delivery with fallback, retry handling, and a persistent pending-notification queue.
 - Automatic release checks after startup and every 24 hours, plus a manual update check. Installation updates remain a separate operation.
+- **Settings → Information** combines media-tool health checks, program updates, system details and license information. The Korean video page and sidebar are named **동영상**.
 
 ## Supported platforms
 
 | Platform | Live monitoring and recording | On-demand downloads | Authentication and limits |
 | --- | --- | --- | --- |
-| CHZZK | Streamlink TS recording, automatic/manual controls, time machine, preview | VODs and clips | Naver cookies for restricted content |
-| YouTube | Streamlink HLS TS recording, automatic/manual controls, preview | Videos and channel imports | Public first; cookies on authentication failure |
-| SOOP | Streamlink HLS TS recording, automatic/manual controls, frame preview | VODs and multi-part videos | Platform cookies when required |
-| CIME | Streamlink HLS TS recording, automatic/manual controls, frame preview | VODs and clips | Platform cookies when required |
+| CHZZK | Automatic/manual recording, time machine, interactive preview | VODs and clips | Naver cookies for restricted content |
+| YouTube | Automatic/manual recording, interactive preview | Videos and channel imports | Public first; cookies on authentication failure |
+| SOOP | Automatic/manual recording, current viewer count, interactive preview | VODs and multi-part videos | Platform cookies when required |
+| CIME | Automatic/manual recording, interactive preview | VODs and clips | Platform cookies when required |
 
-The generic download engine uses yt-dlp internally, but this does not establish support for every yt-dlp extractor. A dedicated YouTube playlist-import workflow is not documented here. TwitCasting has been removed and is rejected by the download engine.
+External-video support follows the extractors and formats accepted by the engine. Channel import is available for YouTube. X Spaces and TwitCasting are retired; their existing history and files are retained.
 
 ## Requirements
 
@@ -88,13 +89,13 @@ The management script recognizes Debian/Ubuntu, Fedora/RHEL-family, and Arch-fam
 
 ### Windows release
 
-1. Download the Windows x64 executable from [the latest release](https://github.com/ProofPage/Phrolova/releases/latest). The verified v2.0.48 asset is `Phrolova-v2.0.48-windows-x64.exe`.
+1. Download `Phrolova-v<version>-windows-x64.exe` and `SHA256SUMS.txt` from [the latest release](https://github.com/ProofPage/Phrolova/releases/latest). Releases include a Windows Defender scan and the executable's SHA-256 checksum.
 2. Place it in a writable folder that will also hold its configuration, data, and logs.
 3. Install FFmpeg and FFprobe. Put `ffmpeg.exe` and `ffprobe.exe` in a `bin` folder beside the Phrolova executable, or add their directory to your system `PATH`.
 4. Launch the executable. Startup checks dependencies and attempts to download `yt-dlp.exe` into the adjacent `bin` folder if it is missing. This requires network access; you can also place `yt-dlp.exe` there yourself.
 5. Open [http://localhost:8000](http://localhost:8000) if the browser does not open automatically, and complete setup.
 
-FFmpeg and FFprobe are **not bundled**. Although backend settings support `FFMPEG_PATH`, the desktop launcher's initial FFmpeg check searches the adjacent `bin` folder and `PATH`; use one of those locations for the release executable.
+FFmpeg and FFprobe are **external tools**. Phrolova checks them independently using `FFMPEG_PATH` / `FFPROBE_PATH`, adjacent `bin/`, and `PATH`. Check their resolved paths and retry detection in **Settings → Information → Media tools**.
 
 The desktop build includes a system tray menu for opening the browser and exiting. Tray labels and executable metadata use **Phrolova**.
 
@@ -188,8 +189,8 @@ The current repository has no Dockerfile or Compose configuration; Docker instal
 3. **Add authentication when needed.** Use **Settings → Authentication** for CHZZK, YouTube, SOOP or CIME cookies.
 4. **Add a channel.** Choose CHZZK, YouTube, SOOP or CIME in Live.
 5. **Review recording options.** Configure global quality, format, and filenames in Settings. CHZZK channels can inherit or override the automatic recording condition. Tags help organize the list separately from those conditions.
-6. **Download a video.** Open **Downloads**, add a CHZZK VOD/clip or YouTube video link, and watch its task status. A YouTube channel URL or `@handle` starts background channel import. Stopping an import stops collection; videos already queued remain.
-7. **Review results.** Use **Downloads** for video task history, **Statistics** for recording/download summaries, and **Logs** for failures and diagnostics. Media is saved on the backend host.
+6. **Download a video.** Open the **Videos (동영상)** page, choose a platform and add video/clip links. Select quality and start individual or queued tasks. A YouTube channel URL or `@handle` starts background channel import. Stopping an import stops collection; videos already queued remain.
+7. **Review results.** Use **Videos** for task history and file inspection, **Statistics** for recording/download summaries, and **Logs** for diagnostics. **Settings → Information** contains media-tool and release checks. Media is saved on the backend host.
 
 ## Configuration
 
@@ -198,7 +199,7 @@ Settings are loaded through Pydantic Settings from environment variables and `.e
 - **Source:** repository-root `.env`, with `backend/.env` as a legacy fallback when the root file is absent.
 - **Windows executable:** `.env` beside the executable.
 
-The web settings pages write to the same resolved `.env` file. Restart after editing it manually, changing host/port or Discord bot credentials, changing download concurrency, or changing the monitoring interval for already-running channels. Some other settings take effect immediately or on the next task.
+The web settings pages write to the same resolved `.env` file. Restart after editing it manually or changing host/port or Discord bot credentials. Download concurrency changes apply immediately without stopping active tasks; per-channel recording preferences apply at the next recording start.
 
 Prefer absolute media paths for a service. Relative paths are resolved from the process working directory; the Linux service and the source commands above run from `backend/`, so `./recordings` means `backend/recordings` in those cases.
 
@@ -211,6 +212,8 @@ These defaults come from the current settings implementation, rather than older 
 | `HOST` | `127.0.0.1` | Server bind address; use `127.0.0.1` for local-only access |
 | `PORT` | `8000` | HTTP port |
 | `FFMPEG_PATH` | `ffmpeg` | Backend FFmpeg executable path; adjacent `bin/` and `PATH` are also searched |
+| `FFPROBE_PATH` | `ffprobe` | Independent file-inspection tool path; FFmpeg's sibling directory, adjacent `bin/` and `PATH` are also searched |
+| `FILE_INSPECTION_TIMEOUT` | `120` | FFprobe inspection timeout in seconds; accepts 1–600 |
 | `DOWNLOAD_DIR` | `./recordings` | Fallback media directory and setup-completion setting |
 | `LIVE_DOWNLOAD_DIR` | Empty | Live output directory; falls back to `DOWNLOAD_DIR` |
 | `VOD_DOWNLOAD_DIR` | Empty | Common video output directory; otherwise legacy directory rules apply |
@@ -221,6 +224,8 @@ These defaults come from the current settings implementation, rather than older 
 | `CHZZK_STREAM_MODE` | `force-timemachine` (effective default) | `standard`, `request-timemachine`, or `force-timemachine` |
 | `CHZZK_TIME_MACHINE_OFFSET` | `0` (effective default) | Seconds skipped from the available time-machine stream's beginning; clamped to 0–86400 |
 | `SAVE_LIVE_PREVIEW` | `false` | Save a CHZZK preview image when recording starts |
+| `CHZZK_LIVE_CDN` | `akamai` | CHZZK live preference: `akamai` = Akamai CDN, `default` = Naver CDN |
+| `CHZZK_VOD_CDN` | `akamai` | CHZZK download preference: `akamai` = Akamai CDN, `default` = Naver CDN |
 | `LIVE_DOWNLOAD_CONDITION` | `all` | CHZZK default: `all`, `watchalong`, or `exclude_watchalong` |
 | `WATCHALONG_TAGS` | Platform's Korean watch-along marker | Comma- or newline-separated matching tags for watch-along-only recording; editable in Settings |
 | `VOD_MAX_CONCURRENT` | `5` | Simultaneous video tasks; Settings accepts 1–10; changes apply immediately without stopping active tasks |
@@ -233,7 +238,7 @@ These defaults come from the current settings implementation, rather than older 
 
 Video output format is a merge preference. Single-file downloads and clips follow their existing engine paths. Quality requests use formats supplied by the platform.
 
-**Template compatibility:** use `LIVE_FORMAT` and `VOD_FORMAT`; the template uses `LIVE_FORMAT`. Its old live filename default is automatically migrated. Its comments about bundled FFmpeg and Docker do not describe the current release. Existing `SPLIT_DOWNLOAD_DIRS`, `VOD_CHZZK_DIR`, and `VOD_EXTERNAL_DIR` values remain legacy fallbacks when `VOD_DOWNLOAD_DIR` is empty.
+**Template compatibility:** the current `.env.example` still sets both CDN preferences to `default`. Set `CHZZK_LIVE_CDN=akamai` and `CHZZK_VOD_CDN=akamai` for the current Akamai defaults, or choose the CDN in Settings. Existing saved choices are preserved. Its old live filename default is automatically migrated; its Docker comment does not describe a supplied installation method. Existing `SPLIT_DOWNLOAD_DIRS`, `VOD_CHZZK_DIR`, and `VOD_EXTERNAL_DIR` values remain legacy fallbacks when `VOD_DOWNLOAD_DIR` is empty.
 
 ### Filename templates
 
@@ -254,10 +259,12 @@ Video templates accept `{name}`, `{title}`, `{id}`, `{extractor}`, `{upload_date
 | --- | --- | --- |
 | CHZZK | `NID_AUT`, `NID_SES` | Enter your own Naver session cookies through Settings when authenticated access is required |
 | YouTube | `YOUTUBE_COOKIE_FILE` | Upload a Netscape-format cookie file in Settings. Downloads and channel imports retry with it after recognized authentication errors; preview resolution also reads it |
+| SOOP | `SOOP_COOKIE_FILE` | Upload a Netscape-format cookie file in Settings for streams and videos requiring platform authentication |
+| CIME | `CIME_COOKIE_FILE` | Upload a Netscape-format cookie file in Settings for streams and videos requiring platform authentication |
 
 Cookie-file paths refer to files on the backend host. Uploaded files are stored under the application's data directory. Cookies do not grant access beyond the account's permissions. Automatic YouTube live recording currently does not receive `YOUTUBE_COOKIE_FILE`; do not assume authenticated video downloads imply authenticated live recording support.
 
-The dashboard and API have no built-in user login or access-control layer. Because the default host binds all interfaces and the API can control recordings, settings, and server directories, keep access restricted to trusted users or protect it with an authenticated reverse proxy or private network. Treat cookies, bot tokens, and webhook URLs as secrets.
+The default host is **127.0.0.1**, which accepts local connections. The dashboard and API have no built-in user login; when exposing them to other devices, use an authenticated reverse proxy or private network. Keep cookies, bot tokens and webhook URLs private.
 
 ## Discord integration
 
@@ -291,7 +298,6 @@ Argument names below are the exact registered Discord option names.
 | `/diag` | None | Inspect notification queue and transport status |
 | `/notify-test` | None | Enqueue a test notification of kind `system` |
 
-
 ### Notification events
 
 Supported event identifiers are `live_detected`, `recording_started`, `recording_completed`, `recording_failed`, `vod_completed`, `vod_failed`, `cookie_expired`, `update_available`, and `system`.
@@ -314,7 +320,7 @@ New installations use `phrolova.db`. Existing `rookery.db` or `signal_recorder.d
 
 For a straightforward backup, stop Phrolova cleanly, then copy `.env`, the entire data directory, and the media directories you need. SQLite uses WAL mode and checkpoints on normal shutdown; do not copy only the main database file while it is running and assume that all recent changes are included. Preserve cookie backups privately.
 
-Video tasks are persisted, including queued and active tasks. Interrupted tasks are restored as errors for manual retry; channel-import jobs are not restored. Keeping `.part` files does not guarantee automatic continuation after a restart.
+Video tasks are persisted, including queued and active tasks. Interrupted tasks are restored as errors for manual retry; channel-import jobs are not restored. Retries reuse persisted filenames and partial-file locations. Continuation depends on the downloader and remaining source/part files.
 
 ## Architecture
 
@@ -330,7 +336,6 @@ Phrolova runs a FastAPI backend with a React single-page frontend. In a producti
 | FFmpeg and FFprobe | Post-close recording remux, independent preview processing, VOD merging and media validation |
 | SQLite repository layer | Persistent application state and schema/legacy-data migrations |
 | discord.py and notification service | Slash commands, bot delivery, webhook fallback, and queued notifications |
-
 
 ## Project structure
 
@@ -421,11 +426,10 @@ The result is `dist/Phrolova.exe`. The release workflow renames it to a versione
 
 ### Known limitations
 
-- **YouTube web start/stop:** the current `/api/stream/record/…` route does not preserve the `youtube:` channel prefix. Use automatic recording or Discord `/start` and `/stop`, which call the conductor with the correct composite key. Do not assume the visible web buttons work for YouTube.
 - **Live containers:** Compatible TS HLS is preferred. When only fMP4/CMAF is available, Streamlink preserves native data and FFmpeg converts it after the writer has closed; data is never mislabeled as TS.
-- **Download controls:** pause/resume is implemented through yt-dlp progress callbacks. Paused yt-dlp tasks retain their concurrency slot.
+- **Download controls:** pause/resume is implemented through yt-dlp progress callbacks. Paused tasks retain their concurrency slot until resumed or cancelled.
 - **Task order and persistence:** display reordering does not reschedule already-created download coroutines. Interrupted video tasks require manual retry after a restart; channel imports are not restored.
-- **Availability:** a quality setting, cookie, retry, or captured URL cannot recover media that the upstream platform no longer supplies. No guarantee of gap-free recordings or complete platform coverage is made.
+- **Availability:** selectable quality and playback depend on the formats, authentication and media supplied by the upstream platform.
 
 ### Common issues
 
@@ -456,7 +460,14 @@ Back up settings and data before changing installation locations. To update a Li
 - [Test guide](docs/test-guide.md) — historical manual test scenarios.
 - [Browser regression tests](frontend/tests/README.md) — current frontend regression commands.
 
-Most supporting guides are written in Korean. Some retain older installation paths, Docker references, executable names, or behavior descriptions. In particular, setup completion now uses `.env` with a nonempty `DOWNLOAD_DIR`, not `data/.setup_complete`; Vite builds directly into `backend/app/static`; and the current X conductor does poll registered accounts. Use this README's instructions where those guides disagree.
+Most supporting guides are written in Korean. Setup uses `.env` with a nonempty `DOWNLOAD_DIR`, and Vite builds directly into `backend/app/static`. Follow this README for current installation paths and use the focused reports below for implementation and validation details.
+
+- [Recording finalization](docs/recording-finalization.md) — source preservation, remux queue and file verification.
+- [Recording boundary and buffer audit](docs/recording-boundary-buffer-audit-ko.md) — graceful stop, reconnect checkpoints and disk buffers.
+- [Reference issue audit](docs/reference-issue-audit.md) — adapted fixes and validation records.
+- [SOOP viewers and platform selectors](docs/soop-viewers-platform-select.md) — current viewer counts and shared selector geometry.
+- [Native Termux and proot guide](docs/termux-guide.md) — Android setup and environment details.
+- [Compatibility audit](docs/compatibility-audit-ko.md) — runtime checks and remaining device-specific coverage.
 
 ## Contributing
 
@@ -469,15 +480,3 @@ Follow the repository's existing line endings, use theme tokens and shared UI pr
 Phrolova is distributed under the [MIT License](LICENSE).
 
 Copyright (c) 2026 Serian (github.com/eruminyu). The original author attribution is preserved in the license and package metadata. The repository also records contributions in its Git history and changelog.
-
-## Linux and Android compatibility audit
-
-See [Linux instructions](docs/linux-guide.md), [Native Termux and proot instructions](docs/termux-guide.md), and the [compatibility audit](docs/compatibility-audit-ko.md). Native Termux installation, web UI, CHZZK recording, restart persistence, and graceful shutdown were confirmed on a user device. Additional platform downloads and background operation were reported as verified by the user; detailed test logs for those checks were not collected. Linux ARM64 and proot execution remain unverified; ARM64 wheel availability is not an execution test.
-
-## Recording finalization
-
-Live reception and file conversion are separate. Streamlink writes `.ts.part`; closed captures become `.ts`. No FFmpeg process receives a live recording stream. A durable SQLite queue starts stream-copy remuxing only after writers close, and validates container, codecs, dimensions, frame rate, duration and stream count before publishing the final file without overwriting existing files.
-
-Set **Recording output format**, **Keep original TS**, and conversion concurrency in Settings. Per-channel settings override the global format at the next recording start. A new installation defaults to MKV; explicitly configured legacy TS/MKV/MP4 preferences remain in effect. Interrupted jobs require review/retry, and failures retain the source and diagnostic information. Existing retired-platform history and chat files remain on disk and in the database; their execution and UI are removed.
-
-CHZZK, YouTube, SOOP and CIME use the shared recording service. TS HLS is supported; DASH-only and fragmented MP4 live inputs are rejected rather than stored as mislabeled TS. Independently resolved preview frames/playback and existing VOD download engines remain separate. See [recording architecture](docs/recording-finalization.md).
