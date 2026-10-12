@@ -1,5 +1,5 @@
 import { memo, useId, useRef, useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowUp, ChevronDown, FileVideo, FolderOpen, GripVertical, Pause, Play, RotateCw, Square, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, FileVideo, FolderOpen, GripVertical, Pause, Play, RotateCw, ShieldCheck, Square, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { client, type VodTask } from '../api/client';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -68,10 +68,11 @@ export const DownloadTaskCard = memo(function DownloadTaskCard({ task, mode, ret
             </div>
             } />
             <div className="download-task-status" role="status" aria-live="polite">
-                <div className="download-status-heading"><div className="download-status-labels"><Badge tone={tone}>{t(status)}</Badge>
-                    {task.state === 'completed' && inspection === 'passed' && <span className="text-xs text-ok">{t('파일 검사 완료')}</span>}
-                </div>
+                <div className="download-status-heading"><Badge tone={tone}>{t(status)}</Badge>
+                    <div className="download-status-meta">
+                    {task.state === 'completed' && inspection === 'passed' && <span className="download-inspection-passed"><ShieldCheck className="size-3.5" aria-hidden="true" />{t('파일 검사 완료')}</span>}
                     {!canQuality && task.quality && <span className="download-selected-quality">{task.quality === 'best' ? t('최고 화질') : task.quality === 'worst' ? t('최저 화질') : task.quality}</span>}
+                    </div>
                 </div>
                 {['downloading', 'processing', 'paused'].includes(state) && <div className="download-progress"><div role="progressbar" aria-label={t('다운로드 진행률')} aria-valuenow={percentage ? Number(percentage) : undefined} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${percentage ?? 0}%` }} /></div><span className="tabular-nums">{percentage ? `${percentage}%` : '—'}</span></div>}
                 {state === 'processing' && <span className="text-xs text-ink-muted">{t('다운로드 후 처리를 진행하고 있습니다.')}</span>}
