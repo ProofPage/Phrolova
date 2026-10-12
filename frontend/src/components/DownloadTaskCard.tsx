@@ -75,7 +75,7 @@ export const DownloadTaskCard = memo(function DownloadTaskCard({ task, mode, ret
                 {state === 'processing' && <span className="text-xs text-ink-muted">{t('다운로드 후 처리를 진행하고 있습니다.')}</span>}
             </div>
             <div className={clsx('download-task-footer', canQuality && 'download-task-footer--ready')}>
-            {!canQuality && <dl className="download-task-metrics">{statistics.map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd className={label === '파일 크기' ? 'download-file-size-value' : undefined}>{value}{label === '파일 크기' && inspection === 'passed' && <span className="download-inspection-passed"><ShieldCheck className="size-3.5" aria-hidden="true" />{t('파일 검사 완료')}</span>}</dd></div>)}</dl>}
+            {!canQuality && <dl className="download-task-metrics">{statistics.map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd>{value}</dd></div>)}</dl>}
             {task.state === 'completed' && inspection !== 'passed' && <div className="download-file-verification"><span className={clsx('text-xs', attention ? 'text-warn' : 'text-ink-muted')}>{t(inspecting ? '파일 정보를 확인하고 있습니다.' : attention ? '파일 확인 필요' : '검사 대기')}</span>{attention && <p className="download-task-warning text-xs break-words" role="status">{t(attention ? task.inspection_message || '다운로드는 완료되었지만 파일 정보를 확인하지 못했습니다.' : task.download_warning_message || downloadErrorMessage(task))}</p>}</div>}
             {(state === 'failed' || task.download_warning_message) && <p className="download-task-warning text-xs break-words" role="status">{t(attention ? task.inspection_message || '다운로드는 완료되었지만 파일 정보를 확인하지 못했습니다.' : task.download_warning_message || downloadErrorMessage(task))}</p>}
             <div className="download-task-controls">
@@ -88,7 +88,10 @@ export const DownloadTaskCard = memo(function DownloadTaskCard({ task, mode, ret
                 {['downloading', 'processing', 'paused'].includes(state) && <Button icon={Square} variant="danger" disabled={!!pending || task.state === 'cancelling'} loading={pending === 'cancel'} onClick={() => void act('cancel')}>{t('취소')}</Button>}
                 {state === 'failed' && task.phase !== 'metadata_error' && <Button icon={RotateCw} disabled={!!pending || retryActive} loading={pending === 'retry'} onClick={() => void act('retry')}>{t('다시 시도')}</Button>}
                 {task.state === 'completed' && task.output_path && <>
+                    <div className="download-file-open">
+                    {inspection === 'passed' && <span className="download-inspection-passed"><ShieldCheck className="size-3.5" aria-hidden="true" />{t('파일 검사 완료')}</span>}
                     <a className="ui-button btn-secondary" href={`${client.defaults.baseURL}/vod/${encodeURIComponent(task.task_id)}/file`} target="_blank" rel="noopener noreferrer"><FileVideo className="size-4" aria-hidden="true" />{t('파일 열기')}</a>
+                    </div>
                     <Button icon={FolderOpen} disabled={!!pending} onClick={() => void act('folder')}>{t('저장 폴더 열기')}</Button>
                     {attention && <Button icon={RotateCw} disabled={!!pending || inspecting} loading={pending === 'inspect'} onClick={() => void act('inspect')}>{t('다시 검사')}</Button>}
                 </>}
