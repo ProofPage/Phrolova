@@ -48,6 +48,8 @@
 .download-task-meta { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; min-width: 0; font-size: 11px; line-height: 18px; color: var(--color-ink-muted); }
 .download-media-meta { min-width: 0; color: var(--color-ink-faint); font-size: 11px; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .download-uploader { min-width: 0; max-width: 240px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.download-task-header-actions { display: flex; align-items: center; gap: 8px; align-self: start; justify-self: end; }
+.download-inspection-passed { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border: 1px solid var(--color-line); border-radius: 4px; background: var(--color-surface-2); color: var(--color-ink-muted); font-size: 10px; line-height: 16px; white-space: nowrap; }
 .download-task-management { display: flex; align-items: center; gap: 2px; padding: 1px; background: var(--color-surface-2); border: 1px solid var(--color-line); border-radius: var(--radius-control); align-self: start; justify-self: end; }
 .download-task-management .icon-button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 32px; min-width: 30px; min-height: 32px; }
 .download-task-management .icon-button:focus-visible { outline: 2px solid var(--color-info); outline-offset: -2px; }
@@ -146,6 +148,10 @@
     .download-task .icon-button, .download-filter-scroll button, .download-quality-option { min-height: 44px; min-width: 44px; }
     .download-task-summary { padding: 12px; }
     .download-task-details dl > div { grid-template-columns: minmax(0,1fr); gap: 2px; }
+}
+@media (max-width:639px) {
+    .download-task-header:has(.download-inspection-passed) { grid-template-columns: var(--thumbnail-width) minmax(0,1fr); }
+    .download-task-header:has(.download-inspection-passed) .download-task-header-actions { grid-column: 1 / -1; grid-row: 2; }
 }
 @container downloads (max-width:750px) {
     .download-input-card { grid-template-columns: minmax(0,1fr); }

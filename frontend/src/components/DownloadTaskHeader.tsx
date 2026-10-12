@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ShieldCheck } from 'lucide-react';
 import type { VodTask } from '../api/client';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatDuration } from '../utils/format';
@@ -17,8 +18,11 @@ export function DownloadTaskHeader({ task, duration, actions }: { task: VodTask;
         <div className="download-task-copy">
             <h3 className="download-title" title={task.title || task.url}>{task.title || t('영상 정보 확인 중')}</h3>
             <div className="download-task-meta"><span className="download-uploader" title={uploader}>{uploader}</span><PlatformBadge platform={task.platform || detectDownloadPlatform(task.url)} /></div>
-            <p className="download-media-meta" title={[media, inspectionLabel].filter(Boolean).join(' · ')}>{media}{inspectionLabel && <> · <span>{inspectionLabel}</span></>}</p>
+            <p className="download-media-meta" title={media}>{media}</p>
         </div>
-        {actions}
+        <div className="download-task-header-actions">
+            {inspectionLabel && <span className="download-inspection-passed"><ShieldCheck className="size-3.5" aria-hidden="true" />{inspectionLabel}</span>}
+            {actions}
+        </div>
     </header>;
 }
