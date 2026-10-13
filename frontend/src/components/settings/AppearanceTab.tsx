@@ -29,7 +29,7 @@ export function AppearanceTab({ onDirtyChange }: Props) {
         const file = event.target.files?.[0];
         if (!file) return;
         if (file.size > 512 * 1024) {
-            toast.error(t("파일 크기는 512KB 이하여야 합니다."));
+            toast.error(t("settings.theFileMustBe512KBOrSmaller"));
             return;
         }
         const reader = new FileReader();
@@ -39,20 +39,20 @@ export function AppearanceTab({ onDirtyChange }: Props) {
 
     return (
         <Card className="space-y-5">
-            <CardHeader icon={Palette} title={t("외관 설정")} />
+            <CardHeader icon={Palette} title={t("settings.appearance")} />
 
-            <Field label={t("언어")} hint={t("앱에서 사용할 언어를 선택합니다.")}>
+            <Field label={t("settings.language")} hint={t("settings.chooseTheLanguageUsedInTheApp")}>
                 <Select
                     value={language}
                     onChange={(event) => setLanguage(event.target.value as typeof language)}
                     options={LANGUAGE_OPTIONS}
-                    aria-label={t("언어")}
+                    aria-label={t("settings.language")}
                 />
             </Field>
 
             <Field
-                label={t("컬러 테마")}
-                hint={<>{t("현재:")} <span className="font-medium" style={{ color: "var(--primary)" }}>{themeId === "custom" ? `${t("사용자 지정")} (${customColor})` : t(THEMES.find((theme) => theme.id === themeId)?.label ?? "")}</span></>}
+                label={t("settings.colorTheme")}
+                hint={<>{t("settings.current")} <span className="font-medium" style={{ color: "var(--primary)" }}>{themeId === "custom" ? `${t("settings.custom")} (${customColor})` : t(THEMES.find((theme) => theme.id === themeId)?.label ?? "")}</span></>}
             >
                 <div className="flex gap-3 flex-wrap items-center">
                     {THEMES.map((theme) => (
@@ -60,7 +60,7 @@ export function AppearanceTab({ onDirtyChange }: Props) {
                             key={theme.id}
                             onClick={() => setTheme(theme.id as ThemeId)}
                             title={t(theme.label)}
-                            aria-label={`${t(theme.label)} ${t("컬러 테마")}`}
+                            aria-label={`${t(theme.label)} ${t("settings.colorTheme")}`}
                             aria-pressed={themeId === theme.id}
                             className={`theme-swatch w-10 h-10 rounded-full border-4 transition-all  ${themeId === theme.id ? "border-ink " : "border-transparent"}`}
                             style={{ backgroundColor: theme.primary }}
@@ -70,8 +70,8 @@ export function AppearanceTab({ onDirtyChange }: Props) {
                         <input ref={colorPickerRef} tabIndex={-1} aria-hidden="true" type="color" className="absolute opacity-0 w-0 h-0" value={customColor} onChange={(event) => setCustomColor(event.target.value)} />
                         <button
                             onClick={() => colorPickerRef.current?.click()}
-                            title={`${t("사용자 지정")} ${t("컬러 테마")}`}
-                            aria-label={`${t("사용자 지정")} ${t("컬러 테마")}`}
+                            title={`${t("settings.custom")} ${t("settings.colorTheme")}`}
+                            aria-label={`${t("settings.custom")} ${t("settings.colorTheme")}`}
                             aria-pressed={themeId === "custom"}
                             className={`theme-swatch w-10 h-10 rounded-full border-4 transition-all  overflow-hidden ${themeId === "custom" ? "border-ink " : "border-transparent"}`}
                             style={{ background: themeId === "custom" ? customColor : "conic-gradient(red, yellow, lime, cyan, blue, magenta, red)" }}
@@ -80,17 +80,17 @@ export function AppearanceTab({ onDirtyChange }: Props) {
                 </div>
             </Field>
 
-            <Field label={t("페이지 타이틀")} hint={t("브라우저 탭 제목이 변경됩니다 (최대 32자)")}>
+            <Field label={t("settings.pageTitle")} hint={t("settings.changesTheBrowserTabTitleUpTo32Characters")}>
                 <div className="flex gap-2">
                     <Input type="text" maxLength={32} value={titleInput} onChange={(event) => setTitleInput(event.target.value)} placeholder="Phrolova" className="flex-1" />
-                    <Button variant="primary" onClick={() => setPageTitle(titleInput)}>{t("적용")}</Button>
+                    <Button variant="primary" onClick={() => setPageTitle(titleInput)}>{t("settings.apply")}</Button>
                 </div>
             </Field>
 
-            <Field label={t("탭 아이콘 (Favicon)")} hint={t("브라우저 탭 좌측 아이콘이 변경됩니다.")}>
+            <Field label={t("settings.tabIconFavicon")} hint={t("settings.changesTheIconShownInTheBrowserTab")}>
                 <input ref={iconInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={handleIconUpload} />
                 <Button icon={ImageIcon} onClick={() => iconInputRef.current?.click()} className="w-full">
-                    {t("이미지 업로드 (PNG · JPG · WEBP, 512KB 이하)")}
+                    {t("settings.uploadImagePNGJPGWEBPUpTo512KB")}
                 </Button>
             </Field>
 
@@ -102,7 +102,7 @@ export function AppearanceTab({ onDirtyChange }: Props) {
                 }}
                 className="w-full"
             >
-                {t("외관 초기화 (기본값 복원)")}
+                {t("settings.resetAppearance")}
             </Button>
         </Card>
     );

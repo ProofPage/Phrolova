@@ -31,6 +31,9 @@ from app.engine.updater import UpdaterService
 from app.store import close_database, get_database, migrate_json_files
 from app.version import __version__
 from app.engine.media_http_compat import install_media_http_compat
+from app.core.error_messages import localized_http_error, localized_validation_error
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 install_media_http_compat()
 
@@ -213,6 +216,8 @@ app = FastAPI(
     version=__version__,
     lifespan=lifespan,
 )
+app.add_exception_handler(StarletteHTTPException, localized_http_error)
+app.add_exception_handler(RequestValidationError, localized_validation_error)
 
 # CORS 설정 (개발 환경 프록시 연동용 — 프로덕션에서는 동일 오리진이므로 실질적 영향 없음)
 app.add_middleware(

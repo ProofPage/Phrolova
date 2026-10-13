@@ -37,7 +37,7 @@ export function Sidebar() {
                 </span>
             </Link>
 
-            <nav className="sidebar-navigation" aria-label={t("주 메뉴")}>
+            <nav className="sidebar-navigation" aria-label={t("common.mainMenu")}>
                 {NAV_GROUPS.map((group) => (
                     <section key={group.title} className="sidebar-nav-group">
                         <h2 className="sidebar-nav-heading">{t(group.title)}</h2>
@@ -64,12 +64,12 @@ export function Sidebar() {
 
     return (
         <>
-            <aside className="app-sidebar hidden lg:flex" aria-label={t("주 메뉴")}>{navigation}</aside>
+            <aside className="app-sidebar hidden lg:flex" aria-label={t("common.mainMenu")}>{navigation}</aside>
             <button
                 type="button"
                 onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setMobileOpen(true); }}
                 className="sidebar-mobile-trigger icon-button lg:hidden"
-                aria-label={t("메뉴 열기")}
+                aria-label={t("common.openMenu")}
                 aria-expanded={mobileOpen}
                 aria-controls="mobile-sidebar"
             >
@@ -77,9 +77,9 @@ export function Sidebar() {
             </button>
             {mobileOpen && (
                 <div className="sidebar-mobile-overlay lg:hidden">
-                    <button className="sidebar-backdrop" onClick={() => setMobileOpen(false)} aria-label={t("메뉴 닫기")} />
-                    <aside ref={drawerRef} role="dialog" aria-modal="true" tabIndex={-1} aria-label={t("주 메뉴")} id="mobile-sidebar" className="app-sidebar app-sidebar-mobile">
-                        <button type="button" onClick={() => setMobileOpen(false)} className="sidebar-mobile-close icon-button" aria-label={t("메뉴 닫기")}>
+                    <button className="sidebar-backdrop" onClick={() => setMobileOpen(false)} aria-label={t("common.closeMenu")} />
+                    <aside ref={drawerRef} role="dialog" aria-modal="true" tabIndex={-1} aria-label={t("common.mainMenu")} id="mobile-sidebar" className="app-sidebar app-sidebar-mobile">
+                        <button type="button" onClick={() => setMobileOpen(false)} className="sidebar-mobile-close icon-button" aria-label={t("common.closeMenu")}>
                             <X className="size-[18px]" />
                         </button>
                         {navigation}

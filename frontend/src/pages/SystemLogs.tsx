@@ -1,3 +1,6 @@
+import { localizedStatus } from '../utils/error';
+import { getActiveLocale } from "../i18n";
+import { translate } from "../i18n";
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
     Terminal,
@@ -34,9 +37,9 @@ export default function SystemLogs() {
 
     const handleClearLogs = async () => {
         const ok = await confirm({
-            title: "로그 초기화",
-            message: "현재 로그와 날짜별 백업 로그를 모두 비웁니다. 초기화 후 발생하는 새 로그는 계속 저장됩니다.",
-            confirmText: "로그 초기화",
+            title: "logs.clearLogs",
+            message: "logs.clearTheActiveLogAndAllDatedBackupLogsNewLogsWillContinueToBeSaved",
+            confirmText: "logs.clearLogs",
             variant: "danger",
         });
         if (!ok) return;
@@ -46,9 +49,9 @@ export default function SystemLogs() {
             const result = await api.clearSystemLogs();
             setSelectedFile(null);
             setListRefreshKey((value) => value + 1);
-            toast.success(result.message);
+            toast.success(localizedStatus(result.message, 'logs.logsCleared'));
         } catch {
-            toast.error("로그 초기화에 실패했습니다.");
+            toast.error("logs.couldNotClearLogs");
         } finally {
             setClearing(false);
         }
@@ -58,9 +61,9 @@ export default function SystemLogs() {
         <div className="product-page logs-page flex flex-col gap-4 lg:h-[calc(100dvh-6.5rem)]">
             <PageHeader
                 icon={Terminal}
-                eyebrow={t("서비스 상태 확인")}
-                title={t("로그")}
-                description={t("실시간 서비스 로그와 일자별 백업을 검색하고 서버 상태를 추적합니다.")}
+                eyebrow={t("logs.serviceStatus")}
+                title={t("logs.title")}
+                description={t("logs.searchLiveServiceLogsAndDailyBackupsToMonitorServerStatus")}
                 actions={(
                     <Button
                         icon={Trash2}
@@ -68,7 +71,7 @@ export default function SystemLogs() {
                         loading={clearing}
                         onClick={handleClearLogs}
                     >
-                        {t("로그 초기화")}
+                        {t("logs.clearLogs")}
                     </Button>
                 )}
             />
@@ -83,11 +86,11 @@ export default function SystemLogs() {
                 </div>
 
                 <div className={clsx("flex-1 flex flex-col bg-surface-2 border border-line rounded-[var(--radius-card)] overflow-hidden surface-raise min-w-0 min-h-[320px] lg:min-h-0", !selectedFile && "hidden lg:flex")}>
-                    {selectedFile && <div className="flex min-h-12 items-center gap-3 border-b border-line px-4 py-2 text-xs font-semibold text-ink-muted lg:hidden"><button type="button" onClick={() => setSelectedFile(null)} className="inline-flex min-h-11 items-center gap-1.5 text-ink-muted hover:text-ink"><ChevronLeft className="size-4" />로그 파일</button><span className="truncate">{selectedFile.filename}</span></div>}
+                    {selectedFile && <div className="flex min-h-12 items-center gap-3 border-b border-line px-4 py-2 text-xs font-semibold text-ink-muted lg:hidden"><button type="button" onClick={() => setSelectedFile(null)} className="inline-flex min-h-11 items-center gap-1.5 text-ink-muted hover:text-ink"><ChevronLeft className="size-4" />{translate("logs.logFiles")}</button><span className="truncate">{selectedFile.filename}</span></div>}
                     {selectedFile === null ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-ink-faint p-8 text-center">
                             <span className="w-8 h-8 grid place-items-center mb-4"><Terminal className="w-6 h-6 opacity-60" /></span>
-                            <p className="text-sm">왼쪽 목록에서 조회할 로그 파일을 선택하세요.</p>
+                            <p className="text-sm">{translate("logs.chooseALogFileFromTheListOnTheLeft")}</p>
                         </div>
                     ) : (
                         <LogContentViewer
@@ -141,16 +144,16 @@ function LogFileListView({ selectedFile, onSelect, refreshKey }: LogFileListView
         return () => window.clearInterval(timer);
     }, [refreshKey, loadFiles]);
 
-    if (loading && files.length === 0) return <LoadingState label="로그 목록을 불러오는 중" />;
+    if (loading && files.length === 0) return <LoadingState label={translate("logs.loadingLogFiles")} />;
 
     if (files.length === 0) {
         if (loadError) {
-            return <EmptyState icon={AlertCircle} title={t("로그 목록을 불러오지 못했습니다.")} description={t("서버 연결을 확인한 뒤 다시 시도해 주세요.")} action={<Button icon={RefreshCw} onClick={() => void loadFiles()}>{t("다시 시도")}</Button>} />;
+            return <EmptyState icon={AlertCircle} title={t("logs.couldNotLoadTheLogList")} description={t("settings.checkTheServerConnectionAndTryAgain")} action={<Button icon={RefreshCw} onClick={() => void loadFiles()}>{t("live.tryAgain")}</Button>} />;
         }
         return (
             <div className="flex flex-col flex-1 items-center justify-center p-8 text-center">
                 <Terminal className="w-8 h-8 text-ink-faint mb-3" />
-                <p className="text-ink-muted font-medium text-sm mb-1">로그 파일이 없습니다.</p>
+                <p className="text-ink-muted font-medium text-sm mb-1">{translate("logs.noLogFiles")}</p>
             </div>
         );
     }
@@ -158,11 +161,11 @@ function LogFileListView({ selectedFile, onSelect, refreshKey }: LogFileListView
     return (
         <div className="flex-1 flex flex-col min-h-0">
             <div className="p-3 border-b border-line bg-surface-2 flex items-center justify-between shrink-0">
-                <span className="text-xs font-semibold text-ink-muted">로그 파일 목록</span>
+                <span className="text-xs font-semibold text-ink-muted">{translate("logs.logFilesInSystemLogs")}</span>
                 <button 
                     onClick={() => loadFiles(false)} 
-                    disabled={loading} aria-label={t("목록 새로고침")} className="icon-button disabled:opacity-50 hover:bg-surface-3 rounded transition-colors text-ink-faint hover:text-ink"
-                    title="목록 새로고침"
+                    disabled={loading} aria-label={t("logs.refreshList")} className="icon-button disabled:opacity-50 hover:bg-surface-3 rounded transition-colors text-ink-faint hover:text-ink"
+                    title={translate("logs.refreshList")}
                 >
                     <RefreshCw className="w-3.5 h-3.5" />
                 </button>
@@ -199,12 +202,12 @@ function LogFileListView({ selectedFile, onSelect, refreshKey }: LogFileListView
                                     </p>
                                     {isLive && (
                                         <span className="px-1.5 py-0.5 bg-ok/15 text-ok border border-ok/20 text-[9px] font-extrabold rounded uppercase tracking-wider animate-pulse">
-                                            {t("실시간")}
+                                            {t("logs.live")}
                                         </span>
                                     )}
                                 </div>
                                 <p className="text-[10px] text-ink-faint">
-                                    수정: {formatDate(file.modified_at)}
+                                    {translate("logs.modified")}{formatDate(file.modified_at)}
                                 </p>
                             </div>
 
@@ -353,11 +356,10 @@ function LogContentViewer({ file }: LogContentViewerProps) {
             <div className="p-3 border-b border-line bg-surface-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
                 <div className="log-toolbar-row w-full justify-between">
                     <span className="text-xs font-mono font-semibold text-ink-muted">
-                        {file.filename} ({visibleLines.length}/{totalLines} 줄)
-                    </span>
+                        {file.filename} ({visibleLines.length}/{totalLines} {translate("logs.lines")}</span>
                     {lastUpdatedAt && (
                         <span className="text-[10px] text-ink-faint" aria-live="polite">
-                            갱신 {lastUpdatedAt.toLocaleTimeString()}
+                            {translate("logs.refresh")}{lastUpdatedAt.toLocaleTimeString(getActiveLocale())}
                         </span>
                     )}
 
@@ -375,7 +377,7 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                                         : "text-ink-faint hover:text-ink"
                                 )}
                             >
-                                {val === 0 ? "전체" : `${val}줄`}
+                                {val === 0 ? translate("live.all") : t("logs.lineLimit",{count:val})}
                             </button>
                         ))}
                     </div>
@@ -387,8 +389,8 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                         <Search className="w-3.5 h-3.5 text-ink-faint absolute left-2.5 top-1/2 -translate-y-1/2" />
                         <Input
                             type="text"
-                            placeholder="로그 검색..."
-                            aria-label="로그 검색"
+                            placeholder={translate("logs.searchLogs")}
+                            aria-label={translate("logs.searchLogsInSystemLogs")}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="text-xs pl-8 pr-3 py-1.5 w-full sm:min-w-40"
@@ -406,19 +408,19 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                                 ? "bg-ok/10 text-ok border-ok/30"
                                 : "bg-surface-3 text-ink-muted border-line hover:bg-surface-4"
                         )}
-                        title={autoRefresh ? "2초마다 실시간 갱신 중" : "실시간 갱신 켜기"}
-                        aria-label={autoRefresh ? "실시간 갱신 끄기" : "실시간 갱신 켜기"}
+                        title={autoRefresh ? translate("logs.refreshingLiveEvery2Seconds") : translate("logs.enableLiveRefresh")}
+                        aria-label={autoRefresh ? translate("logs.disableLiveRefresh") : translate("logs.enableLiveRefresh")}
                         >
                         {autoRefresh ? (
                             <>
                                 <span className="size-1.5 rounded-full bg-ok" aria-hidden="true" />
                                 <Pause className="w-3 h-3" />
-                                <span className="text-[10px]">실시간</span>
+                                <span className="text-[10px]">{translate("logs.live")}</span>
                             </>
                         ) : (
                             <>
                                 <Play className="w-3 h-3 text-ink-faint" />
-                                <span className="text-[10px]">실시간 갱신</span>
+                                <span className="text-[10px]">{translate("logs.liveRefresh")}</span>
                             </>
                         )}
                         </button>
@@ -432,8 +434,8 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                                 ? "bg-ok/10 text-ok border-ok/30"
                                 : "bg-surface-3 text-ink-muted border-line hover:bg-surface-4 hover:text-ink"
                         )}
-                        title="자동 최하단 스크롤"
-                        aria-label="자동 최하단 스크롤"
+                        title={translate("logs.scrollToBottomAutomatically")}
+                        aria-label={translate("logs.scrollToBottomAutomatically")}
                         aria-pressed={autoScroll}
                         >
                         <ArrowDown className="w-3.5 h-3.5" />
@@ -443,8 +445,8 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                         <button
                         onClick={() => loadContent(false)}
                         disabled={loading}
-                        aria-label={t("새로고침")} className="icon-button bg-surface-3 border border-line hover:bg-surface-4 text-ink-muted hover:text-ink rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="새로고침"
+                        aria-label={t("common.refresh")} className="icon-button bg-surface-3 border border-line hover:bg-surface-4 text-ink-muted hover:text-ink rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={translate("common.refresh")}
                         >
                         <RefreshCw className={clsx("w-3.5 h-3.5", loading && "animate-spin")} />
                         </button>
@@ -452,7 +454,7 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                 </div>
             </div>
 
-            {loadError && content.length > 0 && <div role="status" className="flex flex-wrap items-center justify-between gap-2 border-b border-warn/20 bg-warn/5 px-4 py-2 text-xs text-ink-muted"><span>{t("로그 갱신에 실패했습니다. 기존 내용을 표시합니다.")}</span><Button icon={RefreshCw} onClick={() => void loadContent()}>{t("다시 시도")}</Button></div>}
+            {loadError && content.length > 0 && <div role="status" className="flex flex-wrap items-center justify-between gap-2 border-b border-warn/20 bg-warn/5 px-4 py-2 text-xs text-ink-muted"><span>{t("logs.couldNotRefreshLogsShowingThePreviousContent")}</span><Button icon={RefreshCw} onClick={() => void loadContent()}>{t("live.tryAgain")}</Button></div>}
 
             {/* 터미널 로그 출력창 */}
             <div 
@@ -462,19 +464,19 @@ function LogContentViewer({ file }: LogContentViewerProps) {
                 {loading && content.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-ink-faint">
                         <Loader2 className="w-6 h-6 animate-spin mr-2 text-[var(--primary)]" />
-                        <span>로그 로드 중...</span>
+                        <span>{translate("logs.loadingLogs")}</span>
                     </div>
                 ) : loadError && content.length === 0 ? (
                     <div className="flex h-full items-center justify-center">
-                        <EmptyState icon={AlertCircle} title={t("로그 내용을 불러오지 못했습니다.")} description={t("서버 연결을 확인한 뒤 다시 시도해 주세요.")} compact action={<Button icon={RefreshCw} onClick={() => void loadContent()}>{t("다시 시도")}</Button>} />
+                        <EmptyState icon={AlertCircle} title={t("logs.couldNotLoadTheLogContent")} description={t("settings.checkTheServerConnectionAndTryAgain")} compact action={<Button icon={RefreshCw} onClick={() => void loadContent()}>{t("live.tryAgain")}</Button>} />
                     </div>
                 ) : lines.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-ink-faint">
-                        <span>{autoRefresh ? "로그 기록이 없습니다. 새 로그를 기다리는 중입니다." : "로그 기록이 없습니다."}</span>
+                        <span>{autoRefresh ? translate("logs.noLogsYetWaitingForNewEntries") : translate("logs.noLogEntries")}</span>
                     </div>
                 ) : visibleLines.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-ink-faint">
-                        <span>검색 결과가 없습니다.</span>
+                        <span>{translate("common.noResultsFound")}</span>
                     </div>
                 ) : (
                     visibleLines.map((line, idx) => {

@@ -1,3 +1,4 @@
+import { translate } from "../../i18n";
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import { CircleAlert, VideoOff } from "lucide-react";
@@ -8,6 +9,7 @@ import { preferredNativePreviewUrl, preferredPreviewLevel } from "../../utils/li
 
 type PreviewProps = { channelKey: string; isLive: boolean; name: string; poster?: string; broadcastState?: string };
 export function LivePreview(props: PreviewProps) {
+    useLanguage();
     return <HlsLivePreview {...props} />;
 }
 function HlsLivePreview({ channelKey, isLive, name, poster, broadcastState }: PreviewProps) {
@@ -48,7 +50,7 @@ function HlsLivePreview({ channelKey, isLive, name, poster, broadcastState }: Pr
             video.removeAttribute("src");
             video.load();
         };
-        const fail = (text = "미리보기를 불러올 수 없습니다.") => {
+        const fail = (text = "live.previewUnavailable") => {
             failed = true;
             clearTimeout(loadingTimer);
             clearTimeout(refreshTimer);
@@ -128,7 +130,7 @@ function HlsLivePreview({ channelKey, isLive, name, poster, broadcastState }: Pr
                 } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
                     const selected = await preferredNativePreviewUrl(url, abort.signal);
                     if (!stopped && !abort.signal.aborted) video.src = selected;
-                } else fail("이 브라우저에서는 라이브 미리보기를 재생할 수 없습니다.");
+                } else fail("live.thisBrowserCannotPlayTheLivePreview");
             } catch (error) {
                 if (stopped || abort.signal.aborted) return;
                 const response = (error as { response?: { status?: number; data?: { detail?: string } } }).response;
@@ -165,15 +167,15 @@ function HlsLivePreview({ channelKey, isLive, name, poster, broadcastState }: Pr
         };
     }, [channelKey, isLive, attempt]);
 
-    return <div className={`channel-live-preview${!isLive ? " is-offline" : ""}`} aria-label={`${name} ${t("방송 미리보기")}`}>
+    return <div className={`channel-live-preview${!isLive ? " is-offline" : ""}`} aria-label={`${name} ${t("live.livePreview")}`}>
         <div className="channel-preview-stage">
         {isLive && <div className="channel-preview-player" hidden={state !== "ready"}>
             <video ref={videoRef} controls autoPlay muted playsInline poster={poster} className="size-full object-contain" aria-label={`${name} LIVE`} />
         </div>}
         {(!isLive || state !== "ready") && <div className="channel-preview-status" role="status" aria-busy={isLive && state === "loading"}>
             {isLive && state === "loading" ? <span className="size-5 shrink-0 animate-spin rounded-full border-2 border-line-strong border-t-info" aria-hidden="true" /> : isLive ? <CircleAlert className="size-5 text-ink-faint" aria-hidden="true" /> : <VideoOff className="size-5 text-ink-faint" aria-hidden="true" />}
-            <span className="channel-preview-message">{t(!isLive ? broadcastState === "checking" ? "방송 상태를 확인하는 중입니다." : broadcastState === "error" ? "방송 상태 확인에 실패했습니다." : "현재 방송 중이 아닙니다." : state === "loading" ? "미리보기를 불러오는 중" : message)}</span>
-            {isLive && state === "error" && <Button type="button" aria-label={t("다시 시도")} onClick={() => { setState("loading"); setAttempt(value => value + 1); }}>{t("다시 시도")}</Button>}
+            <span className="channel-preview-message">{t(!isLive ? broadcastState === "checking" ? translate("live.checkingLiveStatus") : broadcastState === "error" ? translate("live.couldNotCheckLiveStatus") : translate("live.thisChannelIsCurrentlyOffline") : state === "loading" ? translate("live.loadingPreview") : message)}</span>
+            {isLive && state === "error" && <Button type="button" aria-label={t("live.tryAgain")} onClick={() => { setState("loading"); setAttempt(value => value + 1); }}>{t("live.tryAgain")}</Button>}
         </div>}
         </div>
     </div>;

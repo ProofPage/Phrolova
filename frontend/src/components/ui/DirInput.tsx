@@ -29,7 +29,7 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
             const res = await api.browseDirs(path);
             setData(res);
         } catch {
-            setError(t("디렉토리를 불러올 수 없습니다."));
+            setError(t("common.couldNotLoadFolders"));
         } finally {
             setLoading(false);
         }
@@ -57,7 +57,7 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
             <div className="absolute inset-0 bg-black/60 " />
 
             <div
-                ref={dialogRootRef} role="dialog" aria-modal="true" aria-label={t("폴더 선택")} tabIndex={-1} className="dir-browser ui-dialog relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-2xl surface-raise animate-modal-in
+                ref={dialogRootRef} role="dialog" aria-modal="true" aria-label={t("common.chooseAFolder")} tabIndex={-1} className="dir-browser ui-dialog relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-2xl surface-raise animate-modal-in
                            w-full max-w-lg mx-4 flex flex-col max-h-[70dvh]"
                 onClick={(e) => e.stopPropagation()}
             >
@@ -65,20 +65,20 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
                 <div className="flex items-center justify-between gap-2 shrink-0 px-4 py-3 border-b border-line">
                     <h3 className="text-ink font-semibold text-base flex items-center gap-2">
                         <Folder className="w-4 h-4 text-[var(--primary)]" />
-                        {t("폴더 선택")}
+                        {t("common.chooseAFolder")}
                     </h3>
                     <div className="flex items-center gap-1">
                         {/* 드라이브 리스트로 이동 버튼 */}
                         <button
                             onClick={() => navigate(undefined)}
-                            title={t("드라이브 목록으로")} aria-label={t("드라이브 목록으로")}
+                            title={t("common.showDrives")} aria-label={t("common.showDrives")}
                             className="icon-button rounded-lg text-ink-faint hover:text-[var(--primary)] hover:bg-surface-3 transition-colors"
                         >
                             <HardDrive className="w-4 h-4" />
                         </button>
                         <button
                             onClick={onClose}
-                            aria-label={t("닫기")}
+                            aria-label={t("common.close")}
                             className="icon-button rounded-lg text-ink-faint hover:text-ink hover:bg-surface-3 transition-colors"
                         >
                             <X className="w-4 h-4" />
@@ -89,7 +89,7 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
                 {/* Current Path */}
                 <div className="px-4 py-2 max-h-20 shrink-0 overflow-y-auto bg-surface-1 border-b border-line">
                     <p className="text-xs text-ink-faint font-mono break-all">
-                        {data?.current || t("드라이브 선택")}
+                        {data?.current || t("common.selectADrive")}
                     </p>
                 </div>
 
@@ -122,7 +122,7 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
 
                             {data.dirs.length === 0 && (
                                 <p className="text-ink-faint text-sm text-center py-8">
-                                    {t("하위 폴더 없음")}
+                                    {t("common.noSubfolders")}
                                 </p>
                             )}
 
@@ -149,7 +149,7 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
 
                 {/* Footer */}
                 <div className="dialog-actions shrink-0 px-4 py-3 border-t border-line flex flex-wrap gap-3">
-                    <Button onClick={onClose} className="flex-1">{t("취소")}</Button>
+                    <Button onClick={onClose} className="flex-1">{t("common.cancel")}</Button>
                     <Button
                         onClick={() => {
                             if (data?.current) {
@@ -161,7 +161,7 @@ function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProp
                         variant="primary"
                         className="flex-1"
                     >
-                        {t("이 폴더 선택")}
+                        {t("common.selectThisFolder")}
                     </Button>
                 </div>
             </div>
@@ -186,7 +186,7 @@ export function DirInput({
     id,
     value,
     onChange,
-    placeholder = "경로 입력...",
+    placeholder = "common.enterAPath",
     focusBorderColor = "",
     multiline = false,
     required = false,
@@ -236,8 +236,8 @@ export function DirInput({
                     aria-describedby={describedBy}
                     title={value}
                 />}
-                <Button type="button" icon={FolderOpen} onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setShowBrowser(true); }} className={multiline ? "dir-input-browse px-3 shrink-0" : "px-3 shrink-0"} title={t("폴더 찾아보기")} aria-label={t("폴더 찾아보기")}>
-                    <span className={multiline ? "dir-input-browse-label" : "hidden sm:inline"}>{t("찾아보기")}</span>
+                <Button type="button" icon={FolderOpen} onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setShowBrowser(true); }} className={multiline ? "dir-input-browse px-3 shrink-0" : "px-3 shrink-0"} title={t("common.browseFolders")} aria-label={t("common.browseFolders")}>
+                    <span className={multiline ? "dir-input-browse-label" : "hidden sm:inline"}>{t("common.browse")}</span>
                 </Button>
             </div>
 

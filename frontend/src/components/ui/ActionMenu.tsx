@@ -22,7 +22,7 @@ export function ActionMenu({ label, children, className, onKeyDown }: {
             <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={id} className="ui-dialog ui-popover action-menu" tabIndex={-1}>
                 <div className="flex min-w-0 items-center gap-2 border-b border-line p-3">
                     <h3 id={id} className="min-w-0 flex-1 line-clamp-2 text-sm font-semibold [overflow-wrap:anywhere]" title={label}>{label}</h3>
-                    <button type="button" className="icon-button shrink-0" aria-label={t("닫기")} onClick={close}><X className="size-4" /></button>
+                    <button type="button" className="icon-button shrink-0" aria-label={t("common.close")} onClick={close}><X className="size-4" /></button>
                 </div>
                 <div className="action-menu-items p-2">{children(close)}</div>
             </div>

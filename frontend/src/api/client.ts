@@ -23,10 +23,10 @@ export interface ChannelDownloadOptions {
 }
 
 export const PLATFORM_LABELS: Record<Platform, string> = {
-    chzzk: "치지직",
-    youtube: "유튜브",
-    soop: "숲",
-    cime: "씨미",
+    chzzk: "platform.chzzk",
+    youtube: "platform.youtube",
+    soop: "platform.soop",
+    cime: "platform.cime",
 };
 
 export interface Channel {
@@ -633,7 +633,7 @@ export const api = {
     getRecordingOutputSettings: async (): Promise<RecordingOutputSettings> => (await client.get('/recordings/settings')).data,
     updateRecordingOutputSettings: async (data: RecordingOutputSettings) => (await client.put('/recordings/settings',data)).data,
     clearRecordingHistory: async (jobIds: string[]) => (await client.post('/recordings/history/clear', {job_ids: jobIds})).data,
-    getMediaTools: async (signal?: AbortSignal): Promise<Record<string, { available: boolean; path?: string; version?: string; message?: string }>> => (await client.get('/system/media-tools', { signal })).data,
+    getMediaTools: async (signal?: AbortSignal): Promise<Record<string, { available: boolean; path?: string; version?: string; message?: string; code?: string }>> => (await client.get('/system/media-tools', { signal })).data,
     getRecordingJobs: async (): Promise<{jobs: RecordingJob[]}> => (await client.get('/recordings/jobs')).data,
     retryRecording: async (id: string, output_format?: 'mp4'|'mkv') => (await client.post(`/recordings/${id}/retry`, {output_format})).data,
     inspectRecording: async (id: string) => (await client.post(`/recordings/${id}/inspect`)).data,

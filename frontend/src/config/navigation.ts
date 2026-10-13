@@ -31,18 +31,18 @@ export interface NavGroup {
  */
 export const NAV_GROUPS: NavGroup[] = [
     {
-        title: "모니터링",
+        title: "common.monitoring",
         items: [
-            { name: "라이브", to: "/", icon: LayoutDashboard },
-            { name: "동영상", to: "/vod", icon: Download },
+            { name: "live.title", to: "/", icon: LayoutDashboard },
+            { name: "download.title", to: "/vod", icon: Download },
         ],
     },
     {
-        title: "워크스페이스",
+        title: "common.workspace",
         items: [
-            { name: "통계", to: "/stats", icon: BarChart3 },
-            { name: "로그", to: "/system-logs", icon: Terminal },
-            { name: "설정", to: "/settings", icon: Settings },
+            { name: "stats.title", to: "/stats", icon: BarChart3 },
+            { name: "logs.title", to: "/system-logs", icon: Terminal },
+            { name: "settings.title", to: "/settings", icon: Settings },
         ],
     },
 ];

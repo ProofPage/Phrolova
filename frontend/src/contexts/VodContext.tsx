@@ -1,7 +1,8 @@
+import { useLanguage } from "./LanguageContext";
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { api, VodTask, VodImport, VodAddResult, VodStatusResponse } from "../api/client";
 import { useToast } from "../components/ui/Toast";
-import { getErrorMessage } from "../utils/error";
+import { getErrorMessage, localizedStatus } from "../utils/error";
 
 export interface VodContextType {
     loading: boolean;
@@ -22,6 +23,7 @@ export interface VodContextType {
 const VodContext = createContext<VodContextType | null>(null);
 
 export function VodProvider({ children }: { children: ReactNode }) {
+    useLanguage();
     const toast = useToast();
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
@@ -107,9 +109,9 @@ export function VodProvider({ children }: { children: ReactNode }) {
     const openFileLocation = async (taskId: string) => {
         try {
             const result = await api.openVodFileLocation(taskId);
-            toast.success(result.message);
+            toast.success(localizedStatus(result.message, 'common.folderOpened'));
         } catch (e: unknown) {
-            toast.error(getErrorMessage(e, "파일 위치를 열 수 없습니다."));
+            toast.error(getErrorMessage(e, "download.cannotOpenFileLocation"));
         }
     };
 
@@ -139,7 +141,7 @@ export function VodProvider({ children }: { children: ReactNode }) {
 export function useVod() {
     const context = useContext(VodContext);
     if (!context) {
-        throw new Error("useVod는 VodProvider 내부에서만 사용할 수 있습니다.");
+        throw new Error("download.usevodMustBeUsedWithinVodProvider");
     }
     return context;
 }

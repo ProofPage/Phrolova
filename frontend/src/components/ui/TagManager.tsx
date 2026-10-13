@@ -1,3 +1,4 @@
+import { translate } from "../../i18n";
 import { createPortal } from "react-dom";
 import { useDialogKeyboard } from "../../hooks/useDialogKeyboard";
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
@@ -154,7 +155,7 @@ export function TagManager({
                     {!disabled && (
                         <button
                             onClick={() => onRemoveTag(tag)}
-                            aria-label={`${tag} 태그 제거`} title={`${tag} 태그 제거`} className="tag-remove icon-button !size-6"
+                            aria-label={t("common.removeTag",{tag})} title={t("common.removeTag",{tag})} className="tag-remove icon-button !size-6"
                         >
                             <X className="w-2.5 h-2.5" />
                         </button>
@@ -168,9 +169,9 @@ export function TagManager({
                     ref={triggerRef}
                     disabled={busy}
                     onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setIsOpen(true); }}
-                    aria-label={t("태그 관리")} aria-expanded={isOpen}
+                    aria-label={t("live.manageTags")} aria-expanded={isOpen}
                     className={clsx("icon-button", triggerLabel && "tag-manager-labeled")}
-                    title={t("태그 관리")}
+                    title={t("live.manageTags")}
                 >
                     {compact ? <Tag className="w-4 h-4" /> : <Plus className="w-3 h-3" />}
                     {triggerLabel && <span className="hidden lg:inline">{triggerLabel}</span>}
@@ -179,7 +180,7 @@ export function TagManager({
 
             {/* 드롭다운 */}
             {isOpen && !disabled && createPortal(
-                <div ref={popupRef} role="dialog" aria-modal="true" aria-label={t("태그 관리")} tabIndex={-1} style={position} className="tag-popover ui-popover fixed z-[100] w-52 flex flex-col overflow-hidden text-sm">
+                <div ref={popupRef} role="dialog" aria-modal="true" aria-label={t("live.manageTags")} tabIndex={-1} style={position} className="tag-popover ui-popover fixed z-[100] w-52 flex flex-col overflow-hidden text-sm">
                     <div className="flex shrink-0 items-center p-2 border-b border-line bg-surface-1/70">
                         <div className="relative flex min-w-0 flex-1 items-center">
                             <Tag className="absolute left-2 w-3.5 h-3.5 text-ink-faint" />
@@ -189,11 +190,11 @@ export function TagManager({
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                aria-label="태그 검색 또는 생성" placeholder="태그 검색 또는 생성..."
+                                aria-label={translate("common.searchOrCreateTags")} placeholder={translate("common.searchOrCreateTagsInTagManager")}
                                 className="ui-input min-w-0 w-full bg-transparent text-ink placeholder:text-ink-faint pl-7 pr-2 py-1 text-xs focus:outline-none"
                             />
                         </div>
-                    <button type="button" className="icon-button" aria-label={t("닫기")} onClick={() => setIsOpen(false)}><X className="size-4" /></button></div>
+                    <button type="button" className="icon-button" aria-label={t("common.close")} onClick={() => setIsOpen(false)}><X className="size-4" /></button></div>
                     <div className="min-h-0 overflow-y-auto overscroll-contain scrollbar-thin py-1">
                         {isExactMatchFree && (
                             <button
@@ -207,7 +208,7 @@ export function TagManager({
                                 className="w-full text-left tag-option min-h-9 px-3 py-2 text-xs text-[var(--primary)] hover:bg-surface-3 transition-colors flex items-center gap-2"
                             >
                                 <Plus className="w-3.5 h-3.5" />
-                                <span className="min-w-0 [overflow-wrap:anywhere]">"{inputValue.trim()}" {t("생성")}</span>
+                                <span className="min-w-0 [overflow-wrap:anywhere]">"{inputValue.trim()}" {t("common.create")}</span>
                             </button>
                         )}
                         {filteredAvailable.map((tag) => (
@@ -229,8 +230,8 @@ export function TagManager({
                                 {onDeleteTag && (
                                     <button
                                         onClick={() => { setIsOpen(false); onDeleteTag(tag); }}
-                                        title={`'${tag}' 태그를 전역에서 삭제`}
-                                        aria-label={`${tag} 태그를 전역에서 삭제`}
+                                        title={t("common.deleteTag",{tag})}
+                                        aria-label={t("common.deleteTag",{tag})}
                                         className="tag-delete icon-button shrink-0 text-ink-faint opacity-0 group-hover/tag:opacity-100 focus-visible:opacity-100 hover:text-danger transition-opacity focus:outline-none"
                                     >
                                         <Trash2 className="w-3 h-3" />
@@ -240,8 +241,7 @@ export function TagManager({
                         ))}
                         {filteredAvailable.length === 0 && !isExactMatchFree && (
                             <div className="px-3 py-2 text-xs text-ink-faint text-center">
-                                결과 없음
-                            </div>
+                                {translate("common.noResults")}</div>
                         )}
                     </div>
                 </div>, document.body

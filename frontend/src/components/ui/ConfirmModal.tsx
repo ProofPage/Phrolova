@@ -1,3 +1,5 @@
+import { useLanguage } from "../../contexts/LanguageContext";
+import { translate } from "../../i18n";
 import { useDialogKeyboard } from "../../hooks/useDialogKeyboard";
 import { useRef, createContext, useContext, useState, useCallback } from "react";
 import { AlertTriangle } from "lucide-react";
@@ -36,6 +38,7 @@ interface PendingConfirm {
 }
 
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
+    useLanguage();
     const [pending, setPending] = useState<PendingConfirm | null>(null);
 
     const handleConfirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
@@ -76,19 +79,21 @@ interface ConfirmModalProps extends ConfirmOptions {
 function ConfirmModal({
     title,
     message,
-    confirmText = "확인",
-    cancelText = "취소",
+    confirmText = "common.confirm",
+    cancelText = "common.cancel",
     variant = "default",
     requireTyping,
     onConfirm,
     onCancel,
 }: ConfirmModalProps) {
+    useLanguage();
     const dialogRootRef = useRef<HTMLDivElement>(null);
     useDialogKeyboard(dialogRootRef, onCancel);
     const [inputValue, setInputValue] = useState("");
 
     const isDanger = variant === "danger";
-    const isMatch = requireTyping ? inputValue === requireTyping : true;
+    const expectedTyping = requireTyping && /^(live|common)\./.test(requireTyping) ? translate(requireTyping) : requireTyping;
+    const isMatch = expectedTyping ? inputValue === expectedTyping : true;
 
     return (
         <div
@@ -110,22 +115,21 @@ function ConfirmModal({
                         </div>
                     )}
                     <div className="min-w-0 [overflow-wrap:anywhere]">
-                        <h3 id="confirm-title" className="text-ink font-semibold text-base">{title}</h3>
-                        <p id="confirm-message" className="text-ink-muted text-[13px] mt-2 whitespace-pre-line break-words">{message}</p>
+                        <h3 id="confirm-title" className="text-ink font-semibold text-base">{translate(title)}</h3>
+                        <p id="confirm-message" className="text-ink-muted text-[13px] mt-2 whitespace-pre-line break-words">{translate(message)}</p>
                     </div>
                 </div>
 
                 {requireTyping && (
                     <div className="mb-5">
                         <label htmlFor="confirm-typing" className="block text-xs text-ink-muted mb-2">
-                            계속하려면 <strong className="text-ink">'{requireTyping}'</strong>을(를) 입력하세요.
-                        </label>
+                            {translate("common.confirmTyping", { value: expectedTyping || "" })}</label>
                         <Input
                             id="confirm-typing" type="text"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             className="text-sm"
-                            placeholder={requireTyping}
+                            placeholder={expectedTyping}
                             data-dialog-initial-focus
                         />
                     </div>

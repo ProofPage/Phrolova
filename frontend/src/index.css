@@ -571,3 +571,12 @@ dialog.ui-dialog { top: calc(var(--ui-viewport-top, 0px) + var(--ui-viewport-hei
   .media-add-form .ui-input, .media-add-form .ui-button { min-height: 44px; }
   .media-platform-trigger { height: 44px; }
 }
+
+/* 번역 문구가 길어져도 동작 버튼과 상태가 카드 밖으로 밀리지 않게 한다. */
+.recording-primary-controls { flex-wrap: wrap; flex-shrink: 1; max-width: 100%; justify-content: flex-end; }
+.recording-primary-controls .ui-button { white-space: normal; }
+.recording-status { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.recording-metrics dt { white-space: normal; overflow-wrap: anywhere; }
+.download-task-header-actions { flex-wrap: wrap; max-width: 100%; }
+.download-inspection-passed { white-space: normal; overflow-wrap: anywhere; }
+html[lang="ja-JP"], html[lang="zh-CN"], html[lang="zh-TW"] { line-break: strict; }

@@ -116,3 +116,39 @@ async def test_metadata_timeout_retries_once_and_reports_timeout(monkeypatch, re
             await VodEngine().get_video_info('https://example.com/video')
         assert 'SECRET' not in str(error.value)
     assert len(calls) == 2
+
+
+@pytest.mark.parametrize('case', ['success', 'missing', 'broken'])
+def test_streamlink_health_uses_recording_package(monkeypatch, case):
+    import sys
+    from unittest.mock import Mock
+    close = Mock()
+    def create_session():
+        if case == 'broken':
+            raise RuntimeError('package initialization failed')
+        return SimpleNamespace(http=SimpleNamespace(close=close))
+    package = SimpleNamespace(__file__='C:/app/streamlink/__init__.py', __version__='8.6.2', Streamlink=create_session)
+    monkeypatch.setitem(sys.modules, 'streamlink', None if case == 'missing' else package)
+    result = check_media_tool('streamlink')
+    assert result['available'] == (case == 'success')
+    if case == 'success':
+        assert result['path'] == package.__file__ and result['version'] == '8.6.2'
+        close.assert_called_once()
+    else:
+        assert result['code'] == ('tool_missing' if case == 'missing' else 'tool_failed')
+
+
+def test_tools_api_includes_streamlink_and_preserves_ffmpeg_probe(monkeypatch):
+    from app.api.system import router
+    calls = []
+    def inspect(name):
+        calls.append(name)
+        return {'available': name != 'streamlink', 'path': name, 'version': 'fixture'}
+    monkeypatch.setattr('app.engine.media_tools.check_media_tool', inspect)
+    app = FastAPI()
+    app.include_router(router)
+    result = TestClient(app).get('/api/system/media-tools')
+    assert result.status_code == 200
+    assert set(result.json()) == set(calls) == {'streamlink', 'ffmpeg', 'ffprobe'}
+    assert result.json()['streamlink']['available'] is False
+    assert result.json()['ffmpeg']['available'] is True

@@ -15,4 +15,4 @@ export function parseChzzkChannelInput(input: string): string | null {
     }
 }
 
-export const CHZZK_CHANNEL_INPUT_ERROR = '올바른 치지직 채널 ID 또는 채널 링크를 입력하세요.';
+export const CHZZK_CHANNEL_INPUT_ERROR = "live.enterAValidCHZZKChannelIDOrChannelLink";

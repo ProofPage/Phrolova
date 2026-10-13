@@ -3,6 +3,17 @@ import subprocess
 from app.core.config import get_settings
 
 def check_media_tool(tool: str) -> dict:
+    if tool == 'streamlink':
+        # 녹화 엔진과 같은 Python 패키지를 검사해 별도 CLI 설치와 혼동하지 않는다.
+        try:
+            import streamlink
+            session = streamlink.Streamlink()
+            session.http.close()
+            return {'available': True, 'path': streamlink.__file__, 'version': streamlink.__version__}
+        except ImportError:
+            return {'available': False, 'code': 'tool_missing', 'message': 'Streamlink를 찾을 수 없습니다.'}
+        except Exception:
+            return {'available': False, 'code': 'tool_failed', 'message': 'Streamlink 실행 확인에 실패했습니다.'}
     if tool not in ('ffmpeg', 'ffprobe'):
         raise ValueError('Unsupported tool')
     try:

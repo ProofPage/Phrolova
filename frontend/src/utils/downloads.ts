@@ -75,11 +75,11 @@ export function downloadState(task: VodTask): 'queued' | 'downloading' | 'proces
     return 'queued';
 }
 
-export const downloadStateLabels = { queued: '대기 중', downloading: '다운로드 중', processing: '처리 중', paused: '일시정지', completed: '다운로드 완료', failed: '다운로드 실패', cancelled: '취소됨' };
+export const downloadStateLabels = { queued: "settings.waiting", downloading: "download.downloading", processing: "common.processing", paused: "download.paused", completed: "download.completed", failed: "download.failed", cancelled: "download.cancelled" };
 
 export function downloadErrorMessage(task: VodTask): string {
-    if (task.phase === 'metadata_error') return '영상 정보를 가져오지 못했습니다.';
-    if (/connection|network|timed?\s*out|timeout|HTTP Error 5\d\d/i.test(task.error_message ?? '')) return '다운로드 연결이 중단되었습니다. 다시 시도하세요.';
-    if (/HTTP Error (401|403)|sign.?in|login|cookies|members.only/i.test(task.error_message ?? '')) return '영상에 접근하지 못했습니다. 인증 및 공개 상태를 확인하세요.';
-    return '다운로드를 완료하지 못했습니다. 다시 시도하거나 영상 주소와 인증 설정을 확인하세요.';
+    if (task.phase === 'metadata_error') return "common.couldNotFetchVideoInformation";
+    if (/connection|network|timed?\s*out|timeout|HTTP Error 5\d\d/i.test(task.error_message ?? '')) return "common.downloadConnectionInterruptedTryAgain";
+    if (/HTTP Error (401|403)|sign.?in|login|cookies|members.only/i.test(task.error_message ?? '')) return "common.cannotAccessTheVideoCheckAuthenticationAndVisibility";
+    return "common.theDownloadFailedTryAgainOrCheckTheVideoURLAndAuthenticationSettings";
 }

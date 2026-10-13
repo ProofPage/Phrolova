@@ -1,3 +1,4 @@
+import { translate } from "../../i18n";
 /**
  * 알림 설정 탭.
  *
@@ -40,8 +41,8 @@ import {
 
 /** 멘션 대상 프리셋. 역할 멘션은 직접 입력한다. */
 const MENTION_PRESETS = [
-    { value: "@here", label: "@here — 접속 중인 사람만" },
-    { value: "@everyone", label: "@everyone — 서버 전체" },
+    { value: "@here", label: "settings.hereOnlineMembersOnly" },
+    { value: "@everyone", label: "settings.everyoneEntireServer" },
 ];
 
 interface Props {
@@ -126,11 +127,11 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
             setWebhookUrl("");
             setDirty(false);
             onDirtyChange?.(false);
-            toast.success("알림 설정을 저장했습니다.");
+            toast.success("settings.notificationSettingsSaved");
             onSaved();
             setStatusRefreshSignal((n) => n + 1);
         } catch (e) {
-            toast.error(getErrorMessage(e, "알림 설정 저장에 실패했습니다."));
+            toast.error(getErrorMessage(e, "settings.couldNotSaveNotificationSettings"));
         } finally {
             setSaving(false);
         }
@@ -147,13 +148,13 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                 <CardHeader
                     icon={Webhook}
                     title="Webhook"
-                    description="Discord 채널 설정에서 URL 하나만 복사하면 끝납니다. 알림만 받을 거라면 이것으로 충분합니다."
+                    description={translate("settings.copyASingleURLFromYourDiscordChannelSettingsThisIsAllYouNeedToReceiveNotifications")}
                     action={
                         <div className="flex items-center gap-2">
-                            <Badge tone="ok">권장</Badge>
+                            <Badge tone="ok">{translate("settings.recommended")}</Badge>
                             <StatusDot
                                 active={!!settings?.discord_webhook_configured}
-                                label={settings?.discord_webhook_configured ? "설정됨" : "미설정"}
+                                label={settings?.discord_webhook_configured ? translate("settings.configured") : translate("settings.notConfigured")}
                                 tone={settings?.discord_webhook_configured ? "ok" : "warn"}
                             />
                         </div>
@@ -163,7 +164,7 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                 <Field
                     label="Webhook URL"
                     htmlFor="webhook-url"
-                    hint="Discord 채널 설정 → 연동 → 웹후크에서 만듭니다. Bot을 만들지 않아도 모든 알림이 정상 동작합니다."
+                    hint={translate("settings.createThisInDiscordChannelSettingsIntegrationsWebhooksNotificationsWorkWithoutCreatingABot")}
                 >
                     <Input
                         id="webhook-url"
@@ -176,7 +177,7 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                         }}
                         placeholder={
                             settings?.discord_webhook_configured
-                                ? "설정됨 — 변경하려면 입력"
+                                ? translate("settings.configuredEnterANewValueToChange")
                                 : "https://discord.com/api/webhooks/..."
                         }
                     />
@@ -191,20 +192,20 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
             */}
             <CollapsibleCard
                 icon={Bot}
-                title={t("디스코드에서 원격 제어까지 하려면")}
-                description={t("Bot을 등록하면 /status, /start, /stop 같은 슬래시 커맨드로 녹화를 제어할 수 있습니다. 알림만 받을 거라면 설정하지 않아도 됩니다.")}
+                title={t("settings.forRemoteControlThroughDiscord")}
+                description={t("settings.registerABotToControlRecordingsWithSlashCommandsSuchAsStatusStartAndStopYouCanLeaveThisUnsetIfYouOnlyNeedNotifications")}
                 defaultOpen={!!botReady}
                 action={
                     // 봇은 선택 사항이므로 미설정을 경고로 보이지 않게 둔다.
                     // active=false면 tone과 무관하게 회색 점으로 렌더된다.
-                    <StatusDot active={!!botReady} label={botReady ? "설정됨" : "미설정"} />
+                    <StatusDot active={!!botReady} label={botReady ? translate("settings.configured") : translate("settings.notConfigured")} />
                 }
             >
                 <div className="space-y-4">
                     <Field
-                        label="Bot 토큰"
+                        label={translate("settings.botToken")}
                         htmlFor="bot-token"
-                        hint="비워두면 기존 토큰을 유지합니다. Discord Developer Portal에서 발급받으세요. 토큰 변경은 재시작 후 적용됩니다."
+                        hint={translate("settings.leaveThisBlankToKeepTheCurrentTokenGetOneFromTheDiscordDeveloperPortalTokenChangesTakeEffectAfterRestarting")}
                     >
                         <Input
                             id="bot-token"
@@ -215,14 +216,14 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                                 setBotToken(e.target.value);
                                 markDirty();
                             }}
-                            placeholder={settings?.discord_bot_configured ? "설정됨 — 변경하려면 입력" : "Bot 토큰"}
+                            placeholder={settings?.discord_bot_configured ? translate("settings.configuredEnterANewValueToChange") : translate("settings.botToken")}
                         />
                     </Field>
 
                     <Field
-                        label="알림 채널 ID"
+                        label={translate("settings.notificationChannelID")}
                         htmlFor="channel-id"
-                        hint="Discord에서 개발자 모드를 켠 뒤 채널 우클릭 → 'ID 복사'로 얻은 숫자입니다."
+                        hint={translate("settings.enableDeveloperModeInDiscordThenRightClickTheChannelAndChooseCopyID")}
                     >
                         <Input
                             id="channel-id"
@@ -232,14 +233,14 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                                 setChannelId(e.target.value);
                                 markDirty();
                             }}
-                            placeholder="예: 1234567890123456789"
+                            placeholder={translate("settings.eG1234567890123456789")}
                         />
                     </Field>
 
                     <Field
-                        label="명령어 허용 사용자 ID"
+                        label={translate("settings.allowedUserIDsForCommands")}
                         htmlFor="command-user-ids"
-                        hint="쉼표로 구분합니다. 비워두면 사용자 제한 없이 채널 조건만 적용됩니다."
+                        hint={translate("settings.separateIDsWithCommasLeaveBlankToRestrictCommandsByChannelOnly")}
                     >
                         <Input
                             id="command-user-ids"
@@ -248,14 +249,14 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                                 setCommandUserIds(e.target.value);
                                 markDirty();
                             }}
-                            placeholder="예: 1234567890123456789, 9876543210987654321"
+                            placeholder={translate("settings.eG12345678901234567899876543210987654321")}
                         />
                     </Field>
 
                     <Field
-                        label="명령어 허용 채널 ID"
+                        label={translate("settings.allowedChannelIDForCommands")}
                         htmlFor="command-channel-id"
-                        hint="비워두면 위 알림 채널에서만 명령어가 동작합니다. 셋 다 비어 있으면 모든 명령어가 거부됩니다."
+                        hint={translate("settings.leaveBlankToAllowCommandsOnlyInTheNotificationChannelAboveIfAllThreeFieldsAreEmptyEveryCommandIsRejected")}
                     >
                         <Input
                             id="command-channel-id"
@@ -265,7 +266,7 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                                 setCommandChannelId(e.target.value);
                                 markDirty();
                             }}
-                            placeholder="예: 1234567890123456789"
+                            placeholder={translate("settings.eG1234567890123456789")}
                         />
                     </Field>
                 </div>
@@ -276,8 +277,8 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
             <Card>
                 <CardHeader
                     icon={Bell}
-                    title="받을 알림"
-                    description="꺼둔 종류는 아예 전송되지 않습니다."
+                    title={translate("settings.notificationsToReceive")}
+                    description={translate("settings.disabledNotificationTypesWillNotBeSent")}
                     action={
                         <div className="flex gap-2">
                             <Button
@@ -288,8 +289,7 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                                     markDirty();
                                 }}
                             >
-                                전체 선택
-                            </Button>
+                                {translate("settings.selectAll")}</Button>
                             <Button
                                 variant="ghost"
                                 className="px-3 py-1.5 text-[13px]"
@@ -298,8 +298,7 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                                     markDirty();
                                 }}
                             >
-                                전체 해제
-                            </Button>
+                                {translate("settings.clearAll")}</Button>
                         </div>
                     }
                 />
@@ -308,10 +307,10 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                     {kinds.map((kind) => (
                         <SettingRow
                             key={kind.value}
-                            label={kind.label}
+                            label={t(`settings.notification.${kind.value}`)}
                             control={
                                 <Switch
-                                    label={kind.label}
+                                    label={t(`settings.notification.${kind.value}`)}
                                     checked={enabledKinds.has(kind.value)}
                                     onChange={() =>
                                         toggleKind(kind.value, enabledKinds, setEnabledKinds)
@@ -327,15 +326,15 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
             <Card>
                 <CardHeader
                     icon={AtSign}
-                    title="멘션"
-                    description="놓치면 안 되는 알림에만 멘션을 붙이세요."
+                    title={translate("settings.mentions")}
+                    description={translate("settings.useMentionsOnlyForNotificationsYouCannotAffordToMiss")}
                 />
 
                 <div className="space-y-4">
                     <Field
-                        label="멘션 대상"
+                        label={translate("settings.mentionTarget")}
                         htmlFor="mention-target"
-                        hint="역할을 멘션하려면 <@&역할ID> 형식으로 직접 입력합니다."
+                        hint={translate("settings.toMentionARoleEnterItsIDInTheFormatRoleId")}
                     >
                         <div className="flex flex-wrap gap-2 mb-2">
                             {MENTION_PRESETS.map((p) => (
@@ -373,10 +372,10 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
 
                     <div>
                         <p className="text-[13px] font-medium text-ink-muted mb-1">
-                            {t("멘션을 붙일 알림")}
+                            {t("settings.notificationsToMention")}
                         </p>
                         <p className="text-xs text-ink-faint mb-3">
-                            {t("아무것도 고르지 않으면 멘션 없이 전송됩니다.")}
+                            {t("settings.notificationsAreSentWithoutAMentionIfNoneAreSelected")}
                         </p>
                         <div className="flex flex-wrap gap-2">
                             {kinds.map((kind) => {
@@ -388,7 +387,7 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                                         type="button"
                                         disabled={disabled}
                                         aria-pressed={on}
-                                        title={disabled ? "이 알림이 꺼져 있습니다" : undefined}
+                                        title={disabled ? translate("settings.thisNotificationIsDisabled") : undefined}
                                         onClick={() =>
                                             toggleKind(kind.value, mentionKinds, setMentionKinds)
                                         }
@@ -400,7 +399,7 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                                         }
                                     >
                                         {on && <BellRing className="w-3 h-3" />}
-                                        {t(kind.label)}
+                                        {t(`settings.notification.${kind.value}`)}
                                     </button>
                                 );
                             })}
@@ -413,14 +412,14 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
             <Card>
                 <CardHeader
                     icon={RefreshCcw}
-                    title="고급"
-                    description="전송이 밀렸을 때의 동작을 조정합니다."
+                    title={translate("settings.advanced")}
+                    description={translate("settings.configureWhatHappensWhenDeliveryIsDelayed")}
                 />
 
                 <Field
-                    label="알림 유효 시간 (분)"
+                    label={translate("settings.notificationExpirationMinutes")}
                     htmlFor="ttl"
-                    hint="이 시간을 넘긴 알림은 뒷북이 되므로 전송하지 않고 버립니다. 연결이 오래 끊겼다가 복구됐을 때 지난 알림이 쏟아지는 걸 막습니다."
+                    hint={translate("settings.olderNotificationsAreDiscardedInsteadOfBeingDeliveredLateThisPreventsAFloodOfStaleAlertsAfterALongOutage")}
                 >
                     <Input
                         id="ttl"
@@ -446,7 +445,7 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                     onClick={handleSave}
                     className="w-full"
                 >
-                    {dirty ? "변경사항 저장" : "저장됨"}
+                    {dirty ? translate("settings.saveChanges") : translate("settings.saved")}
                 </Button>
             </div>
         </div>

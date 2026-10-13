@@ -1,7 +1,8 @@
+import { useLanguage } from "../../contexts/LanguageContext";
+import { translate, messageKey, type MessageParams } from "../../i18n";
 import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { CheckCircle, AlertCircle, AlertTriangle, X } from "lucide-react";
 import { clsx } from "clsx";
-import { localizePlatformNames } from '../../utils/platformNames';
 
 // ── Types ────────────────────────────────────
 
@@ -11,6 +12,7 @@ export interface ToastHistoryItem {
     id: string;
     type: ToastType;
     message: string;
+    params?: MessageParams;
     timestamp: Date;
     read: boolean;
 }
@@ -19,14 +21,15 @@ interface Toast {
     id: string;
     type: ToastType;
     message: string;
+    params?: MessageParams;
 }
 
 /** 토스트를 띄우는 동작만 모은 값. 참조가 앱 수명 동안 고정된다. */
 export interface ToastActions {
-    toast: (type: ToastType, message: string) => void;
-    success: (message: string) => void;
-    error: (message: string) => void;
-    warning: (message: string) => void;
+    toast: (type: ToastType, message: string, params?: MessageParams) => void;
+    success: (message: string, params?: MessageParams) => void;
+    error: (message: string, params?: MessageParams) => void;
+    warning: (message: string, params?: MessageParams) => void;
 }
 
 /** 알림 센터가 읽는 누적 내역. 토스트가 뜨고 질 때마다 바뀐다. */
@@ -65,6 +68,7 @@ export function useToastHistory(): ToastHistoryValue {
 // ── Provider ──────────────────────────────
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
+    useLanguage();
     const [toasts, setToasts] = useState<Toast[]>([]);
     const [history, setHistory] = useState<ToastHistoryItem[]>([]);
     const counterRef = useRef(0);
@@ -78,13 +82,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const addToast = useCallback(
-        (type: ToastType, message: string) => {
-            message = localizePlatformNames(message);
+        (type: ToastType, message: string, params?: MessageParams) => {
+            message = messageKey(message) ?? message;
             const id = `toast-${++counterRef.current}`;
-            setToasts((prev) => [...prev, { id, type, message }]);
+            setToasts((prev) => [...prev, { id, type, message, params }]);
 
             setHistory((prev) => {
-                const newHistory = [{ id, type, message, timestamp: new Date(), read: false }, ...prev];
+                const newHistory = [{ id, type, message, params, timestamp: new Date(), read: false }, ...prev];
                 return newHistory.slice(0, 50);
             });
 
@@ -108,9 +112,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     const actions = useMemo<ToastActions>(
         () => ({
             toast: addToast,
-            success: (message: string) => addToast("success", message),
-            error: (message: string) => addToast("error", message),
-            warning: (message: string) => addToast("warning", message),
+            success: (message: string, params?: MessageParams) => addToast("success", message, params),
+            error: (message: string, params?: MessageParams) => addToast("error", message, params),
+            warning: (message: string, params?: MessageParams) => addToast("warning", message, params),
         }),
         [addToast],
     );
@@ -150,6 +154,7 @@ const colorMap = {
 };
 
 function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
+    useLanguage();
     const Icon = iconMap[toast.type];
 
     return (
@@ -162,10 +167,10 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
             )}
         >
             <Icon className="w-5 h-5 shrink-0" />
-            <span className="min-w-0 flex-1 [overflow-wrap:anywhere] text-[13px] text-ink-muted">{toast.message}</span>
+            <span className="min-w-0 flex-1 [overflow-wrap:anywhere] text-[13px] text-ink-muted">{translate(toast.message, toast.params)}</span>
             <button
                 onClick={onClose}
-                className="icon-button" aria-label="알림 닫기"
+                className="icon-button" aria-label={translate("common.dismissNotification")}
             >
                 <X className="w-4 h-4" />
             </button>

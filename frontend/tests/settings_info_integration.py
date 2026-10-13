@@ -16,7 +16,7 @@ async def main():
     settings.update(app_name='Phrolova',ffmpeg_version='9.0.2',streamlink_version='8.6.2',host='127.0.0.1',port=8000)
     tool_calls=0; update_calls=0; fail_update=False; fail_tools=False
     update={'has_update':False,'current_version':'2.0.60','latest_version':'2.0.60',
-        'release_notes':'정보 탭 통합','environment':'windows-exe',
+        'checked_at':'2026-10-13T00:00:00','release_notes':'정보 탭 통합','environment':'windows-exe',
         'download_url':'https://github.com/ProofPage/Phrolova/releases/tag/v2.0.61'}
     async def route_api(route):
         nonlocal tool_calls,update_calls
@@ -32,8 +32,8 @@ async def main():
             tool_calls+=1
             if fail_tools:return await route.fulfill(status=503,json={'detail':'도구 조회 실패'})
             return await route.fulfill(json={key:{'available':True,
-                'version':key+' version 9.0.2-full_build-www.gyan.dev Copyright',
-                'path':'C:/한글 도구 폴더/'+('긴 경로/'*12)+key+'.exe'} for key in ('ffmpeg','ffprobe')})
+                'version':'8.6.2' if key=='streamlink' else key+' version 9.0.2-full_build-www.gyan.dev Copyright',
+                'path':'C:/한글 도구 폴더/'+('긴 경로/'*12)+key+'.exe'} for key in ('streamlink','ffmpeg','ffprobe')})
         return await mock(route)
     async with async_playwright() as p:
         browser=await p.chromium.launch()
@@ -51,7 +51,7 @@ async def main():
             await expect(nav.get_by_role('button',name='시스템',exact=True)).to_have_count(0)
             info=nav.get_by_role('button',name='정보',exact=True)
             await info.click()
-            for title in ('시스템 정보','미디어 도구','프로그램 업데이트','프로그램 정보'):
+            for title in ('시스템 정보','프로그램 업데이트','프로그램 정보'):
                 await expect(page.get_by_role('heading',name=title,exact=True)).to_have_count(1)
             await expect(page.get_by_text('FFmpeg',exact=True)).to_have_count(1)
             await expect(page.get_by_text('FFprobe',exact=True)).to_have_count(1)
@@ -75,7 +75,7 @@ async def main():
             await page.screenshot(path=str(OUT/f'info-{width}.png'),full_page=True)
         fail_tools=True
         await page.get_by_role('button',name='도구 다시 검사').click()
-        await expect(page.get_by_text('도구 상태를 불러오지 못했습니다.',exact=True)).to_have_count(2)
+        await expect(page.get_by_text('도구 상태를 불러오지 못했습니다.',exact=True)).to_have_count(3)
         fail_tools=False
         await page.get_by_role('button',name='도구 다시 검사').click()
         await expect(page.get_by_text('도구 상태를 불러오지 못했습니다.',exact=True)).to_have_count(0)

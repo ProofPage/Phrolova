@@ -8,6 +8,28 @@
 
 ## [Unreleased]
 
+## [2.0.63] - 2026-10-13
+
+### Added
+- 한국어·영어·일본어·스페인어·독일어·중국어 간체·중국어 번체·러시아어의 8개 언어를 지원합니다. 각 언어에 807개 번역을 제공합니다.
+- 기존 외관 설정에서 언어를 즉시 변경하고 저장·복원하며 날짜·숫자·수량을 선택 언어에 맞춰 표시합니다.
+- 번역 키·변수·누락 검사와 다국어 페이지·팝업·알림·반응형·자동 갱신 회귀 검사를 추가합니다.
+
+### Fixed
+- 개발 미리보기의 언어 Provider 연결과 번역 리소스 자동 갱신 시 발생하던 빈 화면을 수정합니다.
+- 동적 상태·인증·파일 검사·오류 안내, 접근성 이름과 기존 알림 내역의 언어 갱신을 보완합니다.
+- 정보 탭의 Streamlink·FFmpeg·FFprobe 설치 상태/경로와 재검사 배치를 통일하고 서버 주소 표시를 제거합니다.
+- 긴 번역의 버튼·상태·카드 줄바꿈을 보완하고 업데이트 조회 실패·미조회 상태를 구분합니다.
+
+### Compatibility
+- 기존 설정·저장 경로·사용자 데이터, Streamlink 녹화·TS/fMP4 원본·FFmpeg 후처리·MKV/MP4 완료 형식과 다운로드 엔진을 유지합니다.
+- 기존 HTTP 오류 detail·상태·헤더는 보존하고 현지화용 message_key만 추가합니다. 제거된 플랫폼·채팅 저장 기능을 복원하지 않습니다.
+
+### Validation
+- 전체 backend 886 passed, 1 skipped, 4 subtests passed. 별도 활성화가 필요한 3 GiB 초과 TS 검사만 제외합니다.
+- TypeScript·Vite 빌드, 8개 언어 각 807개 키·변수 검사, 320/390/1440px 전체 페이지·설정·팝업·알림·언어 복원 검사 통과.
+- 번역 리소스 자동 갱신, 기본 설정·설정 저장·정보 도구·녹화 카드·다운로드 회귀 검사 통과.
+
 ## [2.0.62] - 2026-10-13
 
 ### Fixed
@@ -849,7 +871,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.62...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.63...HEAD
+[2.0.63]: https://github.com/ProofPage/Phrolova/compare/v2.0.62...v2.0.63
 [2.0.62]: https://github.com/ProofPage/Phrolova/compare/v2.0.61...v2.0.62
 [2.0.61]: https://github.com/ProofPage/Phrolova/compare/v2.0.60...v2.0.61
 [2.0.60]: https://github.com/ProofPage/Phrolova/compare/v2.0.59...v2.0.60

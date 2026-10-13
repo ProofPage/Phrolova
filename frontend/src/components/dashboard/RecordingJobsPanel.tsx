@@ -1,3 +1,6 @@
+import { getActiveLocale } from "../../i18n";
+import { useLanguage } from "../../contexts/LanguageContext";
+import { translate } from "../../i18n";
 import { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { api, type RecordingJob } from '../../api/client';
@@ -10,6 +13,7 @@ import { formatBytes } from '../../utils/format';
 const active=(job:RecordingJob)=>['pending','normalizing','converting','verifying'].includes(job.state);
 /** Empty legacy attempts are grouped for display; their records and files survive. */
 export function RecordingJobsPanel({visibleIds}:{visibleIds:string[]}) {
+    useLanguage();
     const [jobs,setJobs]=useState<RecordingJob[]>([]);
     const [error,setError]=useState(false);const [filter,setFilter]=useState('all');
     const [page,setPage]=useState(1);const [busy,setBusy]=useState(false);const toast=useToast();
@@ -33,28 +37,28 @@ export function RecordingJobsPanel({visibleIds}:{visibleIds:string[]}) {
     const clear=async()=>{
         if(busy)return;setBusy(true);
         const ids=selected.filter(job=>!active(job)).map(job=>job.id).slice(0,200);
-        try {await api.clearRecordingHistory(ids);setJobs(current=>current.filter(job=>!ids.includes(job.id)));toast.success('이력을 목록에서 제거했습니다. 저장 파일은 유지됩니다.');}
-        catch {toast.error('이력을 정리하지 못했습니다.');}finally{setBusy(false);}
+        try {await api.clearRecordingHistory(ids);setJobs(current=>current.filter(job=>!ids.includes(job.id)));toast.success("live.historyRemovedSavedFilesWereKept");}
+        catch {toast.error("live.couldNotClearHistory");}finally{setBusy(false);}
     };
     if(!history.length&&!error)return null;
-    return <section className="space-y-2 min-w-0" aria-label="녹화 파일 처리 이력">
+    return <section className="space-y-2 min-w-0" aria-label={translate("live.recordingProcessingHistory")}>
         <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-sm font-semibold">녹화 파일 처리 이력</h2>
-            <div className="flex flex-wrap items-center gap-1" role="group" aria-label="처리 이력 필터">
-                {[['all','전체'],['processing','변환 중'],['completed','완료'],['failed','실패']].map(([key,label])=><Button key={key} variant={filter===key?'secondary':'ghost'} aria-pressed={filter===key} onClick={()=>{setFilter(key);setPage(1);}}>{label}</Button>)}
+            <h2 className="text-sm font-semibold">{translate("live.recordingProcessingHistory")}</h2>
+            <div className="flex flex-wrap items-center gap-1" role="group" aria-label={translate("live.processingHistoryFilter")}>
+                {[['all',translate("live.all")],['processing',translate("live.converting")],['completed',translate("live.completed")],['failed',translate("live.failed")]].map(([key,label])=><Button key={key} variant={filter===key?'secondary':'ghost'} aria-pressed={filter===key} onClick={()=>{setFilter(key);setPage(1);}}>{label}</Button>)}
             </div>
-            <Button icon={Trash2} disabled={busy||!selected.some(job=>!active(job))} onClick={()=>void clear()} title="목록에서만 제거하며 저장 파일은 유지합니다.">이력 정리</Button>
+            <Button icon={Trash2} disabled={busy||!selected.some(job=>!active(job))} onClick={()=>void clear()} title={translate("live.removeHistoryOnlyKeepSavedFiles")}>{translate("live.clearHistory")}</Button>
         </div>
-        {error&&<p role="status" className="text-xs text-warn">파일 처리 상태를 불러오지 못했습니다. 다시 연결하고 있습니다.</p>}
+        {error&&<p role="status" className="text-xs text-warn">{translate("live.couldNotLoadProcessingStatusReconnecting")}</p>}
         {rows.slice(0,page*20).map(({job,ids})=><article key={job.id} className="recording-history-row rounded-[var(--radius-card)] border border-line bg-surface p-3 min-w-0">
             <div className="min-w-0 space-y-1">
                 <div className="flex items-center gap-2 min-w-0"><p className="text-sm font-medium truncate" title={job.channel_name}>{job.channel_name}</p>{job.platform&&<PlatformBadge platform={job.platform}/>}</div>
-                <p className="text-xs text-ink-muted flex flex-wrap gap-x-2 gap-y-1"><span>{job.started_at?new Date(job.started_at).toLocaleString(): '시각 정보 없음'}</span><span>{job.capture_format==='fmp4'?'fMP4 → TS':'TS'} → {job.target_format.toUpperCase()}</span>{!!job.file_size_bytes&&<span>{formatBytes(job.file_size_bytes)}</span>}</p>
-                {ids.length>1&&<p className="text-xs text-ink-faint">파일 없는 시작 실패 {ids.length}건</p>}
+                <p className="text-xs text-ink-muted flex flex-wrap gap-x-2 gap-y-1"><span>{job.started_at?new Date(job.started_at).toLocaleString(getActiveLocale()): translate("live.timeUnavailable")}</span><span>{job.capture_format==='fmp4'?'fMP4 → TS':'TS'} → {job.target_format.toUpperCase()}</span>{!!job.file_size_bytes&&<span>{formatBytes(job.file_size_bytes)}</span>}</p>
+                {ids.length>1&&<p className="text-xs text-ink-faint">{translate("live.startFailedWithoutAFile")}{ids.length}{translate("live.items")}</p>}
             </div>
             <RecordingPostprocess job={job}/>
         </article>)}
-        {!rows.length&&<p className="text-xs text-ink-muted py-3">해당 상태의 처리 이력이 없습니다.</p>}
-        {rows.length>page*20&&<Button onClick={()=>setPage(value=>value+1)}>이력 더 보기</Button>}
+        {!rows.length&&<p className="text-xs text-ink-muted py-3">{translate("live.noProcessingHistoryWithThisStatus")}</p>}
+        {rows.length>page*20&&<Button onClick={()=>setPage(value=>value+1)}>{translate("live.showMoreHistory")}</Button>}
     </section>;
 }

@@ -67,6 +67,12 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: 다국어 리소스와 포맷 검사
+        working-directory: frontend
+        run: |
+          npm run i18n:check
+          npm run i18n:test
+
       - name: 타입체크
         working-directory: frontend
         run: npx tsc --noEmit -p tsconfig.json

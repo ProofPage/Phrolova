@@ -1,3 +1,5 @@
+import { useLanguage } from "../../contexts/LanguageContext";
+import { translate } from "../../i18n";
 import { useListboxPosition } from "../../hooks/useListboxPosition";
 import { useListboxKeyboard } from "../../hooks/useListboxKeyboard";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
@@ -23,6 +25,7 @@ interface Props {
 }
 
 export function AddChannelForm({ platformStatus, onAdded }: Props) {
+    const { t } = useLanguage();
     const toast = useToast();
     const [channelId, setChannelId] = useState("");
     const [selectedPlatform, setSelectedPlatform] = useState<Platform>("chzzk");
@@ -33,7 +36,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
     const [inputError, setInputError] = useState<string | null>(null);
     const inputId = useId();
     const normalizedChannelId = parsePlatformChannelInput(selectedPlatform, channelId);
-    const validationError = selectedPlatform === 'chzzk' ? CHZZK_CHANNEL_INPUT_ERROR : `올바른 ${PLATFORM_LABELS[selectedPlatform]} 채널 ID 또는 채널 링크를 입력하세요.`;
+    const validationError = selectedPlatform === 'chzzk' ? CHZZK_CHANNEL_INPUT_ERROR : t("live.channelInvalid",{platform:t(PLATFORM_LABELS[selectedPlatform])});
 
     useEffect(() => {
         if (!dropdownOpen) return;
@@ -81,22 +84,22 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
                 await api.addPlatformChannel(selectedPlatform, normalizedChannelId, options.auto_record, options);
             }
             setChannelId("");
-            toast.success("채널이 추가되었습니다.");
+            toast.success("live.channelAdded");
             onAdded();
         } finally {
             setLoading(false);
         }
     };
 
-    const placeholder = selectedPlatform === "chzzk" ? "치지직 채널 ID 또는 https://chzzk.naver.com/..."
-        : selectedPlatform === "youtube" ? "핸들(@username) 또는 채널 ID"
-        : selectedPlatform === "soop" ? "숲 채널 ID 또는 https://play.sooplive.com/..."
-        : selectedPlatform === "cime" ? "씨미 채널 ID 또는 https://ci.me/@..."
-        : "채널 ID";
+    const placeholder = selectedPlatform === "chzzk" ? "live.chzzkChannelIDOrHttpsChzzkNaverCom"
+        : selectedPlatform === "youtube" ? "live.handleUsernameOrChannelID"
+        : selectedPlatform === "soop" ? "live.soopChannelIDOrHttpsPlaySoopliveCom"
+        : selectedPlatform === "cime" ? "live.cimeChannelIDOrHttpsCiMe"
+        : "live.channelID";
 
     return (
         <>
-        <form onSubmit={handleSubmit} aria-label="감시 채널 추가" className="dashboard-add-channel media-add-form space-y-2">
+        <form onSubmit={handleSubmit} aria-label={translate("live.addMonitoredChannel")} className="dashboard-add-channel media-add-form space-y-2">
             <div className="flex w-full min-w-0 flex-col items-stretch gap-2 sm:flex-row">
             <div className="relative min-w-0 shrink-0 w-full sm:w-[120px]" ref={dropdownRef}>
                 <PlatformSelectTrigger
@@ -106,7 +109,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
                     className="text-ink hover:bg-surface-3 transition-colors whitespace-nowrap"
                     aria-expanded={dropdownOpen}
                     aria-haspopup="listbox"
-                    aria-label={`플랫폼 선택: ${PLATFORM_LABELS[selectedPlatform]}`}
+                    aria-label={t("live.platformSelection",{platform:t(PLATFORM_LABELS[selectedPlatform])})}
                 />
 
                 {dropdownOpen && (
@@ -128,8 +131,8 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
                                     className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${enabled ? "text-ink-muted hover:bg-surface-3" : "text-ink-faint opacity-50 cursor-not-allowed"}`}
                                 >
                                     <span className={`inline-block w-2 h-2 rounded-full ${enabled ? PLATFORM_DOT_STYLES[platform] : "bg-line-strong"}`} />
-                                    <span className="flex-1">{PLATFORM_LABELS[platform]}</span>
-                                    {!enabled && <span className="flex items-center gap-1 text-[10px]"><Lock className="w-3 h-3" /> 설정 필요</span>}
+                                    <span className="flex-1">{t(PLATFORM_LABELS[platform])}</span>
+                                    {!enabled && <span className="flex items-center gap-1 text-[10px]"><Lock className="w-3 h-3" /> {translate("live.setupRequired")}</span>}
                                 </button>
                             );
                         })}
@@ -138,14 +141,13 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
             </div>
 
             <div className="flex min-w-0 gap-2 sm:flex-1">
-            <Input id={inputId} value={channelId} onChange={(event) => { setChannelId(event.target.value); setInputError(null); }} disabled={loading || settingsOpen} aria-label={['chzzk', 'soop', 'cime'].includes(selectedPlatform) ? `${PLATFORM_LABELS[selectedPlatform]} 채널 ID 또는 채널 링크` : `${PLATFORM_LABELS[selectedPlatform]} 채널 ID`} aria-invalid={!!inputError} aria-describedby={inputError ? `${inputId}-error` : undefined} placeholder={placeholder} className="min-w-0 flex-1" />
-                    <Button type="submit" variant="primary" icon={Plus} loading={loading} disabled={!channelId.trim()} aria-label="채널 추가 설정 열기" title="채널 추가 설정 열기" className="shrink-0 px-3 sm:px-4">
-                채널 추가
-            </Button>
+            <Input id={inputId} value={channelId} onChange={(event) => { setChannelId(event.target.value); setInputError(null); }} disabled={loading || settingsOpen} aria-label={['chzzk', 'soop', 'cime'].includes(selectedPlatform) ? t("live.channelInput",{platform:t(PLATFORM_LABELS[selectedPlatform])}) : t("live.channelInput",{platform:t(PLATFORM_LABELS[selectedPlatform])})} aria-invalid={!!inputError} aria-describedby={inputError ? `${inputId}-error` : undefined} placeholder={placeholder} className="min-w-0 flex-1" />
+                    <Button type="submit" variant="primary" icon={Plus} loading={loading} disabled={!channelId.trim()} aria-label={translate("live.openChannelSetup")} title={translate("live.openChannelSetup")} className="shrink-0 px-3 sm:px-4">
+                {translate("live.addChannel")}</Button>
             </div>
-            {inputError && <p id={`${inputId}-error`} role="alert" className="text-xs text-danger">{inputError}</p>}
+            {inputError && <p id={`${inputId}-error`} role="alert" className="text-xs text-danger">{t(inputError)}</p>}
             </div>
-            <p className="text-[11px] text-ink-faint leading-relaxed">채널을 추가한 뒤 자동 녹화 여부와 조건을 선택할 수 있습니다.</p>
+            <p className="text-[11px] text-ink-faint leading-relaxed">{translate("live.afterAddingAChannelChooseAutomaticRecordingAndItsConditions")}</p>
         </form>
         {settingsOpen && <ChannelDownloadModal platform={selectedPlatform} name={normalizedChannelId || channelId.trim()} channelId={normalizedChannelId || channelId.trim()} onClose={() => setSettingsOpen(false)} onSave={handleAdd} />}
         </>

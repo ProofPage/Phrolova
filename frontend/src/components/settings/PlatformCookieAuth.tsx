@@ -1,7 +1,8 @@
+import { translate } from "../../i18n";
 import { useEffect, useRef, useState } from 'react';
 import { KeyRound, RefreshCw, Trash2, Upload } from 'lucide-react';
 import { api, PLATFORM_LABELS, type CookiePlatform, type PlatformCookieStatus } from '../../api/client';
-import { getErrorMessage } from '../../utils/error';
+import { getErrorMessage, localizedStatus } from '../../utils/error';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useConfirm } from '../ui/ConfirmModal';
 import { useToast } from '../ui/Toast';
@@ -12,7 +13,7 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
     const { t } = useLanguage();
     const toast = useToast();
     const confirm = useConfirm();
-    const name = PLATFORM_LABELS[platform];
+    const name = t(PLATFORM_LABELS[platform]);
     const fileInput = useRef<HTMLInputElement>(null);
     const pending = useRef(false);
     const [status, setStatus] = useState<PlatformCookieStatus | null>(null);
@@ -21,7 +22,7 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
     useEffect(() => {
         let active = true;
         void api.getPlatformCookieStatus(platform).then(data => { if (active) setStatus(data); })
-            .catch(() => { if (active) setError(t('쿠키 파일 상태를 확인하지 못했습니다. 다시 확인하세요.')); });
+            .catch(() => { if (active) setError(t("settings.couldNotCheckCookieFileStatusTryAgain")); });
         return () => { active = false; };
     }, [platform]);
     const change = async (action: 'upload' | 'delete' | 'refresh', file?: File) => {
@@ -34,11 +35,11 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
                 : action === 'delete' ? await api.deletePlatformCookie(platform) : await api.checkPlatformCookies(platform);
             setStatus(data);
             if (action !== 'refresh') {
-                toast.success(t(action === 'upload' ? '쿠키 파일을 등록했습니다.' : '등록된 쿠키를 삭제했습니다.'));
+                toast.success(t(action === 'upload' ? "settings.cookieFileRegistered" : "settings.registeredCookiesRemoved"));
                 onSaved?.();
             }
         } catch (cause) {
-            const message = getErrorMessage(cause, t('쿠키 파일 처리에 실패했습니다. 다시 시도하세요.'));
+            const message = getErrorMessage(cause, t("settings.couldNotProcessTheCookieFileTryAgain"));
             setError(message);
             toast.error(message);
         } finally {
@@ -49,21 +50,21 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
     };
     const remove = async () => {
         if (pending.current) return;
-        if (await confirm({ title: `${name} ${t('쿠키 파일 삭제')}`, message: t('등록된 쿠키를 삭제하시겠습니까? 공개 콘텐츠는 쿠키 없이 이용할 수 있습니다.'), confirmText: t('삭제'), variant: 'danger' })) void change('delete');
+        if (await confirm({ title: `${name} ${t("settings.removeCookieFile")}`, message: t("settings.removeTheRegisteredCookiesPublicContentRemainsAvailableWithoutCookies"), confirmText: t("common.delete"), variant: 'danger' })) void change('delete');
     };
-    const label = !status ? t('상태 확인 중') : status.expired ? t('쿠키 만료')
-        : status.configured && status.valid === false ? t('쿠키 파일 확인 필요') : status.configured ? t('쿠키 등록됨') : t('등록된 쿠키 없음');
+    const label = !status ? t("live.checkingStatus") : status.expired ? t("settings.cookieExpired")
+        : status.configured && status.valid === false ? t("settings.cookieFileNeedsAttention") : status.configured ? t("settings.cookiesRegistered") : t("settings.noRegisteredCookies");
     return <Card className="space-y-4" data-cookie-platform={platform} aria-busy={busy}>
-        <CardHeader icon={KeyRound} title={t(name)} description={t('선택 사항 · 공개 콘텐츠는 쿠키 없이 이용합니다. 로그인이 필요한 콘텐츠에 사용할 Netscape 형식 쿠키 파일을 등록하세요.')}
+        <CardHeader icon={KeyRound} title={t(name)} description={t("settings.optionalPublicContentWorksWithoutCookiesRegisterANetscapeFormatCookieFileForContentThatRequiresSignIn")}
             action={<Badge tone={status?.expired || (status?.configured && status.valid === false) ? 'warn' : status?.configured ? 'ok' : undefined}>{label}</Badge>} />
         <div className="flex flex-wrap items-center gap-2">
-            <input ref={fileInput} type="file" accept=".txt" aria-label={`${name} ${t('쿠키 파일')}`} className="hidden" disabled={busy} onChange={event => { const file = event.target.files?.[0]; if (file) void change('upload', file); }} />
-            <Button icon={Upload} disabled={busy} onClick={() => fileInput.current?.click()} aria-label={`${name} ${t('쿠키 파일 선택')}`}>{t(status?.configured ? '파일 갱신' : '파일 선택')}</Button>
-            <Button icon={RefreshCw} loading={busy} onClick={() => void change('refresh')} aria-label={`${name} ${t('쿠키 상태 확인')}`}>{t('상태 확인')}</Button>
-            {status?.configured && <Button variant="danger" icon={Trash2} disabled={busy} onClick={() => void remove()} aria-label={`${name} ${t('쿠키 파일 삭제')}`}>{t('삭제')}</Button>}
+            <input ref={fileInput} type="file" accept=".txt" aria-label={`${name} ${t("settings.cookieFile")}`} className="hidden" disabled={busy} onChange={event => { const file = event.target.files?.[0]; if (file) void change('upload', file); }} />
+            <Button icon={Upload} disabled={busy} onClick={() => fileInput.current?.click()} aria-label={`${name} ${t("settings.selectCookieFile")}`}>{t(status?.configured ? translate("settings.replaceFile") : translate("settings.chooseFile"))}</Button>
+            <Button icon={RefreshCw} loading={busy} onClick={() => void change('refresh')} aria-label={`${name} ${t("settings.checkCookieStatus")}`}>{t("settings.checkStatus")}</Button>
+            {status?.configured && <Button variant="danger" icon={Trash2} disabled={busy} onClick={() => void remove()} aria-label={`${name} ${t("settings.removeCookieFile")}`}>{t("common.delete")}</Button>}
         </div>
-        {status?.message && <p className="text-xs text-ink-muted [overflow-wrap:anywhere]" role="status">{t(status.message)}</p>}
-        {status?.expired && <p className="text-xs text-warn">{t('로그인한 브라우저에서 쿠키 파일을 다시 내보내 등록하세요.')}</p>}
-        {error && <p role="alert" className="text-xs text-danger [overflow-wrap:anywhere]">{error}</p>}
+        {status?.message && <p className="text-xs text-ink-muted [overflow-wrap:anywhere]" role="status">{localizedStatus(status.message, label)}</p>}
+        {status?.expired && <p className="text-xs text-warn">{t("settings.exportCookiesAgainFromASignedInBrowserAndRegisterTheFile")}</p>}
+        {error && <p role="alert" className="text-xs text-danger [overflow-wrap:anywhere]">{t(error)}</p>}
     </Card>;
 }

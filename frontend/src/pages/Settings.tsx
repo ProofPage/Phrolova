@@ -1,3 +1,4 @@
+import { translate } from "../i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBlocker } from "react-router-dom";
 import {
@@ -25,11 +26,11 @@ import { useLanguage } from "../contexts/LanguageContext";
 type TabId = "download" | "auth" | "notifications" | "appearance" | "info";
 
 const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
-    { id: "download", label: "다운로드", icon: Download },
-    { id: "auth", label: "인증", icon: KeyRound },
-    { id: "notifications", label: "알림", icon: Bell },
-    { id: "appearance", label: "외관", icon: Palette },
-    { id: "info", label: "정보", icon: Info },
+    { id: "download", label: "settings.downloads", icon: Download },
+    { id: "auth", label: "settings.authentication", icon: KeyRound },
+    { id: "notifications", label: "settings.notifications", icon: Bell },
+    { id: "appearance", label: "settings.appearanceInSettings", icon: Palette },
+    { id: "info", label: "settings.aboutInSettings", icon: Info },
 ];
 
 const EMPTY_DIRTY: Record<TabId, boolean> = {
@@ -87,9 +88,9 @@ export default function Settings() {
         if (activeTab === newTab) return;
         if (dirtyTabs[activeTab]) {
             const ok = await confirm({
-                title: "저장되지 않은 변경사항",
-                message: "현재 탭에 저장하지 않은 설정이 있습니다. 이동하시겠습니까?\n이동하면 변경사항은 초기화됩니다.",
-                confirmText: "이동",
+                title: "settings.unsavedChanges",
+                message: "settings.thisTabHasUnsavedSettingsLeaveThisTabChangesWillBeDiscarded",
+                confirmText: "settings.leave",
                 variant: "danger",
             });
             if (!ok) return;
@@ -108,9 +109,9 @@ export default function Settings() {
     useEffect(() => {
         if (blocker.state !== "blocked") return;
         confirm({
-            title: "저장되지 않은 변경사항",
-            message: "저장하지 않은 설정이 있습니다. 페이지를 이동하시겠습니까?\n이동하면 변경사항은 초기화됩니다.",
-            confirmText: "이동",
+            title: "settings.unsavedChanges",
+            message: "settings.youHaveUnsavedSettingsLeaveThisPageChangesWillBeDiscarded",
+            confirmText: "settings.leave",
             variant: "danger",
         }).then((ok) => ok ? blocker.proceed() : blocker.reset());
     }, [blocker.state]);
@@ -129,12 +130,12 @@ export default function Settings() {
         <div className="product-page settings-page space-y-4">
             <PageHeader
                 icon={SettingsIcon}
-                title={t("설정")}
-                description={t("녹화, 다운로드, 인증, 알림 및 애플리케이션 동작을 구성합니다.")}
+                title={t("settings.title")}
+                description={t("settings.configureRecordingDownloadsAuthenticationNotificationsAndAppBehavior")}
                 meta={hasDirtyTab || updateAvailable ? (
                     <>
-                        {hasDirtyTab && <Badge tone="warn">{t("저장하지 않은 변경사항")}</Badge>}
-                        {updateAvailable && <Badge tone="ok">{t("업데이트 가능")}</Badge>}
+                        {hasDirtyTab && <Badge tone="warn">{t("settings.unsavedChangesInSettings")}</Badge>}
+                        {updateAvailable && <Badge tone="ok">{t("settings.updateAvailable")}</Badge>}
                     </>
                 ) : undefined}
             />
@@ -143,13 +144,13 @@ export default function Settings() {
                 <Card className="flex min-h-48 flex-col items-center justify-center gap-3 text-center">
                     {loadError ? <AlertCircle className="size-6 text-danger" /> : <Loader2 className="size-6 animate-spin text-[var(--primary)]" />}
                     <div>
-                        <p className="text-sm font-medium text-ink">{loadError ? t("설정을 불러오지 못했습니다") : t("설정을 불러오는 중")}</p>
-                        <p className="mt-1 text-xs text-ink-faint">{loadError ? t("서버 연결을 확인한 뒤 다시 시도해 주세요.") : t("잠시만 기다려 주세요.")}</p>
+                        <p className="text-sm font-medium text-ink">{loadError ? t("settings.couldNotLoadSettings") : t("settings.loadingSettings")}</p>
+                        <p className="mt-1 text-xs text-ink-faint">{loadError ? t("settings.checkTheServerConnectionAndTryAgain") : t("settings.pleaseWaitAMoment")}</p>
                     </div>
-                    {loadError && <Button icon={RefreshCw} onClick={() => void loadSettings()} variant="primary">다시 시도</Button>}
+                    {loadError && <Button icon={RefreshCw} onClick={() => void loadSettings()} variant="primary">{translate("live.tryAgain")}</Button>}
                 </Card>
             ) : <div className="space-y-4">
-            <nav ref={tabsRef} className="settings-tabs flex min-w-0 items-center gap-1 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface-2 p-1.5" aria-label={t("설정 탭")}>
+            <nav ref={tabsRef} className="settings-tabs flex min-w-0 items-center gap-1 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface-2 p-1.5" aria-label={t("settings.settingsTabs")}>
                 {TABS.map((tab) => {
                     const Icon = tab.icon;
                     return (

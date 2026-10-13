@@ -1,3 +1,4 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { useEffect } from "react";
 import { type Settings as SettingsType } from "../../api/client";
 import { PlatformCookieAuth } from "./PlatformCookieAuth";
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function AuthTab({ onSaved, onDirtyChange }: Props) {
+    useLanguage();
     // File registration saves immediately, so this tab has no unsaved text fields.
     useEffect(() => onDirtyChange?.(false), [onDirtyChange]);
     return (

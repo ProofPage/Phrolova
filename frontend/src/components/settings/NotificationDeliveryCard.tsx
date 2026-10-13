@@ -1,3 +1,4 @@
+import { translate } from "../../i18n";
 /**
  * 알림 전송 진단 카드.
  *
@@ -14,7 +15,7 @@ import {
 } from "../../api/client";
 import { useToast } from "../ui/Toast";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { getErrorMessage } from "../../utils/error";
+import { getErrorMessage, localizedStatus } from "../../utils/error";
 import { Badge, Button, Card, CardHeader, Divider } from "../ui/primitives";
 
 /** 전송 채널 이름을 사람이 읽을 문구로. */
@@ -45,7 +46,7 @@ export function NotificationDeliveryCard({ settings, refreshSignal }: Props) {
         try {
             setStatus(await api.getNotificationStatus());
         } catch {
-            setStatus({ available: false, reason: "상태를 불러오지 못했습니다." });
+            setStatus({ available: false, reason: "settings.couldNotLoadStatus" });
         }
     }, []);
 
@@ -65,10 +66,10 @@ export function NotificationDeliveryCard({ settings, refreshSignal }: Props) {
         setTesting(true);
         try {
             const res = await api.sendTestNotification();
-            toast.success(res.message);
+            toast.success(localizedStatus(res.message, 'settings.testNotificationSent'));
             refreshStatus();
         } catch (e) {
-            toast.error(getErrorMessage(e, "테스트 알림 전송에 실패했습니다."));
+            toast.error(getErrorMessage(e, "settings.couldNotSendTestNotification"));
         } finally {
             setTesting(false);
         }
@@ -81,15 +82,15 @@ export function NotificationDeliveryCard({ settings, refreshSignal }: Props) {
         <Card>
             <CardHeader
                 icon={Activity}
-                title="연결 상태"
-                description="알림이 실제로 나가고 있는지 여기서 확인합니다."
+                title={translate("settings.connectionStatus")}
+                description={translate("settings.checkWhetherNotificationsAreBeingDelivered")}
                 action={
                     <div className="flex items-center gap-2">
                         <Button
                             variant="ghost"
                             icon={RefreshCcw}
                             onClick={refreshStatus}
-                            aria-label={t("상태 새로고침")}
+                            aria-label={t("settings.refreshStatus")}
                         />
                         <Button
                             variant="primary"
@@ -98,15 +99,14 @@ export function NotificationDeliveryCard({ settings, refreshSignal }: Props) {
                             disabled={!anyTransport}
                             onClick={handleTest}
                         >
-                            테스트 발송
-                        </Button>
+                            {translate("settings.sendTest")}</Button>
                     </div>
                 }
             />
 
             {!anyTransport && (
                 <p className="text-[13px] text-warn bg-warn/10 border border-warn/20 rounded-[var(--radius-control)] px-3 py-2.5 mb-4">
-                    {t("Bot 토큰 + 채널 ID 또는 Webhook URL 중 하나는 설정해야 알림이 전송됩니다.")}
+                    {t("settings.setEitherABotTokenAndChannelIDOrAWebhookURLToSendNotifications")}
                 </p>
             )}
 
@@ -120,14 +120,14 @@ export function NotificationDeliveryCard({ settings, refreshSignal }: Props) {
                             {t(TRANSPORT_LABELS[transport.name] ?? transport.name)}
                         </span>
                         {!transport.configured ? (
-                            <Badge tone="neutral">미설정</Badge>
+                            <Badge tone="neutral">{translate("settings.notConfigured")}</Badge>
                         ) : transport.available ? (
                             <Badge tone="ok">
                                 <CheckCircle2 className="w-3 h-3" />
-                                {t("연결됨")}
+                                {t("settings.connected")}
                             </Badge>
                         ) : (
-                            <Badge tone="warn">대기 중</Badge>
+                            <Badge tone="warn">{translate("settings.waiting")}</Badge>
                         )}
                     </div>
                 ))}
@@ -138,10 +138,10 @@ export function NotificationDeliveryCard({ settings, refreshSignal }: Props) {
                     <Divider className="my-4" />
                     <dl className="notification-delivery-summary">
                         {[
-                            { label: "대기", value: status.pending ?? 0, tone: (status.pending ?? 0) > 0 ? "warn" : undefined },
-                            { label: "전송됨", value: status.delivered ?? 0 },
-                            { label: "폐기", value: status.dropped ?? 0, tone: (status.dropped ?? 0) > 0 ? "danger" : undefined },
-                            { label: "만료", value: status.expired ?? 0 },
+                            { label: translate("settings.queued"), value: status.pending ?? 0, tone: (status.pending ?? 0) > 0 ? "warn" : undefined },
+                            { label: translate("settings.delivered"), value: status.delivered ?? 0 },
+                            { label: translate("settings.dropped"), value: status.dropped ?? 0, tone: (status.dropped ?? 0) > 0 ? "danger" : undefined },
+                            { label: translate("settings.expired"), value: status.expired ?? 0 },
                         ].map((s) => (
                             <div key={s.label}>
                                 <dt className="text-[11px] uppercase tracking-wide text-ink-faint">
@@ -162,8 +162,7 @@ export function NotificationDeliveryCard({ settings, refreshSignal }: Props) {
                         ))}
                     </dl>
                     <p className="text-xs text-ink-faint mt-3 leading-relaxed">
-                        대기 중인 알림은 연결이 복구되면 자동으로 전송됩니다. 앱을 재시작해도 유지됩니다.
-                    </p>
+                        {translate("settings.pendingNotificationsAreSentAutomaticallyWhenTheConnectionReturnsTheyAreKeptAcrossAppRestarts")}</p>
                 </>
             )}
         </Card>

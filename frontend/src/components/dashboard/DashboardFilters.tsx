@@ -8,10 +8,10 @@ export type StatusFilter = "all" | "recording" | "live" | "offline";
 export type ViewMode = "grid" | "list";
 
 const FILTERS: { value: StatusFilter; label: string; selectedClass: string; countKey: "totalCount" | "recordingCount" | "liveCount" | "offlineCount" }[] = [
-    { value: "all", label: "전체", selectedClass: "text-ink", countKey: "totalCount" },
-    { value: "recording", label: "녹화 중", selectedClass: "text-ok", countKey: "recordingCount" },
-    { value: "live", label: "라이브", selectedClass: "text-live", countKey: "liveCount" },
-    { value: "offline", label: "오프라인", selectedClass: "text-ink-muted", countKey: "offlineCount" },
+    { value: "all", label: "live.all", selectedClass: "text-ink", countKey: "totalCount" },
+    { value: "recording", label: "live.recording", selectedClass: "text-ok", countKey: "recordingCount" },
+    { value: "live", label: "live.title", selectedClass: "text-live", countKey: "liveCount" },
+    { value: "offline", label: "live.offline", selectedClass: "text-ink-muted", countKey: "offlineCount" },
 ];
 
 interface Props {
@@ -56,7 +56,7 @@ export function DashboardFilters({
         <div className="dashboard-toolbar flex flex-col gap-2 py-2">
             <div className="dashboard-toolbar-main">
                 <div className="dashboard-status-filters min-w-0 max-w-full overflow-x-auto">
-                <div role="group" aria-label={t("채널 상태 필터")} className="flex w-max min-w-full gap-1">
+                <div role="group" aria-label={t("live.channelStatusFilter")} className="flex w-max min-w-full gap-1">
                     {FILTERS.map((option) => {
                         const count = { totalCount, recordingCount, liveCount, offlineCount }[option.countKey];
                         return (
@@ -75,15 +75,15 @@ export function DashboardFilters({
                 </div>
 
                 <div className="dashboard-toolbar-actions">
-                    <Button icon={RefreshCw} onClick={onScanNow} title={t("등록한 채널의 방송 상태를 다시 확인합니다.")} aria-label={t("방송 상태 확인")} className="dashboard-scan px-3 py-2 whitespace-nowrap shrink-0"><span>{t("방송 상태 확인")}</span></Button>
-                    <Button variant="danger" icon={Square} onClick={onStopAll} disabled={recordingCount === 0} aria-label={t("전체 녹화 중지")} className="px-3 py-2 whitespace-nowrap shrink-0"><span className="hidden sm:inline">{t("전체 녹화 중지")}</span><span className="sm:hidden">{t("전체 중지")}</span></Button>
-                    <div role="group" aria-label={t("채널 보기 방식")} className="dashboard-view-toggle flex bg-surface-3/80 rounded-[var(--radius-control)] p-1">
+                    <Button icon={RefreshCw} onClick={onScanNow} title={t("live.checkTheLiveStatusOfRegisteredChannelsAgain")} aria-label={t("live.checkLiveStatus")} className="dashboard-scan px-3 py-2 whitespace-nowrap shrink-0"><span>{t("live.checkLiveStatus")}</span></Button>
+                    <Button variant="danger" icon={Square} onClick={onStopAll} disabled={recordingCount === 0} aria-label={t("live.stopAllRecordings")} className="px-3 py-2 whitespace-nowrap shrink-0"><span className="hidden sm:inline">{t("live.stopAllRecordings")}</span><span className="sm:hidden">{t("live.stopAll")}</span></Button>
+                    <div role="group" aria-label={t("live.channelView")} className="dashboard-view-toggle flex bg-surface-3/80 rounded-[var(--radius-control)] p-1">
                         <button
                             type="button"
                             onClick={() => onViewModeChange("grid")}
                             className={`touch-control grid size-11 sm:size-8 place-items-center rounded-md transition-colors ${viewMode === "grid" ? "bg-surface-1 text-ink shadow-sm" : "text-ink-faint hover:text-ink"}`}
-                            title={t("카드로 보기")}
-                            aria-label={t("카드로 보기")}
+                            title={t("live.gridView")}
+                            aria-label={t("live.gridView")}
                             aria-pressed={viewMode === "grid"}
                         >
                             <LayoutGrid className="w-4 h-4" />
@@ -92,8 +92,8 @@ export function DashboardFilters({
                             type="button"
                             onClick={() => onViewModeChange("list")}
                             className={`touch-control grid size-11 sm:size-8 place-items-center rounded-md transition-colors ${viewMode === "list" ? "bg-surface-1 text-ink shadow-sm" : "text-ink-faint hover:text-ink"}`}
-                            title={t("목록으로 보기")}
-                            aria-label={t("목록으로 보기")}
+                            title={t("live.listView")}
+                            aria-label={t("live.listView")}
                             aria-pressed={viewMode === "list"}
                         >
                             <List className="w-4 h-4" />
@@ -104,13 +104,13 @@ export function DashboardFilters({
 
             <details className="dashboard-options border-t border-line/80 pt-2">
                 <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium text-ink-muted hover:bg-surface-3 hover:text-ink">
-                    <SlidersHorizontal className="size-4 text-ink-faint" />{t("채널 태그")} · {t("기본 녹화 조건")}
+                    <SlidersHorizontal className="size-4 text-ink-faint" />{t("live.channelTags")} · {t("live.defaultRecordingCondition")}
                     {selectedTags.length > 0 && <span className="rounded-full bg-[var(--primary-dim)] px-1.5 text-[10px] text-[var(--primary)]">{selectedTags.length}</span>}
                     <ChevronDown className="ml-auto size-4 text-ink-faint transition-transform" />
                 </summary>
                 <div className="space-y-3 px-2 pt-3">
                     <div className="flex flex-wrap items-center gap-y-2">
-                        <span className="text-[10px] font-bold tracking-[0.14em] text-ink-faint mr-3 shrink-0">{t("채널 태그")}</span>
+                        <span className="text-[10px] font-bold tracking-[0.14em] text-ink-faint mr-3 shrink-0">{t("live.channelTags")}</span>
                         <TagManager
                             availableTags={globalTags}
                             selectedTags={selectedTags}

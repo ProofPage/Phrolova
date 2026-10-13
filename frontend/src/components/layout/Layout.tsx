@@ -1,9 +1,11 @@
+import { useLanguage } from "../../contexts/LanguageContext";
 import { Outlet } from "react-router-dom";
 import { Topbar } from "./Topbar";
 import { Sidebar } from "./Sidebar";
 import { VodProvider } from "../../contexts/VodContext";
 
 export function Layout() {
+    useLanguage();
     return (
         <VodProvider>
             <div className="app-canvas app-shell flex h-dvh min-h-[100svh] max-lg:min-h-0 overflow-hidden text-ink font-sans">

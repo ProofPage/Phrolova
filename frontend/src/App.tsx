@@ -44,7 +44,7 @@ function RootLayout() {
                 <div className="relative z-10 flex flex-col items-center">
                     <span className="brand-mark w-12 h-12 rounded-2xl grid place-items-center mb-4"><Radio className="w-5 h-5 animate-pulse" /></span>
                     <p className="text-sm font-semibold text-ink">Phrolova</p>
-                    <p className="text-[11px] text-ink-faint mt-1">{t("워크스페이스를 준비하고 있습니다")}</p>
+                    <p className="text-[11px] text-ink-faint mt-1">{t("common.preparingYourWorkspace")}</p>
                 </div>
             </div>
         );
@@ -67,7 +67,7 @@ function RootLayout() {
 function RouteError() {
     const { t } = useLanguage();
     return <main className="app-canvas grid min-h-dvh place-items-center px-5">
-        <div className="max-w-sm text-center"><h1 className="page-title">{t("화면을 표시하지 못했습니다.")}</h1><p className="page-description">{t("페이지를 새로고침하거나 라이브 화면으로 돌아가세요.")}</p><div className="mt-4 flex justify-center gap-2"><Button onClick={() => window.location.reload()}>{t("새로고침")}</Button><a className="ui-button btn-primary" href="/">{t("라이브로 이동")}</a></div></div>
+        <div className="max-w-sm text-center"><h1 className="page-title">{t("common.unableToDisplayThisPage")}</h1><p className="page-description">{t("common.refreshThePageOrReturnToLive")}</p><div className="mt-4 flex justify-center gap-2"><Button onClick={() => window.location.reload()}>{t("common.refresh")}</Button><a className="ui-button btn-primary" href="/">{t("common.goToLive")}</a></div></div>
     </main>;
 }
 

@@ -1,6 +1,7 @@
+import { getActiveLocale, formatNumber, formatDateTime, translate } from '../i18n';
 /**
  * 공용 포맷 유틸리티.
- * Dashboard, VodDownload, Stats, ChatLogs 등에서 공통으로 사용하는 포맷 함수.
+ * Dashboard, VodDownload, Stats 등에서 공통으로 사용하는 포맷 함수.
  */
 
 /**
@@ -14,8 +15,8 @@ export function formatDuration(
     style: "clock" | "korean" | "eta" = "clock",
 ): string {
     if (seconds <= 0) {
-        if (style === "eta") return "계산 중...";
-        if (style === "korean") return "0분";
+        if (style === "eta") return translate("common.calculating");
+        if (style === "korean") return new Intl.NumberFormat(getActiveLocale(), {style:"unit", unit:"minute", unitDisplay:"short"}).format(0);
         return "00:00:00";
     }
 
@@ -23,17 +24,11 @@ export function formatDuration(
     const m = Math.floor((seconds % 3600) / 60);
     const s = Math.floor(seconds % 60);
 
-    switch (style) {
-        case "clock":
-            return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-        case "korean":
-            if (h > 0) return `${h}시간 ${m}분`;
-            return `${m}분`;
-        case "eta":
-            if (h > 0) return `${h}시간 ${m}분`;
-            if (m > 0) return `${m}분 ${s}초`;
-            return `${s}초`;
-    }
+    if (style === "clock") return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    const unit = (value: number, name: string) => new Intl.NumberFormat(getActiveLocale(), { style: 'unit', unit: name, unitDisplay: 'short' }).format(value);
+    if (h > 0) return `${unit(h, 'hour')} ${unit(m, 'minute')}`;
+    if (style === 'eta' && m > 0) return `${unit(m, 'minute')} ${unit(s, 'second')}`;
+    return style === 'eta' ? unit(s, 'second') : unit(m, 'minute');
 }
 
 /**
@@ -41,15 +36,14 @@ export function formatDuration(
  */
 export function formatBytes(bytes: number): string {
     if (bytes <= 0) return "0 B";
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+    if (bytes < 1024) return `${formatNumber(bytes)} B`;
+    if (bytes < 1024 * 1024) return `${formatNumber(bytes / 1024, {minimumFractionDigits:1, maximumFractionDigits:1})} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${formatNumber(bytes / (1024 * 1024), {minimumFractionDigits:1, maximumFractionDigits:1})} MB`;
+    return `${formatNumber(bytes / (1024 * 1024 * 1024), {minimumFractionDigits:2, maximumFractionDigits:2})} GB`;
 }
 
 /**
- * ISO 날짜 문자열을 한국어 형식으로 변환한다.
- * - includeYear: true이면 YYYY. MM. DD. HH:MM, false이면 MM. DD. HH:MM
+ * 날짜 표시를 선택 언어에 맞추되 API의 ISO 문자열은 그대로 둔다.
  */
 export function formatDate(iso: string | null, includeYear = false): string {
     if (!iso) return "-";
@@ -60,14 +54,14 @@ export function formatDate(iso: string | null, includeYear = false): string {
         minute: "2-digit",
     };
     if (includeYear) opts.year = "numeric";
-    return new Date(iso).toLocaleString("ko-KR", opts);
+    return formatDateTime(iso, opts);
 }
 
 /**
  * ISO 날짜 문자열에서 시:분:초만 추출한다.
  */
 export function formatTime(iso: string): string {
-    return new Date(iso).toLocaleTimeString("ko-KR", {
+    return formatDateTime(iso, {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",

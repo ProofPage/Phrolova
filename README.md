@@ -54,7 +54,7 @@ Manual start/stop, automatic recording and per-channel quality/output preference
 
 ### Dashboard and automation
 
-- Korean, English, and Japanese language choices, with Korean fallback for untranslated text. Some setup, backend, and integration messages remain Korean.
+- Eight interface languages: Korean, English, Japanese, Spanish, German, Simplified Chinese, Traditional Chinese, and Russian. Choose a language in **Settings → Appearance**; it applies immediately and is restored on the next visit. Dates, numbers, quantities, dialogs and notification history follow the selected language. Technical logs and user content retain their original text.
 - Color presets, a custom accent color, and browser-local title and favicon preferences.
 - Discord slash commands, bot notifications, and webhook delivery with fallback, retry handling, and a persistent pending-notification queue.
 - Automatic release checks after startup and every 24 hours, plus a manual update check. Installation updates remain a separate operation.

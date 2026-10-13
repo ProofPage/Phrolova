@@ -80,6 +80,7 @@ export function Card({
 }: HTMLAttributes<HTMLElement> & {
     padded?: boolean;
 }) {
+    useLanguage();
     return (
         <section
             className={clsx(
@@ -138,6 +139,7 @@ export function CollapsibleCard({
     defaultOpen?: boolean;
     children: ReactNode;
 }) {
+    useLanguage();
     const [open, setOpen] = useState(defaultOpen);
     const bodyId = useId();
 
@@ -434,6 +436,7 @@ export function EmptyState({
 /* ── Divider ────────────────────────────────────────── */
 
 export function Divider({ className }: { className?: string }) {
+    useLanguage();
     return <hr className={clsx("border-0 border-t border-line", className)} />;
 }
 

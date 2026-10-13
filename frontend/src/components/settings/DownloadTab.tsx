@@ -1,3 +1,4 @@
+import { translate } from "../../i18n";
 import { RecordingOutputSettingsCard } from './RecordingOutputSettingsCard';
 import { useEffect, useRef, useState } from "react";
 import { Film, Radio, RefreshCcw, Save } from "lucide-react";
@@ -94,8 +95,8 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
             vod_filename_template: vodFilenameTemplate,
             keep_download_parts: keepParts,
         }),
-        success: t("영상 다운로드 설정을 저장했습니다."),
-        failure: t("영상 다운로드 설정 저장에 실패했습니다."),
+        success: t("settings.videoDownloadSettingsSaved"),
+        failure: t("settings.couldNotSaveVideoDownloadSettings"),
     });
     const handleSaveLive = () => saveLive({
         request: () => api.updateDownloadSettings(
@@ -103,34 +104,34 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
             saveLivePreview, liveFilenameTemplate, recordingQuality, liveCdn,
             { live_download_dir: liveDownloadDir.trim(), monitor_interval: monitorInterval },
         ),
-        success: t("라이브 설정이 저장되었습니다."),
-        failure: t("라이브 설정 저장에 실패했습니다."),
+        success: t("settings.liveSettingsSaved"),
+        failure: t("settings.couldNotSaveLiveSettings"),
     });
     return (
         <div className="download-settings space-y-4">
             <Card className="settings-section space-y-3" data-settings-section="video" aria-busy={vodSaving}>
-                <CardHeader icon={Film} title="영상 다운로드 설정" />
-                <Field label="영상 저장 위치" hint="다운로드한 다시보기, 클립 및 영상이 저장됩니다.">
-                    <DirInput value={vodDownloadDir} onChange={setVodDownloadDir} placeholder="예: E:\\recordings\\Video" />
+                <CardHeader icon={Film} title={translate("settings.videoDownloadSettings")} />
+                <Field label={translate("settings.videoDownloadLocation")} hint={translate("settings.downloadedVODsClipsAndVideosAreSavedHere")}>
+                    <DirInput value={vodDownloadDir} onChange={setVodDownloadDir} placeholder={translate("settings.eGERecordingsVideo")} />
                 </Field>
-                <Field label="동시 다운로드 개수" hint="저장 즉시 적용됩니다. 개수를 줄여도 진행 중인 다운로드는 유지합니다. (1~10개)">
+                <Field label={translate("settings.concurrentDownloads")} hint={translate("settings.appliesWhenSavedReducingThisLimitDoesNotStopActiveDownloads110")}>
                     <Input type="number" value={vodMaxConcurrent} onChange={(event) => setVodMaxConcurrent(Number(event.target.value))} min={1} max={10} />
                 </Field>
-                <Field label={t("기본 화질")} hint={t("영상 다운로드에 사용할 기본 해상도입니다.")}>
+                <Field label={t("settings.defaultResolution")} hint={t("settings.defaultResolutionForVideoDownloads")}>
                     <Select
                         value={vodDefaultQuality}
                         onChange={(event) => setVodDefaultQuality(event.target.value)}
                         options={[
-                            { value: "best", label: "최고 화질" },
+                            { value: "best", label: translate("live.highestQuality") },
                             { value: "1080p", label: "1080p" },
                             { value: "720p", label: "720p" },
                             { value: "480p", label: "480p" },
                         ]}
                     />
                 </Field>
-                <Field label="치지직 다운로드 CDN" hint="기본값은 Akamai CDN입니다. 저장 후 시작하거나 다시 다운로드하는 치지직 영상에 적용됩니다.">
+                <Field label={translate("settings.chzzkDownloadCDN")} hint={translate("settings.akamaiCDNIsTheDefaultAppliesToCHZZKVideosStartedOrDownloadedAgainAfterSaving")}>
                     <Select
-                        aria-label="치지직 다운로드 CDN"
+                        aria-label={translate("settings.chzzkDownloadCDN")}
                         value={cdn}
                         onChange={(event) => setCdn(event.target.value as typeof cdn)}
                         options={[
@@ -139,91 +140,91 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                         ]}
                     />
                 </Field>
-                <Field label={t("다운로드 속도 제한 (MB/s)")} hint={t("0으로 설정하면 속도 제한 없이 다운로드합니다.")}>
+                <Field label={t("settings.downloadSpeedLimitMBS")} hint={t("settings.setTo0ForUnlimitedSpeed")}>
                     <Input type="number" value={vodMaxSpeed} onChange={(event) => setVodMaxSpeed(Number(event.target.value))} min={0} max={1000} />
                 </Field>
-                <Field label={t("영상 파일 형식")} hint={t("MP4는 대부분의 기기와 플레이어에서 재생할 수 있습니다.")}>
+                <Field label={t("settings.videoFileFormat")} hint={t("settings.mp4WorksWithMostDevicesAndMediaPlayers")}>
                     <Select
                         value={vodFormat}
                         onChange={(event) => setVodFormat(event.target.value)}
                         options={[
-                            { value: "mp4", label: "MP4 — MPEG-4 (권장)" },
+                            { value: "mp4", label: translate("settings.mp4MPEG4Recommended") },
                             { value: "mkv", label: "MKV — Matroska" },
                             { value: "ts", label: "TS — MPEG Transport Stream" },
                         ]}
                     />
                 </Field>
                 <SettingRow
-                    label="미완료 영상 파일 보관 (.part)"
-                    hint={keepParts ? "취소 또는 오류가 발생해도 미완료 파일을 보관합니다." : "취소하거나 오류가 발생하면 미완료 파일을 삭제합니다."}
-                    control={<Switch checked={keepParts} onChange={setKeepParts} label="미완료 영상 파일 보관" />}
+                    label={translate("settings.keepIncompleteVideoFilesPart")}
+                    hint={keepParts ? translate("settings.keepPartialFilesWhenADownloadIsCanceledOrFails") : translate("settings.deletePartialFilesWhenADownloadIsCanceledOrFails")}
+                    control={<Switch checked={keepParts} onChange={setKeepParts} label={translate("settings.keepIncompleteVideoFiles")} />}
                 />
-                <Field label="영상 파일명 형식" htmlFor="vod-filename-template" hint="{name}, {title}, {date_year}, {date_month}, {date_day}, {date_hour}, {date_minute}, {date_second}, {id}, {extractor}, {upload_date}, {download_date}, {quality}를 사용할 수 있습니다. 날짜와 시각은 다운로드 시작 기준이며 확장자는 자동으로 붙습니다.">
+                <Field label={translate("settings.videoFilenameFormat")} htmlFor="vod-filename-template" hint={translate("settings.availableFieldsNameTitleDateYearDateMonthDateDayDateHourDateMinuteDateSecondIdExtractorUploadDateDownloadDateAndQualityDateAndTimeUseTheDownloadStartTimeTheExtensionIsAddedAutomatically")}>
                     <Input id="vod-filename-template" value={vodFilenameTemplate} maxLength={240} onChange={(event) => setVodFilenameTemplate(event.target.value)} />
                 </Field>
                 <div className="settings-save-row flex justify-start border-t border-line pt-3">
                 <Button variant="primary" icon={Save} loading={vodSaving} disabled={!vodDirty || !vodDownloadDir.trim() || !vodFilenameTemplate.trim() || !Number.isInteger(vodMaxConcurrent) || vodMaxConcurrent < 1 || vodMaxConcurrent > 10} onClick={handleSaveVod}>
-                    {vodSaving ? "저장 중..." : "영상 다운로드 설정 저장"}
+                    {vodSaving ? translate("settings.saving") : translate("settings.saveVideoDownloadSettings")}
                 </Button>
                 </div>
             </Card>
             <RecordingOutputSettingsCard onSaved={onSaved} onDirtyChange={setOutputDirty}/>
             <Card className="settings-section space-y-3" data-settings-section="live" aria-busy={liveSaving}>
-                <CardHeader icon={Radio} title="라이브 녹화 설정" />
-                <Field label="라이브 저장 위치" hint="라이브 녹화 파일이 저장됩니다.">
-                    <DirInput value={liveDownloadDir} onChange={setLiveDownloadDir} placeholder="예: E:\\recordings\\Live" />
+                <CardHeader icon={Radio} title={translate("settings.liveRecordingSettings")} />
+                <Field label={translate("settings.liveRecordingLocation")} hint={translate("settings.liveRecordingsAreSavedHere")}>
+                    <DirInput value={liveDownloadDir} onChange={setLiveDownloadDir} placeholder={translate("settings.eGERecordingsLive")} />
                 </Field>
-                <Field label="라이브 확인 주기 (초)" hint="등록한 채널의 방송 상태를 확인하는 간격입니다 (5~300초).">
+                <Field label={translate("settings.liveStatusCheckIntervalSeconds")} hint={translate("settings.howOftenToCheckTheLiveStatusOfAddedChannels5300Seconds")}>
                     <Input type="number" min={5} max={300} value={monitorInterval} onChange={event => setMonitorInterval(Number(event.target.value))} />
                 </Field>
-                <Field label="치지직 라이브 CDN" hint="기본값은 Akamai CDN입니다. 다음 녹화부터 적용되며, 제공되지 않는 방송은 Naver CDN으로 연결합니다.">
-                    <Select aria-label="치지직 라이브 CDN" value={liveCdn} disabled={liveSaving} onChange={event=>setLiveCdn(event.target.value as typeof liveCdn)} options={[{value:'default',label:'Naver CDN'},{value:'akamai',label:'Akamai CDN'}]}/>
+                <Field label={translate("settings.chzzkLiveCDN")} hint={translate("settings.akamaiCDNIsTheDefaultAppliesToTheNextRecordingNaverCDNIsUsedWhenUnavailable")}>
+                    <Select aria-label={translate("settings.chzzkLiveCDN")} value={liveCdn} disabled={liveSaving} onChange={event=>setLiveCdn(event.target.value as typeof liveCdn)} options={[{value:'default',label:'Naver CDN'},{value:'akamai',label:'Akamai CDN'}]}/>
                 </Field>
-                <Field label="라이브 녹화 화질" hint="녹화할 해상도를 선택합니다. 높은 해상도일수록 저장 공간을 더 사용합니다.">
+                <Field label={translate("settings.liveRecordingResolution")} hint={translate("settings.chooseARecordingResolutionHigherResolutionsUseMoreStorage")}>
                     <Select
                         value={recordingQuality}
                         onChange={(event) => setRecordingQuality(event.target.value)}
                         options={[
-                            { value: "best", label: "최고 화질" },
+                            { value: "best", label: translate("live.highestQuality") },
                             { value: "1080p", label: "1080p" },
                             { value: "720p", label: "720p" },
                             { value: "480p", label: "480p" },
                         ]}
                     />
                 </Field>
-                <Field label={t("녹화 자동 재시도 횟수")} hint={t("연결이 끊기거나 녹화에 실패했을 때 다시 시도할 횟수입니다.")}>
+                <Field label={t("settings.recordingRetryAttempts")} hint={t("settings.howManyTimesToRetryIfTheConnectionDropsOrRecordingFails")}>
                     <Input type="number" min={0} max={100} value={maxRetries} onChange={(event) => setMaxRetries(parseInt(event.target.value) || 0)} />
                 </Field>
                 <Field
-                    label="치지직 녹화 방식"
-                    hint={streamMode === "force-timemachine" ? "타임머신을 강제 사용하며, 사용할 수 없으면 녹화 요청을 실패 처리합니다." : streamMode === "request-timemachine" ? "타임머신 API를 먼저 요청하고, 사용할 수 없으면 기본 스트림으로 자동 전환합니다." : "치지직 기본 API에서 제공하는 라이브 스트림을 사용합니다."}
+                    label={translate("settings.recordingMode")}
+                    hint={streamMode === "force-timemachine" ? translate("settings.alwaysUseTimeMachineIfUnavailableTheRecordingRequestFails") : streamMode === "request-timemachine" ? translate("settings.tryTheTimeMachineAPIFirstThenFallBackToTheStandardStreamIfUnavailable") : translate("settings.useTheLiveStreamProvidedByTheStandardCHZZKAPI")}
                 >
                     <Select
                         value={streamMode}
                         onChange={(event) => setStreamMode(event.target.value as typeof streamMode)}
                         options={[
-                            { value: "standard", label: "기본 스트림 사용" },
-                            { value: "request-timemachine", label: "가능하면 타임머신 사용" },
-                            { value: "force-timemachine", label: "강제로 타임머신 사용" },
+                            { value: "standard", label: translate("settings.useStandardStream") },
+                            { value: "request-timemachine", label: translate("settings.useTimeMachineWhenAvailable") },
+                            { value: "force-timemachine", label: translate("settings.alwaysUseTimeMachine") },
                         ]}
                     />
                 </Field>
                 {streamMode !== "standard" && (
-                    <Field label="스트림 시작 오프셋 (초)" hint="타임머신이 제공하는 스트림의 시작점에서 건너뛸 시간입니다. 0이면 사용 가능한 가장 앞부분부터 받습니다.">
+                    <Field label={translate("settings.streamStartOffsetSeconds")} hint={translate("settings.skipThisMuchTimeFromTheStartOfATimeMachineStreamUse0ToStartAtTheEarliestAvailablePoint")}>
                         <Input type="number" min={0} max={86400} value={timeMachineOffset} onChange={(event) => setTimeMachineOffset(Math.max(0, Math.min(86400, Number(event.target.value) || 0)))} />
                     </Field>
                 )}
                 <SettingRow
-                    label="라이브 미리보기 이미지 저장"
-                    hint={saveLivePreview ? "치지직 라이브 썸네일을 녹화 파일 옆에 저장합니다." : "미리보기 이미지를 별도 파일로 저장하지 않습니다."}
-                    control={<Switch checked={saveLivePreview} onChange={setSaveLivePreview} label="라이브 미리보기 이미지 저장" />}
+                    label={translate("settings.saveLivePreviewImages")}
+                    hint={saveLivePreview ? translate("settings.saveTheLiveThumbnailNextToTheRecording") : translate("settings.doNotSavePreviewImagesAsSeparateFiles")}
+                    control={<Switch checked={saveLivePreview} onChange={setSaveLivePreview} label={translate("settings.saveLivePreviewImages")} />}
                 />
-                <Field label="라이브 파일명 형식" hint="{name}/{channel_name}, {title}/{live_title}, {channel_uid}, {category}, {date_year}, {live_date_year}, {download_date_year}, {live_date_month}, {live_date_day}, {live_date_hour}, {live_date_minute}, {live_date_second}, {quality}, {extension} 사용 가능. 확장자는 자동 추가됩니다.">
+                <Field label={translate("settings.liveRecordingFilenameFormat")} hint={translate("settings.availableFieldsNameChannelNameTitleLiveTitleChannelUidCategoryDateYearLiveDateYearDownloadDateYearLiveDateMonthLiveDateDayLiveDateHourLiveDateMinuteLiveDateSecondQualityAndExtensionTheExtensionIsAddedAutomatically")}>
                     <Input value={liveFilenameTemplate} onChange={(event) => setLiveFilenameTemplate(event.target.value)} maxLength={240} />
                 </Field>
                 <div className="settings-save-row flex justify-start border-t border-line pt-3">
                 <Button variant="primary" icon={liveSaving ? RefreshCcw : Save} loading={liveSaving} disabled={!liveDirty || !liveDownloadDir.trim() || !Number.isInteger(monitorInterval) || monitorInterval < 5 || monitorInterval > 300 || !liveFilenameTemplate.trim()} onClick={handleSaveLive}>
-                    {liveSaving ? "저장 중..." : "라이브 설정 저장"}
+                    {liveSaving ? translate("settings.saving") : translate("settings.saveLiveSettings")}
                 </Button>
                 </div>
             </Card>

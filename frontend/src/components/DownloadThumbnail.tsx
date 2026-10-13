@@ -1,6 +1,8 @@
+import { useLanguage } from "../contexts/LanguageContext";
 import { useState } from 'react';
 
 function ThumbnailSlot({ src }: { src?: string }) {
+    useLanguage();
     const [state, setState] = useState<'loading' | 'loaded' | 'failed'>(src ? 'loading' : 'failed');
     return <span className="download-thumbnail" data-image-state={state} aria-hidden="true">
         <span className="download-thumbnail-placeholder" hidden={state === 'loaded'}>Phrolova</span>
@@ -11,5 +13,6 @@ function ThumbnailSlot({ src }: { src?: string }) {
 
 /** A new source resets failure/loading state without changing the reserved slot. */
 export function DownloadThumbnail({ src }: { src?: string }) {
+    useLanguage();
     return <ThumbnailSlot key={src || ''} src={src} />;
 }

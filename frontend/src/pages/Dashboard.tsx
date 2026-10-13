@@ -1,3 +1,4 @@
+import { translate } from "../i18n";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Radio, WifiOff } from "lucide-react";
 import { api, type Channel, type PlatformStatus } from "../api/client";
@@ -14,7 +15,7 @@ import { useChannelReorder } from "../hooks/useChannelReorder";
 import { useChannelStream } from "../hooks/useChannelStream";
 import { useCardGrid } from "../hooks/useCardGrid";
 import { getBroadcastStatus, getChannelKey } from "../utils/channel";
-import { getErrorMessage } from "../utils/error";
+import { getErrorMessage, localizedStatus } from "../utils/error";
 import { useLanguage } from "../contexts/LanguageContext";
 
 function DashboardMetric({ label, value, tone }: { label: string; value: number; tone?: "live" | "recording" }) {
@@ -70,9 +71,9 @@ export default function Dashboard() {
         actionRequests.current.add(key);
         const displayName = channel.channel_name || channel.channel_id;
         const ok = await confirm({
-            title: "채널 제거",
-            message: `'${displayName}' 채널을 감시 목록에서 제거할까요?${channel.recording?.is_recording ? '\n진행 중인 녹화도 중지됩니다.' : ''}\n저장된 녹화 파일은 삭제되지 않습니다.`,
-            confirmText: "제거",
+            title: "live.removeChannel",
+            message: t("live.removeChannelConfirm",{name:displayName}) + (channel.recording?.is_recording ? "\n"+t("live.activeRecordingsWillAlsoStop") : ""),
+            confirmText: "live.remove",
             variant: "danger",
         });
         if (!ok) { actionRequests.current.delete(key); return; }
@@ -81,10 +82,10 @@ export default function Dashboard() {
             const platform = channel.platform || "chzzk";
             if (platform === "chzzk") await api.removeChannel(channel.channel_id);
             else await api.removePlatformChannel(platform, channel.channel_id);
-            toast.success("채널이 제거되었습니다.");
+            toast.success("live.channelRemoved");
             await fetchChannels();
         } catch {
-            toast.error("채널 제거에 실패했습니다.");
+            toast.error("live.couldNotRemoveChannel");
         } finally {
             finishAction(key);
         }
@@ -97,10 +98,10 @@ export default function Dashboard() {
         setPendingActions(current => ({ ...current, [key]: 'start' }));
         try {
             await api.startRecording(key);
-            toast.success("녹화를 시작합니다.");
+            toast.success("live.startingRecording");
             await fetchChannels();
         } catch (error) {
-            toast.error(getErrorMessage(error, "녹화 시작에 실패했습니다."));
+            toast.error(getErrorMessage(error, "live.couldNotStartRecording"));
         } finally {
             finishAction(key);
         }
@@ -111,19 +112,19 @@ export default function Dashboard() {
         if (actionRequests.current.has(key)) return;
         actionRequests.current.add(key);
         const ok = await confirm({
-            title: "녹화 중지",
-            message: "현재 진행 중인 녹화를 중지할까요?",
-            confirmText: "중지",
+            title: "live.stopRecording",
+            message: "live.stopTheCurrentRecording",
+            confirmText: "live.stop",
             variant: "danger",
         });
         if (!ok) { actionRequests.current.delete(key); return; }
         setPendingActions(current => ({ ...current, [key]: 'stop' }));
         try {
             await api.stopRecording(key);
-            toast.success("녹화가 중지되었습니다.");
+            toast.success("live.recordingStopped");
             await fetchChannels();
         } catch (error) {
-            toast.error(getErrorMessage(error, "녹화 중지에 실패했습니다."));
+            toast.error(getErrorMessage(error, "live.couldNotStopRecording"));
         } finally {
             finishAction(key);
         }
@@ -131,28 +132,28 @@ export default function Dashboard() {
 
     const handleStopAll = async () => {
         const ok = await confirm({
-            title: "전체 녹화 중지",
-            message: "현재 진행 중인 모든 녹화를 중지하시겠습니까?",
-            confirmText: "모두 중지",
+            title: "live.stopAllRecordings",
+            message: "live.stopAllActiveRecordings",
+            confirmText: "live.stopAllInDashboard",
             variant: "danger",
-            requireTyping: "모두 중지",
+            requireTyping: "live.stopAllInDashboard",
         });
         if (!ok) return;
         try {
             const response = await api.stopAllRecordings();
-            toast.success(response.message);
+            toast.success(localizedStatus(response.message, 'live.allRecordingsStopped'));
             fetchChannels();
         } catch (error) {
-            toast.error(getErrorMessage(error, "전체 녹화 중지에 실패했습니다."));
+            toast.error(getErrorMessage(error, "live.couldNotStopAllRecordings"));
         }
     };
 
     const handleScanNow = async () => {
         try {
             await api.scanNow();
-            toast.success("채널 상태 확인을 요청했습니다. 잠시 후 결과가 반영됩니다.");
+            toast.success("live.channelStatusCheckRequestedResultsWillAppearShortly");
         } catch {
-            toast.error("채널 상태를 확인하지 못했습니다.");
+            toast.error("live.couldNotCheckChannelStatus");
         }
     };
 
@@ -167,7 +168,7 @@ export default function Dashboard() {
             else await api.togglePlatformAutoRecord(platform, channel.channel_id);
             await fetchChannels();
         } catch {
-            toast.error("자동 녹화 설정 변경에 실패했습니다.");
+            toast.error("live.couldNotChangeAutomaticRecordingSettings");
         } finally {
             autoRequests.current.delete(key);
             setAutoLoading(new Set(autoRequests.current));
@@ -184,7 +185,7 @@ export default function Dashboard() {
             await api.updateChannelTags(getChannelKey(channel), [...tags, tag]);
             await fetchChannels();
         } catch {
-            toast.error("태그 추가 실패");
+            toast.error("live.couldNotAddTag");
         } finally {
             tagRequests.current.delete(key);
             setTagLoading(new Set(tagRequests.current));
@@ -200,7 +201,7 @@ export default function Dashboard() {
             await api.updateChannelTags(getChannelKey(channel), (channel.tags || []).filter((item) => item !== tag));
             await fetchChannels();
         } catch {
-            toast.error("태그 제거 실패");
+            toast.error("live.couldNotRemoveTag");
         } finally {
             tagRequests.current.delete(key);
             setTagLoading(new Set(tagRequests.current));
@@ -212,7 +213,7 @@ export default function Dashboard() {
             const data = await api.createTag(tagName);
             setGlobalTags(data.tags);
         } catch {
-            toast.error("태그 생성 실패");
+            toast.error("live.couldNotCreateTag");
         }
     };
 
@@ -221,11 +222,11 @@ export default function Dashboard() {
         // 몇 개가 영향받는지 먼저 보여주고 확인을 받는다.
         const affected = channels.filter((channel) => (channel.tags || []).includes(tagName)).length;
         const ok = await confirm({
-            title: "태그 삭제",
+            title: "live.removeTag",
             message: affected > 0
-                ? `'${tagName}' 태그를 삭제하면 이 태그가 붙은 채널 ${affected}개에서도 함께 떨어집니다.\n채널과 녹화 파일은 그대로 남습니다.`
-                : `'${tagName}' 태그를 삭제할까요?`,
-            confirmText: "삭제",
+                ? t("common.deleteUsedTagConfirm",{tag:tagName,count:affected})
+                : t("common.deleteTagConfirm",{tag:tagName}),
+            confirmText: "common.delete",
             variant: "danger",
         });
         if (!ok) return;
@@ -237,9 +238,9 @@ export default function Dashboard() {
             // 지운 태그가 필터에 걸려 있으면 아무 채널도 안 보이게 되므로 함께 푼다.
             setSelectedFilterTags((current) => current.filter((tag) => tag !== tagName));
             fetchChannels();
-            toast.success(`'${tagName}' 태그를 삭제했습니다.`);
+            toast.success("common.tagDeleted", {tag:tagName});
         } catch (error) {
-            toast.error(getErrorMessage(error, "태그 삭제에 실패했습니다."));
+            toast.error(getErrorMessage(error, "live.couldNotRemoveTagInDashboard"));
         }
     };
 
@@ -305,14 +306,14 @@ export default function Dashboard() {
         <div className="product-page dashboard-page space-y-4">
             <PageHeader
                 icon={Radio}
-                eyebrow={t("실시간 방송 관리")}
-                title={t("라이브")}
-                description={t("등록한 채널의 방송 상태와 녹화를 관리합니다.")}
+                eyebrow={t("live.liveStreamManagement")}
+                title={t("live.title")}
+                description={t("live.monitorYourChannelsAndManageLiveRecordings")}
                 meta={(
                     <>
-                        <DashboardMetric label="감시 채널" value={channels.length} />
-                        <DashboardMetric label="라이브" value={liveCount} tone="live" />
-                        <DashboardMetric label="녹화 중" value={recordingCount} tone="recording" />
+                        <DashboardMetric label={translate("live.monitoredChannels")} value={channels.length} />
+                        <DashboardMetric label={translate("live.title")} value={liveCount} tone="live" />
+                        <DashboardMetric label={translate("live.recording")} value={recordingCount} tone="recording" />
                     </>
                 )}
                 actions={<AddChannelForm platformStatus={platformStatus} onAdded={fetchChannels} />}
@@ -323,7 +324,7 @@ export default function Dashboard() {
             {connectionError && !initialLoading && (
                 <div className="flex items-center gap-3 px-4 py-3 bg-danger/10 border border-danger/20 rounded-[var(--radius-card)] text-danger text-sm">
                     <WifiOff className="w-5 h-5 shrink-0" />
-                    <span>{t("서버 연결이 끊겼습니다. 다시 연결하는 중입니다.")}</span>
+                    <span>{t("live.serverConnectionLostReconnecting")}</span>
                 </div>
             )}
 
@@ -347,8 +348,8 @@ export default function Dashboard() {
                 ><LiveDownloadCondition /></DashboardFilters>
             </div>
 
-            {initialLoading ? <div className="space-y-2" aria-label={t("채널 정보를 불러오는 중")} aria-busy="true">{[1,2,3].map(item => <div key={item} className="flex items-center gap-3 border-b border-line py-3"><div className="skeleton size-8 rounded-full" /><div className="flex-1 space-y-2"><div className="skeleton h-3 w-1/3" /><div className="skeleton h-3 w-1/2" /></div></div>)}</div>
-            : filteredChannels.length === 0 ? <EmptyState icon={Radio} title={channels.length === 0 ? "등록된 채널이 없습니다." : "필터 조건에 맞는 채널이 없습니다."} description={channels.length === 0 ? "채널을 추가하면 방송 상태를 확인하고 자동으로 녹화할 수 있습니다." : "상태 또는 태그 필터를 변경해 보세요."} action={channels.length > 0 ? <Button onClick={() => { setFilter("all"); setSelectedFilterTags([]); }}>필터 초기화</Button> : undefined} />
+            {initialLoading ? <div className="space-y-2" aria-label={t("live.loadingChannelInformation")} aria-busy="true">{[1,2,3].map(item => <div key={item} className="flex items-center gap-3 border-b border-line py-3"><div className="skeleton size-8 rounded-full" /><div className="flex-1 space-y-2"><div className="skeleton h-3 w-1/3" /><div className="skeleton h-3 w-1/2" /></div></div>)}</div>
+            : filteredChannels.length === 0 ? <EmptyState icon={Radio} title={channels.length === 0 ? translate("live.noChannelsAddedYet") : translate("live.noChannelsMatchTheseFilters")} description={channels.length === 0 ? translate("live.addAChannelToMonitorItsLiveStatusAndRecordAutomatically") : translate("live.changeTheStatusOrTagFilters")} action={channels.length > 0 ? <Button onClick={() => { setFilter("all"); setSelectedFilterTags([]); }}>{translate("live.resetFilters")}</Button> : undefined} />
             : <div ref={gridRef} className={viewMode === 'grid' ? 'dashboard-channel-grid' : 'dashboard-channel-list'}>{visibleChannelElements}</div>}
             <RecordingJobsPanel visibleIds={filteredChannels.flatMap(channel=>channel.postprocess?[channel.postprocess.id]:[])}/>
             {editingChannel && <ChannelDownloadModal
@@ -358,7 +359,7 @@ export default function Dashboard() {
                 onClose={() => setEditingChannel(null)}
                 onSave={async (options) => {
                     await api.updateChannelDownloadOptions(editingChannel, options);
-                    toast.success("채널 다운로드 설정이 저장되었습니다.");
+                    toast.success(translate("live.channelDownloadSettingsSaved"));
                     fetchChannels();
                 }}
             />}

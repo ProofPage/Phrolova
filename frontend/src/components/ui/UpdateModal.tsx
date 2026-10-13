@@ -1,3 +1,4 @@
+import { translate } from "../../i18n";
 import { useDialogKeyboard } from "../../hooks/useDialogKeyboard";
 import { useEffect, useRef, useState } from "react";
 import { X, ExternalLink, Copy, CheckCircle2, Terminal } from "lucide-react";
@@ -53,12 +54,12 @@ function CommandBlock({ command }: { command: string }) {
             </div>
             <button
                 onClick={handleCopy}
-                aria-label={t("명령 복사")}
+                aria-label={t("common.copyCommand")}
                 className="icon-button absolute top-2 right-2 bg-surface-3 hover:bg-surface-4 text-ink-faint hover:text-ink rounded-md transition-colors"
             >
                 {copied ? <CheckCircle2 className="w-4 h-4 text-ok" /> : <Copy className="w-4 h-4" />}
             </button>
-            {copyError && <p role="status" className="mt-1 text-xs text-warn">클립보드에 복사하지 못했습니다. 명령을 선택해 직접 복사하세요.</p>}
+            {copyError && <p role="status" className="mt-1 text-xs text-warn">{translate("common.couldNotCopyToClipboardSelectTheCommandAndCopyItManually")}</p>}
         </div>
     );
 }
@@ -75,25 +76,21 @@ export function UpdateModal({ info, onClose }: UpdateModalProps) {
                 return (
                     <div className="space-y-4">
                         <p className="text-sm text-ink-muted">
-                            Windows 데스크톱 환경에서는 브라우저에서 최신 버전을 직접 다운로드하여 설치해야 합니다.
-                        </p>
+                            {translate("common.onWindowsDesktopDownloadAndInstallTheLatestVersionUsingYourBrowser")}</p>
                         <div className="bg-surface-1 p-4 rounded-[var(--radius-control)] border border-line">
                             <ol className="list-decimal list-inside space-y-2 text-sm text-ink-muted">
-                                <li>아래 버튼을 눌러 GitHub 릴리즈 페이지로 이동합니다.</li>
-                                <li><span className="text-[var(--primary)] font-mono break-all">{assetName}</span> 파일을 다운로드합니다.</li>
-                                <li>현재 실행 중인 프로그램을 종료합니다.</li>
+                                <li>{translate("common.useTheButtonBelowToOpenTheGitHubReleasePage")}</li>
+                                <li className="break-words">{translate("common.downloadInstallerFile", {filename: assetName})}</li>
+                                <li>{translate("common.exitTheRunningApp")}</li>
                                 <li>
-                                    받은 파일을 <b className="text-ink-muted">기존 실행 파일과 같은 폴더</b>로 옮긴 뒤 실행합니다.
-                                </li>
-                                <li>정상 동작을 확인했으면 이전 버전 파일은 삭제해도 됩니다.</li>
+                                    {translate("common.moveInstallerAndRun")}</li>
+                                <li>{translate("common.afterConfirmingItWorksYouCanDeleteThePreviousVersion")}</li>
                             </ol>
                         </div>
                         <p className="text-xs text-ink-faint flex items-start gap-1.5">
                             <span className="text-warn">⚠️</span>
                             <span>
-                                설정(<span className="font-mono">.env</span>)과 데이터(<span className="font-mono">data/</span>)는
-                                실행 파일 옆에 저장됩니다. 다른 폴더에서 실행하면 채널 목록이 비어 보이고 초기 설정 마법사가 다시 표시됩니다.
-                            </span>
+                                {translate("common.settingsAndDataLocation", {settings: ".env", data: "data/"})}</span>
                         </p>
                         <a
                             href={info.download_url}
@@ -102,8 +99,7 @@ export function UpdateModal({ info, onClose }: UpdateModalProps) {
                             className="ui-button w-full btn-primary py-2.5 rounded-[var(--radius-control)] font-bold transition-colors flex items-center justify-center gap-2"
                         >
                             <ExternalLink className="w-4 h-4" />
-                            GitHub 릴리즈에서 다운로드
-                        </a>
+                            {translate("common.downloadFromGitHubReleases")}</a>
                     </div>
                 );
             }
@@ -113,9 +109,9 @@ export function UpdateModal({ info, onClose }: UpdateModalProps) {
             case "macos-native":
                 return (
                     <div className="space-y-3">
-                        <p className="text-sm text-ink-muted">서버를 중지하고 저장소를 갱신한 뒤 환경별 설치 가이드에 따라 의존성과 웹 UI를 다시 준비하세요.</p>
+                        <p className="text-sm text-ink-muted">{translate("common.stopTheServerUpdateTheRepositoryThenFollowTheInstallationGuideForYourEnvironmentToPrepareDependenciesAndTheWebUIAgain")}</p>
                         <CommandBlock command="git pull --ff-only" />
-                        <p className="text-xs text-ink-faint">docs/linux-guide.md 및 docs/termux-guide.md를 확인하세요. 기존 설정과 데이터는 유지하세요.</p>
+                        <p className="text-xs text-ink-faint">{translate("common.seeDocsLinuxGuideMdAndDocsTermuxGuideMdKeepYourExistingSettingsAndData")}</p>
                     </div>
                 );
             case "linux-native":
@@ -124,8 +120,7 @@ export function UpdateModal({ info, onClose }: UpdateModalProps) {
                 return (
                     <div className="space-y-4">
                         <p className="text-sm text-ink-muted">
-                            터미널에서 아래 명령을 실행하면 최신 버전으로 갱신한 뒤 자동으로 재시작됩니다.
-                        </p>
+                            {translate("common.runTheCommandBelowInYourTerminalToUpdateToTheLatestVersionAndRestartAutomatically")}</p>
                         <CommandBlock command="phrolova update" />
 
                         {/*
@@ -134,18 +129,14 @@ export function UpdateModal({ info, onClose }: UpdateModalProps) {
                         */}
                         <div className="border-t border-line pt-4 space-y-2.5">
                             <p className="text-sm text-ink-muted">
-                                <span className="font-mono text-warn">command not found</span> 가 나오나요?
-                            </p>
+                                {translate("common.commandNotFoundHelp", {command: "command not found"})}</p>
                             <p className="text-xs text-ink-faint leading-relaxed">
-                                코드를 <span className="font-mono">git pull</span> 로만 갱신해 왔다면 명령이 등록되지 않았을 수 있습니다.
-                                아래 설치 원라이너가 업데이트를 겸하며, <span className="font-mono">phrolova</span> 명령도 함께 등록합니다.
-                            </p>
+                                {translate("common.registerUpdateCommand", {git: "git pull", command: "phrolova"})}</p>
                             <CommandBlock command={INSTALL_ONE_LINER} />
                         </div>
 
                         <p className="text-xs text-ink-faint">
-                            시스템 패키지를 다룰 때 sudo 비밀번호를 물을 수 있습니다.
-                        </p>
+                            {translate("common.youMayBeAskedForYourSudoPasswordWhenManagingSystemPackages")}</p>
                     </div>
                 );
         }
@@ -154,15 +145,14 @@ export function UpdateModal({ info, onClose }: UpdateModalProps) {
     return (
         <div className="ui-overlay fixed inset-0 z-[9998] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 " onClick={onClose} />
-            <div ref={dialogRootRef} role="dialog" aria-modal="true" aria-label={t("업데이트 안내")} tabIndex={-1} className="relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] ui-dialog w-full min-w-0 max-w-lg flex flex-col overflow-hidden shadow-2xl surface-raise animate-modal-in">
+            <div ref={dialogRootRef} role="dialog" aria-modal="true" aria-label={t("common.updateInstructions")} tabIndex={-1} className="relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] ui-dialog w-full min-w-0 max-w-lg flex flex-col overflow-hidden shadow-2xl surface-raise animate-modal-in">
                 <div className="flex items-center justify-between gap-2 p-4 shrink-0 border-b border-line">
                     <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                         <Terminal className="w-5 h-5 text-[var(--primary)]" />
-                        업데이트 안내
-                    </h3>
+                        {translate("common.updateInstructions")}</h3>
                     <button
                         onClick={onClose}
-                        aria-label={t("닫기")} className="icon-button"
+                        aria-label={t("common.close")} className="icon-button"
                     >
                         <X className="w-5 h-5" />
                     </button>

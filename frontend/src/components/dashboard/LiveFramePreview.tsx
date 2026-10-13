@@ -1,3 +1,6 @@
+import { useLanguage } from "../../contexts/LanguageContext";
+import { localizedStatus } from "../../utils/error";
+import { translate } from "../../i18n";
 import { useEffect, useState } from 'react';
 import { CircleAlert, VideoOff } from 'lucide-react';
 import { api } from '../../api/client';
@@ -5,6 +8,7 @@ import { Button } from '../ui/primitives';
 
 type Failure = { message?: string; error_code?: string; retryable?: boolean; retry_after?: number };
 export function LiveFramePreview({ channelKey, isLive, name }: {channelKey: string; isLive: boolean; name: string}) {
+    useLanguage();
     const [attempt, setAttempt] = useState(0);
     const [frame, setFrame] = useState('');
     const [state, setState] = useState<'loading'|'ready'|'error'|'reconnecting'>('loading');
@@ -44,7 +48,7 @@ export function LiveFramePreview({ channelKey, isLive, name }: {channelKey: stri
                 const ended = response?.status === 409 || response?.status === 404;
                 const canRetry = !ended && detail.retryable !== false;
                 setRetryable(canRetry);
-                setMessage(ended ? '방송이 종료되었거나 채널이 제거되었습니다.' : detail.message || '미리보기 연결에 실패했습니다. 다시 연결합니다.');
+                setMessage(ended ? "live.theStreamEndedOrTheChannelWasRemoved" : detail.message || "live.couldNotConnectToThePreviewReconnecting");
                 setState(canRetry ? 'reconnecting' : 'error');
                 if (canRetry) timer = setTimeout(() => { void refresh(); }, Math.min(60, Math.max(detail.retry_after || 5, 5 * 2 ** Math.min(failures - 1, 3))) * 1000);
             }
@@ -52,13 +56,13 @@ export function LiveFramePreview({ channelKey, isLive, name }: {channelKey: stri
         timer = setTimeout(() => { void refresh(); }, 0);
         return () => { stopped = true; controller.abort(); clearTimeout(timer); if (current) URL.revokeObjectURL(current); };
     }, [channelKey, isLive, attempt]);
-    return <div className="channel-live-preview" aria-label={`${name} 방송 미리보기`}>
+    return <div className="channel-live-preview" aria-label={translate("live.previewLabel", {name})}>
         <div className="channel-preview-stage">
-            {isLive && frame && <div className="channel-preview-player"><img src={frame} alt={`${name} 방송 미리보기`} /></div>}
+            {isLive && frame && <div className="channel-preview-player"><img src={frame} alt={translate("live.previewLabel", {name})} /></div>}
             {(!isLive || state !== 'ready') && <div className={`channel-preview-status ${frame ? 'channel-preview-stale' : ''}`} role="status" aria-busy={isLive && state === 'loading'}>
                 {!isLive ? <VideoOff className="size-5 text-ink-faint" aria-hidden="true" /> : state === 'loading' ? <span className="size-5 shrink-0 animate-spin rounded-full border-2 border-line-strong border-t-info" aria-hidden="true" /> : <CircleAlert className="size-5 text-ink-faint" aria-hidden="true" />}
-                <span className="channel-preview-message">{!isLive ? '현재 방송 중이 아닙니다.' : state === 'loading' ? '미리보기를 불러오는 중' : `${frame ? '마지막 정상 화면 · ' : ''}${message}`}</span>
-                {isLive && (state === 'error' || state === 'reconnecting') && retryable && <Button onClick={() => setAttempt(v => v + 1)}>다시 시도</Button>}
+                <span className="channel-preview-message">{!isLive ? translate("live.thisChannelIsCurrentlyOffline") : state === 'loading' ? translate("live.loadingPreview") : `${frame ? translate("live.lastAvailableFrame") : ''}${localizedStatus(message, 'errors.preview')}`}</span>
+                {isLive && (state === 'error' || state === 'reconnecting') && retryable && <Button onClick={() => setAttempt(v => v + 1)}>{translate("live.tryAgain")}</Button>}
             </div>}
         </div>
     </div>;

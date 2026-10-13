@@ -1,3 +1,4 @@
+import { translate } from "../i18n";
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Download, FileVideo, LayoutGrid, List, Play, RotateCw, Trash2, Loader2, AlertCircle, CheckCircle, CircleHelp } from 'lucide-react';
 import { api, type VodTask } from '../api/client';
@@ -40,32 +41,32 @@ export default function VodDownload() {
     useEffect(() => { localStorage.setItem('downloadViewMode', mode); }, [mode]);
     const handleCancel = async (taskId: string, title: string) => {
         const ok = await confirm({
-            title: t("다운로드를 취소할까요?"),
-            message: t("‘{title}’ 다운로드를 취소합니다.").replace("{title}", title),
-            confirmText: t("다운로드 취소"),
+            title: t("download.cancelThisDownload"),
+            message: t("download.cancelTheDownloadTitle", {title}),
+            confirmText: t("download.cancelDownload"),
             variant: "danger",
         });
         if (!ok) return;
         try {
             await cancelTask(taskId);
-            toast.success(t("다운로드 취소를 요청했습니다."));
+            toast.success(t("download.downloadCancellationRequested"));
         } catch (err: unknown) {
-            toast.error(getErrorMessage(err, t("다운로드를 취소하지 못했습니다.")));
+            toast.error(getErrorMessage(err, t("download.couldNotCancelTheDownload")));
         }
     };
 
     const handleRetry = async (taskId: string, title: string) => {
         const ok = await confirm({
-            title: t("다운로드를 다시 시작할까요?"),
-            message: t("‘{title}’을(를) 다시 다운로드합니다.").replace("{title}", title),
-            confirmText: t("다시 다운로드"),
+            title: t("download.retryThisDownload"),
+            message: t("download.downloadTitleAgain", {title}),
+            confirmText: t("download.retryDownload"),
         });
         if (!ok) return;
         try {
             await retryTask(taskId);
-            toast.success(t("다운로드를 다시 시작했습니다."));
+            toast.success(t("download.downloadRestarted"));
         } catch (err: unknown) {
-            toast.error(getErrorMessage(err, t("다운로드를 다시 시작하지 못했습니다.")));
+            toast.error(getErrorMessage(err, t("download.couldNotRestartTheDownload")));
         }
     };
 
@@ -81,18 +82,18 @@ export default function VodDownload() {
     const handleClearCompleted = async () => {
         if (clearingRef.current) return; clearingRef.current = true; setClearing(true);
         const ok = await confirm({
-            title: t("다운로드 목록을 정리할까요?"),
-            message: t("완료된 작업 이력만 정리합니다. 저장된 영상 파일은 삭제하지 않습니다."),
-            confirmText: t("목록 정리"),
+            title: t("download.clearTheDownloadList"),
+            message: t("download.clearCompletedHistoryOnlySavedVideoFilesAreKept"),
+            confirmText: t("download.clearList"),
             variant: "danger",
         });
         if (!ok) { clearingRef.current = false; setClearing(false); return; }
 
         try {
             const result = await clearCompleted(true);
-            toast.success(t("다운로드 목록에서 {count}개 항목을 삭제했습니다.").replace("{count}", String(result.deleted_count)));
+            toast.success("download.removedCountItemsFromTheDownloadList", {count: result.deleted_count});
         } catch (err: unknown) {
-            toast.error(getErrorMessage(err, t("목록 정리에 실패했습니다.")));
+            toast.error(getErrorMessage(err, t("download.couldNotClearTheDownloadList")));
         } finally { clearingRef.current = false; setClearing(false); }
     };
 
@@ -114,7 +115,7 @@ export default function VodDownload() {
             await api.reorderVodTasks(next.map(item => item.task_id));
             await refreshTasks();
         } catch {
-            toast.error(t("순서 변경에 실패했습니다."));
+            toast.error(t("download.couldNotChangeTheTaskOrder"));
         } finally {
             reorderBusyRef.current = false;
             setReordering(false);
@@ -125,7 +126,7 @@ export default function VodDownload() {
         if (action === 'cancel') return handleCancel(task.task_id, task.title);
         if (action === 'retry') return handleRetry(task.task_id, task.title);
         if (action === 'folder') return openFileLocation(task.task_id);
-        if (action === 'remove' && !await confirm({ title: t('목록에서 제거할까요?'), message: t('다운로드 이력만 제거합니다. 저장된 영상 파일은 삭제하지 않습니다.'), confirmText: t('목록에서 제거'), variant: 'danger' })) return;
+        if (action === 'remove' && !await confirm({ title: t("download.removeFromTheList"), message: t("download.onlyDownloadHistoryIsRemovedSavedVideoFilesAreKept"), confirmText: t("download.removeHistory"), variant: 'danger' })) return;
         await handleTaskAction(async () => {
             switch (action) {
                 case 'start': await api.startPreparedVod(task.task_id); break;
@@ -137,7 +138,7 @@ export default function VodDownload() {
                 case 'resume': await resumeTask(task.task_id); break;
             }
             await refreshTasks();
-        }, '요청을 반영했습니다.', '요청에 실패했습니다.');
+        }, "download.requestApplied", "download.theRequestFailed");
     };
     const dispatchRef = useRef(dispatch); dispatchRef.current = dispatch;
     const moveRef = useRef((id: string, direction: number) => { const index = visibleTasks.findIndex(task => task.task_id === id); const target = visibleTasks[index + direction]; if (target && sort === 'manual') void reorderTask(id, tasks.indexOf(target), true); });
@@ -150,20 +151,20 @@ export default function VodDownload() {
     const startAll = async () => {
         if (batchRef.current) return; batchRef.current = true; setBatchBusy(true);
         try { const result = await api.startPreparedVods(ready.map(task => task.task_id)); const errors = result.results.filter(item => item.error); if (errors.length) toast.error(errors.map(item => item.error).join('\n')); await refreshTasks(); }
-        catch (error) { toast.error(getErrorMessage(error, t('요청에 실패했습니다.'))); }
+        catch (error) { toast.error(getErrorMessage(error, t("download.theRequestFailed"))); }
         finally { batchRef.current = false; setBatchBusy(false); }
     };
     return <div className="product-page downloads-page space-y-4">
-        <PageHeader icon={Download} title={t('동영상')} description={t('다시보기와 클립 영상을 다운로드하고 관리합니다.')} variant="plain" meta={<div className="download-overview" aria-label={t('전체 작업 현황')}>
-            {[[t('진행 중'), counts.downloading + counts.processing], [t('대기 중'), counts.queued], [t('완료'), counts.completed], [t('실패'), counts.failed]].map(([label, count]) => <span key={label}>{label} <strong className="tabular-nums">{count}</strong></span>)}
+        <PageHeader icon={Download} title={t("download.title")} description={t("download.downloadAndManageVODsAndClips")} variant="plain" meta={<div className="download-overview" aria-label={t("download.allTasks")}>
+            {[[t("download.active"), counts.downloading + counts.processing], [t("settings.waiting"), counts.queued], [t("live.completed"), counts.completed], [t("live.failed"), counts.failed]].map(([label, count]) => <span key={label}>{label} <strong className="tabular-nums">{count}</strong></span>)}
         </div>} actions={<DownloadInput tasks={tasks} />} actionsPlacement="below" />
-        {loadError && <div role="status" className="download-load-error"><span>{t('다운로드 목록을 불러오지 못했습니다. 잠시 후 다시 시도하세요.')}</span><Button icon={RotateCw} onClick={() => void refreshTasks()}>{t('다시 시도')}</Button></div>}
+        {loadError && <div role="status" className="download-load-error"><span>{t("download.unableToLoadDownloadsTryAgainShortly")}</span><Button icon={RotateCw} onClick={() => void refreshTasks()}>{t("live.tryAgain")}</Button></div>}
             {imports.map((job) => {
                 const running = job.state === "queued" || job.state === "collecting";
-                const label = job.state === "queued" ? "채널 영상 목록 불러오기 대기 중"
-                    : job.state === "collecting" ? "채널 영상 목록을 불러오는 중"
-                    : job.state === "completed" ? "채널 영상 목록 불러오기 완료"
-                    : job.state === "cancelled" ? "채널 영상 목록 불러오기 중지됨" : "채널 영상 목록을 불러오지 못했습니다.";
+                const label = job.state === "queued" ? translate("download.waitingToLoadChannelVideos")
+                    : job.state === "collecting" ? translate("download.loadingChannelVideos")
+                    : job.state === "completed" ? translate("download.channelVideoListLoaded")
+                    : job.state === "cancelled" ? translate("download.stoppedLoadingChannelVideos") : translate("download.couldNotLoadChannelVideos");
                 return (
                     <div key={job.id} role="status" className="download-import rounded-[var(--radius-card)] border border-line bg-surface-2 p-4 flex flex-wrap sm:flex-nowrap items-start gap-3 [overflow-wrap:anywhere]">
                         {running ? <Loader2 className="w-5 h-5 animate-spin text-[var(--primary)] shrink-0 mt-0.5" />
@@ -172,10 +173,10 @@ export default function VodDownload() {
                         <div className="min-w-0 flex-1 space-y-1">
                             <p className="text-sm font-semibold text-ink">{t(label)}</p>
                             <p className="text-xs text-ink-muted break-all">{job.url}</p>
-                            <p className="text-xs text-ink-muted">{t("추가한 영상")}: {job.added_count} · {t("이미 목록에 있는 영상")}: {job.skipped_count}</p>
-                            {running && <p className="text-xs text-ink-muted">{t("찾은 영상부터 다운로드합니다. 목록 불러오기를 중지해도 이미 추가된 영상은 유지됩니다.")}</p>}
+                            <p className="text-xs text-ink-muted">{t("download.videosAdded")}: {job.added_count} · {t("download.videosAlreadyInTheQueue")}: {job.skipped_count}</p>
+                            {running && <p className="text-xs text-ink-muted">{t("download.downloadsStartAsVideosAreFoundStoppingTheLookupKeepsVideosAlreadyAdded")}</p>}
                             {job.error && <details className="text-xs text-danger">
-                                <summary className="cursor-pointer">{t("오류 세부 정보")}</summary>
+                                <summary className="cursor-pointer">{t("download.errorDetails")}</summary>
                                 <p className="mt-1 break-words">{job.error}</p>
                             </details>}
                         </div>
@@ -183,27 +184,27 @@ export default function VodDownload() {
                             if (importActionId !== null) return;
                             setImportActionId(job.id);
                             try { await api.cancelVodImport(job.id); await refreshTasks(); }
-                            catch (err) { toast.error(getErrorMessage(err, t("요청에 실패했습니다."))); }
+                            catch (err) { toast.error(getErrorMessage(err, t("download.theRequestFailed"))); }
                             finally { setImportActionId(null); }
-                        }}>{t(running ? "불러오기 중지" : "닫기")}</Button>
+                        }}>{t(running ? translate("download.stopLoading") : translate("common.close"))}</Button>
                     </div>
                 );
             })}
 
-        <section className="download-list-section space-y-3" aria-label={t('다운로드 목록')}>
-            <div className="download-list-toolbar"><div className="download-list-heading"><h2 className="text-sm font-semibold">{t('다운로드 목록')}</h2><details className="download-help"><summary aria-label={t('다운로드 도움말')}><CircleHelp className="size-3.5" aria-hidden="true" />{t('다운로드 도움말')}</summary><div><p>{t('동시 다운로드 수는 서버 설정에서 변경할 수 있습니다.')}</p><p>{t('일부 영상은 로그인 쿠키가 필요할 수 있습니다.')}</p></div></details></div><div className="download-list-options">
-                <Button icon={Play} variant="primary" disabled={batchBusy || !ready.length} loading={batchBusy} onClick={() => void startAll()}>{t('전체 다운로드')} ({ready.length})</Button>
-                <div className="download-list-display-controls"><Select aria-label={t('작업 정렬')} value={sort} onChange={event => setSort(event.target.value)} options={[{ value: 'manual', label: t('직접 정렬') }, { value: 'newest', label: t('최근 등록순') }, { value: 'oldest', label: t('오래된순') }]} />
-                <div className="dashboard-view-toggle" role="group" aria-label={t('다운로드 보기 방식')}><button className="icon-button" aria-label={t('카드로 보기')} title={t('카드로 보기')} aria-pressed={mode === 'grid'} onClick={() => setMode('grid')}><LayoutGrid className="size-4" /></button><button className="icon-button" aria-label={t('목록으로 보기')} title={t('목록으로 보기')} aria-pressed={mode === 'list'} onClick={() => setMode('list')}><List className="size-4" /></button></div>
-                </div>{tasks.length > 0 && <Button icon={Trash2} variant="ghost" disabled={clearing || !clearableTaskCount} title={t('완료된 작업 이력만 정리합니다. 저장된 영상 파일은 삭제하지 않습니다.')} onClick={() => void handleClearCompleted()}>{t('완료 목록 정리')}</Button>}
+        <section className="download-list-section space-y-3" aria-label={t("download.downloadQueue")}>
+            <div className="download-list-toolbar"><div className="download-list-heading"><h2 className="text-sm font-semibold">{t("download.downloadQueue")}</h2><details className="download-help"><summary aria-label={t("download.downloadHelp")}><CircleHelp className="size-3.5" aria-hidden="true" />{t("download.downloadHelp")}</summary><div><p>{t("download.concurrentDownloadsFollowServerSettings")}</p><p>{t("download.someVideosMayRequireSignInCookies")}</p></div></details></div><div className="download-list-options">
+                <Button icon={Play} variant="primary" disabled={batchBusy || !ready.length} loading={batchBusy} onClick={() => void startAll()}>{t("download.startAllDownloads")} ({ready.length})</Button>
+                <div className="download-list-display-controls"><Select aria-label={t("download.taskSortOrder")} value={sort} onChange={event => setSort(event.target.value)} options={[{ value: 'manual', label: t("download.manualOrder") }, { value: 'newest', label: t("download.newestAddedFirst") }, { value: 'oldest', label: t("download.oldestFirst") }]} />
+                <div className="dashboard-view-toggle" role="group" aria-label={t("download.downloadView")}><button className="icon-button" aria-label={t("live.gridView")} title={t("live.gridView")} aria-pressed={mode === 'grid'} onClick={() => setMode('grid')}><LayoutGrid className="size-4" /></button><button className="icon-button" aria-label={t("live.listView")} title={t("live.listView")} aria-pressed={mode === 'list'} onClick={() => setMode('list')}><List className="size-4" /></button></div>
+                </div>{tasks.length > 0 && <Button icon={Trash2} variant="ghost" disabled={clearing || !clearableTaskCount} title={t("download.clearCompletedHistoryOnlySavedVideoFilesAreKept")} onClick={() => void handleClearCompleted()}>{t("download.clearCompletedHistory")}</Button>}
             </div></div>
 
-            <div className="download-filter-scroll" role="group" aria-label={t('다운로드 상태 필터')}><div>
-                {[['all', '전체', tasks.length], ['downloading', '다운로드 중', counts.downloading + counts.processing], ['queued', '대기 중', counts.queued], ['paused', '일시정지', counts.paused], ['completed', '완료', counts.completed], ['failed', '실패', counts.failed], ...(counts.cancelled ? [['cancelled', '취소됨', counts.cancelled]] : [])].map(([value, label, count]) => <button key={value} className={clsx('dashboard-filter', taskFilter === value && 'is-selected')} aria-pressed={taskFilter === value} onClick={event => { setTaskFilter(String(value)); setVisibleCount(50); event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }}>{t(String(label))} <span className="tabular-nums">({count})</span></button>)}
+            <div className="download-filter-scroll" role="group" aria-label={t("download.downloadStatusFilters")}><div>
+                {[['all', translate("live.all"), tasks.length], ['downloading', translate("download.downloading"), counts.downloading + counts.processing], ['queued', translate("settings.waiting"), counts.queued], ['paused', translate("download.paused"), counts.paused], ['completed', translate("live.completed"), counts.completed], ['failed', translate("live.failed"), counts.failed], ...(counts.cancelled ? [['cancelled', translate("download.cancelled"), counts.cancelled]] : [])].map(([value, label, count]) => <button key={value} className={clsx('dashboard-filter', taskFilter === value && 'is-selected')} aria-pressed={taskFilter === value} onClick={event => { setTaskFilter(String(value)); setVisibleCount(50); event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }}>{t(String(label))} <span className="tabular-nums">({count})</span></button>)}
             </div></div>
-            {tasksLoading && !tasks.length ? <LoadingState label={t('다운로드 목록을 불러오는 중')} /> : !tasks.length ? <EmptyState compact icon={FileVideo} title={t('등록된 다운로드가 없습니다')} description={t('다시보기 또는 클립 URL을 입력해 다운로드를 시작하세요.')} /> : !filteredTasks.length ? <EmptyState compact icon={FileVideo} title={t('해당 상태의 다운로드가 없습니다.')} description={t('다른 상태를 선택해 작업을 확인하세요.')} /> : <>
+            {tasksLoading && !tasks.length ? <LoadingState label={t("download.loadingDownloads")} /> : !tasks.length ? <EmptyState compact icon={FileVideo} title={t("download.noDownloadsAdded")} description={t("download.enterAVODOrClipURLToStartDownloading")} /> : !filteredTasks.length ? <EmptyState compact icon={FileVideo} title={t("download.noDownloadsWithThisStatus")} description={t("download.selectAnotherStatusToViewYourDownloads")} /> : <>
                 <div className={`download-task-list download-task-list--${mode}`}>{visibleTasks.map((task, index) => <DownloadTaskCard key={task.task_id} task={task} mode={mode} onAction={onAction} onMove={onMove} onDropTask={onDropTask} manualOrder={sort === 'manual' && !reordering} canMoveUp={sort === 'manual' && !reordering && index > 0} canMoveDown={sort === 'manual' && !reordering && index < visibleTasks.length - 1} retryActive={tasks.some(item => item.task_id === task.retry_task_id && ['queued', 'downloading', 'processing', 'paused'].includes(downloadState(item)))} />)}</div>
-                {filteredTasks.length > visibleCount && <Button className="w-full" onClick={() => setVisibleCount(count => count + 50)}>{t('더 보기')} ({Math.min(visibleCount, filteredTasks.length)} / {filteredTasks.length})</Button>}
+                {filteredTasks.length > visibleCount && <Button className="w-full" onClick={() => setVisibleCount(count => count + 50)}>{t("download.showMore")} ({Math.min(visibleCount, filteredTasks.length)} / {filteredTasks.length})</Button>}
             </>}
         </section>
     </div>;
