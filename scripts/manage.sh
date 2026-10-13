@@ -73,6 +73,7 @@ is_termux_native() {
 
 # 로그인 셸과 서비스에서 같은 Homebrew 런타임을 찾도록 경로를 준비한다.
 activate_runtime_path() {
+  is_termux_native && return 0
   [ "$(uname -s)" = Darwin ] || return 0
   local location prefix
   if ! has_cmd brew; then
