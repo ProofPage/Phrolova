@@ -1703,31 +1703,13 @@ class VodEngine(VodPreparation):
         output_file = Path(task.output_path)
         if not output_file.exists():
             return {"error": "파일이 존재하지 않습니다."}
-        import platform
-        import subprocess
-
         try:
-            system = platform.system()
-            if system == "Windows":
-                subprocess.run(["explorer", "/select,", str(output_file)], check=False)
-            elif system == "Darwin":
-                subprocess.run(["open", "-R", str(output_file)], check=False)
-            else:
-                import os
-
-                if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
-                    return {
-                        "message": "헤드리스 서버에서는 표시된 저장 경로를 사용하세요.",
-                        "path": str(output_file),
-                    }
-                result = subprocess.run(
-                    ["xdg-open", str(output_file.parent)], check=False, timeout=10
-                )
-                if result.returncode:
-                    return {
-                        "error": "파일 관리자를 열지 못했습니다.",
-                        "path": str(output_file),
-                    }
+            from app.core.file_browser import reveal
+            if not reveal(output_file, select_file=True):
+                return {
+                    "message": "헤드리스 서버에서는 표시된 저장 경로를 사용하세요.",
+                    "path": str(output_file),
+                }
             logger.info(f"[{task_id}] 파일 위치 열기: {output_file}")
             return {"message": "파일 위치를 열었습니다.", "path": str(output_file)}
         except Exception as e:

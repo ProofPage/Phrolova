@@ -12,8 +12,6 @@
 #    - 이 파일 하나로 설치·업데이트가 끝난다 (curl | bash 로 실행되므로 자기완결적이어야 함)
 #    - 같은 명령을 두 번 실행해도 안전하다 (idempotent)
 #
-#  Docker로 띄우는 경우는 이 스크립트를 쓰지 않는다.
-#  저장소 루트에서 `docker compose up --build -d` 를 직접 실행하면 된다 (docs/docker-guide.md).
 # ═══════════════════════════════════════════════════════════════
 set -euo pipefail
 
@@ -28,7 +26,7 @@ SYSTEMD_RUNTIME_DIR="${SYSTEMD_RUNTIME_DIR:-/run/systemd/system}"
 DEFAULT_PORT=8000
 REQUIRED_PYTHON_MINOR=12
 REQUIRED_FFMPEG_MAJOR=6
-REQUIRED_NODE_MAJOR=20
+REQUIRED_NODE_MAJOR=22
 
 # ── 출력 ──────────────────────────────────────────────────────
 if [ -t 1 ]; then
@@ -53,11 +51,47 @@ banner() {
 
 has_cmd() { command -v "$1" >/dev/null 2>&1; }
 
+# BSD readlink도 사용할 수 있게 심볼릭 링크를 한 단계씩 따라간다.
+canonical_path() {
+  local target="$1" parent count=0
+  [ -n "$target" ] && { [ -e "$target" ] || [ -L "$target" ]; } || return 1
+  [[ "$target" = /* ]] || target="$PWD/$target"
+  while [ -L "$target" ]; do
+    count=$((count + 1)); [ "$count" -le 40 ] || return 1
+    parent="$(cd -P "$(dirname "$target")" && pwd)" || return 1
+    target="$(readlink "$target")" || return 1
+    [[ "$target" = /* ]] || target="$parent/$target"
+  done
+  parent="$(cd -P "$(dirname "$target")" && pwd)" || return 1
+  printf '%s/%s\n' "$parent" "$(basename "$target")"
+}
+
+is_termux_native() {
+  [ "${PHROLOVA_ENVIRONMENT:-}" != termux-proot ] || return 1
+  [ -n "${TERMUX_VERSION:-}" ] || [[ "${PREFIX:-}" = /data/data/*/files/usr && "${BASH:-}" = /data/data/* ]]
+}
+
+# 로그인 셸과 서비스에서 같은 Homebrew 런타임을 찾도록 경로를 준비한다.
+activate_runtime_path() {
+  [ "$(uname -s)" = Darwin ] || return 0
+  local location prefix
+  if ! has_cmd brew; then
+    for location in /opt/homebrew/bin /usr/local/bin; do
+      if [ -x "$location/brew" ]; then export PATH="$location:$PATH"; break; fi
+    done
+  fi
+  if has_cmd brew; then
+    prefix="$(brew --prefix node@22 2>/dev/null || true)"
+    if [ -n "$prefix" ] && [ -x "$prefix/bin/node" ]; then export PATH="$prefix/bin:$PATH"; fi
+  fi
+}
+
+
 # root로 돌리는 서버가 흔한데, 최소 이미지에는 sudo가 아예 없는 경우가 있다.
 # 이미 root면 sudo를 붙이지 않고, 아니면 있을 때만 쓴다.
 SUDO=""
 SUDO_E=""
-if [ "$(id -u)" -ne 0 ]; then
+if [ "$(id -u)" -ne 0 ] && ! is_termux_native; then
   if command -v sudo >/dev/null 2>&1; then
     SUDO="sudo"
     SUDO_E="sudo -E"
@@ -80,32 +114,23 @@ confirm() {
 # ── 설치 위치 ─────────────────────────────────────────────────
 # 저장소 안에서 실행됐으면 그 저장소를, 아니면 기본 경로를 쓴다.
 resolve_install_dir() {
-  [ -n "${INSTALL_DIR:-}" ] && return
-
-  local self_dir root
-  self_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")" 2>/dev/null && pwd || true)"
-  if [ -n "$self_dir" ]; then
-    root="$(dirname "$self_dir")"
-    if [ -d "$root/backend" ] && [ -d "$root/frontend" ]; then
-      INSTALL_DIR="$root"
-      return
-    fi
+  if [ -n "${INSTALL_DIR:-}" ]; then
+    [[ "$INSTALL_DIR" = /* ]] || INSTALL_DIR="$PWD/$INSTALL_DIR"
+    return
   fi
-
-  # 구버전 설치 경로를 쓰던 사용자를 그대로 이어받는다.
-  # Phrolova로 이름을 바꾸기 전 설치본이 ~/signal-recorder에 있다.
-  local legacy
+  local self root legacy
+  self="$(canonical_path "${BASH_SOURCE[0]:-}" 2>/dev/null || true)"
+  if [ -n "$self" ]; then
+    root="$(dirname "$(dirname "$self")")"
+    if [ -d "$root/backend" ] && [ -d "$root/frontend" ]; then INSTALL_DIR="$root"; return; fi
+  fi
   for legacy in "$HOME/Phrolova" "$HOME/rookery" "$HOME/signal-recorder" "$HOME/chzzk-recorder-pro"; do
-    if [ -d "$legacy/.git" ]; then
-      INSTALL_DIR="$legacy"
-      return
-    fi
+    if [ -d "$legacy/.git" ] || [ -f "$legacy/.git" ]; then INSTALL_DIR="$legacy"; return; fi
   done
-
   INSTALL_DIR="$DEFAULT_INSTALL_DIR"
 }
 
-is_installed() { [ -d "$INSTALL_DIR/.git" ]; }
+is_installed() { [ -d "$INSTALL_DIR/.git" ] || [ -f "$INSTALL_DIR/.git" ]; }
 
 require_install() {
   is_installed || error "설치를 찾을 수 없습니다: $INSTALL_DIR
@@ -119,23 +144,24 @@ venv_pip()    { echo "$INSTALL_DIR/.venv/bin/pip"; }
 PKG_MANAGER=""
 
 detect_os() {
-  if [ -n "${TERMUX_VERSION:-}" ] || [[ "${PREFIX:-}" == /data/data/*/files/usr ]]; then
-    error "Termux Native에서는 scripts/install-termux.sh를 사용하세요. GNU/Linux 바이너리를 설치하지 않습니다."
-  fi
-  if [ "$(uname -s)" = "Darwin" ]; then
+  if is_termux_native; then PKG_MANAGER=pkg; return; fi
+  if [ "$(uname -s)" = Darwin ]; then
+    activate_runtime_path
     has_cmd brew || error "Homebrew가 필요합니다: https://brew.sh"
-    PKG_MANAGER="brew"
+    [ "$(id -u)" -ne 0 ] || error "Homebrew 설치는 일반 사용자로 실행하세요."
+    PKG_MANAGER=brew
     return
   fi
-
-  [ -f /etc/os-release ] || error "지원하지 않는 OS입니다 (/etc/os-release 없음)."
-  . /etc/os-release
+  local release="${PHROLOVA_OS_RELEASE:-/etc/os-release}"
+  [ -f "$release" ] || error "운영체제를 확인할 수 없습니다. 의존성을 수동으로 준비하세요."
+  . "$release"
   case "${ID:-} ${ID_LIKE:-}" in
-    *debian*|*ubuntu*) PKG_MANAGER="apt" ;;
-    *fedora*)          PKG_MANAGER="dnf" ;;
-    *rhel*|*centos*)   PKG_MANAGER="$(has_cmd dnf && echo dnf || echo yum)" ;;
-    *arch*)            PKG_MANAGER="pacman" ;;
-    *)                 PKG_MANAGER="" ;;
+    *debian*|*ubuntu*) PKG_MANAGER=apt ;;
+    *fedora*) PKG_MANAGER=dnf ;;
+    *rhel*|*centos*) PKG_MANAGER="$(has_cmd dnf && echo dnf || echo yum)" ;;
+    *arch*) PKG_MANAGER=pacman ;;
+    *alpine*) PKG_MANAGER=apk ;;
+    *) PKG_MANAGER="" ;;
   esac
 }
 
@@ -146,6 +172,8 @@ pkg_install() {
     yum)    $SUDO yum install -y "$@" ;;
     pacman) $SUDO pacman -S --noconfirm "$@" ;;
     brew)   brew install "$@" ;;
+    pkg)    pkg install -y "$@" ;;
+    apk)    $SUDO apk add "$@" ;;
     *)      error "패키지 매니저를 알 수 없습니다. $* 를 수동 설치한 뒤 다시 실행하세요." ;;
   esac
 }
@@ -155,6 +183,7 @@ PYTHON_CMD=""
 
 install_ffmpeg_static() {
   local arch pattern url tmpdir bin probe
+  [ "$(uname -s)" = Linux ] && ! is_termux_native && [ "$PKG_MANAGER" != apk ] || error "GNU/Linux 정적 바이너리를 이 환경에 설치하지 않습니다."
   arch="$(uname -m)"
   case "$arch" in
     x86_64)  pattern="linux64-gpl.tar.xz" ;;
@@ -163,8 +192,7 @@ install_ffmpeg_static() {
   esac
 
   url=$(curl -fsSL "https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest" \
-        | grep browser_download_url | grep "$pattern" | grep -v shared \
-        | cut -d'"' -f4 | head -1)
+        | "$PYTHON_CMD" -c 'import json,sys; print(next((a["browser_download_url"] for a in json.load(sys.stdin)["assets"] if sys.argv[1] in a["name"] and "shared" not in a["name"]), ""))' "$pattern")
   [ -n "$url" ] || error "ffmpeg 다운로드 URL을 찾지 못했습니다.
   수동 설치: https://github.com/BtbN/FFmpeg-Builds/releases"
 
@@ -174,94 +202,97 @@ install_ffmpeg_static() {
   curl -fsSL --retry 3 -L -o "$tmpdir/ffmpeg.tar.xz" "$url" || error "ffmpeg 다운로드 실패."
   tar xf "$tmpdir/ffmpeg.tar.xz" -C "$tmpdir"
 
-  bin="$(find "$tmpdir" -type f -name ffmpeg | head -1)"
-  probe="$(find "$tmpdir" -type f -name ffprobe | head -1)"
+  bin="$(find "$tmpdir" -type f -name ffmpeg | sed -n '1p')"
+  probe="$(find "$tmpdir" -type f -name ffprobe | sed -n '1p')"
   [ -n "$bin" ] || error "ffmpeg 압축 해제 실패."
   $SUDO install -m 755 "$bin" /usr/local/bin/ffmpeg
   [ -n "$probe" ] && $SUDO install -m 755 "$probe" /usr/local/bin/ffprobe
 }
 
 ensure_ffmpeg() {
-  if ! has_cmd ffmpeg; then
-    if [ "$PKG_MANAGER" = "apt" ] || [ "$PKG_MANAGER" = "brew" ]; then
-      pkg_install ffmpeg
-    else
-      install_ffmpeg_static
+  if ! has_cmd ffmpeg || ! has_cmd ffprobe; then
+    if ! pkg_install ffmpeg; then
+      if [ "$(uname -s)" = Linux ] && [ "$PKG_MANAGER" != pkg ] && [ "$PKG_MANAGER" != apk ]; then
+        install_ffmpeg_static
+      else
+        error "FFmpeg와 FFprobe를 패키지 매니저로 설치하세요."
+      fi
     fi
   fi
-
-  local ver major
-  ver="$(ffmpeg -version 2>&1 | head -1 | awk '{print $3}')"
-  major="$(echo "$ver" | sed 's/^[nN]//' | cut -d. -f1)"
-  if ! [ "$major" -ge "$REQUIRED_FFMPEG_MAJOR" ] 2>/dev/null; then
-    error "ffmpeg ${REQUIRED_FFMPEG_MAJOR}.0 이상이 필요합니다 (현재: ${ver:-알 수 없음})."
-  fi
-  info "ffmpeg $ver ✓"
+  local tool ver major
+  for tool in ffmpeg ffprobe; do
+    has_cmd "$tool" || error "$tool 실행 파일이 없습니다."
+    ver="$("$tool" -version 2>&1 | awk 'NR==1 {print $3}')"
+    major="$(printf '%s' "$ver" | sed 's/^[nN]//' | cut -d. -f1)"
+    [ "$major" -ge "$REQUIRED_FFMPEG_MAJOR" ] 2>/dev/null || error "$tool 6+가 필요합니다 (현재: $ver)."
+    info "$tool $ver ✓"
+  done
 }
 
 ensure_python() {
-  local cmd ver minor
-  for cmd in python3.14 python3.13 python3.12 python3; do
-    has_cmd "$cmd" || continue
-    ver="$("$cmd" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
-    minor="$(echo "$ver" | cut -d. -f2)"
-    if [ "$minor" -ge "$REQUIRED_PYTHON_MINOR" ]; then
-      PYTHON_CMD="$cmd"
-      info "Python $ver ✓"
-      break
+  local cmd prefix=""
+  if [ "$PKG_MANAGER" = brew ]; then prefix="$(brew --prefix python@3.12 2>/dev/null || true)"; fi
+  for cmd in python3.12 python3.13 python3.14 python3 python "${prefix:+$prefix/bin/python3.12}"; do
+    [ -n "$cmd" ] && has_cmd "$cmd" || continue
+    if "$cmd" -c 'import sys; assert sys.version_info >= (3,12)' >/dev/null 2>&1; then
+      PYTHON_CMD="$(command -v "$cmd")"; break
     fi
   done
-
   if [ -z "$PYTHON_CMD" ]; then
-    info "Python 3.12 설치 중..."
     case "$PKG_MANAGER" in
-      apt)
-        error "Python 3.12+를 먼저 설치하세요. Debian에 Ubuntu PPA를 자동 추가하지 않습니다."
-        ;;
-      dnf)  $SUDO dnf install -y python3.12 ;;
-      brew) brew install python@3.12 ;;
-      *)    error "Python 3.${REQUIRED_PYTHON_MINOR}+ 를 찾을 수 없습니다. 수동 설치 후 다시 실행하세요." ;;
+      brew) brew install python@3.12; PYTHON_CMD="$(brew --prefix python@3.12)/bin/python3.12" ;;
+      dnf) pkg_install python3.12; PYTHON_CMD="$(command -v python3.12)" ;;
+      pkg) pkg_install python; PYTHON_CMD="$(command -v python)" ;;
+      apk) pkg_install python3 py3-pip; PYTHON_CMD="$(command -v python3)" ;;
+      apt) pkg_install python3 python3-venv; PYTHON_CMD="$(command -v python3)" ;;
+      yum) pkg_install python3; PYTHON_CMD="$(command -v python3)" ;;
+      *) error "Python 3.12+를 먼저 설치하세요. 배포판에 맞지 않는 PPA를 자동 추가하지 않습니다." ;;
     esac
-    PYTHON_CMD="python3.12"
-    info "Python 3.12 설치 완료 ✓"
-    return
   fi
-
-  # Python은 있는데 venv 모듈이 빠진 배포판이 있다 (Ubuntu deadsnakes 등).
-  if [ "$PKG_MANAGER" = "apt" ] && ! "$PYTHON_CMD" -c 'import ensurepip' 2>/dev/null; then
-    local py_minor
-    py_minor="$("$PYTHON_CMD" -c 'import sys; print(sys.version_info.minor)')"
-    $SUDO apt-get install -y "python3.${py_minor}-venv" 2>/dev/null || $SUDO apt-get install -y python3-venv
-    info "venv 패키지 설치 완료 ✓"
+  "$PYTHON_CMD" -c 'import sys; assert sys.version_info >= (3,12)' || error "Python 3.12+가 필요합니다."
+  if [ "$PKG_MANAGER" = apt ] && ! "$PYTHON_CMD" -c 'import ensurepip' >/dev/null 2>&1; then
+    local minor
+    minor="$("$PYTHON_CMD" -c 'import sys; print(sys.version_info.minor)')"
+    pkg_install "python3.$minor-venv" || pkg_install python3-venv
   fi
+  info "$("$PYTHON_CMD" --version) ✓"
 }
 
 ensure_node() {
-  if has_cmd node; then
-    local major
-    major="$(node -e 'process.stdout.write(process.versions.node.split(".")[0])')"
-    if [ "$major" -ge "$REQUIRED_NODE_MAJOR" ]; then
-      info "Node.js v$(node -e 'process.stdout.write(process.versions.node)') ✓"
-      return
-    fi
-    warn "Node.js가 v${REQUIRED_NODE_MAJOR} 미만입니다. 최신 LTS로 교체합니다."
+  activate_runtime_path
+  local major=0
+  if has_cmd node; then major="$(node -e 'process.stdout.write(process.versions.node.split(".")[0])')"; fi
+  if [ "$major" -ge "$REQUIRED_NODE_MAJOR" ] 2>/dev/null && has_cmd npm; then
+    info "Node.js $(node --version) ✓"; return
   fi
-
-  info "Node.js 22 LTS 설치 중..."
-  if [ "$PKG_MANAGER" = "brew" ]; then
-    brew install node@22
-  else
-    curl -fsSL https://deb.nodesource.com/setup_22.x | $SUDO_E bash - 2>/dev/null \
-      || curl -fsSL https://rpm.nodesource.com/setup_22.x | $SUDO bash - 2>/dev/null \
-      || error "Node.js 설치 실패. https://nodejs.org 에서 수동 설치하세요."
-    pkg_install nodejs
-  fi
+  step "Node.js 22+ 및 npm 준비"
+  case "$PKG_MANAGER" in
+    brew) brew install node@22; activate_runtime_path ;;
+    apt) curl -fsSL https://deb.nodesource.com/setup_22.x | $SUDO_E bash -; pkg_install nodejs ;;
+    dnf|yum) curl -fsSL https://rpm.nodesource.com/setup_22.x | $SUDO_E bash -; pkg_install nodejs ;;
+    pacman) pkg_install nodejs npm ;;
+    apk) pkg_install nodejs npm ;;
+    pkg) pkg_install nodejs-lts ;;
+    *) error "Node.js 22+와 npm을 먼저 설치하세요: https://nodejs.org" ;;
+  esac
+  has_cmd node && has_cmd npm || error "Node.js/npm 경로를 찾지 못했습니다."
+  major="$(node -e 'process.stdout.write(process.versions.node.split(".")[0])')"
+  [ "$major" -ge "$REQUIRED_NODE_MAJOR" ] || error "설치된 Node.js가 22 미만입니다."
   info "Node.js $(node --version) ✓"
 }
 
 ensure_base_tools() {
   has_cmd git  || pkg_install git
   has_cmd curl || pkg_install curl
+  if ! has_cmd ps; then
+    case "$PKG_MANAGER" in
+      apt) pkg_install procps ;;
+      dnf|yum) pkg_install procps-ng ;;
+      pacman|apk) pkg_install procps-ng ;;
+      pkg) pkg_install procps ;;
+      *) error "실행 프로세스 확인에 필요한 ps를 설치하세요." ;;
+    esac
+  fi
 }
 
 # ── 저장소 / 빌드 ─────────────────────────────────────────────
@@ -326,7 +357,7 @@ sync_repo() {
 }
 
 setup_dirs() {
-  mkdir -p "$INSTALL_DIR/recordings" "$INSTALL_DIR/data" "$INSTALL_DIR/logs"
+  mkdir -p "$INSTALL_DIR/backend/data" "$INSTALL_DIR/logs"
 }
 
 build_frontend() {
@@ -338,10 +369,21 @@ build_frontend() {
 
 setup_python_env() {
   step "Python 가상환경"
-  local venv="$INSTALL_DIR/.venv"
+  local venv="$INSTALL_DIR/.venv" requirements=requirements.txt backup
+  if [ -d "$venv" ] && ! "$venv/bin/python" -c 'import sys,pip; assert sys.version_info >= (3,12)' >/dev/null 2>&1; then
+    backup="$INSTALL_DIR/.venv-backups/$(date +%Y%m%d-%H%M%S)-$$"
+    mkdir -p "$(dirname "$backup")"
+    mv "$venv" "$backup"
+    info "호환되지 않는 가상환경을 보존했습니다: $backup"
+  fi
   [ -d "$venv" ] || "$PYTHON_CMD" -m venv "$venv"
-  "$venv/bin/pip" install --upgrade pip -q
-  "$venv/bin/pip" install -r "$INSTALL_DIR/backend/requirements.txt" -q
+  if is_termux_native; then
+    requirements=requirements-termux.txt
+  else
+    "$venv/bin/python" -m pip install --upgrade pip -q
+  fi
+  "$venv/bin/python" -m pip install -r "$INSTALL_DIR/backend/$requirements" -q
+  "$venv/bin/python" -m pip check
   info "의존성 설치 완료 ✓"
 }
 
@@ -351,6 +393,7 @@ setup_python_env() {
 # 않아도 바로 잡히고, ffmpeg도 이미 같은 곳에 설치하므로 규칙이 하나로 맞는다.
 # ~/.local/bin은 root의 기본 PATH에 없다 — 여기로 내려가면 안내가 한 단계 더 필요하다.
 SYSTEM_BINDIR="/usr/local/bin"
+if is_termux_native; then SYSTEM_BINDIR="${PREFIX}/bin"; fi
 USER_BINDIR="$HOME/.local/bin"
 
 # 이름이 바뀌기 전에 걸어둔 명령. systemd 유닛과 달리 지금까지 정리하지 않아
@@ -360,11 +403,14 @@ LEGACY_COMMAND_NAMES="rookery signal-recorder chzzk-recorder-pro"
 # 우리가 만든 심볼릭 링크만 지운다. 같은 이름의 진짜 파일은 건드리지 않는다.
 remove_legacy_commands() {
   local dir name link
+  local resolved_target
+  resolved_target="$(canonical_path "$INSTALL_DIR/scripts/manage.sh" 2>/dev/null || true)"
+  [ -n "$resolved_target" ] || return 0
   for dir in "$SYSTEM_BINDIR" "$USER_BINDIR"; do
     for name in $LEGACY_COMMAND_NAMES; do
       link="$dir/$name"
       [ -L "$link" ] || continue
-      [ "$(readlink -f "$link" 2>/dev/null)" = "$(readlink -f "$INSTALL_DIR/scripts/manage.sh" 2>/dev/null)" ] || continue
+      [ "$(canonical_path "$link" 2>/dev/null || true)" = "$resolved_target" ] || continue
       rm -f "$link" 2>/dev/null || $SUDO rm -f "$link" 2>/dev/null || true
       [ -e "$link" ] || info "구버전 명령 정리: $link"
     done
@@ -413,13 +459,16 @@ link_self() {
 
 # ── 포트 / 헬스체크 ───────────────────────────────────────────
 current_port() {
-  # config.py의 _resolve_env_file과 같은 규칙 — 프로젝트 루트의 .env를 본다.
-  local f="$INSTALL_DIR/.env"
-  if [ -f "$f" ] && grep -q '^PORT=' "$f" 2>/dev/null; then
-    grep '^PORT=' "$f" | tail -1 | cut -d= -f2 | tr -d '[:space:]'
-  else
-    echo "$DEFAULT_PORT"
+  local python="$(venv_python)" port="" file
+  if [ -x "$python" ]; then
+    port="$(cd "$INSTALL_DIR/backend" && "$python" -c 'from app.core.config import get_settings; print(get_settings().port)' 2>/dev/null || true)"
   fi
+  if ! [[ "$port" =~ ^[0-9]+$ ]]; then
+    file="$INSTALL_DIR/.env"
+    [ -f "$file" ] || file="$INSTALL_DIR/backend/.env"
+    if [ -f "$file" ]; then port="$(sed -n 's/^[[:space:]]*PORT[[:space:]]*=[[:space:]]*//p' "$file" | tail -1 | tr -d '\"\047[:space:]')"; fi
+  fi
+  if [[ "$port" =~ ^[0-9]+$ ]] && [ "$port" -ge 1 ] && [ "$port" -le 65535 ]; then echo "$port"; else echo "$DEFAULT_PORT"; fi
 }
 
 wait_for_health() {
@@ -445,16 +494,25 @@ app_version() {
 
 # ── systemd ───────────────────────────────────────────────────
 service_exists() {
-  has_cmd systemctl && systemctl cat "${SERVICE_NAME}.service" >/dev/null 2>&1
+  [ -d "$SYSTEMD_RUNTIME_DIR" ] && has_cmd systemctl && systemctl cat "${SERVICE_NAME}.service" >/dev/null 2>&1
 }
 
 # 이름이 두 번 바뀌었다: chzzk-recorder-pro → signal-recorder → phrolova.
 # 어느 시절에 설치했든 옛 유닛이 남아 있으면 포트를 물고 있어 새 유닛이 뜨지 못한다.
 LEGACY_SERVICE_NAMES="rookery signal-recorder chzzk-recorder-pro"
 
+# systemd는 인용된 값 안에서도 %를 지정자로 처리한다.
+systemd_value() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//%/%%}"
+  printf '%s' "$value"
+}
+
 # 남아 있는 구버전 유닛 이름을 출력한다 (없으면 아무것도 출력하지 않음).
 find_legacy_services() {
-  has_cmd systemctl || return 0
+  [ -d "$SYSTEMD_RUNTIME_DIR" ] && has_cmd systemctl || return 0
   local name
   for name in $LEGACY_SERVICE_NAMES; do
     if systemctl cat "${name}.service" >/dev/null 2>&1; then
@@ -506,8 +564,11 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=$(whoami)
-WorkingDirectory="${INSTALL_DIR}/backend"
-ExecStart="${INSTALL_DIR}/.venv/bin/python" run.py
+WorkingDirectory="$(systemd_value "$INSTALL_DIR/backend")"
+ExecStart="$(systemd_value "$INSTALL_DIR/.venv/bin/python")" "$(systemd_value "$INSTALL_DIR/backend/run.py")"
+Environment="PATH=$(systemd_value "$PATH")"
+KillMode=mixed
+TimeoutStopSec=180
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
@@ -560,9 +621,14 @@ service_remove() {
 cmd_install() {
   banner
   detect_os
+  if [ "$PKG_MANAGER" = pkg ]; then
+    require_install
+    bash "$INSTALL_DIR/scripts/install-termux.sh"
+    return
+  fi
   ensure_base_tools
-  ensure_ffmpeg
   ensure_python
+  ensure_ffmpeg
   ensure_node
 
   # 0 = 갱신함, 1 = 이미 최신(둘 다 정상), 2 = 실패.
@@ -576,7 +642,7 @@ cmd_install() {
   setup_python_env
   link_self
 
-  if confirm "부팅 시 자동 실행되도록 systemd 서비스로 등록할까요?"; then
+  if [ -d "$SYSTEMD_RUNTIME_DIR" ] && has_cmd systemctl && confirm "부팅 시 자동 실행되도록 systemd 서비스로 등록할까요?"; then
     service_install
     wait_for_health "$(current_port)" || true
   else
@@ -608,7 +674,9 @@ cmd_update() {
     build_frontend
 
     step "Python 의존성 갱신"
-    "$(venv_pip)" install -r "$INSTALL_DIR/backend/requirements.txt" -q
+    ensure_python
+    ensure_ffmpeg
+    setup_python_env
     info "갱신 완료 ✓"
   fi
 
@@ -641,10 +709,8 @@ cmd_update() {
 
 cmd_start() {
   require_install
-  if legacy_service_active || { ! service_exists && legacy_service_exists; }; then
-    service_install || return 1
-    return 0
-  fi
+  activate_runtime_path
+  if legacy_service_active || { ! service_exists && legacy_service_exists; }; then service_install || return 1; return 0; fi
   if service_exists; then
     $SUDO systemctl start "$SERVICE_NAME"
     info "서비스 시작 ✓"
@@ -652,10 +718,7 @@ cmd_start() {
   else
     info "포그라운드로 실행합니다 (Ctrl+C 로 종료)."
     cd "$INSTALL_DIR/backend"
-    local pidfile="$INSTALL_DIR/backend/data/server.pid"
-    mkdir -p "$(dirname "$pidfile")"
-    echo "$$" > "$pidfile"
-    exec "$(venv_python)" run.py
+    exec "$(venv_python)" "$INSTALL_DIR/backend/run.py"
   fi
 }
 
@@ -664,18 +727,8 @@ cmd_stop() {
   if service_exists; then
     $SUDO systemctl stop "$SERVICE_NAME"
     info "서비스 중지 ✓"
-  elif [ -f "$INSTALL_DIR/backend/data/server.pid" ]; then
-    local pid
-    pid="$(cat "$INSTALL_DIR/backend/data/server.pid")"
-    [[ "$pid" =~ ^[0-9]+$ ]] || error "잘못된 PID 파일입니다."
-    if [ -r "/proc/$pid/cmdline" ] && [ "$(readlink "/proc/$pid/cwd")" = "$INSTALL_DIR/backend" ] && tr '\0' ' ' < "/proc/$pid/cmdline" | grep -q 'run.py'; then
-      kill -TERM "$pid"
-      info "종료 신호 전송 ✓"
-    else
-      warn "PID가 이 설치본의 서버와 일치하지 않습니다."
-    fi
   else
-    warn "실행 중인 프로세스가 없습니다."
+    (cd "$INSTALL_DIR/backend" && "$(venv_python)" -m app.core.process_control stop --root "$INSTALL_DIR")
   fi
 }
 
@@ -686,7 +739,7 @@ cmd_restart() {
     info "서비스 재시작 ✓"
     wait_for_health "$(current_port)" || true
   else
-    cmd_stop
+    cmd_stop || return 1
     cmd_start
   fi
 }
@@ -722,7 +775,9 @@ cmd_status() {
     row "상태" "$(systemctl is-active "$SERVICE_NAME" 2>/dev/null)"
     row "부팅" "$(systemctl is-enabled "$SERVICE_NAME" 2>/dev/null)"
   else
-    row "상태" "systemd 미등록 (수동 실행)"
+    local state
+    state="$(cd "$INSTALL_DIR/backend" && "$(venv_python)" -m app.core.process_control status --root "$INSTALL_DIR" 2>/dev/null || true)"
+    row "상태" "${state:-수동 실행}"
   fi
   echo ""
   echo "  상세 점검: ${CYAN}$APP_NAME status --full${NC}"
@@ -763,15 +818,13 @@ cmd_uninstall() {
 }
 
 print_done() {
-  local port ip
+  local port
   port="$(current_port)"
-  ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
 
   echo ""
   echo "${GREEN}${BOLD}  설치가 완료되었습니다.${NC}"
   echo ""
   echo "  ${BOLD}접속${NC}      ${CYAN}http://localhost:$port${NC}"
-  [ -n "$ip" ] && echo "            ${CYAN}http://$ip:$port${NC}  (같은 네트워크)"
   echo ""
   echo "  ${BOLD}관리${NC}      $APP_NAME status     상태 확인"
   echo "            $APP_NAME update     최신 버전으로"
@@ -804,8 +857,6 @@ ${BOLD}최초 설치${NC}
 
 명령 없이 실행하면 설치되어 있지 않을 때는 설치를, 이미 설치되어 있으면 업데이트를 합니다.
 
-Docker로 띄우는 경우는 이 스크립트를 쓰지 않습니다.
-저장소 루트에서 ${CYAN}docker compose up --build -d${NC} 를 실행하세요 (docs/docker-guide.md).
 
 HELP
 }
@@ -813,6 +864,7 @@ HELP
 # ═══════════════════════════════════════════════════════════════
 main() {
   resolve_install_dir
+  activate_runtime_path
 
   local cmd="${1:-}"
   [ $# -gt 0 ] && shift || true
@@ -838,4 +890,7 @@ main() {
   esac
 }
 
-main "$@"
+# 관리 명령 진입점
+if [[ "${BASH_SOURCE[0]:-}" == "$0" || -z "${BASH_SOURCE[0]:-}" ]]; then
+  main "$@"
+fi

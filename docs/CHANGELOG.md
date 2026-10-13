@@ -8,6 +8,21 @@
 
 ## [Unreleased]
 
+### Fixed
+- Linux/macOS/Termux 설치·관리의 런타임 경로와 배포판별 패키지 처리를 보완하고 Node 최소 버전을 22로 맞춥니다. FFprobe도 별도로 검사합니다.
+- macOS BSD 심볼릭 링크 처리, Homebrew 버전별 Python/Node 탐색과 Finder 파일 위치 열기를 지원합니다.
+- POSIX 서버를 설치본별 잠금·PID/시작 정보로 식별하고 정상 종료를 기다려 중복 실행 및 재사용 PID 종료를 방지합니다.
+- Native Termux가 현재 의존성과 순수 Uvicorn 프로필을 사용하게 하고 제거된 라이브러리 import를 정리합니다. 설정·DB·미디어를 보존합니다.
+- 깨진 가상환경을 보존한 뒤 재생성하고 systemd 런타임 PATH·경로 인용·종료 순서를 보완합니다.
+
+### Documentation
+- README와 Linux/Termux 가이드를 최신 코드와 비공개 저장소 접근 방식에 맞춰 작성하고 macOS 설치·검증 범위 문서를 추가합니다.
+- 새 설치용 환경 변수 템플릿의 폐기된 채팅 설정·Docker 안내를 제거하고 현재 CDN·파일명 기본값을 반영합니다. 사용자 설정 파일은 변경하지 않습니다.
+
+### Tests
+- macOS Apple Silicon/Intel 및 ARM64 Python 3.14의 Termux 의존성 프로필을 CI에 추가합니다.
+- 설치 경로·런타임 탐색·파일 관리자·PID/잠금·설정 보존·가상환경 복구 회귀 검사를 추가합니다.
+
 ## [2.0.64] - 2026-10-13
 
 ### Added

@@ -419,4 +419,9 @@ if __name__ == "__main__":
         _run_tray(url, stop_event)
     else:
         # Run on the main thread, sharing shutdown handling with desktop mode.
-        _run_server(settings, stop_event)
+        if sys.platform == 'win32':
+            _run_server(settings, stop_event)
+        else:
+            from app.core.process_control import registered_server
+            with registered_server():
+                _run_server(settings, stop_event)

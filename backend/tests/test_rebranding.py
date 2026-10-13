@@ -82,7 +82,7 @@ def test_invalid_legacy_never_creates_empty_new_db(tmp_path):
 
 def shell(tmp_path, body):
     # Source function definitions without invoking the command entry point.
-    source = (ROOT / 'scripts/manage.sh').read_text(encoding='utf-8').rsplit('main "$@"', 1)[0]
+    source = (ROOT / 'scripts/manage.sh').read_text(encoding='utf-8').split('# 관리 명령 진입점', 1)[0]
     script = tmp_path / 'functions.sh'
     script.write_text('export HOME="$PWD"\n' + source + '\n' + body, encoding='utf-8', newline='\n')
     # Relative script arguments and Bash's own PWD avoid Windows drive-path
@@ -180,6 +180,7 @@ journalctl() { echo "$*" >> "$HOME/calls"; }
 cmd_start; cmd_stop; cmd_restart; cmd_logs
 sync_repo() { return 0; }
 detect_os() { :; }; ensure_node() { :; }; build_frontend() { :; }; link_self() { :; }
+ensure_python() { :; }; ensure_ffmpeg() { :; }; setup_python_env() { :; }
 venv_pip() { echo true; }
 cmd_update
 printf 'new unit' > "$SYSTEMD_UNIT_DIR/phrolova.service"

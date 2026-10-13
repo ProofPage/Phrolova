@@ -5,6 +5,7 @@ VOD/클립 다운로드 관련 엔드포인트.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, HTTPException
@@ -234,7 +235,8 @@ async def open_vod_file_location(task_id: str):
     from app.main import get_recorder_service
 
     service = get_recorder_service()
-    result = service.open_vod_file_location(task_id)
+    # 데스크톱 파일 관리자 응답을 기다려도 녹화·상태 API를 막지 않는다.
+    result = await asyncio.to_thread(service.open_vod_file_location, task_id)
 
     if "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])

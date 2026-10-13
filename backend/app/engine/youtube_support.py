@@ -26,9 +26,11 @@ def runtime_options():
             Path(sys.executable).parent,
             Path(__file__).resolve().parents[3] / "bin",
             Path(os.environ.get("PREFIX", str(Path(sys.executable).parent))) / "bin",
+            # Homebrew의 버전별 Node는 기본 PATH에 연결되지 않을 수 있다.
+            *(Path(prefix) / "opt/node@22/bin" for prefix in ("/opt/homebrew", "/usr/local") if sys.platform == 'darwin'),
         ):
             candidate = folder / (name + (".exe" if sys.platform == "win32" else ""))
-            if candidate.is_file():
+            if candidate.is_file() and (sys.platform == 'win32' or os.access(candidate, os.X_OK)):
                 executable = str(candidate)
                 break
         if executable:
