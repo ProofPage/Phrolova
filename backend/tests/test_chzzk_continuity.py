@@ -302,7 +302,6 @@ class DeliveryTests(unittest.TestCase):
         source = stream.continuity
         manifest, playlist = source.candidates()[0]
         target = source.locate(playlist.segments[0], manifest)
-        self.cdn.delays['/primary/1080p/0.m4v'] = 0.12
         reader = continuity.ChzzkContinuityReader(stream)
         self.addCleanup(reader.writer.close)
         lookup_started = threading.Event()
@@ -315,7 +314,16 @@ class DeliveryTests(unittest.TestCase):
             lookup_finished.set()
             return iter(())
 
-        with patch.object(source, "alternatives", slow_lookup):
+        original_download = reader.writer.download
+
+        def primary_after_lookup(located, required):
+            self.assertTrue(lookup_started.wait(2))
+            return original_download(located, required)
+
+        # 원본을 먼저 끝낼 수 없게 해 느린 조회가 반드시 진행 중인 상황을 만든다.
+        with patch.object(source, "alternatives", slow_lookup), \
+                patch.object(reader.writer, "download", primary_after_lookup), \
+                patch.object(continuity, "RECOVERY_TIMEOUT", 2):
             try:
                 result = reader.writer.fetch(target)
                 self.assertEqual(result.media, MEDIA[0])
@@ -442,7 +450,9 @@ class DeliveryTests(unittest.TestCase):
             return 1, [(self.cdn.url("renewed"), False)]
 
         stream.continuity.provider = provider
-        self.assertEqual(self.read(stream), INITIALIZATION + b"".join(MEDIA), self.stderr.getvalue())
+        # 성공 복구는 CPU 경합에 여유를 주고 시간 제한 자체는 별도 실패 검사에서 확인한다.
+        with patch.object(continuity, "RECOVERY_TIMEOUT", 2):
+            self.assertEqual(self.read(stream), INITIALIZATION + b"".join(MEDIA), self.stderr.getvalue())
         self.assertTrue(calls)
 
     def test_playlist_token_error_refreshes_without_waiting_30_seconds(self):
