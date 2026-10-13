@@ -1,483 +1,260 @@
 # Phrolova
 
-Self-hosted live recording and video downloads for **CHZZK, YouTube, SOOP and CIME**, with interactive previews, verified media conversion, a web dashboard and Discord integration.
+Self-hosted live recording and video downloads for **CHZZK, YouTube, SOOP and CIME**. Manage channels, preview broadcasts, verify recorded files, and review activity in one web dashboard.
 
 [![CI](https://github.com/ProofPage/Phrolova/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/ProofPage/Phrolova/actions/workflows/ci.yml)
 
-[Repository](https://github.com/ProofPage/Phrolova) · [Releases](https://github.com/ProofPage/Phrolova/releases) · [Changelog](docs/CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [MIT License](LICENSE)
+[Releases](https://github.com/ProofPage/Phrolova/releases) · [Changelog](docs/CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [MIT License](LICENSE)
 
-**Start here:** [Windows x64 download](https://github.com/ProofPage/Phrolova/releases/latest) · [Linux installation](#linux-management-script) · [Source installation](#manual-source-installation)
+**Install:** [Windows](#windows) · [Linux](#linux) · [macOS](#macos) · [Android / Termux](#android--termux)
 
-## Contents
+## What you can do
 
-- [Features](#features)
-- [Supported platforms](#supported-platforms)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Quick start](#quick-start)
-- [Configuration](#configuration)
-- [Discord integration](#discord-integration)
-- [Storage and backups](#storage-and-backups)
-- [Architecture](#architecture)
-- [Project structure](#project-structure)
-- [Development](#development)
-- [Limitations and troubleshooting](#limitations-and-troubleshooting)
-- [Additional documentation](#additional-documentation)
-- [Contributing](#contributing)
-- [License and attribution](#license-and-attribution)
+- **Live:** register channels, organize them with tags and filters, monitor broadcast status, and start recordings manually or automatically. Review viewers, recording duration, size, bitrate, retries and errors.
+- **Videos:** download VODs, clips and supported external links; import a YouTube channel's available videos; select quality, limit concurrency/speed, and pause, resume, cancel or retry supported tasks.
+- **Playback and verification:** preview broadcasts independently of recording, open completed files, inspect media with FFprobe and review verification separately from download completion.
+- **Statistics:** see completed recording time/size, download totals, channel activity, recent sessions, disk capacity and separate live/video storage locations.
+- **Logs:** browse original files, search/filter severity, follow live output and export a complete log file.
+- **Settings:** configure storage, quality, filenames, containers, authentication, notifications and appearance. Tool versions and installation paths appear in Information.
+- **Discord:** slash commands, bot/webhook notifications, retries and a persistent notification queue.
+- **Eight languages:** 한국어 (default), English, 日本語, Español, Deutsch, 简体中文, 繁體中文 and Русский. Settings → Appearance applies the selected language immediately and remembers it in that browser; dates, numbers and quantities follow the locale. User content and technical logs retain their original text.
 
-## Features
+### Platforms
 
-### Live monitoring and recording
-
-- Monitor registered CHZZK, YouTube, SOOP and CIME channels and automatically record detected broadcasts when enabled for each channel.
-- Organize channels with tags, filters, and adjustable display order. Inspect live status, viewer count, recording duration, output size, speed, bitrate, and errors.
-- Streamlink stores compatible HLS TS packets directly and preserves fMP4/CMAF streams in their native format when TS is unavailable. After recording ends, FFmpeg normalizes native captures to TS and copies streams into MKV or MP4; FFprobe checks the result. Set global or per-channel output preferences; retain source TS by default. Use separate live and video download directories and customizable filenames.
-- Preview CHZZK, YouTube, SOOP and CIME streams independently of recording, subject to upstream playback availability.
-- Use playback, pause, volume and fullscreen controls in live previews. Offline previews keep the same 16:9 aspect ratio.
-- Stop CHZZK recording at a segment boundary, drain received data before finalization, and carry checkpoints and bounded disk buffers across reconnects and file changes. Interrupted or forced termination preserves the source and its diagnostic state.
-- For CHZZK, choose standard streaming or time-machine playback, optionally save a preview image, and record all broadcasts, only matching watch-alongs, or broadcasts excluding watch-alongs.
-- Retry interrupted CHZZK and YouTube recordings while the broadcast remains live, up to the configured retry limit.
-
-Manual start/stop, automatic recording and per-channel quality/output preferences share the same recording service.
-
-### Video downloads
-
-- Download CHZZK VODs/clips, YouTube videos, SOOP VODs/multi-part videos, and CIME VODs/clips. An external-video option uses supported yt-dlp extractors.
-- Add links to the queue, inspect metadata and select an available quality before starting. Multiple links can be entered on separate lines.
-- Import available videos from a YouTube channel into the download queue in the background. Import skips entries identified as live or upcoming and avoids duplicates already represented by non-error tasks.
-- Track progress, speed, and estimated time where the downloader reports them. Pause, resume, cancel, and retry supported tasks.
-- Limit concurrent downloads and configure a download speed limit. Reorder the displayed task list and retain completed and failed task history.
-- For CHZZK VODs, alternate between Akamai and Naver CDN sources on retries and check downloaded duration with FFprobe to detect incomplete output.
-- Validate HLS/DASH fragments before appending them and preserve HTTP failure details. Manual retries restore the saved filename and partial-file path for supported continuation.
-- Open completed files, open their storage directory, inspect FFprobe results and retry file inspection. Download completion and file-verification results are shown separately.
-
-### Dashboard and automation
-
-- Eight interface languages: Korean, English, Japanese, Spanish, German, Simplified Chinese, Traditional Chinese, and Russian. Choose a language in **Settings → Appearance**; it applies immediately and is restored on the next visit. Dates, numbers, quantities, dialogs and notification history follow the selected language. Technical logs and user content retain their original text.
-- Color presets, a custom accent color, and a browser-local page title.
-- Logs with severity filters, search, live refresh and full original-file export; statistics with separate recording/download paths and disk capacity details.
-- Discord slash commands, bot notifications, and webhook delivery with fallback, retry handling, and a persistent pending-notification queue.
-- Automatic release checks after startup and every 24 hours, plus a manual update check. Installation updates remain a separate operation.
-- **Settings → Information** combines automatic media-tool health checks, software updates, application details and license information. The Korean video page and sidebar are named **동영상**.
-
-## Supported platforms
-
-| Platform | Live monitoring and recording | On-demand downloads | Authentication and limits |
+| Platform | Live monitoring / recording / preview | Video downloads | Authentication |
 | --- | --- | --- | --- |
-| CHZZK | Automatic/manual recording, time machine, interactive preview | VODs and clips | Naver cookies for restricted content |
-| YouTube | Automatic/manual recording, interactive preview | Videos and channel imports | Public first; cookies on authentication failure |
-| SOOP | Automatic/manual recording, current viewer count, interactive preview | VODs and multi-part videos | Platform cookies when required |
-| CIME | Automatic/manual recording, interactive preview | VODs and clips | Platform cookies when required |
+| CHZZK | Automatic/manual recording; standard and time-machine modes | VODs and clips | Naver cookies for content requiring authentication |
+| YouTube | Automatic/manual recording and preview | Videos and channel imports | Netscape-format cookies for authenticated video access |
+| SOOP | Automatic/manual recording and preview | VODs and multi-part videos | Platform cookies when required |
+| CIME | Automatic/manual recording and preview | VODs and clips | Platform cookies when required |
 
-External-video support follows the extractors and formats accepted by the engine. Channel import is available for YouTube. X Spaces and TwitCasting are retired; their existing history and files are retained.
+The external-video option follows the extractors supported by yt-dlp. Playback, formats and account access depend on the source platform. YouTube channel import skips live/upcoming entries and avoids already queued non-error duplicates.
+
+### Recording pipeline
+
+**Live detection → Streamlink capture → TS → FFmpeg finalization → MKV (default) or MP4 → FFprobe verification.**
+
+Streamlink preserves native fMP4/CMAF when the source cannot supply TS; after capture closes, FFmpeg normalizes it before finalization. Existing explicit format/quality preferences are preserved. The dashboard retains **MKV - Matroska** and **MP4 - MPEG-4** labels. Source TS retention is configurable; failed finalization preserves recoverable source data. Downloading uses the existing platform engines and yt-dlp.
 
 ## Requirements
 
-| Installation method | Requirements |
+| Environment | Installation and runtime |
 | --- | --- |
-| Windows release | Windows x64; a writable application directory; external FFmpeg and FFprobe. Python, the built frontend, Streamlink, and a Node.js runtime are included in the executable build. A separate yt-dlp executable is located or downloaded at startup |
-| Linux management script | Bash, initial access to `curl`, network access for dependencies and GitHub, and appropriate package-installation permissions. The script manages Git, Python, Node.js, FFmpeg, frontend builds, and a Python virtual environment; systemd service registration is optional |
-| Source installation | Git, Python **3.12** as used by CI and releases, Node.js **22+** with npm as the recommended common setup for builds and YouTube processing, and FFmpeg/FFprobe |
+| Windows x64 | Packaged `.exe`; external FFmpeg/FFprobe. Python, Streamlink, frontend and Node are bundled; startup locates or downloads `yt-dlp.exe` |
+| Linux x86_64 / ARM64 | Source installation; Bash, Git, Python **3.12+**, Node.js **22+** with npm, FFmpeg and FFprobe **6+**, and `ps` |
+| macOS Apple Silicon / Intel | Source installation with Homebrew, Bash, Git, Python **3.12+**, Node.js **22+**, FFmpeg/FFprobe **6+** |
+| Native Android Termux | Termux packages plus `requirements-termux.txt`; Python **3.12+**, Node.js **22+**, FFmpeg/FFprobe **6+** and native build tools |
+| Termux proot Linux | Linux dependencies and `requirements.txt` inside the guest; no systemd service unless systemd is actually running |
 
-The Python requirements install `yt-dlp[default]`, `streamlink>=7.3,<9`, FastAPI, and the remaining backend dependencies. Installing the `ffmpeg-python` package does **not** install the FFmpeg executable.
+Python dependencies include `streamlink>=8.6.2,<9`, `yt-dlp[default]`, FastAPI, Uvicorn and discord.py. `ffmpeg-python` does **not** install FFmpeg or FFprobe. Node remains necessary for YouTube JavaScript processing after the UI build; [yt-dlp requires Node 22+](https://github.com/yt-dlp/yt-dlp/wiki/EJS).
 
-Version checks differ across entry points: the Linux script requires Python 3.12+ and Node.js 20+, while desktop startup checks Python 3.12+, CI uses Python 3.12 and Node.js 20, and Windows packaging requires Node.js 22+ and currently builds with Node.js 24. Use Python 3.12 and Node.js 22+ for a new source setup rather than treating the installer's older minimums as a tested compatibility guarantee. The Linux installer requires FFmpeg 6+.
-
-The management script recognizes Debian/Ubuntu, Fedora/RHEL-family, and Arch-family systems and includes a Homebrew path for macOS. Dependency installation is distribution-dependent; the repository does not establish a tested minimum OS release or a macOS release package. Its Linux static FFmpeg fallback handles x86_64 and aarch64.
+Windows is the packaged release target. Linux, macOS and Termux run from source; this repository does not ship `.app`, `.dmg`, `.apk` or Docker images. See [platform implementation and validation](docs/native-platform-support.md) for the test matrix and device-test scope.
 
 ## Installation
 
-### Windows release
+The repository is currently **private**. Clone/download using a GitHub account with access. Configure a Git credential helper or use an authorized SSH key; anonymous `raw.githubusercontent.com` install links cannot access a private repository.
 
-1. Download `Phrolova-v<version>-windows-x64.exe` and `SHA256SUMS.txt` from [the latest release](https://github.com/ProofPage/Phrolova/releases/latest). Releases include a Windows Defender scan and the executable's SHA-256 checksum.
-2. Place it in a writable folder that will also hold its configuration, data, and logs.
-3. Install FFmpeg and FFprobe. Put `ffmpeg.exe` and `ffprobe.exe` in a `bin` folder beside the Phrolova executable, or add their directory to your system `PATH`.
-4. Launch the executable. Startup checks dependencies and attempts to download `yt-dlp.exe` into the adjacent `bin` folder if it is missing. This requires network access; you can also place `yt-dlp.exe` there yourself.
-5. Open [http://localhost:8000](http://localhost:8000) if the browser does not open automatically, and complete setup.
+### Windows
 
-FFmpeg and FFprobe are **external tools**. Phrolova checks them independently using `FFMPEG_PATH` / `FFPROBE_PATH`, adjacent `bin/`, and `PATH`. Check their resolved paths and retry detection in **Settings → Information → Media tools**.
+1. Download `Phrolova-v<version>-windows-x64.exe` and `SHA256SUMS.txt` from [Releases](https://github.com/ProofPage/Phrolova/releases/latest).
+2. Place the executable in a writable folder. Put `ffmpeg.exe` and `ffprobe.exe` in its adjacent `bin/` folder or on `PATH`.
+3. Launch it. If `yt-dlp.exe` is missing, startup attempts to download it into `bin/`; it can also be placed there manually.
+4. Open <http://127.0.0.1:8000> and complete setup. The tray menu opens the dashboard or exits the app.
 
-The desktop build includes a system tray menu for opening the browser and exiting. Tray labels and executable metadata use **Phrolova**.
+To update, exit the app and replace the executable in the same folder. Retain `.env`, `data/`, `logs/`, `bin/` and media directories.
 
-To upgrade, exit the running application and replace the executable with the new release in the same folder. Keep `.env`, `data/`, `logs/`, `bin/`, and your media directories.
+### Linux
 
-### Linux management script
-
-Run:
+Install Bash, Git and curl using your distribution's package manager, then:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ProofPage/Phrolova/main/scripts/manage.sh | bash
+git clone https://github.com/ProofPage/Phrolova.git "$HOME/Phrolova"
+cd "$HOME/Phrolova"
+bash scripts/manage.sh install
+bash scripts/manage.sh start
 ```
 
-On a new installation, the script installs or checks dependencies, clones the repository, builds the frontend, creates `.venv`, installs backend requirements, and registers the `phrolova` management command. It asks whether to install and start a systemd service. Without a service, use `phrolova start` to run in the foreground.
+The script prepares dependencies, `.venv`, the production frontend and the `phrolova` command. It supports apt, dnf/yum, pacman and apk. Python must be available at version 3.12+; older distributions require a suitable interpreter before installation. GNU/Linux static FFmpeg fallback is restricted to x86_64/ARM64 glibc environments; macOS, Android and Alpine use their own packages.
 
-The default location is `~/Phrolova`. Existing legacy installation locations can be reused. Running the command again updates an existing installation from `main`; this is a source-branch update, not a pinned release installation.
+An active systemd installation offers optional `phrolova.service` registration. Otherwise `start` runs in the foreground; use Ctrl+C or `stop` from another terminal. See the [Linux guide](docs/linux-guide.md).
 
-To choose a location, pass `INSTALL_DIR` to **Bash**, which executes the script:
+### macOS
+
+Install [Homebrew](https://brew.sh), then use a regular user terminal:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ProofPage/Phrolova/main/scripts/manage.sh | INSTALL_DIR="$HOME/Phrolova" bash
+brew install git python@3.12 node@22 ffmpeg
+git clone https://github.com/ProofPage/Phrolova.git "$HOME/Phrolova"
+cd "$HOME/Phrolova"
+bash scripts/manage.sh install
+bash scripts/manage.sh start
 ```
 
-Available management commands:
+The manager resolves versioned Homebrew runtimes on both `/opt/homebrew` and `/usr/local`, including Node that is not linked into the default PATH. No GNU `readlink -f`, Linux `/proc` or systemd is needed. The server runs in the foreground; macOS Finder opens local completed-file locations using `open` / `open -R`.
 
-| Command | Action |
-| --- | --- |
-| `phrolova install` | Run installation and offer service registration |
-| `phrolova update` | Update from `main`, rebuild when changed, and restart an installed service |
-| `phrolova start` | Start the service, or run in the foreground without one |
-| `phrolova stop` | Stop the service; use Ctrl+C for a foreground session |
-| `phrolova restart` | Restart the application |
-| `phrolova status` | Show version, location, port, and server/service status |
-| `phrolova status --full` | Run the detailed health-check script |
-| `phrolova logs` | Follow the service journal, or the script's fallback `logs/service.log` if present |
-| `phrolova service install` | Register, enable, and start the systemd service |
-| `phrolova service remove` | Remove the systemd service |
-| `phrolova uninstall` | Remove the service, command links, and virtual environment; retain the repository and data |
+See the [macOS guide](docs/macos-guide.md) for manual installation, background sessions and updates.
 
-The CLI command is `phrolova` and the service is `phrolova.service`. Legacy installations and service names are detected; old services are disabled only while the replacement is started, with rollback on failure. If an update encounters local changes that block a pull, the script may stash them before retrying; inspect the reported stash before continuing local development.
+### Android / Termux
+
+Use a current Termux installation from the sources listed in the [official Termux documentation](https://github.com/termux/termux-app#installation). Keep the repository and virtual environment in Termux's private `$HOME`:
+
+```bash
+pkg update
+pkg install -y git
+cd "$HOME"
+git clone https://github.com/ProofPage/Phrolova.git
+cd Phrolova
+bash scripts/install-termux.sh
+bash scripts/manage.sh start
+```
+
+The installer uses Termux's Python/pip, FFmpeg, Node.js LTS, Clang/Rust and other build dependencies. It selects `requirements-termux.txt` with plain Uvicorn rather than Linux-only standard extras, validates imports and registers the management command. It does not download Linux/Windows binaries or upgrade Termux-managed pip. Some Python dependencies compile on the device.
+
+Open <http://127.0.0.1:8000> in the Android browser. Folder-open actions return the saved path rather than launching `xdg-open`. Use `termux-setup-storage` only if media should go to shared storage; keep the application, SQLite database and cookies inside private HOME.
+
+For Ubuntu/Debian via proot-distro, set `PHROLOVA_ENVIRONMENT=termux-proot` inside the guest and follow the Linux installation. See the [Termux guide](docs/termux-guide.md) for background execution, shared storage and recovery.
 
 ### Manual source installation
 
-Install the prerequisites above first. The following Bash commands build the frontend directly into `backend/app/static` and run the backend from `backend/`:
+On Linux/macOS with dependencies already installed:
 
 ```bash
-git clone https://github.com/ProofPage/Phrolova.git
-cd Phrolova
-
+cd "$HOME/Phrolova"
 python3.12 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r backend/requirements.txt
-
-cd frontend
-npm ci
-npm run build
-cd ../backend
-
-python run.py
+.venv/bin/python -m pip install -r backend/requirements.txt
+.venv/bin/python -m pip check
+(cd frontend && npm ci && npm run build)
+cd backend
+../.venv/bin/python run.py
 ```
 
-For Windows PowerShell:
+On macOS, add `$(brew --prefix node@22)/bin` to PATH first and use `$(brew --prefix python@3.12)/bin/python3.12` if the versioned Python is not on PATH. Native Termux uses `python` and `backend/requirements-termux.txt` instead.
+
+For Windows PowerShell source development:
 
 ```powershell
-git clone https://github.com/ProofPage/Phrolova.git
-cd Phrolova
-
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
-
-cd frontend
-npm ci
-npm run build
-cd ..\backend
-
+npm ci --prefix frontend
+npm run build --prefix frontend
+cd backend
 ..\.venv\Scripts\python.exe run.py
 ```
 
-Open [http://localhost:8000](http://localhost:8000). The production frontend is served by FastAPI; a separate Vite server is unnecessary after the build. No `dist` copy step is required.
+Vite builds directly into `backend/app/static`; there is no manual `dist` copy step. FastAPI serves the UI and API together at port 8000.
 
-Leave `.env` absent to use the setup wizard. For file-based configuration, copy [`.env.example`](.env.example) to `.env` at the repository root and review [Configuration](#configuration), including the outdated entries in that template. A nonempty `DOWNLOAD_DIR` in `.env` marks setup as complete and suppresses the wizard.
+## First use
 
-The current repository has no Dockerfile or Compose configuration; Docker installation is not provided.
-
-## Quick start
-
-1. **Complete initial setup.** Choose separate live and video download directories, a live output format, and recording quality, then review and save. The wizard suggests `Downloads/Phrolova/Live` and `Downloads/Phrolova/Video` under the server user's home directory.
-2. **Set your interface language.** In **Settings → Appearance**, select English if desired. Some messages remain untranslated.
-3. **Add authentication when needed.** Use **Settings → Authentication** for CHZZK, YouTube, SOOP or CIME cookies.
-4. **Add a channel.** Choose CHZZK, YouTube, SOOP or CIME in Live.
-5. **Review recording options.** Configure global quality, format, and filenames in Settings. CHZZK channels can inherit or override the automatic recording condition. Tags help organize the list separately from those conditions.
-6. **Download a video.** Open the **Videos (동영상)** page, choose a platform and add video/clip links. Select quality and start individual or queued tasks. A YouTube channel URL or `@handle` starts background channel import. Stopping an import stops collection; videos already queued remain.
-7. **Review results.** Use **Videos** for task history and file inspection, **Statistics** for recording/download summaries, and **Logs** for diagnostics. **Settings → Information** contains media-tool and release checks. Media is saved on the backend host.
+1. Complete the setup wizard with separate live/video paths, recording quality and final container. Missing folders are created when settings are saved.
+2. Select your language in **Settings → Appearance**.
+3. Register platform cookies in **Settings → Authentication** when the content requires them.
+4. Add channels in **Live**, review recording preferences and enable automatic recording or start manually.
+5. Add links in **Videos**, select quality and start downloading. A YouTube channel URL or `@handle` imports available videos in the background.
+6. Review output in **Statistics**, **Logs** and **Settings → Information**. Media is stored on the server running Phrolova.
 
 ## Configuration
 
-Settings are loaded through Pydantic Settings from environment variables and `.env`. Environment variables override `.env` values. The application uses:
+Use the dashboard for normal configuration. For file-based setup, copy [`.env.example`](.env.example) to a new root `.env` and edit it. A nonempty `DOWNLOAD_DIR` marks setup complete and skips the wizard; leave `.env` absent to use the wizard. Never overwrite an existing `.env` during installation/update.
 
-- **Source:** repository-root `.env`, with `backend/.env` as a legacy fallback when the root file is absent.
-- **Windows executable:** `.env` beside the executable.
+Source installations resolve root `.env` first, then legacy `backend/.env`. Windows releases use `.env` beside the executable. Environment variables override file settings. Restart after manually editing `.env` or changing server/Discord bot credentials.
 
-The web settings pages write to the same resolved `.env` file. Restart after editing it manually or changing host/port or Discord bot credentials. Download concurrency changes apply immediately without stopping active tasks; per-channel recording preferences apply at the next recording start.
-
-Prefer absolute media paths for a service. Relative paths are resolved from the process working directory; the Linux service and the source commands above run from `backend/`, so `./recordings` means `backend/recordings` in those cases.
-
-### Server and media settings
-
-These defaults come from the current settings implementation, rather than older guide text.
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `HOST` | `127.0.0.1` | Server bind address; use `127.0.0.1` for local-only access |
-| `PORT` | `8000` | HTTP port |
-| `FFMPEG_PATH` | `ffmpeg` | Backend FFmpeg executable path; adjacent `bin/` and `PATH` are also searched |
-| `FFPROBE_PATH` | `ffprobe` | Independent file-inspection tool path; FFmpeg's sibling directory, adjacent `bin/` and `PATH` are also searched |
-| `FILE_INSPECTION_TIMEOUT` | `120` | FFprobe inspection timeout in seconds; accepts 1–600 |
-| `DOWNLOAD_DIR` | `./recordings` | Fallback media directory and setup-completion setting |
-| `LIVE_DOWNLOAD_DIR` | Empty | Live output directory; falls back to `DOWNLOAD_DIR` |
-| `VOD_DOWNLOAD_DIR` | Empty | Common video output directory; otherwise legacy directory rules apply |
-| `MONITOR_INTERVAL` | `60` | CHZZK/YouTube polling interval in seconds; Settings accepts 5–300 |
-| `RECORDING_QUALITY` | `best` | Live preference: `best`, `1080p`, `720p`, or `480p` |
-| `LIVE_FORMAT` | `mkv` | Completed recording format; explicit legacy `ts`, `mkv`, and `mp4` settings are preserved |
-| `MAX_RECORD_RETRIES` | `3` | Automatic retries after an established CHZZK/YouTube recording stalls while live |
-| `CHZZK_STREAM_MODE` | `force-timemachine` (effective default) | `standard`, `request-timemachine`, or `force-timemachine` |
-| `CHZZK_TIME_MACHINE_OFFSET` | `0` (effective default) | Seconds skipped from the available time-machine stream's beginning; clamped to 0–86400 |
-| `SAVE_LIVE_PREVIEW` | `false` | Save a CHZZK preview image when recording starts |
-| `CHZZK_LIVE_CDN` | `akamai` | CHZZK live preference: `akamai` = Akamai CDN, `default` = Naver CDN |
-| `CHZZK_VOD_CDN` | `akamai` | CHZZK download preference: `akamai` = Akamai CDN, `default` = Naver CDN |
-| `LIVE_DOWNLOAD_CONDITION` | `all` | CHZZK default: `all`, `watchalong`, or `exclude_watchalong` |
-| `WATCHALONG_TAGS` | Platform's Korean watch-along marker | Comma- or newline-separated matching tags for watch-along-only recording; editable in Settings |
-| `VOD_MAX_CONCURRENT` | `5` | Simultaneous video tasks; Settings accepts 1–10; changes apply immediately without stopping active tasks |
-| `VOD_DEFAULT_QUALITY` | `best` | Default video quality selection in the dashboard |
-| `VOD_FORMAT` | `mp4` | Preferred video merge container: `mp4`, `mkv`, or `ts` |
-| `VOD_MAX_SPEED` | `0` | yt-dlp download limit in MB/s; `0` means unlimited |
-| `KEEP_DOWNLOAD_PARTS` | `false` | Retain partial video files on supported cancellation/failure paths |
-
-`request-timemachine` tries CHZZK time-machine playback and falls back to the standard stream. `force-timemachine` fails if that playback cannot be obtained. Availability is controlled by CHZZK; these modes do not promise access to an entire broadcast.
-
-Video output format is a merge preference. Single-file downloads and clips follow their existing engine paths. Quality requests use formats supplied by the platform.
-
-**Template compatibility:** the current `.env.example` still sets both CDN preferences to `default`. Set `CHZZK_LIVE_CDN=akamai` and `CHZZK_VOD_CDN=akamai` for the current Akamai defaults, or choose the CDN in Settings. Existing saved choices are preserved. Its old live filename default is automatically migrated; its Docker comment does not describe a supplied installation method. Existing `SPLIT_DOWNLOAD_DIRS`, `VOD_CHZZK_DIR`, and `VOD_EXTERNAL_DIR` values remain legacy fallbacks when `VOD_DOWNLOAD_DIR` is empty.
-
-### Filename templates
-
-The current defaults include seconds and use filesystem-safe separators:
-
-```dotenv
-LIVE_FILENAME_TEMPLATE="[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}"
-VOD_FILENAME_TEMPLATE="[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}"
-```
-
-For live recording, `{name}`, `{title}`, `{channel_uid}`, `{category}`, and `{quality}` are available, together with `live_date_*` and `download_date_*` date/time fields. `live_date_*` uses the broadcast start time when available, otherwise the recording start time. The extension is appended if absent, invalid filename characters are sanitized, and collisions receive a numeric suffix.
-
-Video templates accept `{name}`, `{title}`, `{id}`, `{extractor}`, `{upload_date}`, `{quality}`, `{download_date}`, and `{date_year}`, `{date_month}`, `{date_day}`, `{date_hour}`, `{date_minute}`, `{date_second}`. The `date_*` fields describe the download's naming timestamp, not the original broadcast time. The extension is added automatically. These templates are validated for supported tokens and filename characters.
-
-### Authentication
-
-| Platform | Setting | How it is used |
-| --- | --- | --- |
-| CHZZK | `NID_AUT`, `NID_SES` | Enter your own Naver session cookies through Settings when authenticated access is required |
-| YouTube | `YOUTUBE_COOKIE_FILE` | Upload a Netscape-format cookie file in Settings. Downloads and channel imports retry with it after recognized authentication errors; preview resolution also reads it |
-| SOOP | `SOOP_COOKIE_FILE` | Upload a Netscape-format cookie file in Settings for streams and videos requiring platform authentication |
-| CIME | `CIME_COOKIE_FILE` | Upload a Netscape-format cookie file in Settings for streams and videos requiring platform authentication |
-
-Cookie-file paths refer to files on the backend host. Uploaded files are stored under the application's data directory. Cookies do not grant access beyond the account's permissions. Automatic YouTube live recording currently does not receive `YOUTUBE_COOKIE_FILE`; do not assume authenticated video downloads imply authenticated live recording support.
-
-The default host is **127.0.0.1**, which accepts local connections. The dashboard and API have no built-in user login; when exposing them to other devices, use an authenticated reverse proxy or private network. Keep cookies, bot tokens and webhook URLs private.
-
-## Discord integration
-
-Configure Discord in **Settings → Notifications** or through `.env`. Invite your application bot with the `bot` and `applications.commands` scopes, and allow it to view the intended channel, send messages, and embed links. Restart after setting or replacing the bot token.
-
-| Variable | Purpose |
+| Setting | Default / purpose |
 | --- | --- |
-| `DISCORD_BOT_TOKEN` | Bot token; enables the bot connection |
-| `DISCORD_NOTIFICATION_CHANNEL_ID` | Destination channel for bot notifications; also the command-channel fallback when no explicit command restrictions are set |
-| `DISCORD_COMMAND_USER_IDS` | Comma-separated user IDs allowed to run commands |
-| `DISCORD_COMMAND_CHANNEL_ID` | Channel in which commands are allowed |
-| `DISCORD_WEBHOOK_URL` | Notification-only delivery, or fallback when bot delivery is unavailable |
-| `DISCORD_NOTIFY_EVENTS` | `all` (default), `none`, or a comma-separated list of event identifiers |
-| `DISCORD_MENTION_EVENTS` | Event identifiers that should include a mention; empty by default |
-| `DISCORD_MENTION_TARGET` | `@here` (default), `@everyone`, or a Discord role mention |
-| `DISCORD_NOTIFY_TTL` | Maximum pending-notification age in seconds; default `3600` |
+| `HOST`, `PORT` | `127.0.0.1`, `8000` |
+| `FFMPEG_PATH`, `FFPROBE_PATH` | `ffmpeg`, `ffprobe`; explicit paths, adjacent `bin/` and PATH are supported |
+| `DOWNLOAD_DIR` | `./recordings`; fallback media path |
+| `LIVE_DOWNLOAD_DIR`, `VOD_DOWNLOAD_DIR` | Separate live/video paths; existing fallback rules apply when empty |
+| `RECORDING_QUALITY`, `LIVE_FORMAT` | `best`, `mkv`; MP4 can be selected |
+| `MONITOR_INTERVAL`, `MAX_RECORD_RETRIES` | `60` seconds, `3` retries |
+| `CHZZK_STREAM_MODE`, `CHZZK_TIME_MACHINE_OFFSET` | `force-timemachine`, `0`; settings expose available modes |
+| `CHZZK_LIVE_CDN`, `CHZZK_VOD_CDN` | `akamai`; `default` selects Naver CDN |
+| `VOD_MAX_CONCURRENT`, `VOD_DEFAULT_QUALITY` | `5`, `best`; concurrency changes apply without stopping active tasks |
+| `VOD_FORMAT`, `VOD_MAX_SPEED` | `mp4`, `0` (unlimited MB/s) |
+| `KEEP_DOWNLOAD_PARTS` | `false`; optional partial-file preservation |
+| `FILE_INSPECTION_TIMEOUT` | `120` seconds; accepts 1–600 |
 
-**Command authorization:** if both a user allowlist and a command channel are configured, both must match. A user allowlist alone restricts users without imposing a channel condition. If neither explicit restriction is configured, the notification channel becomes the allowed channel. With none of these configured, commands are denied. A channel-only restriction permits any user who can invoke the bot in that channel; set a user allowlist when tighter control is needed.
+Use **absolute media paths** for consistent storage. Relative paths resolve against the working directory; the source manager starts from `backend/`. Existing media paths and saved preferences are preserved. Manual `.env` values should contain actual paths rather than assuming shell variable expansion.
 
-### Slash commands
+For authentication, CHZZK uses `NID_AUT` / `NID_SES`; YouTube, SOOP and CIME use their corresponding `*_COOKIE_FILE` settings. Upload Netscape-format files in Settings. YouTube video downloads/imports retry with cookies after recognized authentication failures; this does not establish authenticated automatic YouTube live recording.
 
-Argument names below are the exact registered Discord option names.
+The dashboard/API has no built-in web login. The default loopback address is suitable for local use. For remote administration, keep that binding and use an SSH tunnel:
 
-| Command | Arguments | Behavior |
+```bash
+ssh -N -L 8000:127.0.0.1:8000 user@server
+```
+
+An externally exposed dashboard needs access control through an authenticated proxy or private network. Platform cookies and Discord command allowlists do not authenticate web API users.
+
+## Management, updates and backup
+
+| Command | Action |
+| --- | --- |
+| `phrolova start` | Start an installed service or run in the foreground |
+| `phrolova stop` | Stop this installation's server gracefully |
+| `phrolova restart` | Wait for stop, then start; slow shutdown prevents a duplicate restart |
+| `phrolova status` / `status --full` | Server status / read-only diagnostics |
+| `phrolova logs` | Follow service journal or `logs/service.log` |
+| `phrolova update` | Pull `main`, rebuild changed source and refresh dependencies |
+| `phrolova service install` / `remove` | Linux systemd registration/removal when systemd is running |
+
+The same commands work as `bash scripts/manage.sh <command>` if the registered link is outside PATH. macOS and Termux do not receive a systemd service. For background sessions use `tmux`; Android additionally needs appropriate battery settings and optionally `termux-wake-lock`.
+
+Before updating, finish active work and stop the server. Keep a backup, then run `phrolova update` and start again when using a foreground installation. The manager may stash local source changes blocking an update and reports the stash; inspect it if you maintain custom patches. Updates track `main`, rather than a pinned release tag.
+
+An incompatible Python virtual environment is moved into `.venv-backups/` before recreation. Configuration, database, cookies and media stay in place.
+
+| Data | Source installation | Windows release |
 | --- | --- | --- |
-| `/status` | None | Show recording and system status |
-| `/list` | None | List registered channels |
-| `/start` | `channel_id` | Start a registered channel and enable automatic recording |
-| `/stop` | `channel_id` | Stop a registered channel and disable automatic recording |
-| `/rescan` | None | Request an immediate scan of registered channels |
-| `/diag` | None | Inspect notification queue and transport status |
-| `/notify-test` | None | Enqueue a test notification of kind `system` |
+| Configuration | Root `.env`; legacy `backend/.env` fallback | Adjacent `.env` |
+| Database / uploaded cookies | `backend/data/` | Adjacent `data/` |
+| Logs | Root `logs/` | Adjacent `logs/` |
+| Media | Configured live/video directories | Configured live/video directories |
 
-### Notification events
+For backup, stop cleanly and copy `.env`, the whole data directory and needed media. SQLite uses WAL; copying only `phrolova.db` while running can omit committed WAL data. Existing legacy databases are migrated through SQLite backup while originals are retained. Interrupted video tasks restore as retryable errors; continuation depends on the downloader and remaining partial files.
 
-Supported event identifiers are `live_detected`, `recording_started`, `recording_completed`, `recording_failed`, `vod_completed`, `vod_failed`, `cookie_expired`, `update_available`, and `system`.
+## Discord
 
-Notifications are queued and attempted through the bot first, then the webhook. Pending notifications are persisted and expire after the configured TTL. Recording completion/failure notifications follow finalization and verification. Use Logs and task status to investigate missing completion or failure messages.
+Configure the bot/webhook in **Settings → Notifications**. Invite the bot with `bot` and `applications.commands` scopes and channel permissions for messages/embeds.
 
-## Storage and backups
+Commands: `/status`, `/list`, `/start channel_id`, `/stop channel_id`, `/rescan`, `/diag`, `/notify-test`. `/start` enables automatic recording; `/stop` disables it for the selected channel.
 
-SQLite stores channels, automatic recording options, tags, recording sessions, live-detection history, completed/failed video tasks, pending notifications, and recording conversion jobs. Media and preserved legacy files remain outside the database.
+`DISCORD_COMMAND_USER_IDS` sets a user allowlist; `DISCORD_COMMAND_CHANNEL_ID` sets the allowed channel. When both are configured both must match. If neither is explicit, the notification channel is used; with no authorization setting, commands are denied. Bot delivery falls back to the webhook and pending notifications survive restart until their TTL expires. See the full variable list in [`.env.example`](.env.example).
 
-| Data | Source installation | Windows executable |
-| --- | --- | --- |
-| Settings | `.env` at repository root | `.env` beside executable |
-| Database | `backend/data/phrolova.db` | `data/phrolova.db` beside executable |
-| Uploaded cookie files | `backend/data/` | `data/` beside executable |
-| Application logs | `logs/` at repository root | `logs/` beside executable |
-| Media and preserved legacy files | Configured live/video directories | Configured live/video directories |
+## Development and validation
 
-New installations use `phrolova.db`. Existing `rookery.db` or `signal_recorder.db` files are copied with SQLite backup (including committed WAL data), preserving originals. A failed migration continues using the original database. Legacy JSON state is imported once into empty destination tables, and successfully handled source files are retained with a `.migrated` suffix.
-
-For a straightforward backup, stop Phrolova cleanly, then copy `.env`, the entire data directory, and the media directories you need. SQLite uses WAL mode and checkpoints on normal shutdown; do not copy only the main database file while it is running and assume that all recent changes are included. Preserve cookie backups privately.
-
-Video tasks are persisted, including queued and active tasks. Interrupted tasks are restored as errors for manual retry; channel-import jobs are not restored. Retries reuse persisted filenames and partial-file locations. Continuation depends on the downloader and remaining source/part files.
-
-## Architecture
-
-Phrolova runs a FastAPI backend with a React single-page frontend. In a production build, FastAPI serves the frontend and HTTP API from the same process. Server-sent events update live channel state; the download UI also retrieves task status.
-
-| Component | Responsibility |
-| --- | --- |
-| Python, FastAPI, and Uvicorn | API routes, settings, application lifecycle, and static frontend serving |
-| React 19, TypeScript, Vite, and Tailwind CSS 4 | Dashboard, forms, responsive layout, frontend development, and builds |
-| Recorder service and conductor | Registered-channel state, polling, recording orchestration, retries, and event broadcasts |
-| yt-dlp | Stream URL/metadata extraction, video downloads and channel enumeration |
-| Streamlink | HLS/DASH stream reception for the live recording pipeline |
-| FFmpeg and FFprobe | Post-close recording remux, independent preview processing, VOD merging and media validation |
-| SQLite repository layer | Persistent application state and schema/legacy-data migrations |
-| discord.py and notification service | Slash commands, bot delivery, webhook fallback, and queued notifications |
-
-## Project structure
-
-| Path | Contents |
-| --- | --- |
-| `backend/app/api/` | FastAPI routes for live channels, downloads, settings, statistics, and logs |
-| `backend/app/core/` | Settings, paths, HTTP helpers, logging, and filename handling |
-| `backend/app/engine/` | Conductor, platform engines, live pipelines, video downloads, recording finalization, and release checks |
-| `backend/app/services/` | Recorder facade, Discord bot, and notification delivery |
-| `backend/app/store/` | SQLite access, repositories, and migrations |
-| `backend/app/version.py` | Application version source |
-| `backend/run.py` | Server and desktop startup |
-| `backend/tests/` | Backend tests |
-| `backend/requirements.txt` | Runtime Python dependencies |
-| `frontend/src/` | React pages, components, hooks, contexts, and API client |
-| `frontend/tests/` | Browser regression scripts and fixtures |
-| `frontend/package.json` | Frontend dependencies and npm commands |
-| `scripts/` | Linux/Windows management and health-check scripts |
-| `docs/` | Changelog and technical guides |
-| `assets/` | Icons and screenshots |
-| `.github/` | CI, Windows releases, and issue/PR templates |
-| `.env.example` | Environment template; see the compatibility notes above |
-| `phrolova.spec` | Windows PyInstaller packaging configuration |
-
-`backend/app/static/` is generated by the frontend build and is not committed. The npm package name `phrolova`, PyInstaller specification, `dist/Phrolova.exe` build output, database filename, and Linux command/service use the Phrolova brand. Published release assets use **Phrolova**.
-
-## Development
-
-Set up the source installation first. From the repository root, activate its virtual environment and install the development requirements:
+The backend uses **Python, FastAPI, Uvicorn and SQLite**. The dashboard uses **React 19, TypeScript, Vite and Tailwind CSS 4**. Platform engines live in `backend/app/engine/`; API routes in `backend/app/api/`; common paths/settings/runtime handling in `backend/app/core/`; UI and eight locale resources in `frontend/src/`.
 
 ```bash
-source .venv/bin/activate
-python -m pip install -r backend/requirements-dev.txt
+.venv/bin/python -m pip install -r backend/requirements-dev.txt
+(cd backend && ../.venv/bin/python -m pytest -q)
+(cd frontend && npm ci && npm run i18n:check && npm run i18n:test)
+(cd frontend && npx tsc --noEmit -p tsconfig.json && npm run build)
+bash -n scripts/manage.sh
+bash -n scripts/install-termux.sh
+bash -n scripts/healthcheck.sh
 ```
 
-On Windows, use `.\.venv\Scripts\python.exe` in place of the activated `python` command, or activate the environment with `.\.venv\Scripts\Activate.ps1`.
+CI runs backend tests on Linux x64/ARM64, Windows x64 and macOS Apple Silicon/Intel, plus Python 3.14 with the Termux dependency profile on Linux ARM64. That profile checks dependency compatibility; Android-native build/install and device endurance require a real Termux device. Frontend CI checks locale resources, formatting, TypeScript and the production build.
 
-Run the backend in one terminal:
+For development, run `python run.py` from `backend/` and `npm run dev` from `frontend/` in separate terminals. Vite proxies `/api` and `/health` to the backend. Preview fixture mode is for interface development; it does not run real recordings/downloads or prove platform playback access.
 
-```bash
-cd backend
-python run.py
-```
+## Troubleshooting
 
-Run the frontend in another terminal:
+- **UI missing:** build `frontend/`; output must exist in `backend/app/static`.
+- **Python too old:** install Python 3.12+ and rerun installation. Older Debian/RHEL defaults may not meet the requirement.
+- **YouTube runtime missing:** keep Node 22+ or a supported Deno installed; check PATH after restarting the server.
+- **FFmpeg/FFprobe not found:** inspect resolved paths in Information; both are separate executables.
+- **Folder cannot open:** file-manager actions execute on the server. Headless Linux and Termux provide the path; use a file manager on that host.
+- **Address already in use:** check `phrolova status`, stop the existing instance and wait for finalization before starting another.
+- **Private repository update check fails:** anonymous GitHub release checks cannot read private release metadata; update through an authorized Git checkout or download.
+- **Termux build fails:** verify Clang/Rust/native packages and available storage; consult [Termux installation details](docs/termux-guide.md). Do not substitute Linux wheels for Android dependencies.
 
-```bash
-cd frontend
-npm ci
-npm run dev
-```
+## Documentation and contributing
 
-Open [http://localhost:3000](http://localhost:3000). Vite proxies `/api` and `/health` to `http://127.0.0.1:8000`. Keep the backend at that address during development unless you also intentionally adjust the development proxy. `run.py` does not enable automatic backend reload; restart it after backend changes.
+[Linux](docs/linux-guide.md) · [macOS](docs/macos-guide.md) · [Termux](docs/termux-guide.md) · [Platform validation](docs/native-platform-support.md) · [Changelog](docs/CHANGELOG.md) · [Contribution guide](CONTRIBUTING.md)
 
-### Validation commands
+Preserve API contracts, user data, recording/download behavior and existing line endings when contributing. Report checks actually run; do not restore retired functionality during unrelated work.
 
-Run backend tests from the repository root:
+## License
 
-```bash
-python -m pytest -c backend/pytest.ini backend/tests
-```
-
-Run type checking and the production frontend build from `frontend/`:
-
-```bash
-npx tsc --noEmit -p tsconfig.json
-npm run build
-```
-
-These are the checks requested by the contribution guide. CI runs backend pytest and frontend type checking/builds. Static test-count baselines in older documents differ; consult the actual test output and current CI results rather than treating a historical count as a current result. Browser regression instructions are in [frontend/tests/README.md](frontend/tests/README.md).
-
-### Windows executable build
-
-On Windows, use Python 3.12 and Node.js 22+ available on `PATH`. From the repository root with the Python virtual environment active:
-
-```powershell
-cd frontend
-npm ci
-npm run build
-cd ..
-python -m pip install -r backend/requirements.txt pyinstaller pillow pystray
-python -m PyInstaller --clean --noconfirm phrolova.spec
-```
-
-The result is `dist/Phrolova.exe`. The release workflow renames it to a versioned Phrolova Windows x64 asset. The specification bundles Node.js and retrieves its matching license during the build; network access is required. FFmpeg and FFprobe remain external dependencies.
-
-## Limitations and troubleshooting
-
-### Known limitations
-
-- **Live containers:** Compatible TS HLS is preferred. When only fMP4/CMAF is available, Streamlink preserves native data and FFmpeg converts it after the writer has closed; data is never mislabeled as TS.
-- **Download controls:** pause/resume is implemented through yt-dlp progress callbacks. Paused tasks retain their concurrency slot until resumed or cancelled.
-- **Task order and persistence:** display reordering does not reschedule already-created download coroutines. Interrupted video tasks require manual retry after a restart; channel imports are not restored.
-- **Availability:** selectable quality and playback depend on the formats, authentication and media supplied by the upstream platform.
-
-### Common issues
-
-| Symptom | What to check |
-| --- | --- |
-| FFmpeg not found | Install FFmpeg and FFprobe together. For the executable, use adjacent `bin/` or `PATH`; for backend operation, a valid `FFMPEG_PATH` is also supported |
-| CHZZK VOD repeatedly fails duration validation | Verify `ffprobe` is beside FFmpeg or on `PATH`, then inspect Logs for an incomplete download or CDN error |
-| Missing Streamlink or another Python module | Use the intended virtual environment and reinstall `backend/requirements.txt`; for a packaged app, obtain the current release |
-| yt-dlp missing at Windows startup | Check outbound GitHub access or put `yt-dlp.exe` in the adjacent `bin/` folder |
-| YouTube extraction fails | Check Logs, the installed yt-dlp version, and Node.js availability. For authentication-required video downloads, re-upload valid cookies and check that the account can view the video |
-| Live channel is not recording | Confirm automatic recording is enabled, check CHZZK watch-along conditions and the hold message, confirm the stream is live, and inspect Logs |
-| Retry limit reached | Inspect the reported failure and correct its cause before manually restarting recording or retrying a completed/failed video task |
-| Browser cannot connect or port is occupied | Check `HOST` and `PORT`, stop an older instance/service, and restart. Use `/health` on the configured port to check server response |
-| API works but the dashboard does not load | Run `npm ci` and `npm run build` in `frontend/`, confirm `backend/app/static/index.html` exists, and restart the backend |
-| Linux service does not start | Run `phrolova status --full` and `phrolova logs`; check the service user's access to the application, virtual environment, and output directories |
-| `phrolova` command is missing | Re-run the installation one-liner to register it. If installed under `~/.local/bin`, ensure that directory is on your `PATH` |
-| `phrolova logs` reports no file without systemd | Use the foreground console or the dashboard's Logs page. The script's fallback `logs/service.log` is not automatically created by foreground startup |
-| Cannot save settings or media | Give the backend user write access to `.env`, the data directory, logs, and configured output directories. Check free disk space and use absolute paths |
-| An output folder does not open in your browser's machine | “Open location” runs on the backend host, not on a remote browser client; access the server's media directory directly |
-
-Back up settings and data before changing installation locations. To update a Linux installation managed by the script, use `phrolova update`; for Windows, replace the stopped executable. Dashboard release checks notify you of updates but do not install them.
-
-## Additional documentation
-
-- [Changelog](docs/CHANGELOG.md) — release history.
-- [Storage guide](docs/storage.md) — SQLite and legacy JSON migration details.
-- [Linux guide](docs/linux-guide.md) — additional service-management background.
-- [Test guide](docs/test-guide.md) — historical manual test scenarios.
-- [Browser regression tests](frontend/tests/README.md) — current frontend regression commands.
-
-Most supporting guides are written in Korean. Setup uses `.env` with a nonempty `DOWNLOAD_DIR`, and Vite builds directly into `backend/app/static`. Follow this README for current installation paths and use the focused reports below for implementation and validation details.
-
-- [Recording finalization](docs/recording-finalization.md) — source preservation, remux queue and file verification.
-- [Recording boundary and buffer audit](docs/recording-boundary-buffer-audit-ko.md) — graceful stop, reconnect checkpoints and disk buffers.
-- [Reference issue audit](docs/reference-issue-audit.md) — adapted fixes and validation records.
-- [SOOP viewers and platform selectors](docs/soop-viewers-platform-select.md) — current viewer counts and shared selector geometry.
-- [Native Termux and proot guide](docs/termux-guide.md) — Android setup and environment details.
-- [Compatibility audit](docs/compatibility-audit-ko.md) — runtime checks and remaining device-specific coverage.
-
-## Contributing
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing code. Preserve recording behavior and compatibility with deployed clients, including API paths, field names, and payload structures. Run the backend tests, TypeScript check, and production build described above, and report the results you actually observed.
-
-Follow the repository's existing line endings, use theme tokens and shared UI primitives, write code comments explaining why in Korean, and use English commit subjects with Korean bodies as requested by the contribution guide. Do not renormalize unrelated files.
-
-## License and attribution
-
-Phrolova is distributed under the [MIT License](LICENSE).
-
-Copyright (c) 2026 Serian (github.com/eruminyu). The original author attribution is preserved in the license and package metadata. The repository also records contributions in its Git history and changelog.
+[MIT](LICENSE). Copyright (c) 2026 Serian (github.com/eruminyu). Original author attribution is preserved; subsequent contributions are recorded in Git history and the changelog.

@@ -1,52 +1,32 @@
 # Linux 설치 및 운영
 
-Python 3.12+가 필요합니다. 아래 명령은 Ubuntu 24.04 또는 Python 3.12+를 제공하는 Debian 배포판을 기준으로 합니다. Debian 12의 기본 Python 3.11에서는 실행 진입점이 중지되므로 Python 3.12+를 별도로 준비하거나 배포판을 업그레이드하세요. Debian에 Ubuntu PPA를 추가하지 마세요. x86_64에서 검증했고 ARM64 실제 실행은 미검증입니다.
+Linux x86_64/ARM64에서 소스로 실행합니다. Python 3.12+, Node.js 22+와 npm, FFmpeg/FFprobe 6+, Bash, Git, curl, ps가 필요합니다. apt·dnf/yum·pacman·apk를 감지해 해당 배포판 패키지를 사용합니다.
 
 ## 설치
 
+저장소는 비공개입니다. 접근 권한이 있는 GitHub 계정의 Git 자격 증명이나 SSH 키를 먼저 설정하세요.
+
 ```bash
+# Ubuntu/Debian 초기 도구. 다른 배포판은 자체 패키지 매니저를 사용합니다.
 sudo apt-get update
-sudo apt-get install -y git python3 python3-venv python3-dev ffmpeg nodejs npm build-essential pkg-config libxml2-dev libxslt1-dev libffi-dev libssl-dev tmux
-python3 -c 'import sys; assert sys.version_info >= (3, 12), "Python 3.12+ required"'
-node --version
-# Node.js 22+ 권장. 배포판 Node가 오래되면 공식 설치 방법으로 먼저 갱신하세요.
+sudo apt-get install -y bash git curl
 git clone https://github.com/ProofPage/Phrolova.git "$HOME/Phrolova"
 cd "$HOME/Phrolova"
-python3 -m venv .venv
-.venv/bin/python -m pip install -r backend/requirements.txt
-.venv/bin/python -m pip check
-(cd frontend && npm ci && npm run build)
-# 빌드는 backend/app/static에 직접 출력됩니다. dist 복사 불필요.
-if [ ! -e .env ] && [ ! -e backend/.env ]; then
-  cp .env.example .env
-  chmod 600 .env
-fi
-# 새 템플릿 기본 HOST는 127.0.0.1. 기존 .env는 직접 확인하세요.
-cd backend
-../.venv/bin/python run.py
-```
-
-브라우저: <http://127.0.0.1:8000> 또는 <http://localhost:8000>. Ctrl+C로 종료하고 같은 명령으로 재시작합니다. 기본 상대 다운로드 경로는 실행 작업 디렉터리 기준입니다. 모든 시작 방식을 `backend/`에서 실행하거나 `.env`의 다운로드 경로를 절대경로로 지정하세요. 데이터베이스는 `backend/data/phrolova.db`, 설정은 루트 `.env`(기존 `backend/.env` 지원), 로그는 루트 `logs/service.log`입니다.
-
-Node.js는 웹 UI 빌드 이후 웹 서버 자체에는 필요하지 않습니다. 다만 YouTube의 JavaScript 처리에는 Node 또는 Deno가 필요하므로 YouTube를 쓰면 런타임을 유지하세요. `ffmpeg-python`은 FFmpeg 실행 파일을 설치하지 않습니다.
-
-## 백그라운드 실행
-
-```bash
-cd "$HOME/Phrolova"
+bash scripts/manage.sh install
 bash scripts/manage.sh start
-# systemd 없는 환경에서는 포그라운드 실행입니다.
-# 별도 세션에서:
-tmux new -s phrolova
-cd "$HOME/Phrolova/backend"
-../.venv/bin/python run.py
-# Ctrl+B, D로 분리; tmux attach -t phrolova로 복귀 후 Ctrl+C로 종료.
 ```
 
-systemd가 실제로 동작하는 일반 Linux에서만:
+설치 명령은 기존 체크아웃을 재사용하고 의존성 검사, 가상환경 생성, 프론트엔드 빌드와 관리 명령 등록을 수행합니다. Python 기본 버전이 3.12 미만인 배포판에서는 적합한 Python을 먼저 설치해야 합니다. Debian에 Ubuntu PPA를 자동 추가하지 않습니다.
+
+Node는 22 이상을 검사합니다. apt 계열은 NodeSource Debian 설치 방법, dnf/yum은 RPM 설치 방법을 사용하며 Arch/Alpine은 자체 패키지를 사용합니다. FFmpeg와 FFprobe를 각각 검사합니다. GNU/Linux 정적 FFmpeg 대체 설치는 x86_64/ARM64 glibc 환경에서만 사용하며 Alpine에는 적용하지 않습니다.
+
+처음 실행한 후 <http://127.0.0.1:8000>에서 설정을 완료하세요. 루트 `.env`가 없으면 기본 설정 화면을 이용합니다. `DOWNLOAD_DIR`을 지정한 `.env`를 먼저 만들면 이 화면을 건너뜁니다.
+
+## 실행 방식
+
+systemd가 실제 실행 중이면 서비스 등록을 선택할 수 있습니다.
 
 ```bash
-cd "$HOME/Phrolova"
 bash scripts/manage.sh service install
 bash scripts/manage.sh status
 bash scripts/manage.sh logs
@@ -54,59 +34,43 @@ bash scripts/manage.sh stop
 bash scripts/manage.sh restart
 ```
 
-자동 등록은 현재 사용자와 저장소 경로를 사용합니다. systemd 부팅 자동 실행은 이 검수 컨테이너에서 미검증입니다. 직접 작성할 때도 `WorkingDirectory`를 `backend`로 지정하고 `ExecStart`에 가상환경 Python과 `run.py` 절대경로를 사용하세요. 서비스 종료는 네트워크 타임아웃/yt-dlp 재시도가 끝날 때까지 지연될 수 있습니다.
+유닛은 현재 사용자, 가상환경 Python과 `backend/` 작업 디렉터리를 사용하며 PATH에 Node를 포함합니다. 공백·퍼센트가 포함된 경로를 systemd 인용 규칙으로 처리합니다. 종료 신호는 우선 서버에 전달해 녹화 후처리와 자식 프로세스 정리를 수행합니다.
 
-## 업데이트와 점검
+systemd가 없으면 `start`는 포그라운드 실행입니다. Ctrl+C로 종료하거나 다른 터미널에서 `stop`을 실행하세요. 설치본별 PID/시작 정보를 확인해 해당 서버만 종료하고, 종료가 지연되면 중복 재시작을 중단합니다.
 
-녹화·다운로드가 끝난 다음 서버를 종료하세요. 아래 명령은 로컬 수정을 강제로 덮어쓰지 않습니다.
+```bash
+# systemd 없는 서버의 백그라운드 세션
+sudo apt-get install -y tmux
+tmux new -s phrolova 'cd "$HOME/Phrolova" && bash scripts/manage.sh start'
+# Ctrl+B, D로 분리; tmux attach -t phrolova로 복귀
+```
+
+## 저장 경로·업데이트·점검
+
+설정은 루트 `.env` 우선, 기존 `backend/.env`는 폴백입니다. DB와 업로드 쿠키는 `backend/data/`, 로그는 루트 `logs/`에 있습니다. 상대 미디어 경로는 `backend/` 기준입니다. 절대경로를 설정하면 실행 방식에 관계없이 같은 위치를 사용합니다.
+
+녹화·다운로드 완료 후 정상 종료하고 `.env`, 전체 `backend/data/`, 필요한 미디어를 백업하세요.
 
 ```bash
 cd "$HOME/Phrolova"
-git pull --ff-only
-.venv/bin/python -m pip install -r backend/requirements.txt
-(cd frontend && npm ci && npm run build)
-cd backend
-../.venv/bin/python run.py
+bash scripts/manage.sh stop
+bash scripts/manage.sh update
+bash scripts/manage.sh start
+bash scripts/manage.sh status --full
 ```
 
-```bash
-cd "$HOME/Phrolova"
-tail -f logs/service.log
-curl -f http://127.0.0.1:8000/health
-.venv/bin/streamlink --version
-.venv/bin/yt-dlp --version
-ffmpeg -version
-ffprobe -version
-```
+업데이트는 `main`을 가져오며 설정·DB·쿠키·미디어를 보존합니다. 로컬 코드 변경이 pull을 막으면 stash 위치를 표시합니다. Python 업그레이드로 깨진 가상환경은 `.venv-backups/`에 보존하고 재생성합니다.
 
-오류: Python 버전 오류는 3.12+ 환경을 준비하세요. UI가 없으면 프론트엔드를 다시 빌드하세요. `Permission denied`이면 설치 폴더·`backend/data`·`logs`·다운로드 경로에 실행 사용자 쓰기 권한이 있는지 확인하세요. `address already in use`이면 기존 인스턴스를 종료하세요. 임의 프로세스 전체 종료 명령을 사용하지 마세요. 설정·DB·쿠키를 삭제하여 해결하지 마세요.
+상세 점검은 API 조회·읽기 전용 SQLite 접근·프로세스 확인을 수행합니다. 데스크톱 폴더 열기는 `xdg-open`을 사용하고 디스플레이 없는 서버에서는 경로만 제공합니다.
 
 ## 원격 접속
 
-API에는 일반 웹 사용자 인증이 없습니다. CHZZK/YouTube/X 쿠키와 Discord 명령 허용 목록은 웹 API 접근 통제가 아닙니다. 외부 공개 전에 인증을 제공하는 리버스 프록시/VPN과 접근 제한을 구성해야 합니다. 원격 관리의 간단한 방법은 SSH 터널입니다.
+기본 루프백 바인딩을 유지하고 SSH 터널로 접속할 수 있습니다.
 
 ```bash
 ssh -N -L 8000:127.0.0.1:8000 user@server
 ```
 
-그 뒤 로컬 브라우저의 <http://127.0.0.1:8000>을 사용합니다. 새 기본 설정은 로컬 전용이며 기존 명시적 HOST 값은 유지됩니다.
+웹 API에 별도 로그인 기능은 없습니다. 외부 공개 시 인증 프록시 또는 사설 네트워크에서 접근을 제어하세요.
 
-## 공식 관리 명령과 기존 설치 이전
-
-설치 스크립트는 `phrolova` 명령을 등록합니다. 새 기본 경로는 `~/Phrolova`이며, 명시한 `INSTALL_DIR`과 현재 저장소를 우선하고 기존 `~/rookery`, `~/signal-recorder`, `~/chzzk-recorder-pro`를 이어받습니다. 기존 디렉터리를 삭제하거나 이동하지 않습니다.
-
-```bash
-phrolova install
-phrolova update
-phrolova start
-phrolova stop
-phrolova restart
-phrolova status
-phrolova status --full
-phrolova logs
-phrolova service install
-phrolova service remove
-phrolova uninstall
-```
-
-이전 서버에서 녹화·다운로드를 완료하고 정상 종료한 뒤 업데이트하세요. 기존 DB와 `.env`를 백업하세요. 서비스 전환은 기존 유닛을 중지하고 `phrolova.service`를 시작합니다. 등록 또는 헬스 확인 실패 시 이전 서비스 활성화·실행 상태를 복구합니다. 기존 유닛 파일은 비활성 상태로 보존합니다. 복구 실패 경고가 있으면 로그와 `systemctl status`를 확인하세요. 관리 명령 링크는 새 링크 등록 성공 후 동일 설치본을 가리키는 구형 심볼릭 링크만 제거합니다.
+[README](../README.md) · [검증 범위](native-platform-support.md)

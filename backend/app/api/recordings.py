@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from typing import Literal
-import asyncio, os, shutil
+import asyncio
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -115,23 +115,7 @@ async def open_location(job_id: str, request: Request):
         local = False
     if not local:
         return {'message': f'서버 저장 위치: {folder}. 원격 브라우저에서는 파일 열기를 사용하세요.', 'path': str(folder), 'opened': False}
-    if os.name == "nt":
-        await asyncio.to_thread(os.startfile, str(folder))
+    from app.core.file_browser import reveal
+    if await asyncio.to_thread(reveal, folder):
         return {"message": "저장 폴더를 열었습니다.", "path": str(folder)}
-    command = shutil.which("xdg-open")
-    if command and (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
-        proc = await asyncio.create_subprocess_exec(
-            command,
-            str(folder),
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
-        try:
-            await asyncio.wait_for(proc.wait(), 10)
-        except asyncio.TimeoutError:
-            if proc.returncode is None:
-                proc.kill()
-            await proc.wait()
-        if proc.returncode == 0:
-            return {"message": "저장 폴더를 열었습니다.", "path": str(folder)}
     return {"message": f"저장 위치: {folder}", "path": str(folder)}

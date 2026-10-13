@@ -1,127 +1,107 @@
 # Android Termux 설치 및 운영
 
+Native Termux와 proot Linux는 의존성 설치 방식을 구분합니다. Native는 Android 패키지와 `requirements-termux.txt`, proot는 게스트 배포판 패키지와 `requirements.txt`를 사용합니다.
 
-## A. Native Termux
+## Native Termux
+
+[공식 설치 안내](https://github.com/termux/termux-app#installation)를 확인하세요. 비공개 저장소 접근 권한이 있는 GitHub 계정의 Git 인증이 필요합니다.
 
 ```bash
 pkg update
 pkg install -y git
 cd "$HOME"
 git clone https://github.com/ProofPage/Phrolova.git
-cd "$HOME/Phrolova"
+cd Phrolova
 bash scripts/install-termux.sh
-cd backend
-"$HOME/Phrolova/.venv/bin/python" run.py
+bash scripts/manage.sh start
 ```
 
-추가한 설치 스크립트는 Python, python-pip, FFmpeg, Node.js LTS, Clang, Rust, make, pkg-config, libxml2, libxslt, OpenSSL, libffi, tmux를 `pkg`로 설치합니다. 새 가상환경과 `requirements-termux.txt`를 사용하고 웹 UI를 빌드합니다. 기존 `.env`/`backend/.env`를 덮어쓰지 않고 DB·녹화·인증 정보를 삭제하지 않습니다. 반복 실행은 같은 설치 폴더를 재사용합니다. 실패 시 줄 번호와 명령 오류를 출력합니다. `pkg update`는 사용자가 필요할 때 수행하고 전체 패키지를 자동 업그레이드하지 않습니다.
+설치기는 Python·python-pip·FFmpeg·Node.js LTS·curl·procps·Clang·Rust·make·pkg-config·libxml2·libxslt·OpenSSL·libffi·tmux를 준비합니다. Python 3.12+, Node 22+, FFmpeg/FFprobe 6+를 검사하고 필요한 Python 확장 모듈을 장치에서 빌드합니다.
 
-수동 Python 단계:
+`requirements-termux.txt`는 순수 Uvicorn을 사용합니다. FastAPI, Streamlink, yt-dlp, aiohttp, pydantic-core, discord.py와 Uvicorn import를 확인하며 제거된 라이브러리를 요구하지 않습니다. Linux/Windows 실행 파일이나 manylinux wheel로 Android 의존성을 대체하지 않고 Termux 관리 대상 pip도 자동 업그레이드하지 않습니다.
+
+수동 Python 설치:
 
 ```bash
 cd "$HOME/Phrolova"
-python -c 'import sys; assert sys.version_info >= (3, 12)'
 python -m venv .venv
-.venv/bin/python -m pip install setuptools wheel
 .venv/bin/python -m pip install -r backend/requirements-termux.txt
 .venv/bin/python -m pip check
 (cd frontend && npm ci && npm run build)
+cd backend
+../.venv/bin/python run.py
 ```
 
-Termux 관리 대상 pip를 임의 업그레이드하지 마세요. Rust/maturin/pydantic-core 빌드 오류는 실제 로그를 확인해야 합니다. manylinux ARM64 wheel을 Android wheel 대신 설치하거나 `--no-deps`로 필수 의존성을 생략하지 마세요. 빌드 격리가 원인인 경우에만 필요한 빌드 도구 버전을 별도 설치하고 `--no-build-isolation`을 검토하세요. 이 방식도 단말에서 미검증이며 성공 보장 대안이 아닙니다.
+<http://127.0.0.1:8000>을 Android 브라우저에서 엽니다. 서버는 트레이를 사용하지 않으며 폴더 열기 요청에는 저장 경로를 제공합니다.
 
-Android 브라우저에서 <http://127.0.0.1:8000> 또는 <http://localhost:8000>을 엽니다. 서버는 기본 헤드리스 모드이며 트레이가 필요 없습니다. 폴더 열기는 서버의 저장 경로를 반환하며 Android 파일 앱을 자동 실행하지 않습니다.
+## 저장 경로
 
-## 저장소
+앱·가상환경·DB·쿠키는 `$HOME/Phrolova` 내부에 두세요. 공유 저장소는 실행 권한·심볼릭 링크·SQLite 잠금 제약이 있어 앱 설치 위치로 사용하지 않습니다. 설치기는 `/sdcard`·`/storage` 아래 설치 경로를 거부합니다.
 
-저장소·가상환경·DB·쿠키는 `$HOME/Phrolova`에 두세요. 기본 녹화는 `$HOME/Phrolova/backend/recordings`에 저장됩니다. 공유 저장소 권한 없이도 내부 HOME에서 운영할 수 있습니다. 공유 저장소에는 실행 권한·심볼릭 링크·파일 잠금 제약이 있으므로 저장소나 SQLite WAL DB를 두지 마세요.
-
-미디어만 공유 저장소에 저장하려면:
+미디어만 공유 저장소로 보내려면:
 
 ```bash
 termux-setup-storage
-# Android 권한 창에서 저장소 접근을 허용한 후:
-mkdir -p "$HOME/storage/shared/Phrolova-recordings"
-test -w "$HOME/storage/shared/Phrolova-recordings"
+# Android 저장소 권한을 허용한 뒤 실행
+mkdir -p "$HOME/storage/shared/Phrolova/Live" "$HOME/storage/shared/Phrolova/Video"
+printf '%s\n' "$HOME/storage/shared/Phrolova/Live" "$HOME/storage/shared/Phrolova/Video"
 ```
 
-웹 설정에서 실제 절대경로를 지정하거나 `.env`의 `DOWNLOAD_DIR`을 해당 경로로 지정하세요. `.env`의 `$HOME` 확장에 의존하지 마세요. 권한이 거부되면 공유 경로를 쓰지 말고 기본 내부 경로를 유지하세요. 허용되지 않은 경로에 대한 저장 작업은 실패할 수 있으나 기존 DB를 초기화할 필요는 없습니다.
+출력된 실제 절대경로를 설정에 입력하세요. `.env`의 `$HOME` 자동 확장에 의존하지 않습니다. 권한을 받지 못하면 내부 HOME를 사용하세요.
 
-## 백그라운드·종료·재시작
+## 백그라운드·관리·업데이트
 
 ```bash
 termux-wake-lock
-tmux new -s phrolova
-cd "$HOME/Phrolova/backend"
-"$HOME/Phrolova/.venv/bin/python" run.py
-# Ctrl+B, D: 분리
-# tmux attach -t phrolova: 복귀
-# Ctrl+C: 정상 종료
-# 녹화를 더 하지 않을 때:
+tmux new -s phrolova 'cd "$HOME/Phrolova" && bash scripts/manage.sh start'
+# Ctrl+B, D로 분리; tmux attach -t phrolova로 복귀
+# 다른 Termux 세션에서:
+cd "$HOME/Phrolova"
+bash scripts/manage.sh status
+bash scripts/manage.sh logs
+bash scripts/manage.sh stop
+# 작업 종료 후:
 termux-wake-unlock
 ```
 
-Android 설정에서 Termux 배터리 제한을 완화하세요. wake-lock은 화면 꺼짐 중 수면을 줄이지만 강제 종료·제조사 절전·네트워크 손실을 막는 보장은 없습니다. proot도 Android의 정책에서 벗어나지 못합니다. 강제 종료 후 같은 명령으로 서버를 다시 실행하세요. 완료 기록과 설정은 유지되고 중단 VOD는 오류 작업으로 복원되어 수동 재시도가 가능합니다. 정확한 바이트 위치 자동 재개는 보장하지 않습니다. `.part`를 보존하려면 `KEEP_DOWNLOAD_PARTS=true`를 설정하세요. 장시간 녹화에는 TS/MKV가 강제 종료 후 복구에 유리하며 일반 MP4는 최종화 전에 종료되면 재생이 어려울 수 있습니다.
+Android 배터리 제한에서 Termux를 허용하세요. wake-lock과 tmux는 Android 강제 종료를 막지 못합니다. 중단된 다운로드는 재시작 시 오류 작업으로 복원되며 수동 재시도할 수 있습니다. 필요하면 `.part` 보존을 켜세요. 제품 기본 동시 다운로드는 5개이며 휴대폰에서는 1개부터 시작해 발열·저장 공간을 확인하세요.
 
-자동 시작은 별도 Termux:Boot 설치와 권한 설정이 필요하고 미검증입니다. 설정했다면 `$HOME/.termux/boot/phrolova.sh`에 다음 내용을 넣을 수 있습니다. 중복 세션을 만들지 않습니다.
+작업 완료 후 정상 종료하고 `.env`, 전체 `backend/data/`, 미디어를 백업한 뒤:
 
 ```bash
-#!/data/data/com.termux/files/usr/bin/bash
-termux-wake-lock
-tmux has-session -t phrolova 2>/dev/null || tmux new-session -d -s phrolova 'cd "$HOME/Phrolova/backend" && "$HOME/Phrolova/.venv/bin/python" run.py'
+bash scripts/manage.sh update
+bash scripts/manage.sh start
 ```
 
-로그·공간 확인:
+Native 업데이트도 `requirements-termux.txt`를 사용합니다. 반복 설치는 `.env`·기존 `backend/.env`·DB·쿠키·미디어를 보존합니다. Python 업그레이드로 깨진 가상환경은 `.venv-backups/`에 보존하고 재생성합니다. Native 확장 빌드 오류는 컴파일 로그와 장치 저장 공간을 확인하세요. Termux:Boot 자동 시작은 별도 구성입니다.
+
+## proot-distro Linux
+
+Termux 셸에서:
 
 ```bash
-tail -f "$HOME/Phrolova/logs/service.log"
-df -h "$HOME"
-du -sh "$HOME/Phrolova/backend/recordings"
-```
-
-기본 동시 VOD는 3개입니다. 휴대폰에서는 우선 1개로 제한하고 발열·메모리·배터리·저장 공간을 관찰하세요. 공간 부족 보호/열 제어가 구현되어 있다고 주장하지 않습니다. Node는 웹 서버 실행에 불필요하지만 YouTube JavaScript 처리에는 필요하므로 YouTube 이용 시 유지하세요.
-
-## B. proot-distro Ubuntu/Debian
-
-Native Termux에서:
-
-```bash
-pkg update
 pkg install -y proot-distro tmux
-proot-distro list
 proot-distro install ubuntu
-termux-wake-lock
 proot-distro login ubuntu
 ```
 
-Ubuntu 내부에서만:
+Ubuntu 게스트에서:
 
 ```bash
+export PHROLOVA_ENVIRONMENT=termux-proot
 apt-get update
-apt-get install -y git python3 python3-venv python3-dev ffmpeg nodejs npm build-essential pkg-config libxml2-dev libxslt1-dev libffi-dev libssl-dev
-python3 -c 'import sys; assert sys.version_info >= (3, 12), "Python 3.12+ required"'
-node --version
-# Python 또는 Node가 오래되면 배포판에 맞게 먼저 준비하세요.
+apt-get install -y bash git curl
+# Python 3.12+를 제공하는 게스트 사용
 git clone https://github.com/ProofPage/Phrolova.git "$HOME/Phrolova"
 cd "$HOME/Phrolova"
-python3 -m venv .venv
-.venv/bin/python -m pip install -r backend/requirements.txt
-(cd frontend && npm ci && npm run build)
-if [ ! -e .env ] && [ ! -e backend/.env ]; then cp .env.example .env; chmod 600 .env; fi
-cd backend
-PHROLOVA_ENVIRONMENT=termux-proot "$HOME/Phrolova/.venv/bin/python" run.py
+bash scripts/manage.sh install
+bash scripts/manage.sh start
 ```
 
-Debian을 사용하려면 지원 목록에서 확인한 뒤 `proot-distro install debian`과 `proot-distro login debian`을 사용하고 내부 설치는 같은 방식으로 진행하세요. Python 3.11 기본 배포판에는 별도 3.12+가 필요합니다. proot 안의 root는 Android 실제 root 권한이 아닙니다. systemd 서비스 등록은 사용하지 마세요.
+환경 변수는 게스트 셸 프로필에 보존하세요. 상위 Termux의 `TERMUX_VERSION`이 전달돼도 게스트가 Android 패키지 경로를 사용하지 않게 합니다. Native/proot 간 `.venv`를 재사용하지 않습니다. 게스트에는 Linux Node/Python/FFmpeg를 설치하며 systemd가 실행 중이지 않으면 서비스를 등록하지 않습니다.
 
-Native Termux에서 tmux 세션을 먼저 만든 뒤 proot에 로그인하면 세션 분리 상태로 운영할 수 있습니다. Ctrl+C로 서버를 종료하고 동일한 로그인·실행 명령으로 재시작합니다. 브라우저는 같은 단말의 <http://127.0.0.1:8000>입니다. Native의 가상환경을 복사하지 마세요. 공유 저장소가 필요하면 로그인 때 명시적으로 bind하고 미디어 경로만 사용하세요.
+## 검증 범위
 
-proot는 glibc wheel과 배포판 바이너리를 사용할 수 있어 Native 소스 빌드 문제의 보조 수단입니다. 실행 오버헤드와 Android 강제 종료 문제를 해결하지 못하고, 기기에서 실제 실행은 미검증입니다.
+설치·반복 실행·설정 보존은 격리된 패키지 명령으로 자동 검사합니다. Python 3.14/ARM64의 Termux 의존성 프로필은 Linux CI에서 검사합니다. 실제 Android ABI 빌드와 장시간 녹화는 단말 검증이 필요하며 이번 작업 환경에는 Android 단말이 없습니다.
 
-## 업데이트
-
-서버를 정상 종료한 다음 `git pull --ff-only`, 해당 환경의 requirements 설치, `npm ci && npm run build`를 수행하고 재시작하세요. Native에서는 `scripts/manage.sh`를 사용하지 마세요. 로컬 수정으로 pull이 실패하면 변경 사항을 검토하고 강제 초기화하지 마세요.
-
-## 데이터 파일명 이전
-
-새 기본 SQLite 이름은 `backend/data/phrolova.db`입니다. 기존 `rookery.db`와 `signal_recorder.db`는 SQLite 백업 API로 커밋된 WAL까지 이관하고 원본을 보존합니다. 업데이트 전에 앱을 정상 종료하고 DB 및 `.env`를 백업하세요. 실패하면 원본 DB를 계속 사용합니다. Termux 내부 `$HOME` 설치를 유지하며 이 리브랜딩은 `pkg` 설치 방식이나 Streamlink 라이브 경로를 변경하지 않습니다.
+[README](../README.md) · [Linux](linux-guide.md) · [검증 범위](native-platform-support.md)

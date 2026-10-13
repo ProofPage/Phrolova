@@ -30,7 +30,7 @@ fetch() { curl -fsS --max-time 5 "$BASE$1" 2>/dev/null; }
 
 # python3가 있다고 표시돼도 실제로 동작하지 않는 환경이 있어 실행까지 확인한다.
 PY=""
-for cand in python3 python; do
+for cand in "$APP_DIR/.venv/bin/python" python3 python; do
     if command -v "$cand" >/dev/null 2>&1 && "$cand" -c 'import sys' >/dev/null 2>&1; then
         PY="$cand"; break
     fi
@@ -53,13 +53,32 @@ fi
 
 # ── 2. 실행 중인 프로세스 ───────────────────────────
 section "프로세스"
-kv "uvicorn" "$(pgrep -fc 'uvicorn.*app.main' 2>/dev/null || echo 0)개"
-kv "yt-dlp (녹화/다운로드)" "$(pgrep -fc 'yt-dlp' 2>/dev/null || echo 0)개"
-kv "ffmpeg" "$(pgrep -fc 'ffmpeg' 2>/dev/null || echo 0)개"
-echo "  ── 가동 시간 ──"
-pgrep -f 'uvicorn.*app.main' 2>/dev/null | head -3 | while read -r pid; do
-    printf '    pid %-8s %s\n' "$pid" "$(ps -o etime= -p "$pid" 2>/dev/null | tr -d ' ')"
-done
+if has_py; then
+    APP_DIR="$APP_DIR" "$PY" <<'PYEOF'
+import os, subprocess, sys
+from pathlib import Path
+root = Path(os.environ['APP_DIR']).resolve()
+sys.path.insert(0, str(root / 'backend'))
+try:
+    from app.core.process_control import read_record, matches
+    record = read_record(root)
+    if record and matches(record, root):
+        pid = record['pid']
+        age = subprocess.check_output(['ps', '-p', str(pid), '-o', 'etime='], text=True, timeout=3).strip()
+        print(f'  Phrolova PID: {pid} / 가동 시간: {age}')
+    else:
+        print('  Phrolova: 이 설치본의 실행 프로세스 없음')
+    # BSD/Android에도 있는 ps 형식으로 조회한다. 전체 호스트 도구 수임을 명시한다.
+    rows = subprocess.check_output(['ps', '-ax', '-o', 'comm='], text=True, timeout=3).splitlines()
+    for tool in ('ffmpeg', 'ffprobe', 'yt-dlp', 'streamlink'):
+        count = sum(Path(row.strip()).name == tool for row in rows)
+        print(f'  {tool} (호스트 전체): {count}개')
+except (ImportError, OSError, subprocess.SubprocessError) as error:
+    print(f'  프로세스 확인 실패: {error}')
+PYEOF
+else
+    kv "프로세스" "Python 실행 도구를 찾지 못했습니다"
+fi
 
 # ── 3. 채널 및 녹화 상태 ────────────────────────────
 section "채널 / 녹화"
@@ -170,8 +189,8 @@ section "로그"
 for L in "$APP_DIR/logs/service.log" "$APP_DIR/backend/logs/service.log"; do
     if [ -f "$L" ]; then
         kv "파일" "$L ($(du -h "$L" | cut -f1))"
-        kv "ERROR 총합" "$(grep -c 'ERROR' "$L" 2>/dev/null || echo 0)건"
-        kv "오늘 ERROR" "$(grep -c "^$(date +%Y-%m-%d).*ERROR" "$L" 2>/dev/null || echo 0)건"
+        kv "ERROR 총합" "$(grep -c 'ERROR' "$L" 2>/dev/null || true)건"
+        kv "오늘 ERROR" "$(grep -c "^$(date +%Y-%m-%d).*ERROR" "$L" 2>/dev/null || true)건"
         echo "  ── 최근 ERROR 5건 ──"
         grep 'ERROR' "$L" 2>/dev/null | tail -5 | cut -c1-160 | sed 's/^/    /'
     fi
@@ -180,7 +199,7 @@ done
 # ── 8. 버전 ─────────────────────────────────────────
 section "버전"
 [ -f "$APP_DIR/backend/app/version.py" ] && kv "소스 버전" "$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "$APP_DIR/backend/app/version.py" | head -1)"
-if [ -d "$APP_DIR/.git" ]; then
+if [ -d "$APP_DIR/.git" ] || [ -f "$APP_DIR/.git" ]; then
     kv "git 브랜치" "$(git -C "$APP_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null)"
     kv "git 커밋" "$(git -C "$APP_DIR" log --oneline -1 2>/dev/null)"
 fi

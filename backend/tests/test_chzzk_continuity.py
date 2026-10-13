@@ -302,20 +302,36 @@ class DeliveryTests(unittest.TestCase):
         source = stream.continuity
         manifest, playlist = source.candidates()[0]
         target = source.locate(playlist.segments[0], manifest)
-        self.cdn.delays['/primary/1080p/0.m4v'] = 0.12
         reader = continuity.ChzzkContinuityReader(stream)
         self.addCleanup(reader.writer.close)
+        lookup_started = threading.Event()
+        release_lookup = threading.Event()
+        lookup_finished = threading.Event()
 
         def slow_lookup(*_):
-            time.sleep(0.4)
+            lookup_started.set()
+            release_lookup.wait(3)
+            lookup_finished.set()
             return iter(())
 
-        with patch.object(source, "alternatives", slow_lookup):
-            before = time.monotonic()
-            result = reader.writer.fetch(target)
-            elapsed = time.monotonic() - before
-        self.assertEqual(result.media, MEDIA[0])
-        self.assertLess(elapsed, 0.3)
+        original_download = reader.writer.download
+
+        def primary_after_lookup(located, required):
+            self.assertTrue(lookup_started.wait(2))
+            return original_download(located, required)
+
+        # 원본을 먼저 끝낼 수 없게 해 느린 조회가 반드시 진행 중인 상황을 만든다.
+        with patch.object(source, "alternatives", slow_lookup), \
+                patch.object(reader.writer, "download", primary_after_lookup), \
+                patch.object(continuity, "RECOVERY_TIMEOUT", 2):
+            try:
+                result = reader.writer.fetch(target)
+                self.assertEqual(result.media, MEDIA[0])
+                self.assertTrue(lookup_started.wait(1))
+                # CI의 CPU 속도 대신 느린 조회 완료 전에 원본을 반환하는지 검사한다.
+                self.assertFalse(lookup_finished.is_set())
+            finally:
+                release_lookup.set()
 
     def test_failed_fallback_lookup_does_not_abort_primary(self):
         self.cdn.playlist("primary")
@@ -361,11 +377,14 @@ class DeliveryTests(unittest.TestCase):
         result = self.read(self.stream())
         self.assertEqual(result, INITIALIZATION + MEDIA[0])
         self.assertIn("gap", [e["kind"] for e in self.events()])
-        self.assertEqual(self.events()[-1]["resume_from"],
+        boundaries = [event for event in self.events() if event["kind"] == "boundary"]
+        self.assertEqual(len(boundaries), 1, self.stderr.getvalue())
+        boundary = boundaries[0]
+        self.assertEqual(boundary["resume_from"],
                          (START + timedelta(seconds=4)).isoformat())
-        self.assertTrue(self.events()[-1]["after_gap"])
+        self.assertTrue(boundary["after_gap"])
         # Retry the exact missing interval, not the first future segment.
-        self.assertIn('recovery_deadline', self.events()[-1])
+        self.assertIn('recovery_deadline', boundary)
 
     def test_partial_repair_preserves_prefix_without_duplicate_on_retry(self):
         self.cdn.playlist("primary", indices=(0, 3))
@@ -405,14 +424,19 @@ class DeliveryTests(unittest.TestCase):
         self.cdn.playlist("primary", changed_map=2)
         result = self.read(self.stream())
         self.assertEqual(result, INITIALIZATION + MEDIA[0] + MEDIA[1])
-        boundary = self.events()[-1]
+        boundaries = [event for event in self.events() if event["kind"] == "boundary"]
+        self.assertEqual(len(boundaries), 1, self.stderr.getvalue())
+        boundary = boundaries[0]
         self.assertEqual(boundary["reason"], "initialization_changed")
         self.assertEqual(boundary["resume_from"], (START + timedelta(seconds=8)).isoformat())
 
     def test_discontinuity_is_a_file_boundary(self):
         self.cdn.playlist("primary", discontinuity=2)
         self.assertEqual(self.read(self.stream()), INITIALIZATION + MEDIA[0] + MEDIA[1])
-        self.assertEqual(self.events()[-1]["reason"], "discontinuity")
+        # 병렬 요청의 진단 로그가 뒤에 도착해도 실제 경계 이벤트를 검사한다.
+        boundaries = [event for event in self.events() if event["kind"] == "boundary"]
+        self.assertEqual(len(boundaries), 1, self.stderr.getvalue())
+        self.assertEqual(boundaries[0]["reason"], "discontinuity")
 
     def test_token_error_refreshes_api_and_segment_url(self):
         self.cdn.playlist("primary")
@@ -426,7 +450,9 @@ class DeliveryTests(unittest.TestCase):
             return 1, [(self.cdn.url("renewed"), False)]
 
         stream.continuity.provider = provider
-        self.assertEqual(self.read(stream), INITIALIZATION + b"".join(MEDIA))
+        # 성공 복구는 CPU 경합에 여유를 주고 시간 제한 자체는 별도 실패 검사에서 확인한다.
+        with patch.object(continuity, "RECOVERY_TIMEOUT", 2):
+            self.assertEqual(self.read(stream), INITIALIZATION + b"".join(MEDIA), self.stderr.getvalue())
         self.assertTrue(calls)
 
     def test_playlist_token_error_refreshes_without_waiting_30_seconds(self):
