@@ -426,7 +426,7 @@ class DeliveryTests(unittest.TestCase):
             return 1, [(self.cdn.url("renewed"), False)]
 
         stream.continuity.provider = provider
-        self.assertEqual(self.read(stream), INITIALIZATION + b"".join(MEDIA))
+        self.assertEqual(self.read(stream), INITIALIZATION + b"".join(MEDIA), self.stderr.getvalue())
         self.assertTrue(calls)
 
     def test_playlist_token_error_refreshes_without_waiting_30_seconds(self):

@@ -276,3 +276,34 @@ def test_linux_desktop_reveals_containing_folder(tmp_path, monkeypatch):
     monkeypatch.setattr(file_browser.subprocess, 'run', execute)
     assert file_browser.reveal(tmp_path / 'file.mkv', select_file=True)
     assert execute.call_args.args[0] == ['/usr/bin/xdg-open', str(tmp_path.resolve())]
+
+
+@pytest.mark.parametrize('remote', ['git@github.com:ProofPage/Phrolova.git', 'ssh://git@github.com/ProofPage/Phrolova.git'])
+@pytest.mark.skipif(BASH is None, reason='Bash unavailable')
+def test_update_preserves_private_repository_ssh_authentication(tmp_path, remote):
+    shell(tmp_path, f'''
+INSTALL_DIR="$HOME/install"; mkdir -p "$INSTALL_DIR/.git"
+git() {{
+  case "$*" in
+    *'remote get-url origin') printf '%s\\n' '{remote}' ;;
+    *'remote set-url'*) echo 'Unexpected credential transport change' >&2; return 99 ;;
+    *'fetch origin --quiet') : ;;
+    *'rev-parse HEAD'|*'rev-parse origin/main') echo unchanged ;;
+    *) return 99 ;;
+  esac
+}}
+rc=0; sync_repo || rc=$?
+[ "$rc" = 1 ]
+''')
+
+
+def test_proot_desktop_does_not_inherit_native_android_file_manager_rules(tmp_path, monkeypatch):
+    monkeypatch.setattr(file_browser.sys, 'platform', 'linux')
+    monkeypatch.setenv('PHROLOVA_ENVIRONMENT', 'termux-proot')
+    monkeypatch.setenv('TERMUX_VERSION', 'inherited')
+    monkeypatch.setenv('DISPLAY', ':0')
+    monkeypatch.setattr(file_browser.shutil, 'which', lambda name: '/usr/bin/xdg-open')
+    execute = Mock(return_value=Mock(returncode=0))
+    monkeypatch.setattr(file_browser.subprocess, 'run', execute)
+    assert file_browser.reveal(tmp_path)
+    execute.assert_called_once()

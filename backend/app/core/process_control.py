@@ -1,4 +1,4 @@
-"""POSIX 서버만 식별하여 종료한다. PID가 재사용되어도 다른 앱에는 신호를 보내지 않는다."""
+"""POSIX 설치본의 실행 정보를 확인해 정상 종료하고 중복 실행을 차단한다."""
 from __future__ import annotations
 
 import argparse

@@ -2,14 +2,14 @@
 # ═══════════════════════════════════════════════════════════════
 #  Phrolova — 통합 관리 스크립트 (Linux / macOS)
 #
-#  원라이너 (설치 · 업데이트 겸용):
-#    curl -fsSL https://raw.githubusercontent.com/ProofPage/Phrolova/main/scripts/manage.sh | bash
+#  인증된 체크아웃에서 설치 · 업데이트:
+#    bash scripts/manage.sh install | update
 #
 #  설치 후에는 어디서나 한 단어로 쓴다:
 #    phrolova update | start | stop | status | logs
 #
 #  설계 원칙
-#    - 이 파일 하나로 설치·업데이트가 끝난다 (curl | bash 로 실행되므로 자기완결적이어야 함)
+#    - 같은 체크아웃의 관리 함수를 설치·업데이트에 재사용한다
 #    - 같은 명령을 두 번 실행해도 안전하다 (idempotent)
 #
 # ═══════════════════════════════════════════════════════════════
@@ -134,7 +134,7 @@ is_installed() { [ -d "$INSTALL_DIR/.git" ] || [ -f "$INSTALL_DIR/.git" ]; }
 
 require_install() {
   is_installed || error "설치를 찾을 수 없습니다: $INSTALL_DIR
-  먼저 설치하세요:  curl -fsSL $RAW_URL | bash"
+  GitHub 접근 권한으로 저장소를 clone한 뒤 bash scripts/manage.sh install을 실행하세요."
 }
 
 venv_python() { echo "$INSTALL_DIR/.venv/bin/python"; }
@@ -316,10 +316,20 @@ sync_repo() {
   # GitHub 리다이렉트로 당장은 동작하지만 영구 보장이 아니므로 정식 주소로 맞춘다.
   local current_remote
   current_remote="$(git -C "$INSTALL_DIR" remote get-url origin 2>/dev/null || true)"
-  if [ -n "$current_remote" ] && [ "$current_remote" != "$REPO_URL" ]; then
-    git -C "$INSTALL_DIR" remote set-url origin "$REPO_URL" || true
-    info "원격 주소를 갱신했습니다 → $REPO_URL"
-  fi
+  case "$current_remote" in
+    "$REPO_URL"|"${REPO_URL%.git}"|git@github.com:ProofPage/Phrolova.git|ssh://git@github.com/ProofPage/Phrolova.git) ;;
+    '') ;;
+    *)
+      # 비공개 저장소의 SSH 사용자는 주소 이전 후에도 같은 인증 방식을 유지한다.
+      local replacement="$REPO_URL"
+      case "$current_remote" in
+        git@github.com:*) replacement="git@github.com:${REPO_SLUG}.git" ;;
+        ssh://git@github.com/*) replacement="ssh://git@github.com/${REPO_SLUG}.git" ;;
+      esac
+      git -C "$INSTALL_DIR" remote set-url origin "$replacement" || return 2
+      info "원격 주소를 갱신했습니다 → $replacement"
+      ;;
+  esac
 
   git -C "$INSTALL_DIR" fetch origin --quiet || return 2
 
@@ -853,7 +863,9 @@ ${BOLD}환경 변수${NC}
   INSTALL_DIR   설치 경로 (기본: \$HOME/Phrolova)
 
 ${BOLD}최초 설치${NC}
-  curl -fsSL $RAW_URL | bash
+  GitHub 접근 권한이 있는 계정의 Git 인증이 필요합니다.
+  git clone $REPO_URL "\$HOME/Phrolova"
+  bash "\$HOME/Phrolova/scripts/manage.sh" install
 
 명령 없이 실행하면 설치되어 있지 않을 때는 설치를, 이미 설치되어 있으면 업데이트를 합니다.
 

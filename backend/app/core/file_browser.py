@@ -19,7 +19,8 @@ def reveal(path: Path, *, select_file: bool = False) -> bool:
         args = [command, '-R', str(path)] if select_file else [command, str(path)]
     else:
         # Native Android에는 Linux 파일 관리자를 실행하지 않는다.
-        native_termux = bool(os.environ.get('TERMUX_VERSION')) or os.environ.get('PREFIX', '').startswith('/data/data/')
+        native_termux = (os.environ.get('PHROLOVA_ENVIRONMENT') != 'termux-proot'
+                        and (bool(os.environ.get('TERMUX_VERSION')) or os.environ.get('PREFIX', '').startswith('/data/data/')))
         if native_termux or not (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')):
             return False
         command = shutil.which('xdg-open')
