@@ -1,17 +1,14 @@
-import { translatePlural } from '../i18n';
+import { formatNumber, translatePlural } from '../i18n';
 import { translate } from "../i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
     BarChart2,
     AlertCircle,
-    Calendar,
     Copy,
     Clock,
     Database,
     Download,
-    HardDrive,
     History,
-    Radio,
     RefreshCw,
     Video,
 } from "lucide-react";
@@ -25,12 +22,26 @@ const formatDuration = (seconds: number, _language: string) => formatDurationBas
 const formatStatsDate = (iso: string | null, language: string) => iso ? new Date(iso).toLocaleString(language, { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
 const formatCount = (count: number, _language: string, unit: "item" | "session" | "channel") => translatePlural(`stats.count.${unit}`, count);
 
-function StorageCard({ used, total, free, dir, t }: { used: number; total: number; free: number; dir: string; t: (text: string) => string }) {
+function StorageCard({ storage, t }: { storage: StatsResponse['storage']; t: ReturnType<typeof useLanguage>['t'] }) {
     useLanguage();
     const toast = useToast();
-    const percentage = total > 0 ? Math.round((used / total) * 100) : 0;
-    const tone = percentage >= 90 ? "var(--color-danger)" : percentage >= 70 ? "var(--color-warn)" : "var(--color-ok)";
-    const copyPath = async () => {
+    const { used_bytes: used, total_bytes: total, free_bytes: free } = storage;
+    const liveDir = storage.live_download_dir || storage.download_dir;
+    const videoDir = storage.vod_download_dir || '';
+    const chzzkDir = storage.vod_chzzk_dir || videoDir;
+    const separateVideoDirs = !!chzzkDir && !!videoDir && chzzkDir !== videoDir;
+    const paths = [
+        { id: 'live', label: t('live.title'), path: liveDir, hint: t('setup.saveLiveRecordingsHere') },
+        ...(separateVideoDirs ? [
+            { id: 'chzzk', label: `${t('download.title')} · ${t('platform.chzzk')}`, path: chzzkDir, hint: t('setup.saveDownloadedVideosIncludingVODsAndClipsHere') },
+            { id: 'external', label: `${t('download.title')} · ${t('stats.external')}`, path: videoDir, hint: t('setup.saveDownloadedVideosIncludingVODsAndClipsHere') },
+        ] : [{ id: 'video', label: t('download.title'), path: videoDir || chzzkDir, hint: t('setup.saveDownloadedVideosIncludingVODsAndClipsHere') }]),
+    ];
+    const usageAvailable = storage.usage_available !== false && Number.isFinite(total) && total > 0;
+    const percentage = usageAvailable ? Math.max(0, Math.min(100, Math.round((used / total) * 100))) : 0;
+    const tone = !usageAvailable ? "var(--color-ink-faint)" : percentage >= 90 ? "var(--color-danger)" : percentage >= 70 ? "var(--color-warn)" : "var(--color-ok)";
+    const spaceStatus = !usageAvailable ? 'stats.diskUnavailable' : percentage >= 90 ? 'stats.diskSpaceLow' : percentage >= 70 ? 'stats.diskSpaceCaution' : 'stats.diskSpaceHealthy';
+    const copyPath = async (dir: string) => {
         try {
             if (navigator.clipboard) await navigator.clipboard.writeText(dir);
             else {
@@ -42,14 +53,29 @@ function StorageCard({ used, total, free, dir, t }: { used: number; total: numbe
             toast.success(t("stats.storagePathCopied"));
         } catch { toast.error(t("stats.couldNotCopyTheStoragePath")); }
     };
-    return <div className="grid min-w-0 gap-6 border-y border-line py-4 md:grid-cols-2">
-        <div className="min-w-0">
-            <div className="flex items-center justify-between"><p className="text-xs text-ink-faint">{t("stats.diskUsage")}</p><HardDrive className="size-4 text-ink-faint" /></div>
-            <div className="mt-1 flex flex-wrap items-baseline gap-3"><strong className="text-xl font-semibold text-ink">{percentage}%</strong><span className="text-xs text-ink-faint">{formatBytes(free)} {t("stats.free")}</span></div>
-            <div className="mt-3 h-1 overflow-hidden rounded bg-surface-4"><div className="h-full" style={{width:`${percentage}%`,backgroundColor:tone}} /></div>
-            <p className="mt-2 text-xs text-ink-faint tabular-nums">{formatBytes(used)} / {formatBytes(total)}</p>
+    return <div className="stats-storage grid min-w-0 border-y border-line">
+        <div className="stats-storage-section stats-disk-section min-w-0">
+            <div className="stats-storage-heading"><p className="text-xs text-ink-faint">{t("stats.diskUsage")}</p><span className="text-xs font-medium" style={{color:tone}}>{t(spaceStatus)}</span></div>
+            <strong className="stats-disk-percentage">{usageAvailable ? `${formatNumber(percentage)}%` : '—'}</strong>
+            <div className="stats-disk-meter" role={usageAvailable ? 'progressbar' : undefined} aria-label={t('stats.diskUsage')} aria-valuemin={usageAvailable ? 0 : undefined} aria-valuemax={usageAvailable ? 100 : undefined} aria-valuenow={usageAvailable ? percentage : undefined}><div style={{width:`${percentage}%`,backgroundColor:tone}} /></div>
+            <dl className="stats-disk-capacity">
+                <div><dt>{t('stats.diskUsedCapacity')}</dt><dd>{usageAvailable ? formatBytes(used) : '—'}</dd></div>
+                <div><dt>{t('stats.diskFreeCapacity')}</dt><dd>{usageAvailable ? formatBytes(free) : '—'}{usageAvailable && <span className="stats-disk-secondary">{t('stats.diskFreeShare', {percentage:formatNumber(Math.round(free / total * 100))})}</span>}</dd></div>
+                <div><dt>{t('stats.diskTotalCapacity')}</dt><dd>{usageAvailable ? formatBytes(total) : '—'}</dd></div>
+                <div><dt>{t('stats.diskDrive')}</dt><dd className="stats-disk-drive">{storage.disk_mountpoint || '—'}{storage.disk_filesystem && <span className="stats-disk-secondary">{storage.disk_filesystem}</span>}</dd></div>
+            </dl>
+            <p className="stats-disk-hint text-xs text-ink-faint">{t('stats.liveStorageDiskHint')}</p>
         </div>
-        <div className="min-w-0"><div className="flex items-center justify-between gap-3"><p className="text-xs text-ink-faint">{t("download.storageLocation")}</p><Button variant="ghost" icon={Copy} onClick={() => void copyPath()} disabled={!dir} aria-label={t("stats.copyStoragePath")}>{t("stats.copy")}</Button></div><p className="mt-1 break-all text-xs leading-6 text-ink-muted">{dir || "—"}</p></div>
+        <div className="stats-storage-section min-w-0">
+            <div className="stats-storage-heading"><p className="text-xs text-ink-faint">{t('download.storageLocation')}</p></div>
+            <dl className="stats-storage-paths">
+                {paths.map(({ id, label, path, hint }) => <div key={id} data-storage-path={id}>
+                    <dt className="stats-storage-path-heading"><span className="text-xs font-medium text-ink">{label}</span><Button variant="ghost" icon={Copy} onClick={() => void copyPath(path)} disabled={!path} aria-label={t('stats.copyNamedStoragePath', { name: label })}>{t('stats.copy')}</Button></dt>
+                    <dd className="stats-storage-path-value text-xs leading-6 text-ink-muted">{path || '—'}</dd>
+                    <dd className="mt-1 text-xs text-ink-faint">{hint}</dd>
+                </div>)}
+            </dl>
+        </div>
     </div>;
 }
 
@@ -92,7 +118,6 @@ export default function Stats() {
                 icon={BarChart2}
                 eyebrow={t("stats.recordingOverview")}
                 title={t("stats.title")}
-                description={t("stats.seeRecordingTimeFileSizesChannelActivityAndStorageAtAGlance")}
                 actionsPlacement="inline-top"
                 actions={(
                     <div className="flex flex-wrap items-center justify-between gap-2 md:justify-end">
@@ -129,18 +154,17 @@ export default function Stats() {
                 return (
                     <>
                         <div className="stats-summary gap-0">
-                            <MetricCard icon={Clock} label={t("stats.completedLiveRecordingTime")} value={formatDuration(live.total_duration_seconds, language)} detail={`${formatCount(live.total_sessions, language, "session")} · ${live.active_recordings} ${t("stats.activeRecordings")}`} tone="ok" />
+                            <MetricCard icon={Clock} label={t("stats.completedLiveRecordingTime")} value={formatDuration(live.total_duration_seconds, language)} detail={`${formatCount(live.total_sessions, language, "session")} · ${t("live.recording")}: ${formatCount(live.active_recordings, language, "session")}`} tone="ok" />
                             <MetricCard icon={Video} label={t("stats.completedRecordingSize")} value={formatBytes(live.total_size_bytes)} detail={t("stats.totalCompletedLiveFiles")} tone="live" />
                             <MetricCard icon={Download} label={t("stats.videoDownloads")} value={formatCount(vod.total_completed, language, "item")} detail={`${t("platform.chzzk")} ${vod.by_type.chzzk} · ${t("stats.external")} ${vod.by_type.external}`} tone="primary" />
 
                         </div>
 
-                        <StorageCard used={storage.used_bytes} total={storage.total_bytes} free={storage.free_bytes} dir={storage.download_dir} t={t} />
+                        <StorageCard storage={storage} t={t} />
                         <div className="grid grid-cols-1 gap-4">
                             <Card padded={false} className="stats-history overflow-hidden">
                                 <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-b border-line">
                                     <div className="flex items-center gap-2">
-                                        <span className="w-8 h-8 rounded-[var(--radius-control)] bg-ok/10 text-ok grid place-items-center"><Radio className="w-4 h-4" /></span>
                                         <div>
                                             <h2 className="text-sm font-semibold text-ink">{t("stats.channelHistory")}</h2>
                                             <p className="text-[11px] text-ink-faint">{t("stats.liveDetectionOverTheLast30Days")}</p>
@@ -153,7 +177,7 @@ export default function Stats() {
                                     <EmptyState compact icon={Database} title={t("stats.noRecordingsToReportYet")} description={t("stats.channelStatisticsWillAppearAfterTheFirstRecordingCompletes")} />
                                 ) : (
                                     <div>
-                                    <div className="stats-history-list divide-y divide-line">{live.by_channel.map(channel => <div key={channel.channel_id} className="px-4 py-3"><p className="break-all text-sm max-w-64 break-words font-medium text-ink">{channel.channel_name}</p><p className="mt-0.5 break-all text-xs text-ink-faint">{channel.channel_id}</p><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted"><span>{t("live.recordings")} {channel.session_count}</span><span>{t("stats.liveDetections")} {channel.live_detected_count}{t("stats.days")}</span><span>{formatDuration(channel.total_duration_seconds, language)}</span><span>{formatBytes(channel.total_size_bytes)}</span></div></div>)}</div>
+                                    <div className="stats-history-list divide-y divide-line">{live.by_channel.map(channel => <div key={channel.channel_id} className="px-4 py-3"><p className="break-all text-sm max-w-64 break-words font-medium text-ink">{channel.channel_name}</p><p className="mt-0.5 break-all text-xs text-ink-faint">{channel.channel_id}</p><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted"><span>{t("live.recordings")}: {formatCount(channel.session_count, language, "session")}</span><span>{t("stats.liveDetections")} {translatePlural("stats.count.day", channel.live_detected_count)}</span><span>{formatDuration(channel.total_duration_seconds, language)}</span><span>{formatBytes(channel.total_size_bytes)}</span></div></div>)}</div>
                                     <div className="stats-history-table">
                                         <table className="w-full min-w-[680px] text-sm">
                                             <thead>
@@ -187,7 +211,6 @@ export default function Stats() {
                             <Card padded={false} className="stats-history overflow-hidden">
                                 <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-line">
                                     <div className="flex items-center gap-2">
-                                        <span className="w-8 h-8 rounded-[var(--radius-control)] bg-surface-4 text-ink-muted grid place-items-center"><Calendar className="w-4 h-4" /></span>
                                         <div>
                                             <h2 className="text-sm font-semibold text-ink">{t("stats.recentRecordings")}</h2>
                                             <p className="text-[11px] text-ink-faint">{t("stats.10MostRecentCompletedSessions")}</p>

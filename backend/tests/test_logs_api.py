@@ -11,6 +11,7 @@ import pytest
 from unittest.mock import patch
 
 from app.api.system import router
+from app.api.system import export_system_log
 
 # 테스트용 FastAPI 인스턴스 생성 및 라우터 마운트 (lifespan 종속성 격리)
 app = FastAPI()
@@ -110,3 +111,41 @@ def test_get_system_log_path_traversal_protection(temp_log_dir):
             # Path Traversal 시도는 400 Bad Request 로 차단되어야 함
             assert response.status_code == 400
             assert "Invalid log file" in response.json()["detail"]
+
+
+@pytest.mark.parametrize('filename', ['service.log', 'service.log.2026-06-19'])
+def test_export_preserves_complete_original_log(temp_log_dir, filename):
+    raw = ('한국어 日本語 Русский\r\n' * 1500).encode('utf-8') + b'\xff\n'
+    target = temp_log_dir / filename
+    target.write_bytes(raw)
+    with patch('app.api.system._get_log_dir', return_value=temp_log_dir):
+        response = client.get(f'/api/system/logs/{filename}/export', params={'lines': 1})
+    assert response.status_code == 200
+    assert response.content == raw
+    assert response.headers['content-type'] == 'application/octet-stream'
+    assert 'attachment' in response.headers['content-disposition']
+    assert filename in response.headers['content-disposition']
+    assert response.headers['cache-control'] == 'no-store'
+    assert target.read_bytes() == raw
+
+
+@pytest.mark.parametrize('filename', ['not_a_log.txt', 'service.log.missing', '..%5Cservice.log', '..%2Fservice.log'])
+def test_export_rejects_non_logs_and_unsafe_paths(temp_log_dir, filename):
+    with patch('app.api.system._get_log_dir', return_value=temp_log_dir):
+        response = client.get(f'/api/system/logs/{filename}/export')
+    assert response.status_code in (400, 404)
+
+
+@pytest.mark.asyncio
+async def test_export_bounds_live_appends_and_handles_empty_logs(temp_log_dir):
+    target = temp_log_dir / 'service.log'
+    initial = target.read_bytes()
+    with patch('app.api.system._get_log_dir', return_value=temp_log_dir):
+        response = await export_system_log('service.log')
+        with target.open('ab') as stream:
+            stream.write(b'new live entry\n')
+        exported = b''.join([chunk async for chunk in response.body_iterator])
+        assert exported == initial
+        target.write_bytes(b'')
+        empty = await export_system_log('service.log')
+        assert b''.join([chunk async for chunk in empty.body_iterator]) == b''

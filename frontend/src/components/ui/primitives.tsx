@@ -28,10 +28,10 @@ import { useLanguage } from "../../contexts/LanguageContext";
  * 핵심 상태와 주요 액션을 첫 화면에서 함께 읽을 수 있게 한다.
  */
 export function PageHeader({ title, description, meta, actions, actionsPlacement = "inline" }: {
-    icon: LucideIcon;
+    icon?: LucideIcon;
     eyebrow?: string;
     title: string;
-    description: ReactNode;
+    description?: ReactNode;
     meta?: ReactNode;
     actions?: ReactNode;
     actionsPlacement?: "inline" | "inline-top" | "below";
@@ -43,7 +43,7 @@ export function PageHeader({ title, description, meta, actions, actionsPlacement
             <div className="page-heading">
                 <div className="page-heading-copy">
                     <h1 className="page-title">{t(title)}</h1>
-                    <p className="page-description">{typeof description === "string" ? t(description) : description}</p>
+                    {description && <p className="page-description">{typeof description === "string" ? t(description) : description}</p>}
                 </div>
                 {meta && <div className="page-summary">{meta}</div>}
                 {actions && actionsPlacement !== "below" && <div className="page-actions">{actions}</div>}
@@ -246,7 +246,7 @@ export function SettingRow({
         >
             <div className="min-w-0">
                 <p className="text-[13px] font-medium text-ink-muted">{t(label)}</p>
-                {hint && <p className="text-xs text-ink-faint mt-0.5 leading-relaxed">{typeof hint === "string" ? t(hint) : hint}</p>}
+                {hint && <p className="ui-field-hint">{typeof hint === "string" ? t(hint) : hint}</p>}
             </div>
             <div className="shrink-0">{control}</div>
         </div>

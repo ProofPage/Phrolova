@@ -65,6 +65,7 @@ async def main():
             for route in ('/', '/vod', '/stats', '/system-logs', '/settings'):
                 await page.goto(BASE + route)
                 await expect(page.locator('h1')).to_have_count(1)
+                await expect(page.locator('.page-description')).to_have_count(0)
                 await expect(page.locator('html')).to_have_attribute('lang', locale)
                 await page.wait_for_timeout(150)
                 text = await page.locator('main').inner_text()
@@ -80,19 +81,40 @@ async def main():
                 if re.search(r'X Spaces|채팅 기록|라이브 채팅 저장', text):
                     issues.append((locale, route, 'removed feature'))
             nav=page.get_by_role('navigation',name=d['settings.settingsTabs'])
+            helpers=page.locator('.settings-field-help')
+            await expect(helpers).to_have_count(2)
+            for helper in await helpers.all():
+                await expect(helper.locator('p')).not_to_be_visible()
+                await helper.locator('summary').focus()
+                await helper.locator('summary').press('Enter')
+                await expect(helper.locator('p')).to_be_visible()
+                assert '{name}' in await helper.locator('p').inner_text()
+                for width in (320,390,1440):
+                    await page.set_viewport_size({'width':width,'height':844})
+                    assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth'),(locale,'filename help',width)
+                await helper.locator('summary').press('Enter')
+            await page.set_viewport_size({'width':390,'height':844})
             for key in ['settings.authentication','settings.notifications','settings.appearanceInSettings','settings.aboutInSettings']:
                 await nav.get_by_role('button',name=d[key],exact=True).click()
                 text=await page.locator('main').inner_text()
                 leaked=re.findall(r'\b(?:common|live|download|settings|logs|stats|setup|platform)\.[A-Za-z][A-Za-z0-9.]*',text)
                 if leaked:issues.append((locale,key,leaked))
-                assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth'),(locale,key)
+                for width in (320,390,1440):
+                    await page.set_viewport_size({'width':width,'height':844})
+                    assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth'),(locale,key,width)
+                    clipped = await page.locator('button').evaluate_all("nodes => nodes.filter(n => n.getBoundingClientRect().width > 0 && n.scrollWidth > n.clientWidth + 2).map(n => n.textContent.trim())")
+                    if clipped: issues.append((locale,key,width,'clipped buttons',clipped))
+                await page.set_viewport_size({'width':390,'height':844})
                 if key == 'settings.authentication':
+                    await expect(page.get_by_text(d['settings.optionalPublicContentWorksWithoutCookiesRegisterANetscapeFormatCookieFileForContentThatRequiresSignIn'],exact=True)).to_have_count(1)
                     await expect(page.locator('[data-cookie-platform]').first.get_by_role('status')).to_have_text(d['settings.cookieNotRegistered'])
                 if key == 'settings.notifications':
+                    await expect(page.get_by_role('button',name=d['settings.saveChanges'],exact=True)).to_be_disabled()
                     for kind in ['live_detected','recording_started','recording_completed','recording_failed','vod_completed','vod_failed','cookie_expired','update_available','system']:
                         assert d[f'settings.notification.{kind}'] in text,(locale,kind)
-            await page.get_by_role('button',name=d['settings.checkTools'],exact=True).click()
-            await expect(page.get_by_role('button',name=d['settings.checkTools'],exact=True)).to_be_enabled()
+            await expect(page.get_by_role('button',name=d['settings.checkTools'],exact=True)).to_have_count(0)
+            await expect(page.locator('.media-tool-list')).to_contain_text('Streamlink')
+            await expect(page.locator('.media-tool-list')).to_contain_text(d['settings.toolHealthy'])
             for environment in ['windows-exe','linux-native','windows-native']:
                 update_environment=environment
                 await page.get_by_role('button',name=d['settings.checkForUpdates'],exact=True).click()

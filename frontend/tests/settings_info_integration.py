@@ -1,4 +1,4 @@
-"""System tab is retired; information owns tools and updates without losing actions."""
+"""Information shows tool status automatically and retains the update actions."""
 import asyncio
 import copy
 import os
@@ -51,16 +51,18 @@ async def main():
             await expect(nav.get_by_role('button',name='시스템',exact=True)).to_have_count(0)
             info=nav.get_by_role('button',name='정보',exact=True)
             await info.click()
-            for title in ('시스템 정보','프로그램 업데이트','프로그램 정보'):
+            for title in ('기본 정보','소프트웨어 업데이트','Phrolova 정보'):
                 await expect(page.get_by_role('heading',name=title,exact=True)).to_have_count(1)
             await expect(page.get_by_text('FFmpeg',exact=True)).to_have_count(1)
             await expect(page.get_by_text('FFprobe',exact=True)).to_have_count(1)
             await expect(page.get_by_text('FFmpeg 버전',exact=True)).to_have_count(0)
             await expect(page.get_by_text('v2.0.60',exact=True)).to_have_count(2) # current/latest only
-            before=tool_calls
-            await page.get_by_role('button',name='도구 다시 검사').click()
-            await expect(page.get_by_role('button',name='도구 다시 검사')).to_be_enabled()
-            assert tool_calls==before+1
+            await expect(page.get_by_role('button',name='도구 다시 검사')).to_have_count(0)
+            await expect(page.get_by_label('미디어 도구 상태')).to_have_attribute('aria-busy','false')
+            row_geometry=await page.locator('.media-tool-list .ui-info-row').evaluate_all('es => es.map(e => { const r=e.getBoundingClientRect(); return {height:r.height,bottom:r.bottom,cardBottom:e.closest(".ui-panel").getBoundingClientRect().bottom}; })')
+            assert max(row['height'] for row in row_geometry)-min(row['height'] for row in row_geometry)<=2, row_geometry
+            assert row_geometry[-1]['cardBottom']-row_geometry[-1]['bottom']<=2, row_geometry
+            assert tool_calls > 0
             before=update_calls
             await page.get_by_role('button',name='업데이트 확인',exact=True).click()
             await expect(page.get_by_role('button',name='v2.0.61 업데이트 하기')).to_be_visible()
@@ -74,10 +76,12 @@ async def main():
             assert await page.evaluate('document.documentElement.scrollWidth<=innerWidth'),width
             await page.screenshot(path=str(OUT/f'info-{width}.png'),full_page=True)
         fail_tools=True
-        await page.get_by_role('button',name='도구 다시 검사').click()
+        await nav.get_by_role('button',name='외관',exact=True).click()
+        await info.click()
         await expect(page.get_by_text('도구 상태를 불러오지 못했습니다.',exact=True)).to_have_count(3)
         fail_tools=False
-        await page.get_by_role('button',name='도구 다시 검사').click()
+        await nav.get_by_role('button',name='외관',exact=True).click()
+        await info.click()
         await expect(page.get_by_text('도구 상태를 불러오지 못했습니다.',exact=True)).to_have_count(0)
         fail_update=True
         await page.get_by_role('button',name='업데이트 확인',exact=True).click()
@@ -88,6 +92,6 @@ async def main():
         await expect(page.get_by_role('button',name='v2.0.61 업데이트 하기')).to_be_visible()
         assert not errors,errors
         await browser.close()
-    print('PASS: five settings tabs, integrated information/tools/update/about, real button API calls/modal, update badge, failed requests/recovery, 320/768/1440px')
+    print('PASS: five settings tabs, automatic tool status without recheck button, update actions/modal/badge, failed requests/recovery, 320/768/1440px')
 
 if __name__=='__main__':asyncio.run(main())

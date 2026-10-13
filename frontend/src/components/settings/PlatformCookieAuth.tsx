@@ -55,7 +55,7 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
     const label = !status ? t("live.checkingStatus") : status.expired ? t("settings.cookieExpired")
         : status.configured && status.valid === false ? t("settings.cookieFileNeedsAttention") : status.configured ? t("settings.cookiesRegistered") : t("settings.noRegisteredCookies");
     return <Card className="space-y-4" data-cookie-platform={platform} aria-busy={busy}>
-        <CardHeader icon={KeyRound} title={t(name)} description={t("settings.optionalPublicContentWorksWithoutCookiesRegisterANetscapeFormatCookieFileForContentThatRequiresSignIn")}
+        <CardHeader icon={KeyRound} title={t(name)}
             action={<Badge tone={status?.expired || (status?.configured && status.valid === false) ? 'warn' : status?.configured ? 'ok' : undefined}>{label}</Badge>} />
         <div className="flex flex-wrap items-center gap-2">
             <input ref={fileInput} type="file" accept=".txt" aria-label={`${name} ${t("settings.cookieFile")}`} className="hidden" disabled={busy} onChange={event => { const file = event.target.files?.[0]; if (file) void change('upload', file); }} />

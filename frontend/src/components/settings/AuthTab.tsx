@@ -10,11 +10,12 @@ interface Props {
 }
 
 export function AuthTab({ onSaved, onDirtyChange }: Props) {
-    useLanguage();
+    const { t } = useLanguage();
     // File registration saves immediately, so this tab has no unsaved text fields.
     useEffect(() => onDirtyChange?.(false), [onDirtyChange]);
     return (
-        <div className="space-y-6">
+        <div className="auth-settings">
+            <p className="settings-shared-hint">{t("settings.optionalPublicContentWorksWithoutCookiesRegisterANetscapeFormatCookieFileForContentThatRequiresSignIn")}</p>
             {(["chzzk", "youtube", "soop", "cime"] as const).map(platform => (
                 <PlatformCookieAuth key={platform} platform={platform} onSaved={onSaved} />
             ))}

@@ -35,14 +35,16 @@ export function InfoTab({ settings, onDirtyChange, onUpdateAvailabilityChange }:
     useEffect(() => onDirtyChange?.(false), [onDirtyChange]);
 
     return (
-        <div className="space-y-5">
-            <Card>
+        <div className="info-settings">
+            <Card className="info-system-card">
                 <CardHeader icon={Info} title={translate("settings.systemInformation")} />
-                <div className="space-y-1 text-sm">
-                    <InfoRow label={t("settings.appName")}><span className="text-ink-muted">{settings?.app_name || t("settings.loading")}</span></InfoRow>
-                    <InfoRow label="Discord Bot"><span className={settings?.discord_bot_configured ? "text-ok" : "text-ink-faint"}>{settings?.discord_bot_configured ? t("settings.configured") : t("settings.notConfigured")}</span></InfoRow>
+                <div className="info-section-body">
+                    <div className="space-y-1 text-sm">
+                        <InfoRow label={t("settings.appName")}><span className="text-ink-muted">{settings?.app_name || t("settings.loading")}</span></InfoRow>
+                        <InfoRow label="Discord Bot"><span className={settings?.discord_bot_configured ? "text-ok" : "text-ink-faint"}>{settings?.discord_bot_configured ? t("settings.configured") : t("settings.notConfigured")}</span></InfoRow>
+                    </div>
+                    <MediaToolsCard ffmpegVersion={settings?.ffmpeg_version} />
                 </div>
-                <MediaToolsCard ffmpegVersion={settings?.ffmpeg_version} />
             </Card>
             <ProgramUpdateCard onUpdateAvailabilityChange={onUpdateAvailabilityChange} />
 

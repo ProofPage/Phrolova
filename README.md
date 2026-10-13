@@ -55,10 +55,11 @@ Manual start/stop, automatic recording and per-channel quality/output preference
 ### Dashboard and automation
 
 - Eight interface languages: Korean, English, Japanese, Spanish, German, Simplified Chinese, Traditional Chinese, and Russian. Choose a language in **Settings → Appearance**; it applies immediately and is restored on the next visit. Dates, numbers, quantities, dialogs and notification history follow the selected language. Technical logs and user content retain their original text.
-- Color presets, a custom accent color, and browser-local title and favicon preferences.
+- Color presets, a custom accent color, and a browser-local page title.
+- Logs with severity filters, search, live refresh and full original-file export; statistics with separate recording/download paths and disk capacity details.
 - Discord slash commands, bot notifications, and webhook delivery with fallback, retry handling, and a persistent pending-notification queue.
 - Automatic release checks after startup and every 24 hours, plus a manual update check. Installation updates remain a separate operation.
-- **Settings → Information** combines media-tool health checks, program updates, system details and license information. The Korean video page and sidebar are named **동영상**.
+- **Settings → Information** combines automatic media-tool health checks, software updates, application details and license information. The Korean video page and sidebar are named **동영상**.
 
 ## Supported platforms
 

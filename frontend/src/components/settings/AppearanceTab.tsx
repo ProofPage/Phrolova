@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { ImageIcon, Palette, RotateCcw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Palette, RotateCcw } from "lucide-react";
 import type { Settings as SettingsType } from "../../api/client";
 import { THEMES, type ThemeId, useTheme } from "../../contexts/ThemeContext";
 import { LANGUAGE_OPTIONS, useLanguage } from "../../contexts/LanguageContext";
 import { Button, Card, CardHeader, Field, Input, Select } from "../ui/primitives";
-import { useToast } from "../ui/Toast";
 
 interface Props {
     settings: SettingsType | null;
@@ -15,33 +14,19 @@ interface Props {
 }
 
 export function AppearanceTab({ onDirtyChange }: Props) {
-    const { themeId, customColor, pageTitle, setTheme, setCustomColor, setPageTitle, setIconUrl, resetAll } = useTheme();
+    const { themeId, customColor, pageTitle, setTheme, setCustomColor, setPageTitle, resetAll } = useTheme();
     const { language, setLanguage, t } = useLanguage();
     const [titleInput, setTitleInput] = useState(pageTitle);
-    const toast = useToast();
-    const iconInputRef = useRef<HTMLInputElement>(null);
     const colorPickerRef = useRef<HTMLInputElement>(null);
     const dirty = titleInput !== pageTitle;
 
     useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
 
-    const handleIconUpload = (event: ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        if (file.size > 512 * 1024) {
-            toast.error(t("settings.theFileMustBe512KBOrSmaller"));
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = (loadEvent) => setIconUrl(loadEvent.target?.result as string);
-        reader.readAsDataURL(file);
-    };
-
     return (
         <Card className="space-y-5">
             <CardHeader icon={Palette} title={t("settings.appearance")} />
 
-            <Field label={t("settings.language")} hint={t("settings.chooseTheLanguageUsedInTheApp")}>
+            <Field label={t("settings.language")}>
                 <Select
                     value={language}
                     onChange={(event) => setLanguage(event.target.value as typeof language)}
@@ -85,13 +70,6 @@ export function AppearanceTab({ onDirtyChange }: Props) {
                     <Input type="text" maxLength={32} value={titleInput} onChange={(event) => setTitleInput(event.target.value)} placeholder="Phrolova" className="flex-1" />
                     <Button variant="primary" onClick={() => setPageTitle(titleInput)}>{t("settings.apply")}</Button>
                 </div>
-            </Field>
-
-            <Field label={t("settings.tabIconFavicon")} hint={t("settings.changesTheIconShownInTheBrowserTab")}>
-                <input ref={iconInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={handleIconUpload} />
-                <Button icon={ImageIcon} onClick={() => iconInputRef.current?.click()} className="w-full">
-                    {t("settings.uploadImagePNGJPGWEBPUpTo512KB")}
-                </Button>
             </Field>
 
             <Button

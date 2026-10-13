@@ -148,7 +148,6 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                 <CardHeader
                     icon={Webhook}
                     title="Webhook"
-                    description={translate("settings.copyASingleURLFromYourDiscordChannelSettingsThisIsAllYouNeedToReceiveNotifications")}
                     action={
                         <div className="flex items-center gap-2">
                             <Badge tone="ok">{translate("settings.recommended")}</Badge>
@@ -278,7 +277,6 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                 <CardHeader
                     icon={Bell}
                     title={translate("settings.notificationsToReceive")}
-                    description={translate("settings.disabledNotificationTypesWillNotBeSent")}
                     action={
                         <div className="flex gap-2">
                             <Button
@@ -413,7 +411,6 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                 <CardHeader
                     icon={RefreshCcw}
                     title={translate("settings.advanced")}
-                    description={translate("settings.configureWhatHappensWhenDeliveryIsDelayed")}
                 />
 
                 <Field
@@ -442,10 +439,11 @@ export function NotificationsTab({ settings, onSaved, onDirtyChange }: Props) {
                     variant="primary"
                     icon={Save}
                     loading={saving}
+                    disabled={!dirty}
                     onClick={handleSave}
                     className="w-full"
                 >
-                    {dirty ? translate("settings.saveChanges") : translate("settings.saved")}
+                    {translate("settings.saveChanges")}
                 </Button>
             </div>
         </div>

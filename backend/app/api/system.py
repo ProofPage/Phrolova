@@ -8,6 +8,8 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
+from urllib.parse import quote
 from logging.handlers import TimedRotatingFileHandler
 from app.core.logger import get_log_dir, logger
 
@@ -146,6 +148,43 @@ async def clear_system_logs():
         "message": "현재 로그와 날짜별 백업 로그를 초기화했습니다.",
         "cleared_files": cleared_files,
     }
+
+
+@router.get("/logs/{filename}/export", response_class=StreamingResponse)
+async def export_system_log(filename: str):
+    """선택한 로그의 전체 원문을 그대로 내보냅니다. 로그는 변경하지 않습니다."""
+    log_dir = _get_log_dir().resolve()
+    target = (log_dir / filename).resolve()
+    if (Path(filename).name != filename or target.parent != log_dir
+            or not target.name.startswith("service.log") or not target.is_file()):
+        raise HTTPException(status_code=400, detail="Invalid log file path")
+    try:
+        stream = target.open("rb")
+        try:
+            size = os.fstat(stream.fileno()).st_size
+        except OSError:
+            stream.close()
+            raise
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail="logs.couldNotExport") from exc
+
+    def chunks():
+        # 계속 추가되는 실시간 로그도 내보내기 시작 시점의 크기까지만 읽는다.
+        remaining = size
+        try:
+            while remaining > 0:
+                chunk = stream.read(min(65536, remaining))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+                yield chunk
+        finally:
+            stream.close()
+
+    return StreamingResponse(chunks(), media_type="application/octet-stream", headers={
+        "Content-Disposition": f"attachment; filename*=UTF-8''{quote(target.name)}",
+        "Cache-Control": "no-store",
+    })
 
 
 @router.get("/logs/{filename:path}")

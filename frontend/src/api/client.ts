@@ -352,6 +352,12 @@ export interface StatsResponse {
     };
     storage: {
         download_dir: string;
+        live_download_dir?: string;
+        vod_download_dir?: string;
+        vod_chzzk_dir?: string;
+        usage_available?: boolean;
+        disk_mountpoint?: string;
+        disk_filesystem?: string;
         used_bytes: number;
         total_bytes: number;
         free_bytes: number;
@@ -640,15 +646,20 @@ export const api = {
     openRecordingLocation: async (id: string) => (await client.post(`/recordings/${id}/open-location`)).data,
     recordingFileUrl: (id: string, source = false) => `${API_BASE_URL}/recordings/${id}/file${source ? '?source=true' : ''}`,
     // System Logs
-    getSystemLogFiles: async (): Promise<SystemLogFile[]> => {
-        const res = await client.get<SystemLogFile[]>("/system/logs");
+    getSystemLogFiles: async (signal?: AbortSignal): Promise<SystemLogFile[]> => {
+        const res = await client.get<SystemLogFile[]>("/system/logs", { signal });
         return res.data;
     },
-    getSystemLogContent: async (filename: string, lines?: number): Promise<SystemLogResponse> => {
-        const res = await client.get<SystemLogResponse>(`/system/logs/${filename}`, {
+    getSystemLogContent: async (filename: string, lines?: number, signal?: AbortSignal): Promise<SystemLogResponse> => {
+        const res = await client.get<SystemLogResponse>(`/system/logs/${encodeURIComponent(filename)}`, {
+            signal,
             params: { ...(lines !== undefined ? { lines } : {}), _refresh: Date.now() },
             headers: { "Cache-Control": "no-cache" },
         });
+        return res.data;
+    },
+    exportSystemLog: async (filename: string): Promise<Blob> => {
+        const res = await client.get<Blob>(`/system/logs/${encodeURIComponent(filename)}/export`, { responseType: "blob" });
         return res.data;
     },
     clearSystemLogs: async (): Promise<{ message: string; cleared_files: number }> => {

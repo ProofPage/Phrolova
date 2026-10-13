@@ -1,13 +1,10 @@
 import { useLanguage } from "../../contexts/LanguageContext";
 import { translate } from "../../i18n";
 import { useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
 import { api } from '../../api/client';
-import { Button } from '../ui/primitives';
 
 export function MediaToolsCard({ ffmpegVersion }: { ffmpegVersion?: string | null }) {
     useLanguage();
-    const [attempt, setAttempt] = useState(0);
     const [tools, setTools] = useState<Awaited<ReturnType<typeof api.getMediaTools>>>({});
     const [busy, setBusy] = useState(true);
     const [error, setError] = useState(false);
@@ -20,9 +17,9 @@ export function MediaToolsCard({ ffmpegVersion }: { ffmpegVersion?: string | nul
         }).catch(() => { if (!controller.signal.aborted) setError(true); })
           .finally(() => { if (!controller.signal.aborted) setBusy(false); });
         return () => controller.abort();
-    }, [attempt]);
+    }, []);
     return <div className="space-y-3" aria-label={translate("settings.mediaToolStatus")} aria-busy={busy}>
-        <dl className="space-y-1 text-sm">
+        <dl className="media-tool-list space-y-1 text-sm">
             {['streamlink', 'ffmpeg', 'ffprobe'].map(name => <div key={name} className="ui-info-row">
                 <dt className="text-ink-faint">{name === 'streamlink' ? 'Streamlink' : name === 'ffmpeg' ? 'FFmpeg' : 'FFprobe'}</dt>
                 <dd className="min-w-0 space-y-1.5">
@@ -44,6 +41,5 @@ export function MediaToolsCard({ ffmpegVersion }: { ffmpegVersion?: string | nul
                 <li>{translate("settings.setCustomPathsWithFFMPEGPATHAndFFPROBEPATHCheckTheToolsAgainAfterInstallationThenRetryRecordingProcessing")}</li>
             </ul>
         </details>}
-        <div className="flex justify-end"><Button icon={RefreshCw} disabled={busy} onClick={() => setAttempt(value => value + 1)}>{translate("settings.checkTools")}</Button></div>
     </div>;
 }

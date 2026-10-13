@@ -1,6 +1,6 @@
 """Browser contracts for recording repair states, grouped history and CDN settings."""
 
-import asyncio, copy, os
+import asyncio, copy, os, re
 from pathlib import Path
 from urllib.parse import urlparse
 from playwright.async_api import async_playwright, expect
@@ -184,7 +184,7 @@ async def main():
         ]
         history = page.get_by_role("region", name="녹화 파일 처리 이력")
         await expect(history.locator(".recording-history-row")).to_have_count(3)
-        await expect(history).to_contain_text("파일 없는 시작 실패 3건")
+        await expect(history).to_contain_text(re.compile(r"파일 없는 시작 실패\s*3건"))
         empty = history.locator(".recording-history-row").filter(
             has_text="이전 시작 실패"
         )
@@ -387,7 +387,7 @@ async def main():
         live = page.get_by_role("combobox", name="치지직 라이브 CDN", exact=True)
         vod = page.get_by_role("combobox", name="치지직 다운로드 CDN", exact=True)
         await live.select_option("akamai")
-        await page.get_by_role("button", name="라이브 설정 저장", exact=True).click()
+        await page.get_by_role("button", name="변경사항 저장", exact=True).click()
         await expect(vod).to_have_value("default")
         assert any(
             path == "/api/settings/live" and body["chzzk_live_cdn"] == "akamai"
@@ -395,7 +395,7 @@ async def main():
         )
         await vod.select_option("akamai")
         await page.get_by_role(
-            "button", name="영상 다운로드 설정 저장", exact=True
+            "button", name="변경사항 저장", exact=True
         ).click()
         assert any(
             path == "/api/settings/vod" and body["chzzk_vod_cdn"] == "akamai"

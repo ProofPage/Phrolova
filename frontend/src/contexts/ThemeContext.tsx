@@ -1,6 +1,6 @@
 import { useLanguage } from "./LanguageContext";
 /**
- * ThemeContext: 웹 UI 개인화 (테마·타이틀·파비콘)
+ * ThemeContext: 웹 UI 개인화 (테마·타이틀)
  * localStorage 기반으로 백엔드 없이 완결.
  */
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
@@ -31,7 +31,6 @@ const STORAGE_KEYS = {
     theme: "chzzk_theme",
     customColor: "chzzk_custom_color",
     title: "chzzk_title",
-    iconUrl: "chzzk_icon_url",
 } as const;
 
 // ── 색상 유틸 ──────────────────────────────────────
@@ -100,25 +99,15 @@ function applyTitle(title: string) {
     document.title = title || DEFAULT_TITLE;
 }
 
-function applyFavicon(url: string) {
-    const existing = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
-    const link = existing ?? document.createElement("link");
-    link.rel = "icon";
-    link.href = url || "/favicon.ico";
-    if (!existing) document.head.appendChild(link);
-}
-
 // ── Context ───────────────────────────────────────
 
 interface ThemeContextValue {
     themeId: ThemeId;
     customColor: string;
     pageTitle: string;
-    iconUrl: string;
     setTheme: (id: ThemeId) => void;
     setCustomColor: (hex: string) => void;
     setPageTitle: (title: string) => void;
-    setIconUrl: (url: string) => void;
     resetAll: () => void;
 }
 
@@ -133,10 +122,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         localStorage.getItem(STORAGE_KEYS.customColor) || DEFAULT_CUSTOM_COLOR
     );
     const [pageTitle, setPageTitleState] = useState<string>(readStoredTitle);
-    const [iconUrl, setIconUrlState] = useState<string>(() =>
-        localStorage.getItem(STORAGE_KEYS.iconUrl) || ""
-    );
-
     // 최초 마운트: 저장값 즉시 DOM 반영
     useEffect(() => {
         if (themeId === "custom") {
@@ -145,7 +130,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             applyPresetTheme(themeId);
         }
         applyTitle(pageTitle);
-        applyFavicon(iconUrl);
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const setTheme = (id: ThemeId) => {
@@ -173,28 +157,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         applyTitle(trimmed);
     };
 
-    const setIconUrl = (url: string) => {
-        setIconUrlState(url);
-        localStorage.setItem(STORAGE_KEYS.iconUrl, url);
-        applyFavicon(url);
-    };
-
     const resetAll = () => {
         setThemeId("blue");
         setCustomColorState(DEFAULT_CUSTOM_COLOR);
         setPageTitleState(DEFAULT_TITLE);
-        setIconUrlState("");
         localStorage.removeItem(STORAGE_KEYS.theme);
         localStorage.removeItem(STORAGE_KEYS.customColor);
         localStorage.removeItem(STORAGE_KEYS.title);
-        localStorage.removeItem(STORAGE_KEYS.iconUrl);
         applyPresetTheme("blue");
         applyTitle(DEFAULT_TITLE);
-        applyFavicon("");
     };
 
     return (
-        <ThemeContext.Provider value={{ themeId, customColor, pageTitle, iconUrl, setTheme, setCustomColor, setPageTitle, setIconUrl, resetAll }}>
+        <ThemeContext.Provider value={{ themeId, customColor, pageTitle, setTheme, setCustomColor, setPageTitle, resetAll }}>
             {children}
         </ThemeContext.Provider>
     );

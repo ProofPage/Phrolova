@@ -308,7 +308,6 @@ export default function Dashboard() {
                 icon={Radio}
                 eyebrow={t("live.liveStreamManagement")}
                 title={t("live.title")}
-                description={t("live.monitorYourChannelsAndManageLiveRecordings")}
                 meta={(
                     <>
                         <DashboardMetric label={translate("live.monitoredChannels")} value={channels.length} />

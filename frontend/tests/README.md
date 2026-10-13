@@ -57,6 +57,16 @@ python frontend/tests/setup_wizard.py
 
 다국어 검사는 [구현·검증 기록](../../docs/i18n.md)을 참고하세요.
 
+다운로드 설정의 통합 저장 회귀 검사:
+
+```bash
+PHROLOVA_TEST_OUTPUT=/tmp/phrolova-unified-settings python frontend/tests/settings_consistency.py
+```
+
+- 세 영역의 변경사항을 한 버튼으로 저장하고 변경된 영역만 순서대로 요청하는지 확인합니다.
+- 저장 중 중복 요청과 입력 변경 방지, 숫자 범위 검증, 부분 실패 후 실패한 영역만 재시도, 탭 이동 경고와 새로고침 복원을 검사합니다.
+- 6개 창 크기와 8개 언어에서 하단 오른쪽 버튼의 고정 위치·잘림·가로 넘침과 ‘저장됨’ 문구가 표시되지 않는지 확인합니다.
+
 ```bash
 cd frontend
 npm run i18n:check
@@ -70,3 +80,13 @@ python frontend/tests/i18n_regression.py
 - `i18n_regression.py`: 격리된 브라우저와 모의 API에서 8개 언어·전체 페이지·설정 하위 탭, 320/390/1440px, 즉시 전환과 새로고침 복원, 기본 설정/녹화 팝업·자동 녹화/시작/중지 요청을 검사합니다.
 
 - `i18n_hmr.py`: Vite 개발 서버에 연결하여 번역 리소스 자동 갱신과 복원 중 Context 오류/빈 화면이 발생하지 않는지 확인합니다. 원본 JSON을 `finally`에서 복원하며 다른 번역 파일 편집/제품 빌드와 동시에 실행하지 마세요.
+
+로그 대시보드 회귀 검사:
+
+```bash
+python frontend/tests/logs_dashboard.py
+```
+
+- 8개 언어·4개 화면 폭에서 파일 요약, 오류·경고 분류와 검색 조합, 아이콘 제거 및 화면 높이를 확인합니다.
+- 실시간 갱신의 중지·재개, 이전 내용을 유지하는 실패 처리, 파일 전환 중 요청 취소, 줄 수 변경, 원문 내보내기, 좌우 패널 높이, 빈 로그 및 초기화 확인·취소를 검사합니다.
+- 모든 로그와 초기화 요청은 격리된 모의 API를 사용합니다.

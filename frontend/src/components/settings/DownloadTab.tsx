@@ -1,9 +1,10 @@
 import { translate } from "../../i18n";
 import { RecordingOutputSettingsCard } from './RecordingOutputSettingsCard';
 import { useEffect, useRef, useState } from "react";
-import { Film, Radio, RefreshCcw, Save } from "lucide-react";
-import { useSettingsSave } from "../../hooks/useSettingsSave";
-import { api, type Settings as SettingsType } from "../../api/client";
+import { Film, Radio, Save } from "lucide-react";
+import { api, type RecordingOutputSettings, type Settings as SettingsType } from "../../api/client";
+import { getErrorMessage } from "../../utils/error";
+import { useToast } from "../ui/Toast";
 import { Button, Card, CardHeader, Field, Input, Select, SettingRow, Switch } from "../ui/primitives";
 import { DirInput } from "../ui/DirInput";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -19,7 +20,14 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [liveDownloadDir, setLiveDownloadDir] = useState("");
     const [vodDownloadDir, setVodDownloadDir] = useState("");
     const [monitorInterval, setMonitorInterval] = useState(30);
-    const [outputDirty,setOutputDirty] = useState(false);
+    const [output, setOutput] = useState<RecordingOutputSettings | null>(null);
+    const [savedOutput, setSavedOutput] = useState<RecordingOutputSettings | null>(null);
+    const [outputLoading, setOutputLoading] = useState(true);
+    const [outputLoadError, setOutputLoadError] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [saveErrors, setSaveErrors] = useState<Partial<Record<'video' | 'live' | 'processing', unknown>>>({});
+    const pending = useRef(false);
+    const toast = useToast();
     const [keepParts, setKeepParts] = useState(false);
     const [maxRetries, setMaxRetries] = useState(3);
     const [recordingQuality, setRecordingQuality] = useState("best");
@@ -35,11 +43,16 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [liveCdn, setLiveCdn] = useState<"default" | "akamai">("akamai");
     const [cdn, setCdn] = useState<"default" | "akamai">("akamai");
     const initialized = useRef(false);
-    // 세 영역이 각각 따로 저장되므로 훅도 따로 둔다 — 저장 중 표시가 서로 섞이지 않는다.
-    const { saving: liveSaving, save: saveLive } = useSettingsSave(onSaved);
-    const { saving: vodSaving, save: saveVod } = useSettingsSave(onSaved);
     useEffect(() => {
-        // Save 후 부모가 설정을 새로 불러와도 다른 섹션의 미저장값은 보존한다.
+        let active = true;
+        void api.getRecordingOutputSettings().then(data => {
+            if (active) { setOutput(data); setSavedOutput(data); }
+        }).catch(() => { if (active) setOutputLoadError(true); })
+          .finally(() => { if (active) setOutputLoading(false); });
+        return () => { active = false; };
+    }, []);
+    useEffect(() => {
+        // 일부 영역만 저장에 성공해도 실패한 영역의 입력값은 보존한다.
         // 탭을 나갔다 돌아오면 컴포넌트가 다시 마운트되어 최신 값을 읽는다.
         if (!settings || initialized.current) return;
         initialized.current = true;
@@ -82,42 +95,74 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         cdn !== (settings.chzzk_vod_cdn ?? "akamai") ||
         vodFilenameTemplate !== (settings.vod_filename_template || "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}")
     );
+    const outputDirty = !!output && JSON.stringify(output) !== JSON.stringify(savedOutput);
     const dirty = outputDirty || liveDirty || vodDirty;
+    const validVod = !!vodDownloadDir.trim() && !!vodFilenameTemplate.trim() && vodFilenameTemplate.length <= 240 &&
+        Number.isInteger(vodMaxConcurrent) && vodMaxConcurrent >= 1 && vodMaxConcurrent <= 10 &&
+        Number.isFinite(vodMaxSpeed) && vodMaxSpeed >= 0 && vodMaxSpeed <= 1000;
+    const validLive = !!liveDownloadDir.trim() && !!liveFilenameTemplate.trim() && liveFilenameTemplate.length <= 240 &&
+        Number.isInteger(monitorInterval) && monitorInterval >= 5 && monitorInterval <= 300 &&
+        Number.isInteger(maxRetries) && maxRetries >= 0 && maxRetries <= 100 &&
+        Number.isInteger(timeMachineOffset) && timeMachineOffset >= 0 && timeMachineOffset <= 86400;
+    const valid = (!vodDirty || validVod) && (!liveDirty || validLive);
     useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
-    const handleSaveVod = () => saveVod({
-        request: () => api.updateVodSettings({
-            vod_download_dir: vodDownloadDir.trim(),
-            vod_max_concurrent: vodMaxConcurrent,
-            vod_default_quality: vodDefaultQuality,
-            vod_max_speed: vodMaxSpeed,
-            vod_format: vodFormat,
-            chzzk_vod_cdn: cdn,
-            vod_filename_template: vodFilenameTemplate,
-            keep_download_parts: keepParts,
-        }),
-        success: t("settings.videoDownloadSettingsSaved"),
-        failure: t("settings.couldNotSaveVideoDownloadSettings"),
-    });
-    const handleSaveLive = () => saveLive({
-        request: () => api.updateDownloadSettings(
-            maxRetries, streamMode, timeMachineOffset,
-            saveLivePreview, liveFilenameTemplate, recordingQuality, liveCdn,
-            { live_download_dir: liveDownloadDir.trim(), monitor_interval: monitorInterval },
-        ),
-        success: t("settings.liveSettingsSaved"),
-        failure: t("settings.couldNotSaveLiveSettings"),
-    });
+    const handleSave = async () => {
+        if (pending.current || !dirty || !valid || outputLoading) return;
+        pending.current = true;
+        setSaving(true);
+        setSaveErrors({});
+        const errors: typeof saveErrors = {};
+        let savedAny = false;
+        const requests: { section: 'video' | 'live' | 'processing'; request: () => Promise<unknown> }[] = [];
+        if (vodDirty) requests.push({ section: 'video', request: async () => {
+            await api.updateVodSettings({
+                vod_download_dir: vodDownloadDir.trim(),
+                vod_max_concurrent: vodMaxConcurrent,
+                vod_default_quality: vodDefaultQuality,
+                vod_max_speed: vodMaxSpeed,
+                vod_format: vodFormat,
+                chzzk_vod_cdn: cdn,
+                vod_filename_template: vodFilenameTemplate,
+                keep_download_parts: keepParts,
+            });
+            setVodDownloadDir(vodDownloadDir.trim());
+        }});
+        if (outputDirty && output) requests.push({ section: 'processing', request: async () => {
+            const result = await api.updateRecordingOutputSettings(output);
+            setSavedOutput(result); setOutput(result);
+        }});
+        if (liveDirty) requests.push({ section: 'live', request: async () => {
+            await api.updateDownloadSettings(
+                maxRetries, streamMode, timeMachineOffset,
+                saveLivePreview, liveFilenameTemplate, recordingQuality, liveCdn,
+                { live_download_dir: liveDownloadDir.trim(), monitor_interval: monitorInterval },
+            );
+            setLiveDownloadDir(liveDownloadDir.trim());
+        }});
+        try {
+            // 기존 API가 같은 설정 파일을 갱신하므로 요청을 순서대로 보낸다.
+            for (const { section, request } of requests) {
+                try { await request(); savedAny = true; }
+                catch (error) { errors[section] = error; }
+            }
+            setSaveErrors(errors);
+            if (savedAny) await onSaved();
+            if (Object.keys(errors).length) toast.error('settings.couldNotSaveAllChanges');
+            else toast.success('settings.allChangesSaved');
+        } finally { pending.current = false; setSaving(false); }
+    };
     return (
         <div className="download-settings space-y-4">
-            <Card className="settings-section space-y-3" data-settings-section="video" aria-busy={vodSaving}>
+            <fieldset disabled={saving} className="min-w-0 space-y-4">
+            <Card className="settings-section space-y-3" data-settings-section="video" aria-busy={saving}>
                 <CardHeader icon={Film} title={translate("settings.videoDownloadSettings")} />
-                <Field label={translate("settings.videoDownloadLocation")} hint={translate("settings.downloadedVODsClipsAndVideosAreSavedHere")}>
+                <Field label={translate("settings.videoDownloadLocation")}>
                     <DirInput value={vodDownloadDir} onChange={setVodDownloadDir} placeholder={translate("settings.eGERecordingsVideo")} />
                 </Field>
                 <Field label={translate("settings.concurrentDownloads")} hint={translate("settings.appliesWhenSavedReducingThisLimitDoesNotStopActiveDownloads110")}>
                     <Input type="number" value={vodMaxConcurrent} onChange={(event) => setVodMaxConcurrent(Number(event.target.value))} min={1} max={10} />
                 </Field>
-                <Field label={t("settings.defaultResolution")} hint={t("settings.defaultResolutionForVideoDownloads")}>
+                <Field label={t("settings.defaultResolution")}>
                     <Select
                         value={vodDefaultQuality}
                         onChange={(event) => setVodDefaultQuality(event.target.value)}
@@ -159,26 +204,26 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                     hint={keepParts ? translate("settings.keepPartialFilesWhenADownloadIsCanceledOrFails") : translate("settings.deletePartialFilesWhenADownloadIsCanceledOrFails")}
                     control={<Switch checked={keepParts} onChange={setKeepParts} label={translate("settings.keepIncompleteVideoFiles")} />}
                 />
-                <Field label={translate("settings.videoFilenameFormat")} htmlFor="vod-filename-template" hint={translate("settings.availableFieldsNameTitleDateYearDateMonthDateDayDateHourDateMinuteDateSecondIdExtractorUploadDateDownloadDateAndQualityDateAndTimeUseTheDownloadStartTimeTheExtensionIsAddedAutomatically")}>
+                <Field label={translate("settings.videoFilenameFormat")} htmlFor="vod-filename-template">
                     <Input id="vod-filename-template" value={vodFilenameTemplate} maxLength={240} onChange={(event) => setVodFilenameTemplate(event.target.value)} />
+                    <details className="settings-field-help">
+                        <summary>{t('settings.filenameVariables')}</summary>
+                        <p>{t("settings.availableFieldsNameTitleDateYearDateMonthDateDayDateHourDateMinuteDateSecondIdExtractorUploadDateDownloadDateAndQualityDateAndTimeUseTheDownloadStartTimeTheExtensionIsAddedAutomatically")}</p>
+                    </details>
                 </Field>
-                <div className="settings-save-row flex justify-start border-t border-line pt-3">
-                <Button variant="primary" icon={Save} loading={vodSaving} disabled={!vodDirty || !vodDownloadDir.trim() || !vodFilenameTemplate.trim() || !Number.isInteger(vodMaxConcurrent) || vodMaxConcurrent < 1 || vodMaxConcurrent > 10} onClick={handleSaveVod}>
-                    {vodSaving ? translate("settings.saving") : translate("settings.saveVideoDownloadSettings")}
-                </Button>
-                </div>
+                {saveErrors.video != null && <p role="alert" className="text-xs text-danger break-words">{getErrorMessage(saveErrors.video, 'settings.couldNotSaveVideoDownloadSettings')}</p>}
             </Card>
-            <RecordingOutputSettingsCard onSaved={onSaved} onDirtyChange={setOutputDirty}/>
-            <Card className="settings-section space-y-3" data-settings-section="live" aria-busy={liveSaving}>
+            <RecordingOutputSettingsCard value={output} onChange={setOutput} busy={saving || outputLoading} error={saveErrors.processing != null ? getErrorMessage(saveErrors.processing, 'settings.couldNotSaveFileProcessingSettings') : outputLoadError ? t('settings.couldNotLoadFileProcessingSettings') : ''}/>
+            <Card className="settings-section space-y-3" data-settings-section="live" aria-busy={saving}>
                 <CardHeader icon={Radio} title={translate("settings.liveRecordingSettings")} />
-                <Field label={translate("settings.liveRecordingLocation")} hint={translate("settings.liveRecordingsAreSavedHere")}>
+                <Field label={translate("settings.liveRecordingLocation")}>
                     <DirInput value={liveDownloadDir} onChange={setLiveDownloadDir} placeholder={translate("settings.eGERecordingsLive")} />
                 </Field>
                 <Field label={translate("settings.liveStatusCheckIntervalSeconds")} hint={translate("settings.howOftenToCheckTheLiveStatusOfAddedChannels5300Seconds")}>
                     <Input type="number" min={5} max={300} value={monitorInterval} onChange={event => setMonitorInterval(Number(event.target.value))} />
                 </Field>
                 <Field label={translate("settings.chzzkLiveCDN")} hint={translate("settings.akamaiCDNIsTheDefaultAppliesToTheNextRecordingNaverCDNIsUsedWhenUnavailable")}>
-                    <Select aria-label={translate("settings.chzzkLiveCDN")} value={liveCdn} disabled={liveSaving} onChange={event=>setLiveCdn(event.target.value as typeof liveCdn)} options={[{value:'default',label:'Naver CDN'},{value:'akamai',label:'Akamai CDN'}]}/>
+                    <Select aria-label={translate("settings.chzzkLiveCDN")} value={liveCdn} onChange={event=>setLiveCdn(event.target.value as typeof liveCdn)} options={[{value:'default',label:'Naver CDN'},{value:'akamai',label:'Akamai CDN'}]}/>
                 </Field>
                 <Field label={translate("settings.liveRecordingResolution")} hint={translate("settings.chooseARecordingResolutionHigherResolutionsUseMoreStorage")}>
                     <Select
@@ -219,15 +264,20 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                     hint={saveLivePreview ? translate("settings.saveTheLiveThumbnailNextToTheRecording") : translate("settings.doNotSavePreviewImagesAsSeparateFiles")}
                     control={<Switch checked={saveLivePreview} onChange={setSaveLivePreview} label={translate("settings.saveLivePreviewImages")} />}
                 />
-                <Field label={translate("settings.liveRecordingFilenameFormat")} hint={translate("settings.availableFieldsNameChannelNameTitleLiveTitleChannelUidCategoryDateYearLiveDateYearDownloadDateYearLiveDateMonthLiveDateDayLiveDateHourLiveDateMinuteLiveDateSecondQualityAndExtensionTheExtensionIsAddedAutomatically")}>
+                <Field label={translate("settings.liveRecordingFilenameFormat")}>
                     <Input value={liveFilenameTemplate} onChange={(event) => setLiveFilenameTemplate(event.target.value)} maxLength={240} />
+                    <details className="settings-field-help">
+                        <summary>{t('settings.filenameVariables')}</summary>
+                        <p>{t("settings.availableFieldsNameChannelNameTitleLiveTitleChannelUidCategoryDateYearLiveDateYearDownloadDateYearLiveDateMonthLiveDateDayLiveDateHourLiveDateMinuteLiveDateSecondQualityAndExtensionTheExtensionIsAddedAutomatically")}</p>
+                    </details>
                 </Field>
-                <div className="settings-save-row flex justify-start border-t border-line pt-3">
-                <Button variant="primary" icon={liveSaving ? RefreshCcw : Save} loading={liveSaving} disabled={!liveDirty || !liveDownloadDir.trim() || !Number.isInteger(monitorInterval) || monitorInterval < 5 || monitorInterval > 300 || !liveFilenameTemplate.trim()} onClick={handleSaveLive}>
-                    {liveSaving ? translate("settings.saving") : translate("settings.saveLiveSettings")}
-                </Button>
-                </div>
+                {saveErrors.live != null && <p role="alert" className="text-xs text-danger break-words">{getErrorMessage(saveErrors.live, 'settings.couldNotSaveLiveSettings')}</p>}
             </Card>
+            </fieldset>
+            <div className="settings-save download-settings-save">
+                {(saving || dirty) && <p className="text-xs text-ink-faint" role="status">{saving ? t('settings.saving') : !valid ? t('settings.checkInvalidFieldsBeforeSaving') : t('settings.unsavedChangesInSettings')}</p>}
+                <Button variant="primary" icon={Save} loading={saving} disabled={!dirty || !valid || outputLoading} onClick={() => void handleSave()}>{t('settings.saveChanges')}</Button>
+            </div>
         </div>
     );
 }

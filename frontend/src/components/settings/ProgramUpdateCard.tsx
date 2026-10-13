@@ -51,7 +51,7 @@ export function ProgramUpdateCard({ onUpdateAvailabilityChange }: Props) {
         <>
             <Card className="space-y-5">
                 <CardHeader icon={Terminal} title={translate("settings.appUpdates")} />
-                <div className="bg-surface-3 p-4 rounded-[var(--radius-control)] border border-line flex flex-col items-start sm:flex-row sm:items-center justify-between gap-4 [overflow-wrap:anywhere]">
+                <div className="info-version-summary bg-surface-3 p-2.5 rounded-[var(--radius-control)] border border-line flex flex-col items-start sm:flex-row sm:items-center justify-between gap-4 [overflow-wrap:anywhere]">
                     <div className="min-w-0">
                         <h4 className="text-sm font-medium text-ink mb-1">{t("settings.currentVersion")}</h4>
                         <p className="text-xs text-ink-faint font-mono">v{updateInfo?.current_version || "..."}</p>

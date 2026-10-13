@@ -131,7 +131,6 @@ export default function Settings() {
             <PageHeader
                 icon={SettingsIcon}
                 title={t("settings.title")}
-                description={t("settings.configureRecordingDownloadsAuthenticationNotificationsAndAppBehavior")}
                 meta={hasDirtyTab || updateAvailable ? (
                     <>
                         {hasDirtyTab && <Badge tone="warn">{t("settings.unsavedChangesInSettings")}</Badge>}

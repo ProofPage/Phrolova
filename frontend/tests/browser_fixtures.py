@@ -3,6 +3,7 @@ import json
 from mobile_fixtures import FIX
 
 LONG = FIX["long"]
+FIX['stats']['storage'].update(live_download_dir=FIX['stats']['storage']['download_dir'],vod_download_dir='/videos/'+LONG,vod_chzzk_dir='/videos/'+LONG)
 
 async def mock(route):
     from urllib.parse import urlparse

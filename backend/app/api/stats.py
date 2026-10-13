@@ -6,6 +6,7 @@ Phrolova: Stats API Router
 from __future__ import annotations
 
 import shutil
+import os
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -14,6 +15,34 @@ from app.core.config import get_settings
 from app.store.repositories import LiveHistoryRepository, VodRepository
 
 router = APIRouter(prefix="/api/stats", tags=["Stats"])
+
+
+def _disk_volume_info(path: Path) -> dict[str, str]:
+    """저장 위치의 볼륨 정보를 읽고, 확인할 수 없는 항목은 비워 둡니다."""
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        get_mount = kernel.GetVolumePathNameW
+        get_mount.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
+        get_mount.restype = wintypes.BOOL
+        get_info = kernel.GetVolumeInformationW
+        get_info.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD,
+                             ctypes.POINTER(wintypes.DWORD), ctypes.POINTER(wintypes.DWORD),
+                             ctypes.POINTER(wintypes.DWORD), wintypes.LPWSTR, wintypes.DWORD]
+        get_info.restype = wintypes.BOOL
+        mount = ctypes.create_unicode_buffer(32768)
+        if not get_mount(str(path.resolve()), mount, len(mount)):
+            return {}
+        filesystem = ctypes.create_unicode_buffer(256)
+        get_info(mount.value, None, 0, None, None, None, filesystem, len(filesystem))
+        return {"disk_mountpoint": mount.value, "disk_filesystem": filesystem.value}
+
+    mount = path.resolve()
+    while mount.parent != mount and not mount.is_mount():
+        mount = mount.parent
+    return {"disk_mountpoint": str(mount), "disk_filesystem": ""}
 
 
 @router.get("", summary="통계 대시보드 데이터 조회")
@@ -123,9 +152,16 @@ async def get_stats():
 
     storage: dict = {
         "download_dir": settings.effective_live_download_dir,
+        # 기존 필드는 유지하고 실제 녹화·다운로드 엔진이 쓰는 경로를 함께 제공한다.
+        "live_download_dir": settings.effective_live_download_dir,
+        "vod_download_dir": settings.effective_vod_download_dir(is_chzzk=False),
+        "vod_chzzk_dir": settings.effective_vod_download_dir(is_chzzk=True),
         "used_bytes": 0,
         "total_bytes": 0,
         "free_bytes": 0,
+        "usage_available": False,
+        "disk_mountpoint": "",
+        "disk_filesystem": "",
     }
 
     download_path = Path(settings.effective_live_download_dir)
@@ -135,7 +171,14 @@ async def get_stats():
             storage["used_bytes"] = usage.used
             storage["total_bytes"] = usage.total
             storage["free_bytes"] = usage.free
+            storage["usage_available"] = usage.total > 0
         except Exception:
+            pass
+
+    if storage["usage_available"]:
+        try:
+            storage.update(_disk_volume_info(download_path))
+        except (OSError, ValueError):
             pass
 
     return {

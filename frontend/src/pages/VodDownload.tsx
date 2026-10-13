@@ -155,7 +155,7 @@ export default function VodDownload() {
         finally { batchRef.current = false; setBatchBusy(false); }
     };
     return <div className="product-page downloads-page space-y-4">
-        <PageHeader icon={Download} title={t("download.title")} description={t("download.downloadAndManageVODsAndClips")} variant="plain" meta={<div className="download-overview" aria-label={t("download.allTasks")}>
+        <PageHeader icon={Download} title={t("download.title")} variant="plain" meta={<div className="download-overview" aria-label={t("download.allTasks")}>
             {[[t("download.active"), counts.downloading + counts.processing], [t("settings.waiting"), counts.queued], [t("live.completed"), counts.completed], [t("live.failed"), counts.failed]].map(([label, count]) => <span key={label}>{label} <strong className="tabular-nums">{count}</strong></span>)}
         </div>} actions={<DownloadInput tasks={tasks} />} actionsPlacement="below" />
         {loadError && <div role="status" className="download-load-error"><span>{t("download.unableToLoadDownloadsTryAgainShortly")}</span><Button icon={RotateCw} onClick={() => void refreshTasks()}>{t("live.tryAgain")}</Button></div>}

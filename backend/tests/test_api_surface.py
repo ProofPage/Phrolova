@@ -82,6 +82,7 @@ EXPECTED_API_ROUTES = {
     ("POST", "/api/stream/record/{channel_id:path}/stop"),
     ("GET", "/api/system/logs"),
     ("GET", "/api/system/logs/{filename:path}"),
+    ("GET", "/api/system/logs/{filename}/export"),
     ("DELETE", "/api/system/logs"),
     ("GET", "/api/system/update"),
     ("POST", "/api/system/update/check"),
