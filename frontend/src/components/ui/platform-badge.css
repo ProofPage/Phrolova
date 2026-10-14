@@ -4,3 +4,5 @@
 .platform-badge.platform-soop { color: var(--color-soop); }
 .platform-badge.platform-cime { color: var(--color-cime); }
 .platform-badge.platform-kick { color: var(--color-kick); }
+.platform-badge.platform-twitch { color: var(--color-twitch); }
+.platform-badge.platform-tiktok { color: var(--color-tiktok); }

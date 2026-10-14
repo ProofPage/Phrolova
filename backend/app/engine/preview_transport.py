@@ -66,7 +66,13 @@ async def decode_preview(cmd: list[str], url: str, headers: dict, platform: str,
     if authenticated:
         # CookieJar scopes every playlist/segment/redirect to its actual domain.
         session.http.cookies.update(platform_cookie_jar(platform))
-    opening = asyncio.create_task(asyncio.to_thread(HLSStream(session, url).open))
+    if platform == 'tiktok':
+        from streamlink.stream.http import HTTPStream
+        session.http.cookies.update(platform_cookie_jar('tiktok'))
+        source = HTTPStream(session, url)
+    else:
+        source = HLSStream(session, url)
+    opening = asyncio.create_task(asyncio.to_thread(source.open))
     reader = None
     process = None
     tasks = []

@@ -101,7 +101,7 @@ async def main():
         assert await page.locator('.logs-page').evaluate('e => e.getBoundingClientRect().height < 1000')
         left=await page.locator('.logs-file-panel').bounding_box()
         right=await page.locator('.logs-content-panel').bounding_box()
-        assert abs(left['height'] - right['height']) < 2, (left,right)
+        assert left['height'] <= right['height'], (left,right)
         rows = await page.locator('.logs-file-option').evaluate_all('es => es.map(e => e.getBoundingClientRect().height)')
         assert all(height < 130 for height in rows), rows
         list_box = await page.locator('.logs-file-list').bounding_box()
@@ -122,10 +122,26 @@ async def main():
         assert abs(list_box['y'] + list_box['height'] - breakdown['y']) < 2, (list_box, breakdown)
         left = await page.locator('.logs-file-panel').bounding_box()
         right = await page.locator('.logs-content-panel').bounding_box()
-        assert abs(left['height'] - right['height']) < 2, (left, right)
+        assert left['height'] < 390, left
+        summary_rows = await page.locator('.logs-file-breakdown dl > div').evaluate_all('es => es.map(e => { const r=e.getBoundingClientRect(); return {y:r.y,height:r.height}; })')
+        assert all(row['height'] < 55 for row in summary_rows), summary_rows
+        gap = summary_rows[1]['y'] - summary_rows[0]['y'] - summary_rows[0]['height']
+        assert 8 <= gap <= 16, summary_rows
+        assert breakdown['height'] < 160, breakdown
         assert abs(left['y'] + left['height'] - breakdown['y'] - breakdown['height']) < 2, (left, breakdown)
         await page.set_viewport_size({'width': 1440, 'height': 1050})
         await page.screenshot(path=str(OUT / 'logs-single-file.png'), full_page=True)
+        for width in (320, 390, 768):
+            await page.set_viewport_size({'width': width, 'height': 900})
+            await page.locator('.logs-back button').click()
+            await expect(page.locator('.logs-file-panel')).to_be_visible()
+            assert await page.locator('.logs-file-panel').evaluate('e => e.getBoundingClientRect().height < 390')
+            assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+            if width == 390:
+                await page.screenshot(path=str(OUT / 'logs-single-file-mobile.png'), full_page=True)
+            await page.locator('.logs-file-option').click()
+            await expect(page.locator('.logs-content-panel')).to_be_visible()
+        await page.set_viewport_size({'width': 1440, 'height': 1050})
         files.extend([backup, *[dict(backup, filename=f'service.2026-09-{day:02d}.log') for day in range(1, 20)]])
         await page.reload()
         await expect(page.locator('.logs-file-option')).to_have_count(21)

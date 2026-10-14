@@ -12,7 +12,7 @@ import { droppedVodText } from '../utils/vodUrls';
 
 type InputProblem = { message: string; url?: string };
 const defaults: { id: DownloadSource; label: string }[] = [{ id: 'chzzk', label: "platform.chzzk" }, { id: 'youtube', label: "platform.youtube" }, { id: 'external', label: "download.externalVideo" }];
-const supportedIds: DownloadSource[] = ['chzzk', 'youtube', 'soop', 'cime', 'kick', 'external'];
+const supportedIds: DownloadSource[] = ['chzzk', 'youtube', 'soop', 'cime', 'kick', 'twitch', 'tiktok', 'external'];
 
 export function DownloadInput({ tasks }: { tasks: VodTask[] }) {
     const { t } = useLanguage();
@@ -75,7 +75,7 @@ export function DownloadInput({ tasks }: { tasks: VodTask[] }) {
             <DownloadSourceSelect sources={sources} value={source} disabled={!!busy} onChange={value => { setSource(value); setProblems([]); setResult(null); }} />
             <textarea id="vod-url" className="ui-input min-w-0 w-full resize-y" rows={Math.min(4, Math.max(1, text.split('\n').length))} aria-label={t("download.downloadURLList")} aria-describedby="download-input-help" aria-invalid={parsed.invalid.length > 0} value={text} disabled={!!busy}
                 onChange={event => { setText(event.target.value); setProblems([]); setResult(null); }}
-                placeholder={source === 'chzzk' ? 'https://chzzk.naver.com/video/...' : source === 'youtube' ? 'https://www.youtube.com/watch?v=...' : source === 'soop' ? 'https://vod.sooplive.com/player/...' : source === 'cime' ? 'https://ci.me/@channel/vods/...' : source === 'kick' ? 'https://kick.com/channel/videos/...' : 'https://...'} />
+                placeholder={source === 'chzzk' ? 'https://chzzk.naver.com/video/...' : source === 'youtube' ? 'https://www.youtube.com/watch?v=...' : source === 'soop' ? 'https://vod.sooplive.com/player/...' : source === 'cime' ? 'https://ci.me/@channel/vods/...' : source === 'kick' ? 'https://kick.com/channel/videos/...' : source === 'twitch' ? 'https://www.twitch.tv/videos/...' : source === 'tiktok' ? 'https://www.tiktok.com/@user/video/...' : 'https://...'} />
         </div>
         <p id="download-input-help" className="text-xs text-ink-muted">{t("download.enterVODOrClipLinksSeparateMultipleLinksWithLineBreaks")}</p>
         {(busy || parsed.count > 0) && <div className="download-input-summary text-xs text-ink-faint" role="status" aria-live="polite">

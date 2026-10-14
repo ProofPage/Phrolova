@@ -8,6 +8,20 @@
 
 ## [Unreleased]
 
+## [2.0.69] - 2026-10-15
+
+### Added
+- Add Twitch channel monitoring, Streamlink live recording and previews, and yt-dlp VOD/clip downloads with optional scoped cookies.
+- Add TikTok channel monitoring, Streamlink live capture, refreshed image previews, video/share-link downloads and cookie management.
+- Discover available live qualities and connect both platforms to the existing queue, media inspection, logging and eight-language interface.
+
+### Fixed
+- Remux TikTok FLV inputs to MPEG-TS using stream copy and local pipes; drain and reap the muxer when recording stops.
+- Reject live share links in the TikTok video queue and distinguish access, throttling, missing-content and quality errors.
+- Keep the log file sidebar and storage summary compact instead of stretching summary rows into empty space.
+- Treat expected generic-extractor fallback and missing optional BunnyCDN JSON-LD as informational messages while retaining actual warnings.
+- Display Twitch as 트위치 and TikTok as 틱톡 in Korean; retain international brand names in other locales.
+
 ## [2.0.68] - 2026-10-14
 
 ### Added
@@ -954,7 +968,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.68...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.69...HEAD
+[2.0.69]: https://github.com/ProofPage/Phrolova/compare/v2.0.68...v2.0.69
 [2.0.68]: https://github.com/ProofPage/Phrolova/compare/v2.0.67...v2.0.68
 [2.0.67]: https://github.com/ProofPage/Phrolova/compare/v2.0.66...v2.0.67
 [2.0.66]: https://github.com/ProofPage/Phrolova/compare/v2.0.65...v2.0.66

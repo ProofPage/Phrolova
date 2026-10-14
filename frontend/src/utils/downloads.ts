@@ -1,6 +1,8 @@
 import type { DownloadSource, Platform, VodTask } from '../api/client';
 import { canonicalVodUrl } from './vodUrls';
 import { canonicalKickVideoUrl } from './kickUrls';
+import { canonicalTwitchVideoUrl, TWITCH_HOSTS } from './twitchUrls';
+import { canonicalTikTokVideoUrl, TIKTOK_HOSTS } from './tiktokUrls';
 
 export type { DownloadSource } from '../api/client';
 export function detectDownloadPlatform(value: string): Platform | 'external' {
@@ -8,6 +10,8 @@ export function detectDownloadPlatform(value: string): Platform | 'external' {
         const host = new URL(value).hostname;
         if (host === 'chzzk.naver.com') return 'chzzk';
         if (['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(host)) return 'youtube';
+        if (TIKTOK_HOSTS.has(host)) return 'tiktok';
+        if (TWITCH_HOSTS.has(host)) return 'twitch';
         if (host === 'kick.com' || host === 'www.kick.com') return 'kick';
         if (host === 'ci.me' || host === 'www.ci.me') return 'cime';
         if (['vod.sooplive.com', 'vod.sooplive.co.kr', 'vod.afreecatv.com'].includes(host)) return 'soop';
@@ -37,6 +41,14 @@ export function normalizeDownloadInput(value: string, source: DownloadSource): {
                 parsed.hash = ''; return { url: parsed.href, collection: true, source: 'youtube' };
             }
             return null;
+        }
+        if (TIKTOK_HOSTS.has(host)) {
+            const url = canonicalTikTokVideoUrl(text);
+            return url ? { url, collection: false, source: 'tiktok' } : null;
+        }
+        if (TWITCH_HOSTS.has(host)) {
+            const url = canonicalTwitchVideoUrl(text);
+            return url ? { url, collection: false, source: 'twitch' } : null;
         }
         if (host === 'kick.com' || host === 'www.kick.com') {
             const url = canonicalKickVideoUrl(text);

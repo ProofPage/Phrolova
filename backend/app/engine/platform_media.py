@@ -4,6 +4,8 @@ from app.engine.platform_auth import redact_media_error
 
 def media_platform(url: str) -> str:
     host = (urlsplit(url).hostname or '').lower()
+    if host in ('tiktok.com', 'www.tiktok.com', 'm.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com'): return 'tiktok'
+    if host in ('twitch.tv', 'www.twitch.tv', 'm.twitch.tv', 'go.twitch.tv', 'clips.twitch.tv', 'player.twitch.tv'): return 'twitch'
     if host in ('kick.com', 'www.kick.com'): return 'kick'
     if host in ('ci.me', 'www.ci.me'): return 'cime'
     if host in ('vod.sooplive.com', 'vod.sooplive.co.kr', 'vod.afreecatv.com'): return 'soop'
@@ -13,6 +15,12 @@ def media_platform(url: str) -> str:
 
 def canonical_platform_video(url: str) -> str:
     platform = media_platform(url)
+    if platform == 'tiktok':
+        from app.engine.tiktok import canonical_tiktok_video_url
+        return canonical_tiktok_video_url(url)
+    if platform == 'twitch':
+        from app.engine.twitch import canonical_twitch_video_url
+        return canonical_twitch_video_url(url)
     if platform == 'kick':
         from app.engine.kick import canonical_kick_video_url
         return canonical_kick_video_url(url)
@@ -30,7 +38,15 @@ class SafeMediaLogger:
     def __init__(self, logger): self.logger = logger
     def debug(self, message): self.logger.debug(redact_media_error(message))
     def info(self, message): self.logger.info(redact_media_error(message))
-    def warning(self, message): self.logger.warning(redact_media_error(message))
+    def warning(self, message):
+        # 일반 추출기 전환과 BunnyCDN의 선택 메타데이터 누락은 실패 경고가 아니다.
+        text = str(message).strip()
+        if text == '[generic] Falling back on generic information extractor':
+            self.logger.info('[generic] 전용 추출기가 없어 일반 추출기로 미디어를 확인합니다.')
+        elif text.partition(';')[0].strip() == '[BunnyCdn] unable to extract JSON-LD':
+            self.logger.info('[BunnyCdn] 부가 메타데이터(JSON-LD)를 찾지 못했습니다. 미디어 추출을 계속합니다.')
+        else:
+            self.logger.warning(redact_media_error(message))
     def error(self, message): self.logger.error(redact_media_error(message))
 
 def platform_ydl(url: str, options: dict):

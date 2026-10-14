@@ -12,9 +12,9 @@ from typing import Callable, Awaitable, TypeVar
 
 from app.core.config import get_settings
 
-DOMAINS = {'soop': ('sooplive.com', 'sooplive.co.kr', 'afreecatv.com'), 'cime': ('ci.me',), 'kick': ('kick.com',),
+DOMAINS = {'soop': ('sooplive.com', 'sooplive.co.kr', 'afreecatv.com'), 'cime': ('ci.me',), 'kick': ('kick.com',), 'twitch': ('twitch.tv',), 'tiktok': ('tiktok.com',),
            'chzzk': ('naver.com',), 'youtube': ('youtube.com', 'google.com')}
-NAMES = {'soop': '숲', 'cime': '씨미', 'kick': 'Kick'}
+NAMES = {'soop': '숲', 'cime': '씨미', 'kick': 'Kick', 'twitch': 'Twitch', 'tiktok': 'TikTok'}
 T = TypeVar('T')
 
 
@@ -154,5 +154,5 @@ async def with_platform_cookie_fallback(platform: str, operation: Callable[[str 
 def redact_media_error(error: object, *, max_length: int = 1000) -> str:
     text = re.sub(r'https?://[^\s\]\)\"\']+', '[영상 주소]', str(error))
     text = re.sub(r'(?i)(\b(?:url|uri):\s*)/[^\s)]+', r'\1[영상 경로]', text)
-    text = re.sub(r'(?i)(cookie|authorization|token)\s*[:=]\s*[^\r\n]+', r'\1=[비공개]', text)
+    text = re.sub(r'(?i)(cookie|authorization|token|sessionid(?:_ss)?|sid_tt|sid_guard|ttwid)\s*[:=]\s*[^\r\n]+', r'\1=[비공개]', text)
     return text[:max_length]

@@ -302,7 +302,7 @@ class VodEngine(VodPreparation):
                 else None
             )
         ]
-        if media_platform(task.source_url) in ("soop", "cime", "kick"):
+        if media_platform(task.source_url) in ("soop", "cime", "kick", "twitch", "tiktok"):
             opts["hls_prefer_native"] = True
             opts["skip_unavailable_fragments"] = False
             opts["postprocessors"] = [
@@ -472,7 +472,25 @@ class VodEngine(VodPreparation):
                         raise ValueError('영상 정보 요청 시간이 초과되었습니다. 잠시 후 다시 조회하세요.') from None
                     await asyncio.sleep(0.5)
 
-        if media_platform(url) == "kick":
+        if media_platform(url) == "tiktok":
+            from app.engine.tiktok import tiktok_access_error
+            from app.engine.platform_auth import platform_cookie_file
+            with platform_cookie_file("tiktok") as cookie_file:
+                try:
+                    info = await extract(cookie_file)
+                except Exception as error:
+                    raise tiktok_access_error(error) or ValueError(redact_media_error(error)) from None
+            if info and info.get('is_live'):
+                raise ValueError('TikTok 라이브는 라이브 메뉴에서 채널을 등록하세요.')
+        elif media_platform(url) == "twitch":
+            from app.engine.twitch import twitch_access_error
+            from app.engine.platform_auth import platform_cookie_file
+            with platform_cookie_file("twitch") as cookie_file:
+                try:
+                    info = await extract(cookie_file)
+                except Exception as error:
+                    raise twitch_access_error(error) or ValueError(redact_media_error(error)) from None
+        elif media_platform(url) == "kick":
             from app.engine.kick import kick_access_error
             from app.engine.platform_auth import platform_cookie_file
             with platform_cookie_file('kick') as cookie_file:
@@ -934,6 +952,30 @@ class VodEngine(VodPreparation):
     async def _download_external(self, task_id: str, task: VodDownloadTask) -> None:
         """yt-dlp를 사용한 외부 URL(유튜브 등) 다운로드."""
         self._validate_media_url(task.url)
+        if media_platform(task.url) == "tiktok":
+            from app.engine.tiktok import tiktok_access_error
+            from app.engine.platform_auth import platform_cookie_file
+            with platform_cookie_file("tiktok") as cookie_file:
+                try:
+                    await self._download_with_ytdlp(task_id, task, cookie_file)
+                except Exception as error:
+                    access = tiktok_access_error(error)
+                    if access and not access.retryable:
+                        raise NonRetryableDownloadError(str(access)) from None
+                    raise
+            return
+        if media_platform(task.url) == "twitch":
+            from app.engine.twitch import twitch_access_error
+            from app.engine.platform_auth import platform_cookie_file
+            with platform_cookie_file("twitch") as cookie_file:
+                try:
+                    await self._download_with_ytdlp(task_id, task, cookie_file)
+                except Exception as error:
+                    access = twitch_access_error(error)
+                    if access and not access.retryable:
+                        raise NonRetryableDownloadError(str(access)) from None
+                    raise
+            return
         if media_platform(task.url) == "kick":
             from app.engine.kick import kick_access_error
             from app.engine.platform_auth import platform_cookie_file
@@ -1048,6 +1090,8 @@ class VodEngine(VodPreparation):
             raise DownloadCancelledError("다운로드가 취소되었습니다.")
         if not info:
             raise RuntimeError("영상 정보를 가져올 수 없습니다.")
+        if media_platform(task.source_url) == 'tiktok' and info.get('is_live'):
+            raise NonRetryableDownloadError('TikTok 라이브는 라이브 메뉴에서 채널을 등록하세요.')
         vod_title = info.get("title", "Unknown")
         uploader = info.get("uploader") or info.get("channel") or "Unknown Channel"
         task.title = f"[{uploader}] {vod_title}"

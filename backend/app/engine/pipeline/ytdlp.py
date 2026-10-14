@@ -148,7 +148,7 @@ class YtdlpLivePipeline:
             Callable[[str], Awaitable[tuple[str, dict, Optional[str]]]]
         ] = None,
     ) -> str:
-        """Resolve HLS and save Streamlink packets; FFmpeg runs only after closure.
+        """Save Streamlink packets, remuxing TikTok FLV to TS without encoding.
 
         Args:
             stream_obj: 라이브 URL 문자열 (예: https://chzzk.naver.com/live/{id})
@@ -954,7 +954,7 @@ class YtdlpLivePipeline:
         continuity_callback=None,
         api_cookie=None,
     ) -> tuple[object, object]:
-        """Create a fresh Streamlink HLS reader without an FFmpeg muxer."""
+        """Create a Streamlink reader, with a stream-copy TS adapter for TikTok FLV."""
         from streamlink import Streamlink
         from streamlink.stream.hls import HLSStream
         from http.cookies import CookieError, SimpleCookie
@@ -1003,6 +1003,13 @@ class YtdlpLivePipeline:
                 )
             )
 
+        if (urlsplit(source_page_url).hostname or "").lower() in ("tiktok.com", "www.tiktok.com", "m.tiktok.com"):
+            from app.engine.platform_auth import platform_cookie_jar
+            from app.engine.tiktok_transport import TikTokFLVStream
+            session.http.cookies.update(platform_cookie_jar('tiktok'))
+            session.set_option('stream-timeout', 10)
+            return session, TikTokFLVStream(session, hls_url)
+
         # Read the manifest through Streamlink, without its FFmpeg-backed muxer.
         if urlsplit(hls_url).path.lower().endswith(".mpd"):
             session.http.close()
@@ -1021,6 +1028,10 @@ class YtdlpLivePipeline:
             from streamlink.plugins.kick import KickHLSStream
 
             stream_type = KickHLSStream
+        if (urlsplit(source_page_url).hostname or "").lower() in ("twitch.tv", "www.twitch.tv", "m.twitch.tv", "go.twitch.tv"):
+            from streamlink.plugins.twitch import TwitchHLSStream
+
+            stream_type = TwitchHLSStream
         if YtdlpLivePipeline._is_chzzk_live_page(source_page_url):
             from app.engine.chzzk_stream import ChzzkHLSStream
             channel_id = urlsplit(source_page_url).path.rstrip('/').rsplit('/', 1)[-1]

@@ -18,6 +18,8 @@ class Platform(str, Enum):
     SOOP = "soop"
     CIME = "cime"
     KICK = "kick"
+    TWITCH = "twitch"
+    TIKTOK = "tiktok"
 
 
 class LiveStatus(TypedDict, total=False):
@@ -43,7 +45,7 @@ class LiveStatus(TypedDict, total=False):
 class PlatformEngine(Protocol):
     """플랫폼 엔진 프로토콜.
 
-    CHZZK, YouTube, SOOP, CIME, Kick 엔진이 이를 구현한다.
+    CHZZK, YouTube, SOOP, CIME, Kick, Twitch 엔진이 이를 구현한다.
 
     @runtime_checkable이라 issubclass()로 검사할 수 있다. CI에 파이썬 타입
     체커가 없으므로 tests/test_engine_modules.py가 각 엔진의 준수 여부를 확인한다 —
