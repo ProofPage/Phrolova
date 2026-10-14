@@ -22,6 +22,8 @@ async def vod_capabilities():
         {'id': 'chzzk', 'label': '치지직'}, {'id': 'youtube', 'label': '유튜브'},
         {'id': 'soop', 'label': '숲'}, {'id': 'cime', 'label': '씨미'},
         {'id': 'kick', 'label': 'Kick'}, {'id': 'twitch', 'label': 'Twitch'}, {'id': 'tiktok', 'label': 'TikTok'},
+        {'id': 'anilife', 'label': 'platform.anilife'}, {'id': 'linkani', 'label': 'platform.linkani'},
+        {'id': 'ohli24', 'label': 'platform.ohli24'},
         {'id': 'external', 'label': '외부 영상'},
     ], 'prepare': True, 'pause': True, 'file_open': True}
 
@@ -256,7 +258,22 @@ async def cancel_channel_import(import_id: str):
 
 class VodPrepareRequest(BaseModel):
     urls: list[Annotated[str, Field(max_length=2048)]] = Field(..., min_length=1, max_length=100)
-    source: Literal['chzzk', 'youtube', 'soop', 'cime', 'kick', 'twitch', 'tiktok', 'external', 'auto'] = 'auto'
+    source: Literal['chzzk', 'youtube', 'soop', 'cime', 'kick', 'twitch', 'tiktok', 'anilife', 'linkani', 'ohli24', 'external', 'auto'] = 'auto'
+
+
+class VodCatalogRequest(BaseModel):
+    url: str = Field(..., max_length=2048)
+
+
+@router.post('/catalog', summary='작품의 다운로드 가능한 회차 조회')
+async def video_catalog(req: VodCatalogRequest):
+    from app.engine.episode_sites import load_catalog, EpisodeSiteError
+    try:
+        return await asyncio.wait_for(asyncio.to_thread(load_catalog, req.url), timeout=45)
+    except EpisodeSiteError as exc:
+        raise HTTPException(400, str(exc)) from None
+    except TimeoutError:
+        raise HTTPException(504, '회차 목록 요청 시간이 초과되었습니다. 잠시 후 다시 시도하세요.') from None
 
 
 class VodQualityRequest(BaseModel):

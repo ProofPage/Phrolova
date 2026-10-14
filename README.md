@@ -32,6 +32,9 @@ The interface supports **Korean, English, Japanese, Spanish, German, Simplified 
 | Kick | Streamlink monitoring integration, preview and manual/automatic recording | VODs and clips via yt-dlp | Optional Kick cookies; required for sign-in-only qualities |
 | Twitch | Monitoring, preview and manual/automatic recording via Streamlink | VODs and individual clips via yt-dlp | Optional Twitch Netscape cookies |
 | TikTok | Monitoring, frame previews and manual/automatic recording via Streamlink | Individual videos and short share links via yt-dlp | Optional TikTok Netscape cookies |
+| Anilife / Linkani / Ohli24 | — | Work/episode links, episode selection, HLS videos and VTT subtitles | Normal site playback session |
+
+For episode-based sources, paste a work link in **Videos** and select up to 100 episodes. These sources use the existing queue, quality controls and media inspection. See [episode source adapters](docs/video-site-adapters.md) for URL formats and validation details.
 
 External links use yt-dlp's supported extractors. Available formats and access follow the source platform. YouTube imports skip live/upcoming entries and videos already queued in a non-error state. Authenticated YouTube video downloads/imports are separate from automatic live recording; authenticated automatic YouTube live recording is not established by cookie registration.
 

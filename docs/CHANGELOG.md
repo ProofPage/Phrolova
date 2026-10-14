@@ -8,6 +8,19 @@
 
 ## [Unreleased]
 
+## [2.0.70] - 2026-10-15
+
+### Added
+- Adapt Anilife, Linkani and Ohli24 video extraction from the supplied Lua plugins into native Python adapters, without adding a Lua runtime.
+- Add work/episode URLs, an episode picker with search and pagination, unavailable-file status, a 100-episode selection limit, HLS quality selection and VTT subtitles.
+- Connect the adapters to the existing persistent download queue, pause/cancel controls, media finalization, inspection and platform logs.
+
+### Fixed
+- Preserve the complete download-source list on capability request failure and show a connection error with retry instead of silently hiding platforms.
+- Normalize Unicode URLs before sending Referer headers, verify work/episode identity, and mark incomplete episode listings without inventing missing entries.
+- Support the current Ohli24 CDN hosts observed in its issued playlist. Validate redirects, media hosts and plain AES-128 identity keys while rejecting unsupported/protected formats.
+- Add all new source labels and episode controls to the eight-language interface and verify narrow mobile layouts.
+
 ## [2.0.69] - 2026-10-15
 
 ### Added
@@ -968,7 +981,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.69...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.70...HEAD
+[2.0.70]: https://github.com/ProofPage/Phrolova/compare/v2.0.69...v2.0.70
 [2.0.69]: https://github.com/ProofPage/Phrolova/compare/v2.0.68...v2.0.69
 [2.0.68]: https://github.com/ProofPage/Phrolova/compare/v2.0.67...v2.0.68
 [2.0.67]: https://github.com/ProofPage/Phrolova/compare/v2.0.66...v2.0.67

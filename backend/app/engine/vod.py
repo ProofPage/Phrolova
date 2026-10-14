@@ -302,12 +302,14 @@ class VodEngine(VodPreparation):
                 else None
             )
         ]
-        if media_platform(task.source_url) in ("soop", "cime", "kick", "twitch", "tiktok"):
+        if media_platform(task.source_url) in ("soop", "cime", "kick", "twitch", "tiktok", "anilife", "linkani", "ohli24"):
             opts["hls_prefer_native"] = True
             opts["skip_unavailable_fragments"] = False
             opts["postprocessors"] = [
                 {"key": "FFmpegVideoRemuxer", "preferedformat": settings.vod_format}
             ]
+        if media_platform(task.source_url) in ("anilife", "linkani", "ohli24"):
+            opts.update(writesubtitles=True, subtitleslangs=["all"], noplaylist=True)
         if is_youtube_url(task.url):
             opts.update(youtube_options())
             opts["noplaylist"] = True

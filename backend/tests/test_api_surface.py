@@ -25,6 +25,7 @@ from app.main import STATIC_DIR, app
 #: (HTTP 메서드, 경로). 메서드는 쉼표로 이어 붙이고 HEAD는 뺀다
 #: (FastAPI가 GET에 자동으로 붙여주는 것이라 계약이 아니다).
 EXPECTED_API_ROUTES = {
+    ('POST', '/api/vod/catalog'),
     ('GET', '/api/system/media-tools'),
     ('GET', '/api/stream/preview-media/{token}/asset.{extension}'),
     ("POST", "/api/recordings/history/clear"),

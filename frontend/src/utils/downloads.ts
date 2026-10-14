@@ -1,13 +1,15 @@
-import type { DownloadSource, Platform, VodTask } from '../api/client';
+import type { DownloadSource, VodTask } from '../api/client';
+import { EPISODE_HOSTS, parseEpisodeInput } from './episodeSites';
 import { canonicalVodUrl } from './vodUrls';
 import { canonicalKickVideoUrl } from './kickUrls';
 import { canonicalTwitchVideoUrl, TWITCH_HOSTS } from './twitchUrls';
 import { canonicalTikTokVideoUrl, TIKTOK_HOSTS } from './tiktokUrls';
 
 export type { DownloadSource } from '../api/client';
-export function detectDownloadPlatform(value: string): Platform | 'external' {
+export function detectDownloadPlatform(value: string): DownloadSource {
     try {
         const host = new URL(value).hostname;
+        if (EPISODE_HOSTS[host]) return EPISODE_HOSTS[host];
         if (host === 'chzzk.naver.com') return 'chzzk';
         if (['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(host)) return 'youtube';
         if (TIKTOK_HOSTS.has(host)) return 'tiktok';
@@ -30,6 +32,7 @@ export function normalizeDownloadInput(value: string, source: DownloadSource): {
         const parsed = new URL(text);
         if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password || (parsed.port && parsed.port !== '80' && parsed.port !== '443')) return null;
         const host = parsed.hostname.toLowerCase();
+        if (EPISODE_HOSTS[host]) return parseEpisodeInput(text);
         if (['x.com','twitter.com','pscp.tv'].includes(host) || host.endsWith('.pscp.tv')) return null;
         if (host === 'twitcasting.tv' || host.endsWith('.twitcasting.tv')) return null;
         const youtube = ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(host);

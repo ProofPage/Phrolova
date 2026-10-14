@@ -6,3 +6,4 @@
 .platform-badge.platform-kick { color: var(--color-kick); }
 .platform-badge.platform-twitch { color: var(--color-twitch); }
 .platform-badge.platform-tiktok { color: var(--color-tiktok); }
+.platform-badge.platform-anilife,.platform-badge.platform-linkani,.platform-badge.platform-ohli24 { color: var(--color-info); }

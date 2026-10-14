@@ -93,3 +93,4 @@ python frontend/tests/logs_dashboard.py
 
 - `twitch_integration.py`: Twitch 채널 주소 검증, 공개 화질 목록, 쿠키 등록, 라이브 채널 추가, 다시보기·클립 준비 목록과 360/390/768/1440px 레이아웃을 확인합니다. API는 모의 응답입니다.
 - `tiktok_integration.py`: 틱톡 이미지 미리보기, 채널·동영상·공유 주소 검증, 화질 목록, 쿠키 등록과 360/390/768/1440px 레이아웃을 확인합니다. API는 모의 응답입니다.
+- `episode_integration.py`: API 장애 시 11개 다운로드 소스 보존·재시도, 회차 검색·선택·누락 안내·재생 불가 상태·100개 제한과 실제 준비 요청을 검사합니다. 320/390/768/1440px에서 모의 API를 사용합니다.

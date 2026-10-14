@@ -12,7 +12,7 @@ export const client = axios.create({
 // ── Types ───────────────────────────────────────────────
 
 export type Platform = "chzzk" | "youtube" | "soop" | "cime" | "kick" | "twitch" | "tiktok";
-export type DownloadSource = Platform | 'external';
+export type DownloadSource = Platform | 'anilife' | 'linkani' | 'ohli24' | 'external';
 export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
 export interface ChannelDownloadOptions {
     output_format?: 'mp4' | 'mkv' | null;
@@ -31,6 +31,12 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
     twitch: "platform.twitch",
     tiktok: "platform.tiktok",
 };
+
+export const DOWNLOAD_SOURCE_LABELS: Record<DownloadSource, string> = {
+    ...PLATFORM_LABELS, anilife: 'platform.anilife', linkani: 'platform.linkani', ohli24: 'platform.ohli24', external: 'download.externalVideo',
+};
+export interface VideoEpisode { id: string; title: string; url: string; number?: number | null; available: boolean; }
+export interface VideoCatalog { source: DownloadSource; id: string; title: string; url: string; episodes: VideoEpisode[]; incomplete?:boolean; }
 
 export interface Channel {
     broadcast_status?: 'checking' | 'live' | 'offline' | 'error';
@@ -94,7 +100,7 @@ export type ChzzkVodCdn = "default" | "akamai";
 
 export interface VodTask {
     task_id: string;
-    platform?: Platform | 'external';
+    platform?: DownloadSource;
     url: string;
     title: string;
     state: "idle" | "downloading" | "paused" | "completed" | "error" | "cancelling";
@@ -440,7 +446,8 @@ export const api = {
     // Monitor
 
     // VOD
-    getVodCapabilities: async () => (await client.get<{ sources: { id: DownloadSource; label: string }[]; prepare: boolean; pause: boolean; file_open: boolean }>("/vod/capabilities")).data,
+    getVodCapabilities: async (signal?:AbortSignal) => (await client.get<{ sources: { id: DownloadSource; label: string }[]; prepare: boolean; pause: boolean; file_open: boolean }>("/vod/capabilities",{signal,timeout:10000})).data,
+    getVideoCatalog: async (url: string, signal?: AbortSignal) => (await client.post<VideoCatalog>('/vod/catalog', {url}, {signal, timeout:50000})).data,
     prepareVods: async (urls: string[], source?: DownloadSource) => (await client.post<{ results: { url: string; task_id?: string; duplicate?: boolean; error?: string }[] }>("/vod/prepare", { urls, ...(source ? { source } : {}) })).data,
     startPreparedVods: async (task_ids: string[]) => (await client.post<{ results: { task_id: string; started?: boolean; error?: string }[] }>("/vod/start-prepared", { task_ids })).data,
     startPreparedVod: async (id: string) => { await client.post(`/vod/${id}/start`); },

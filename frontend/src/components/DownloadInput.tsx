@@ -1,7 +1,7 @@
 import { translate, translatePlural } from "../i18n";
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Plus } from 'lucide-react';
-import { api, type VodTask } from '../api/client';
+import { api, DOWNLOAD_SOURCE_LABELS, type VodTask } from '../api/client';
 import { useVod } from '../contexts/VodContext';
 import { Button } from './ui/primitives';
 import { DownloadSourceSelect } from './DownloadSourceSelect';
@@ -9,15 +9,19 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { getErrorMessage } from '../utils/error';
 import { normalizeDownloadInput, parseDownloadInputs, type DownloadSource } from '../utils/downloads';
 import { droppedVodText } from '../utils/vodUrls';
+import { isEpisodeSource } from '../utils/episodeSites';
+import { VideoCatalogDialog } from './VideoCatalogDialog';
 
 type InputProblem = { message: string; url?: string };
-const defaults: { id: DownloadSource; label: string }[] = [{ id: 'chzzk', label: "platform.chzzk" }, { id: 'youtube', label: "platform.youtube" }, { id: 'external', label: "download.externalVideo" }];
-const supportedIds: DownloadSource[] = ['chzzk', 'youtube', 'soop', 'cime', 'kick', 'twitch', 'tiktok', 'external'];
+const supportedIds = Object.keys(DOWNLOAD_SOURCE_LABELS) as DownloadSource[];
+const defaults = supportedIds.map(id=>({id,label:DOWNLOAD_SOURCE_LABELS[id]}));
 
 export function DownloadInput({ tasks }: { tasks: VodTask[] }) {
     const { t } = useLanguage();
     const { addTask, refreshTasks } = useVod();
     const [sources, setSources] = useState(defaults);
+    const [sourceError,setSourceError] = useState(false);
+    const [sourceAttempt,setSourceAttempt] = useState(0);
     const [source, setSource] = useState<DownloadSource>('chzzk');
     const [text, setText] = useState('');
     const [busy, setBusy] = useState<'queue' | 'start' | null>(null);
@@ -25,26 +29,36 @@ export function DownloadInput({ tasks }: { tasks: VodTask[] }) {
     const [problems, setProblems] = useState<InputProblem[]>([]);
     const [result, setResult] = useState<{ key: string; count: number } | null>(null);
     const [dragging, setDragging] = useState(false);
+    const [catalog,setCatalog] = useState<{inputs:ReturnType<typeof parseDownloadInputs>['items'];mode:'queue'|'start'} | null>(null);
     const parsed = useMemo(() => parseDownloadInputs(text, source), [text, source]);
-    const hasCollection = parsed.items.some(item => item.collection);
+    const hasCollection = parsed.items.some(item => item.collection && !isEpisodeSource(item.source));
     useEffect(() => {
-        api.getVodCapabilities().then(data => {
+        const controller = new AbortController();
+        setSourceError(false);
+        api.getVodCapabilities(controller.signal).then(data => {
             const supported = data.sources?.filter(item => supportedIds.includes(item.id));
-            if (supported?.length) { setSources(supported); setSource(current => supported.some(item => item.id === current) ? current : supported[0].id); }
-        }).catch(() => {});
-    }, []);
-    const submit = async (mode: 'queue' | 'start') => {
+            if (!supported?.length) throw new Error('empty sources');
+            setSources(supported.map(item=>({id:item.id,label:DOWNLOAD_SOURCE_LABELS[item.id]})));
+            setSource(current => supported.some(item => item.id === current) ? current : supported[0].id);
+        }).catch(() => { if (!controller.signal.aborted) setSourceError(true); });
+        return ()=>controller.abort();
+    }, [sourceAttempt]);
+    const submit = async (mode: 'queue' | 'start', picked?:string[]) => {
         if (busyRef.current) return;
-        const errors: InputProblem[] = parsed.invalid.map(url => ({message: "download.unsupportedURL", url}));
-        errors.push(...parsed.duplicates.map(url => ({message: "download.duplicateLinksAreAddedOnce", url})));
-        if (!parsed.items.length) { setProblems(errors); return; }
-        if (parsed.items.length > 100) { setProblems([{message: "download.registerUpTo100URLsAtOnce"}]); return; }
+        const current = picked ? parseDownloadInputs(picked.join('\n'),'external') : parsed;
+        const errors: InputProblem[] = current.invalid.map(url => ({message: "download.unsupportedURL", url}));
+        errors.push(...current.duplicates.map(url => ({message: "download.duplicateLinksAreAddedOnce", url})));
+        if (!current.items.length) { setProblems(errors); return; }
+        if (current.items.length > 100) { setProblems([{message: "download.registerUpTo100URLsAtOnce"}]); return; }
+        if (!picked && current.items.some(item=>item.collection && isEpisodeSource(item.source))) {
+            setCatalog({inputs:current.items,mode});setProblems(errors);return;
+        }
         busyRef.current = true; setBusy(mode); setResult(null);
         let successful = 0;
-        const failedInputs: string[] = [...parsed.invalid];
+        const failedInputs: string[] = [...current.invalid];
         try {
             const existing = new Set(tasks.map(task => normalizeDownloadInput(task.url, source)?.url ?? task.url));
-            const fresh = parsed.items.filter(item => {
+            const fresh = current.items.filter(item => {
                 if (!existing.has(item.url)) return true;
                 errors.push({message: "download.thisVODIsAlreadyRegistered", url: item.url}); return false;
             });
@@ -75,9 +89,10 @@ export function DownloadInput({ tasks }: { tasks: VodTask[] }) {
             <DownloadSourceSelect sources={sources} value={source} disabled={!!busy} onChange={value => { setSource(value); setProblems([]); setResult(null); }} />
             <textarea id="vod-url" className="ui-input min-w-0 w-full resize-y" rows={Math.min(4, Math.max(1, text.split('\n').length))} aria-label={t("download.downloadURLList")} aria-describedby="download-input-help" aria-invalid={parsed.invalid.length > 0} value={text} disabled={!!busy}
                 onChange={event => { setText(event.target.value); setProblems([]); setResult(null); }}
-                placeholder={source === 'chzzk' ? 'https://chzzk.naver.com/video/...' : source === 'youtube' ? 'https://www.youtube.com/watch?v=...' : source === 'soop' ? 'https://vod.sooplive.com/player/...' : source === 'cime' ? 'https://ci.me/@channel/vods/...' : source === 'kick' ? 'https://kick.com/channel/videos/...' : source === 'twitch' ? 'https://www.twitch.tv/videos/...' : source === 'tiktok' ? 'https://www.tiktok.com/@user/video/...' : 'https://...'} />
+                placeholder={source === 'chzzk' ? 'https://chzzk.naver.com/video/...' : source === 'youtube' ? 'https://www.youtube.com/watch?v=...' : source === 'soop' ? 'https://vod.sooplive.com/player/...' : source === 'cime' ? 'https://ci.me/@channel/vods/...' : source === 'kick' ? 'https://kick.com/channel/videos/...' : source === 'twitch' ? 'https://www.twitch.tv/videos/...' : source === 'tiktok' ? 'https://www.tiktok.com/@user/video/...' : source==='anilife'?'https://anilife01.tv/content/...':source==='linkani'?'https://linkani.tv/ani/...':source==='ohli24'?'https://www.ohli24.net/.../....html':'https://...'} />
         </div>
-        <p id="download-input-help" className="text-xs text-ink-muted">{t("download.enterVODOrClipLinksSeparateMultipleLinksWithLineBreaks")}</p>
+        <p id="download-input-help" className="text-xs text-ink-muted">{t(isEpisodeSource(source)?'episodes.inputHelp':"download.enterVODOrClipLinksSeparateMultipleLinksWithLineBreaks")}</p>
+        {sourceError && <div role="alert" className="flex flex-wrap items-center gap-2 text-xs text-warn"><span>{t('episodes.sourceFailed')}</span><Button onClick={()=>setSourceAttempt(n=>n+1)}>{t('episodes.retry')}</Button></div>}
         {(busy || parsed.count > 0) && <div className="download-input-summary text-xs text-ink-faint" role="status" aria-live="polite">
             {busy ? t(busy === 'queue' ? translate("download.addingURLsToTheList") : translate("download.requestingDownloadStart")) : parsed.count ? t("download.inputSummary", {count: parsed.count, valid: parsed.items.length}) : t("download.enterLinksToAddThemToTheListOrDownloadImmediately")}
             {parsed.invalid.length > 0 && <span className="text-warn"> · {t("download.unsupportedCount", {count: parsed.invalid.length})}</span>}
@@ -90,5 +105,6 @@ export function DownloadInput({ tasks }: { tasks: VodTask[] }) {
         </div>
         {result && <p role="status" className="text-xs text-ok">{result.count ? translatePlural(result.key, result.count) : t(result.key)}</p>}
         {problems.length > 0 && <ul role="alert" className="text-xs text-warn break-words space-y-1">{problems.map((problem, index) => <li key={index}>{problem.url && `${problem.url}: `}{t(problem.message)}</li>)}</ul>}
+        {catalog && <VideoCatalogDialog inputs={catalog.inputs} start={catalog.mode==='start'} onClose={()=>setCatalog(null)} onConfirm={urls=>{const mode=catalog.mode;setCatalog(null);void submit(mode,urls);}} />}
     </div>;
 }
