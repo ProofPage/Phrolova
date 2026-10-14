@@ -954,7 +954,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.67...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.68...HEAD
+[2.0.68]: https://github.com/ProofPage/Phrolova/compare/v2.0.67...v2.0.68
 [2.0.67]: https://github.com/ProofPage/Phrolova/compare/v2.0.66...v2.0.67
 [2.0.66]: https://github.com/ProofPage/Phrolova/compare/v2.0.65...v2.0.66
 [2.0.65]: https://github.com/ProofPage/Phrolova/compare/v2.0.64...v2.0.65
