@@ -1,5 +1,5 @@
 # Adapted from Chzzk-Rekoda 449935d. Copyright (c) 2024 munsy0227.
-# MIT license: third_party/Chzzk-Rekoda-LICENSE.
+# MIT license: THIRD_PARTY_NOTICES.
 """Small, URL-free control protocol between the plugin and recorder."""
 
 import json

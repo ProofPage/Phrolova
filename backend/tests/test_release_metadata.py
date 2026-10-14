@@ -54,6 +54,10 @@ def test_phrolova_packaging_names():
     spec = (PROJECT_ROOT / "phrolova.spec").read_text(encoding="utf-8")
     workflow = (PROJECT_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     assert 'name="Phrolova"' in spec
+    # 삭제·교체된 입력 파일을 참조하면 CI가 통과해도 Windows 패키징은 실패한다.
+    for asset in ("assets/icon.ico", "assets/icon.png", "THIRD_PARTY_NOTICES"):
+        assert (PROJECT_ROOT / asset).is_file(), asset
+        assert f'"{asset}"' in spec
     for key, value in (("InternalName", "Phrolova"), ("OriginalFilename", "Phrolova.exe"), ("ProductName", "Phrolova")):
         assert f'StringStruct("{key}", "{value}")' in spec
     assert "dist/Phrolova.exe" in workflow

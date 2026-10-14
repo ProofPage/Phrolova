@@ -41,4 +41,4 @@
 
 실방송 검증은 짧은 공개 수신입니다. 장시간 자연 CDN 장애 및 Linux/Termux 실기기 실행은 이번 검증에 포함하지 않았습니다. 강제 종료 이후 녹화 커서의 영구 복원은 참조 구현과 마찬가지로 별도 범위이며, 기존 원본·미완료 변환 복구는 유지합니다.
 
-참조 코드의 MIT 고지와 라이선스는 `third_party/Chzzk-Rekoda-LICENSE`에 보존했고 Windows 패키지에도 포함합니다.
+참조 코드의 MIT 고지와 라이선스는 `THIRD_PARTY_NOTICES`에 보존했고 Windows 패키지에도 포함합니다.
