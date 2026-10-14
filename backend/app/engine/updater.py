@@ -9,7 +9,8 @@ import httpx
 from datetime import datetime
 from typing import Optional
 
-from app.core.logger import logger
+from app.core.logger import logger as app_logger
+logger = app_logger.getChild("update")
 from app.version import __version__
 from app.services.notifications import NotificationKind, NotificationService
 
@@ -28,6 +29,7 @@ class UpdaterService:
         self._task: Optional[asyncio.Task] = None
         self._cached_update_info: Optional[dict] = None
         self._last_checked_at: Optional[datetime] = None
+        self._last_check_error: Optional[dict] = None
         
         # 최신 버전을 이미 알렸는지 추적 (중복 알림 방지)
         self._notified_versions: set[str] = set()
@@ -51,11 +53,13 @@ class UpdaterService:
             async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
                 response = await client.get(
                     GITHUB_API_URL, 
-                    headers={"Accept": "application/vnd.github.v3+json"}
+                    headers={"Accept": "application/vnd.github+json", "User-Agent": "Phrolova-Update-Check"}
                 )
                 
             if response.status_code == 200:
                 data = response.json()
+                if not isinstance(data, dict) or not isinstance(data.get("tag_name"), str) or not data["tag_name"].strip():
+                    raise ValueError("GitHub 릴리즈 응답에 tag_name이 없습니다.")
                 latest_version = data.get("tag_name", "").lstrip('v')
                 release_notes = data.get("body", "")
                 published_at = data.get("published_at", "")
@@ -73,6 +77,8 @@ class UpdaterService:
                     "checked_at": datetime.now().isoformat()
                 }
                 self._last_checked_at = datetime.now()
+                self._last_check_error = None
+                logger.info("업데이트 확인 완료 · 현재=%s · 최신=%s · 새 버전=%s", __version__, latest_version, has_update)
                 
                 # 새 버전 발견 & 알림 보낸 적 없으면 알림 발송
                 if has_update and latest_version not in self._notified_versions:
@@ -81,17 +87,22 @@ class UpdaterService:
                     
                 return self._cached_update_info
             elif response.status_code == 404:
-                # 릴리즈가 아직 하나도 없는 경우
-                logger.info("GitHub에 아직 릴리즈가 없습니다.")
+                self._check_failed("release_unavailable", "저장소 또는 최신 공개 릴리즈에 접근할 수 없습니다. 저장소 공개 여부·접근 권한·릴리즈 게시 상태를 확인하세요.", status=404)
+            elif response.status_code == 429 or (response.status_code == 403 and response.headers.get("x-ratelimit-remaining") == "0"):
+                self._check_failed("rate_limit", "GitHub API 요청 한도에 도달했습니다. 잠시 후 다시 확인하세요.", status=response.status_code)
             else:
-                logger.error(f"GitHub API 호출 실패 (Status: {response.status_code})")
+                self._check_failed("http_error", "GitHub API 요청에 실패했습니다. 접근 권한과 GitHub 서비스 상태를 확인하세요.", status=response.status_code)
                 
+        except httpx.TimeoutException as e:
+            self._check_failed("timeout", f"GitHub 응답 대기 시간(10초)을 초과했습니다. 네트워크를 확인하세요. {type(e).__name__}")
+        except httpx.RequestError as e:
+            self._check_failed("network", f"GitHub 연결 실패 · {type(e).__name__}: {e}")
         except Exception as e:
-            logger.error(f"업데이트 확인 중 오류 발생: {e}")
+            self._check_failed("invalid_response", f"업데이트 응답 처리 실패 · {type(e).__name__}: {e}")
             
         # 오류 발생 시 기존 캐시 반환 또는 기본값
         if self._cached_update_info:
-            return self._cached_update_info
+            return {**self._cached_update_info, "check_error": self._last_check_error}
             
         return {
             "current_version": __version__,
@@ -100,8 +111,13 @@ class UpdaterService:
             "release_notes": "",
             "published_at": "",
             "download_url": f"https://github.com/{GITHUB_REPO}/releases",
-            "checked_at": datetime.now().isoformat() if self._last_checked_at else None
+            "checked_at": datetime.now().isoformat() if self._last_checked_at else None,
+            "check_error": self._last_check_error,
         }
+
+    def _check_failed(self, code: str, message: str, *, status: int | None = None) -> None:
+        self._last_check_error = {"code": code, "status": status}
+        logger.warning("업데이트 확인 실패 · 저장소=%s · 코드=%s · HTTP=%s · %s", GITHUB_REPO, code, status or "응답 없음", message)
 
     def _notify_update(self, latest_version: str, release_notes: str, html_url: str) -> None:
         """신규 업데이트 알림을 큐에 넣는다."""
@@ -147,7 +163,7 @@ class UpdaterService:
     def get_cached_info(self) -> dict:
         """가장 최근에 확인된 업데이트 정보를 반환한다. 없으면 즉시 동기 검사 불가하므로 기본값 반환."""
         if self._cached_update_info:
-            return self._cached_update_info
+            return {**self._cached_update_info, "check_error": self._last_check_error}
             
         return {
             "current_version": __version__,
@@ -156,7 +172,8 @@ class UpdaterService:
             "release_notes": "",
             "published_at": "",
             "download_url": f"https://github.com/{GITHUB_REPO}/releases",
-            "checked_at": None
+            "checked_at": None,
+            "check_error": self._last_check_error,
         }
 
     async def start(self):

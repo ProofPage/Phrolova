@@ -6,6 +6,7 @@ Phrolova: 구조화된 로깅 모듈
 from __future__ import annotations
 
 import logging
+import copy
 import re
 from urllib.parse import urlsplit, urlunsplit
 import sys
@@ -119,13 +120,61 @@ def _redact_log_secrets(text: str) -> str:
 
 class _SecretSafeFormatter(logging.Formatter):
     def format(self, record):
+        # 공유 레코드를 바꾸면 파일·콘솔 및 다른 핸들러의 예외 출력이 오염된다.
+        record = copy.copy(record)
+        record.scope = _log_scope(record.name)
+        if record.exc_info:
+            record.exc_text = None
+        status = _access_status(record) if record.name == "uvicorn.access" else None
+        if status is not None and status >= 400:
+            record.levelno = logging.ERROR if status >= 500 else logging.WARNING
+            record.levelname = logging.getLevelName(record.levelno)
+        # Streamlink가 전역 레벨 이름을 소문자로 바꿔도 웹 로그 필터와 형식을 유지한다.
+        record.levelname = record.levelname.upper()
         return _redact_log_secrets(super().format(record))
 
 
-def _make_formatter() -> logging.Formatter:
+class _ConsoleFormatter(_SecretSafeFormatter):
+    def format(self, record):
+        from app.core.console import wrap_console_text
+        output = super().format(record).splitlines()
+        return "\n".join(wrap_console_text(line, indent="" if index == 0 else "  ") for index, line in enumerate(output))
+
+
+def _access_status(record) -> int | None:
+    try:
+        return int(record.args[4]) if isinstance(record.args, tuple) else None
+    except (IndexError, TypeError, ValueError):
+        return None
+
+
+def _log_scope(name: str) -> str:
+    if name == "uvicorn" or name.startswith("uvicorn."):
+        return "HTTP" if name == "uvicorn.access" else "SERVER"
+    if name == "phrolova":
+        return "SYSTEM"
+    if name.startswith("phrolova."):
+        return name.removeprefix("phrolova.").upper().replace(".", "/")
+    return name
+
+
+class _AccessLogFilter(logging.Filter):
+    def __init__(self, *, debug: bool = False):
+        super().__init__()
+        self.debug = debug
+
+    def filter(self, record):
+        if record.levelno >= logging.WARNING or self.debug:
+            return True
+        # Uvicorn의 정상 폴링·정적 파일 요청만 숨긴다. HTTP 실패는 파일에도 남긴다.
+        status = _access_status(record)
+        return status is None or status >= 400
+
+
+def _make_formatter(*, console: bool = False) -> logging.Formatter:
     """콘솔·파일·uvicorn 핸들러가 같은 줄 모양을 쓰도록 한곳에서 만든다."""
-    return _SecretSafeFormatter(
-        fmt="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    return (_ConsoleFormatter if console else _SecretSafeFormatter)(
+        fmt="%(asctime)s | %(levelname)-7s | %(scope)-19s | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
@@ -198,7 +247,7 @@ def setup_logger(
     )
     if not has_console_handler:
         console_handler = _make_console_handler()
-        console_handler.setFormatter(fmt)
+        console_handler.setFormatter(_make_formatter(console=True))
         logger.addHandler(console_handler)
 
     # ── 파일 핸들러 (선택) ───────────────────────────────
@@ -247,14 +296,20 @@ def _attach_uvicorn_logging(target: logging.Logger) -> None:
     # 나중에 루트에 핸들러가 생기면 같은 줄이 두 번 찍힌다.
     parent.propagate = False
 
-    # 접근 로그는 요청 한 건에 한 줄이다. 프론트가 2초마다 상태를 폴링하므로
-    # service.log에 넣으면 하루 수만 줄이 쌓인다 — 지금처럼 콘솔에만 남긴다.
-    access_handler = _make_console_handler()
-    access_handler.setFormatter(_make_formatter())
     access = logging.getLogger("uvicorn.access")
-    access.handlers = [access_handler]
-    access.setLevel(target.level)
+    access.handlers = list(target.handlers)
+    for old_filter in list(access.filters):
+        if isinstance(old_filter, _AccessLogFilter):
+            access.removeFilter(old_filter)
+    access.addFilter(_AccessLogFilter(debug=target.level <= logging.DEBUG))
+    # Uvicorn은 HTTP 500도 INFO 레코드로 보내므로 상태 필터 전에 잘라내지 않는다.
+    access.setLevel(min(target.level, logging.INFO))
     access.propagate = False
+    for name in ("uvicorn.error", "uvicorn.asgi"):
+        child = logging.getLogger(name)
+        child.handlers = []
+        child.setLevel(target.level)
+        child.propagate = True
 
 
 # ── 기본 로거 인스턴스 ──────────────────────────────────
@@ -273,17 +328,35 @@ def _get_default_logger():
 logger = _get_default_logger()
 
 
+def get_platform_logger(platform: str | None, component: str | None = None) -> logging.Logger:
+    """플랫폼 enum·저장된 채널 키를 같은 분류로 기록한다."""
+    if platform is None:
+        return logger.getChild(component) if component else logger
+    value = str(getattr(platform, "value", platform)).split(":", 1)[0].lower()
+    if value not in {"chzzk", "youtube", "soop", "cime", "x_spaces", "external"}:
+        value = "external"
+    child = logger.getChild(value)
+    return child.getChild(component) if component else child
+
+
 def get_media_logger(url: str) -> logging.Logger:
     """플랫폼 로그를 공용 핸들러로 전달한다. 파일 핸들러는 공유한다."""
     from urllib.parse import urlsplit
 
-    host = (urlsplit(url).hostname or "").lower()
+    try:
+        host = (urlsplit(url).hostname or "").lower()
+    except ValueError:
+        host = ""
     if host == "youtu.be" or host == "youtube.com" or host.endswith(".youtube.com"):
         platform = "youtube"
     elif host == "chzzk.naver.com" or host.endswith(".chzzk.naver.com"):
         platform = "chzzk"
-    elif host in {"x.com", "twitter.com", "pscp.tv"} or host.endswith(".pscp.tv"):
+    elif any(host == domain or host.endswith("." + domain) for domain in ("sooplive.com", "sooplive.co.kr", "afreecatv.com")):
+        platform = "soop"
+    elif host in {"ci.me", "www.ci.me"}:
+        platform = "cime"
+    elif any(host == domain or host.endswith("." + domain) for domain in ("x.com", "twitter.com", "pscp.tv")):
         platform = "x_spaces"
     else:
         platform = "external"
-    return logger.getChild(platform)
+    return get_platform_logger(platform)

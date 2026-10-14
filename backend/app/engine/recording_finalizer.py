@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from app.core.config import get_settings
-from app.core.logger import logger
+from app.core.logger import get_platform_logger
 from app.engine.media_inspection import probe_media, InspectionError
 from app.engine.platform_auth import redact_media_error
 from app.store.db import get_database
@@ -591,6 +591,7 @@ class RecordingFinalizer:
         if not self._claim(job_id):
             return
         job = self.get(job_id)
+        logger = get_platform_logger(job.get("platform", "external"), "files")
         proc = None
         stderr_task = None
         try:
@@ -719,7 +720,7 @@ class RecordingFinalizer:
                 )
                 job["diagnostics"] = {"returncode": proc.returncode, "stderr": stderr}
                 if proc.returncode != 0:
-                    logger.warning(f"[{job_id}] 변환 실패: {stderr}")
+                    logger.error("[%s] FFmpeg 변환 실패 · 채널=%s · 종료코드=%s · 상세=%s", job_id, job.get("channel_id"), proc.returncode, stderr)
                     raise RuntimeError(
                         "파일을 변환하지 못했습니다. 원본 TS를 보관했습니다. 오류 상세를 확인하거나 MKV로 다시 변환하세요."
                     )
@@ -861,7 +862,7 @@ class RecordingFinalizer:
                 processing_completed_at=now(),
             )
             job["diagnostics"]["detail"] = redact_media_error(error)
-            logger.warning(f'[{job_id}] 후처리 실패: {job["diagnostics"]["detail"]}')
+            logger.error("[%s] 파일 처리 실패 · 단계=%s · 원본 보관 · 상세=%s: %s", job_id, job.get("processing_stage"), type(error).__name__, job["diagnostics"]["detail"], exc_info=not isinstance(error, (RuntimeError, ValueError)))
             self._save(job)
             if self.on_finished:
                 self.on_finished(job)

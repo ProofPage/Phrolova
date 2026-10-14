@@ -368,6 +368,7 @@ export interface StatsResponse {
 // ── System / Update Types ───────────────────────────────
 
 export interface UpdateInfo {
+    check_error?: { code: string; status: number | null } | null;
     current_version: string;
     latest_version: string;
     has_update: boolean;

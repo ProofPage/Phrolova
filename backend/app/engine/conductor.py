@@ -12,7 +12,7 @@ import json
 from datetime import timedelta
 from typing import TYPE_CHECKING, Optional
 from app.core.config import get_settings
-from app.core.logger import logger
+from app.core.logger import logger, get_platform_logger
 from app.engine.auth import AuthManager
 from app.engine.base import Platform
 from app.engine.channel import ChannelTask
@@ -197,6 +197,7 @@ class Conductor:
     ) -> None:
         """감시할 채널을 등록한다."""
         composite_key = self.make_composite_key(platform, channel_id)
+        logger = get_platform_logger(platform, "live")
         if composite_key in self._channels:
             logger.warning(f"채널 '{composite_key}'은(는) 이미 등록되어 있습니다.")
             return
@@ -319,6 +320,7 @@ class Conductor:
 
     def set_auto_record(self, composite_key: str, value: bool) -> None:
         """채널의 자동 녹화 설정을 직접 지정한다."""
+        logger = get_platform_logger(composite_key, "live")
         task = self._channels.get(composite_key)
         if task is None:
             raise ValueError(f"채널 '{composite_key}'을(를) 찾을 수 없습니다.")
@@ -329,6 +331,7 @@ class Conductor:
 
     def set_channel_tags(self, composite_key: str, tags: list[str]) -> None:
         """채널의 태그를 지정한다."""
+        logger = get_platform_logger(composite_key, "live")
         task = self._channels.get(composite_key)
         if task is None:
             raise ValueError(f"채널 '{composite_key}'을(를) 찾을 수 없습니다.")
@@ -356,6 +359,7 @@ class Conductor:
         Returns:
             변경 후의 auto_record 값.
         """
+        logger = get_platform_logger(composite_key, "live")
         task = self._channels.get(composite_key)
         if task is None:
             raise ValueError(f"채널 '{composite_key}'을(를) 찾을 수 없습니다.")
@@ -393,6 +397,7 @@ class Conductor:
         Args:
             composite_key: 특정 채널만 스캔. None이면 모든 채널.
         """
+        logger = get_platform_logger(composite_key, "live")
         if composite_key:
             event = self._scan_events.get(composite_key)
             if event:
@@ -405,6 +410,7 @@ class Conductor:
 
     async def remove_channel(self, composite_key: str) -> None:
         """채널을 감시 목록에서 제거한다."""
+        logger = get_platform_logger(composite_key, "live")
         from app.engine.preview_frames import frame_previews
         frame_previews.invalidate(composite_key)
         task = self._channels.get(composite_key)
@@ -585,6 +591,7 @@ class Conductor:
         메모리에만 두면 재시작할 때마다 통계가 초기화된다. 기록에 실패해도
         감시는 계속돼야 하므로 예외를 삼킨다.
         """
+        logger = get_platform_logger(composite_key, "live")
         try:
             self._history_repo.record_detection(composite_key)
         except Exception as e:
@@ -597,6 +604,7 @@ class Conductor:
 
         새 방송이 시작됐으므로 재시도 횟수는 0부터 다시 센다.
         """
+        logger = get_platform_logger(composite_key, "live")
         logger.info(
             f"[{composite_key}] 🔴 방송 시작 감지! 스트리머: {task.channel_name}, 제목: {task.title}"
         )
@@ -628,6 +636,7 @@ class Conductor:
 
     async def _handle_live_ended(self, composite_key: str, task: ChannelTask) -> None:
         """방송 종료를 처리한다."""
+        logger = get_platform_logger(composite_key, "live")
         logger.info(f"[{composite_key}] ⚫ 방송 종료 감지.")
         await self._stop_recording(composite_key)
 
@@ -667,17 +676,20 @@ class Conductor:
 
     def _monitor_failure(self, task, error, detail=None):
         from app.engine.platform_auth import redact_media_error
-        message = redact_media_error(error)
+        message = redact_media_error(error) or type(error).__name__
         task.monitor_status = "retry_wait"
         task.broadcast_status = "error"
         task.monitor_error = message
-        task.monitor_error_detail = redact_media_error(detail) if detail else None
+        task.monitor_error_detail = redact_media_error(detail) if detail else (type(error).__name__ if isinstance(error, Exception) else None)
         self._remember_error(task, "monitor", message, task.monitor_error_detail)
         self._persist_retry(task)
         self._broadcast_status()
         count = task.recent_errors[-1]["count"]
         if count == 1 or count % 10 == 0:
-            logger.warning(f"[{task.composite_key}] 감시 오류 ({count}회): {message}")
+            get_platform_logger(task.platform, "watch").warning(
+                "[%s] 감시 실패 · 누적=%s · 원인=%s · 상세=%s",
+                task.composite_key, count, message, task.monitor_error_detail or "없음",
+            )
 
     def _reset_retry(self, task):
         if task.last_error:
@@ -716,6 +728,7 @@ class Conductor:
         self, composite_key: str, task: ChannelTask, retry_count: int, max_retries: int
     ) -> int:
         """방송은 켜져 있는데 녹화가 멈춘 경우 다시 시작한다. 새 재시도 횟수를 돌려준다."""
+        logger = get_platform_logger(composite_key, "live")
         pipe = task.pipeline
         retry_count = max(retry_count, task.retry_count)
         if not self._can_auto_record(task):
@@ -803,6 +816,7 @@ class Conductor:
         상태 변화에 따른 처리, 다음 차례까지 대기. 각 처리는 아래 메서드로 나눠 두었고
         여기서는 어떤 조건에 무엇이 일어나는지만 읽히게 한다.
         """
+        logger = get_platform_logger(composite_key, "live")
         settings = get_settings()
         task = self._channels.get(composite_key)
         interval = self._poll_interval_for(task)
@@ -937,6 +951,7 @@ class Conductor:
         continuation=None,
     ) -> None:
         """Start a session, or continue a closed CHZZK container boundary."""
+        logger = get_platform_logger(composite_key, "live")
         task = self._channels.get(composite_key)
         if task is None:
             return
@@ -983,6 +998,7 @@ class Conductor:
                 if automatic and (not self._can_auto_record(task)):
                     return
             pipeline = YtdlpLivePipeline(channel_id=task.channel_id)
+            pipeline._logger = get_platform_logger(task.platform, "recording")
             if continuation is not None:
                 pipeline.continuity_resume = continuation['resume']
                 pipeline.continuity_buffer = continuation.get('buffer')
@@ -1089,7 +1105,12 @@ class Conductor:
 
             message = redact_media_error(e)
             self._record_failure(task, e)
-            logger.error(f"[{composite_key}] 녹화 시작 실패: {message}")
+            logger.error(
+                "[%s] 녹화 시작 실패 · 코드=%s · 원인=%s · 재시도=%s · 상세=%s: %s",
+                composite_key, task.retry_code, task.last_error,
+                task.retry_at or ("중단" if task.retry_blocked else "수동 재시도"), type(e).__name__, message,
+                exc_info=not isinstance(e, (RuntimeError, ValueError)),
+            )
             self._notify(
                 NotificationKind.RECORDING_FAILED,
                 title="❌ 녹화 시작 실패",
@@ -1223,6 +1244,7 @@ class Conductor:
         기존 JSON 구현은 매번 전체 파일을 읽고 다시 썼기 때문에 이력이 쌓일수록
         녹화 종료 처리가 느려졌다. 지금은 INSERT 한 번이다.
         """
+        logger = get_platform_logger(composite_key, "live")
         try:
             self._history_repo.add_session(
                 {

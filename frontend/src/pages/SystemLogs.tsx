@@ -16,7 +16,7 @@ const LEVEL_KEYS = { all: "logs.severityAll", error: "logs.severityError", warni
 
 // Read only the logger's level column, never severity words in a message.
 function logLevel(line: string): LogLevel {
-    const level = line.match(/^[^|]*\|\s*(TRACE|DEBUG|INFO|SUCCESS|WARNING|WARN|ERROR|CRITICAL|FATAL)\s*\|/)?.[1];
+    const level = line.match(/^[^|]*\|\s*(TRACE|DEBUG|INFO|SUCCESS|WARNING|WARN|ERROR|CRITICAL|FATAL)\s*\|/i)?.[1].toUpperCase();
     if (level === "ERROR" || level === "CRITICAL" || level === "FATAL") return "error";
     if (level === "WARNING" || level === "WARN") return "warning";
     if (level === "INFO" || level === "SUCCESS") return "info";
@@ -215,9 +215,15 @@ function LogContentViewer({ file }: { file: SystemLogFile }) {
     const { lines, counts } = useMemo(() => {
         const raw = content.split(/\r?\n/);
         if (raw.at(-1) === "") raw.pop();
-        const entries = raw.map((text, index) => ({text, index, level: logLevel(text)}));
+        let previousLevel: LogLevel = "other";
+        const entries = raw.map((text, index) => {
+            const headerLevel = logLevel(text);
+            // 예외 스택과 상세 경로는 앞선 항목에 속한다. 오류 필터에서도 함께 표시한다.
+            if (/^[^|]*\|\s*(TRACE|DEBUG|INFO|SUCCESS|WARNING|WARN|ERROR|CRITICAL|FATAL)\s*\|/i.test(text)) previousLevel = headerLevel;
+            return {text, index, level: previousLevel, headerLevel};
+        });
         const totals = {all:entries.length,error:0,warning:0,info:0};
-        for (const entry of entries) if (entry.level !== "other") totals[entry.level]++;
+        for (const entry of entries) if (entry.headerLevel !== "other") totals[entry.headerLevel]++;
         return {lines:entries,counts:totals};
     }, [content]);
     const visibleLines = lines.filter(line => (levelFilter === "all" || line.level === levelFilter) && line.text.toLowerCase().includes(searchTerm.toLowerCase()));
