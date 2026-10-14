@@ -1,5 +1,5 @@
 # Adapted from Chzzk-Rekoda 50424e5 and 449935d (including f3c9212, 35cd826).
-# Copyright (c) 2024 munsy0227. MIT license: third_party/Chzzk-Rekoda-LICENSE.
+# Copyright (c) 2024 munsy0227. MIT license: THIRD_PARTY_NOTICES.
 # Phrolova integration uses callbacks, native Streamlink files and post-capture conversion.
 """Ordered CHZZK HLS delivery. Network failures must never become skipped media.
 

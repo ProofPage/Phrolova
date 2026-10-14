@@ -1,6 +1,6 @@
 """CHZZK source discovery and native Streamlink continuity integration.
 
-Source selection is adapted from Chzzk-Rekoda 50424e5 (MIT; see third_party).
+Source selection is adapted from Chzzk-Rekoda 50424e5 (MIT; see THIRD_PARTY_NOTICES).
 The Akamai mapping is a candidate only: the writer verifies the same interval,
 rendition, initialization and media before it can replace Korean media.
 """
