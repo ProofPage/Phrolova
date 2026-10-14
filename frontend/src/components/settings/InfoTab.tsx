@@ -1,10 +1,8 @@
-import { translate } from "../../i18n";
 import { useEffect, type ReactNode } from "react";
-import { Info } from "lucide-react";
 import { type Settings as SettingsType } from "../../api/client";
 import { MediaToolsCard } from './MediaToolsCard';
 import { ProgramUpdateCard } from './ProgramUpdateCard';
-import { Card, CardHeader } from "../ui/primitives";
+import { Card } from "../ui/primitives";
 import { useLanguage } from "../../contexts/LanguageContext";
 
 const AUTHOR = "ProofPage";
@@ -22,7 +20,7 @@ interface Props {
 function InfoRow({ label, children, last = false }: { label: string; children: ReactNode; last?: boolean }) {
     useLanguage();
     return (
-        <div className={`ui-info-row ${last ? "border-0" : ""}`}>
+        <div className={`ui-info-row ${last ? "ui-info-row-last" : ""}`}>
             <span className="text-ink-faint">{label}</span>
             {children}
         </div>
@@ -35,9 +33,8 @@ export function InfoTab({ settings, onDirtyChange, onUpdateAvailabilityChange }:
     useEffect(() => onDirtyChange?.(false), [onDirtyChange]);
 
     return (
-        <div className="info-settings">
-            <Card className="info-system-card">
-                <CardHeader icon={Info} title={translate("settings.systemInformation")} />
+        <Card padded={false} className="info-settings">
+            <section className="info-section info-system-card">
                 <div className="info-section-body">
                     <div className="space-y-1 text-sm">
                         <InfoRow label={t("settings.appName")}><span className="text-ink-muted">{settings?.app_name || t("settings.loading")}</span></InfoRow>
@@ -45,11 +42,10 @@ export function InfoTab({ settings, onDirtyChange, onUpdateAvailabilityChange }:
                     </div>
                     <MediaToolsCard ffmpegVersion={settings?.ffmpeg_version} />
                 </div>
-            </Card>
-            <ProgramUpdateCard onUpdateAvailabilityChange={onUpdateAvailabilityChange} />
+            </section>
 
-            <Card>
-                <CardHeader icon={Info} title={translate("settings.about")} />
+            <section className="info-section">
+                <div className="info-section-body">
                 <div className="space-y-1 text-sm">
                     <InfoRow label={t("settings.author")}>
                         <span className="text-ink-muted">{AUTHOR}</span>
@@ -65,15 +61,19 @@ export function InfoTab({ settings, onDirtyChange, onUpdateAvailabilityChange }:
                         </a>
                     </InfoRow>
                     <InfoRow label={t("settings.license")} last>
-                        <span className="text-ink-muted">MIT</span>
+                        <div className="info-license-value">
+                            <span className="text-ink-muted">MIT</span>
+                            <p className="info-copyright text-xs text-ink-faint leading-relaxed">
+                                {t("settings.copyright2026AuthorDistributedUnderTheMITLicense", {author: AUTHOR})}
+                                <br />
+                                {t("settings.ffmpegIsNotBundledAndIsSubjectToItsOwnLicense")}
+                            </p>
+                        </div>
                     </InfoRow>
                 </div>
-                <p className="text-xs text-ink-faint mt-4 leading-relaxed">
-                    {t("settings.copyright2026AuthorDistributedUnderTheMITLicense", {author: AUTHOR})}
-                    <br />
-                    {t("settings.ffmpegIsNotBundledAndIsSubjectToItsOwnLicense")}
-                </p>
-            </Card>
-        </div>
+                </div>
+            </section>
+            <ProgramUpdateCard embedded onUpdateAvailabilityChange={onUpdateAvailabilityChange} />
+        </Card>
     );
 }

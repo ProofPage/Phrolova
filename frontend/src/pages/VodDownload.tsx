@@ -1,4 +1,4 @@
-import { translate } from "../i18n";
+import { formatNumber, translate } from "../i18n";
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Download, FileVideo, LayoutGrid, List, Play, RotateCw, Trash2, Loader2, AlertCircle, CheckCircle, CircleHelp } from 'lucide-react';
 import { api, type VodTask } from '../api/client';
@@ -6,7 +6,7 @@ import { useVod } from '../contexts/VodContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useConfirm } from '../components/ui/ConfirmModal';
 import { useToast } from '../components/ui/Toast';
-import { Button, EmptyState, LoadingState, PageHeader, Select } from '../components/ui/primitives';
+import { Button, EmptyState, LoadingState, MetricCard, PageHeader, Select } from '../components/ui/primitives';
 import { DownloadInput } from '../components/DownloadInput';
 import { DownloadTaskCard, type DownloadAction } from '../components/DownloadTaskCard';
 import { downloadState } from '../utils/downloads';
@@ -155,9 +155,9 @@ export default function VodDownload() {
         finally { batchRef.current = false; setBatchBusy(false); }
     };
     return <div className="product-page downloads-page space-y-4">
-        <PageHeader icon={Download} title={t("download.title")} variant="plain" meta={<div className="download-overview" aria-label={t("download.allTasks")}>
-            {[[t("download.active"), counts.downloading + counts.processing], [t("settings.waiting"), counts.queued], [t("live.completed"), counts.completed], [t("live.failed"), counts.failed]].map(([label, count]) => <span key={label}>{label} <strong className="tabular-nums">{count}</strong></span>)}
-        </div>} actions={<DownloadInput tasks={tasks} />} actionsPlacement="below" />
+        <PageHeader icon={Download} title={t("download.title")} variant="plain" meta={<div className="workspace-summary download-summary" aria-label={t("download.allTasks")}>
+            {[["download.active", counts.downloading + counts.processing], ["settings.waiting", counts.queued], ["live.completed", counts.completed], ["live.failed", counts.failed]].map(([label, count]) => <MetricCard key={String(label)} label={t(String(label))} value={formatNumber(Number(count))} />)}
+        </div>} metaPlacement="below" actions={<DownloadInput tasks={tasks} />} actionsPlacement="below" />
         {loadError && <div role="status" className="download-load-error"><span>{t("download.unableToLoadDownloadsTryAgainShortly")}</span><Button icon={RotateCw} onClick={() => void refreshTasks()}>{t("live.tryAgain")}</Button></div>}
             {imports.map((job) => {
                 const running = job.state === "queued" || job.state === "collecting";
@@ -192,6 +192,7 @@ export default function VodDownload() {
             })}
 
         <section className="download-list-section space-y-3" aria-label={t("download.downloadQueue")}>
+            <div className="workspace-controls">
             <div className="download-list-toolbar"><div className="download-list-heading"><h2 className="text-sm font-semibold">{t("download.downloadQueue")}</h2><details className="download-help"><summary aria-label={t("download.downloadHelp")}><CircleHelp className="size-3.5" aria-hidden="true" />{t("download.downloadHelp")}</summary><div><p>{t("download.concurrentDownloadsFollowServerSettings")}</p><p>{t("download.someVideosMayRequireSignInCookies")}</p></div></details></div><div className="download-list-options">
                 <Button icon={Play} variant="primary" disabled={batchBusy || !ready.length} loading={batchBusy} onClick={() => void startAll()}>{t("download.startAllDownloads")} ({ready.length})</Button>
                 <div className="download-list-display-controls"><Select aria-label={t("download.taskSortOrder")} value={sort} onChange={event => setSort(event.target.value)} options={[{ value: 'manual', label: t("download.manualOrder") }, { value: 'newest', label: t("download.newestAddedFirst") }, { value: 'oldest', label: t("download.oldestFirst") }]} />
@@ -202,6 +203,7 @@ export default function VodDownload() {
             <div className="download-filter-scroll" role="group" aria-label={t("download.downloadStatusFilters")}><div>
                 {[['all', translate("live.all"), tasks.length], ['downloading', translate("download.downloading"), counts.downloading + counts.processing], ['queued', translate("settings.waiting"), counts.queued], ['paused', translate("download.paused"), counts.paused], ['completed', translate("live.completed"), counts.completed], ['failed', translate("live.failed"), counts.failed], ...(counts.cancelled ? [['cancelled', translate("download.cancelled"), counts.cancelled]] : [])].map(([value, label, count]) => <button key={value} className={clsx('dashboard-filter', taskFilter === value && 'is-selected')} aria-pressed={taskFilter === value} onClick={event => { setTaskFilter(String(value)); setVisibleCount(50); event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }}>{t(String(label))} <span className="tabular-nums">({count})</span></button>)}
             </div></div>
+            </div>
             {tasksLoading && !tasks.length ? <LoadingState label={t("download.loadingDownloads")} /> : !tasks.length ? <EmptyState compact icon={FileVideo} title={t("download.noDownloadsAdded")} description={t("download.enterAVODOrClipURLToStartDownloading")} /> : !filteredTasks.length ? <EmptyState compact icon={FileVideo} title={t("download.noDownloadsWithThisStatus")} description={t("download.selectAnotherStatusToViewYourDownloads")} /> : <>
                 <div className={`download-task-list download-task-list--${mode}`}>{visibleTasks.map((task, index) => <DownloadTaskCard key={task.task_id} task={task} mode={mode} onAction={onAction} onMove={onMove} onDropTask={onDropTask} manualOrder={sort === 'manual' && !reordering} canMoveUp={sort === 'manual' && !reordering && index > 0} canMoveDown={sort === 'manual' && !reordering && index < visibleTasks.length - 1} retryActive={tasks.some(item => item.task_id === task.retry_task_id && ['queued', 'downloading', 'processing', 'paused'].includes(downloadState(item)))} />)}</div>
                 {filteredTasks.length > visibleCount && <Button className="w-full" onClick={() => setVisibleCount(count => count + 50)}>{t("download.showMore")} ({Math.min(visibleCount, filteredTasks.length)} / {filteredTasks.length})</Button>}

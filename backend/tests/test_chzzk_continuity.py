@@ -14,6 +14,7 @@ import threading
 import time
 import unittest
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -43,6 +44,8 @@ class CDN:
         self.assets = {}
         self.responses = {}
         self.delays = {}
+        self.request_events = {}
+        self.body_gates = {}
         self.trickle = {}
         self.statuses = {}
         self.truncate = set()
@@ -67,6 +70,10 @@ class CDN:
                         owner.active += 1
                         owner.peak = max(owner.peak, owner.active)
                 try:
+                    if event := owner.request_events.get(path):
+                        event.set()
+                    if gate := owner.body_gates.get(path):
+                        gate.wait(timeout=5)
                     time.sleep(owner.delays.get(path, 0))
                     status = owner.statuses.get(path, 200 if path in owner.assets else 404)
                     body = owner.assets.get(path, b"") if status == 200 else b""
@@ -196,6 +203,17 @@ class DeliveryTests(unittest.TestCase):
         return [parse_event(line) for line in self.stderr.getvalue().splitlines()
                 if line.startswith(EVENT_PREFIX)]
 
+    def read_while_source_blocked(self, stream, gate):
+        # 전체 실행 속도 대신 느린 소스가 응답하기 전에도 녹화를 끝내는지 확인한다.
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(self.read, stream)
+            try:
+                result = future.result(timeout=3)
+                self.assertFalse(gate.is_set())
+                return result
+            finally:
+                gate.set()
+
     def test_normal_order_exactly_once(self):
         self.cdn.playlist("primary")
         result = self.read(self.stream())
@@ -205,10 +223,16 @@ class DeliveryTests(unittest.TestCase):
     def test_slow_primary_hedges_and_does_not_duplicate(self):
         self.cdn.playlist("primary")
         self.cdn.playlist("backup")
-        self.cdn.delays['/primary/1080p/1.m4v'] = 0.2
-        result = self.read(self.stream([(self.cdn.url("primary"), False),
-                                       (self.cdn.url("backup"), True)]))
+        # 빠른 CI에서도 0.2초 지연이 먼저 끝나지 않도록 백업 요청과 응답 순서를 고정한다.
+        backup_requested = threading.Event()
+        self.cdn.request_events['/backup/1080p/1.m4v'] = backup_requested
+        self.cdn.body_gates['/primary/1080p/1.m4v'] = backup_requested
+        self.session.set_option("stream-segment-timeout", 10)
+        with patch.object(continuity, "RECOVERY_TIMEOUT", 10):
+            result = self.read(self.stream([(self.cdn.url("primary"), False),
+                                           (self.cdn.url("backup"), True)]))
         self.assertEqual(result, INITIALIZATION + b"".join(MEDIA))
+        self.assertTrue(backup_requested.is_set())
         self.assertGreater(self.cdn.hits['/backup/1080p/1.m4v'], 0)
         self.assertLessEqual(self.cdn.peak, 4)
 
@@ -639,6 +663,7 @@ class LLHLSTests(unittest.TestCase):
     setUp = DeliveryTests.setUp
     stream = DeliveryTests.stream
     read = DeliveryTests.read
+    read_while_source_blocked = DeliveryTests.read_while_source_blocked
     events = DeliveryTests.events
     def ll_stream(self, extra=()):
         return self.stream([continuity.SourcePath(self.cdn.url("primary"), False, "llhls", "korean"), *extra])
@@ -749,14 +774,14 @@ class LLHLSTests(unittest.TestCase):
         self.cdn.playlist("history")
         self.cdn.playlist("akamai")
         self.cdn.statuses['/primary/1080p/1.m4v'] = 404
-        self.cdn.delays['/history/1080p/list.m3u8'] = 0.4
+        history_release = threading.Event()
+        self.cdn.body_gates['/history/1080p/list.m3u8'] = history_release
         paths = [continuity.SourcePath(self.cdn.url("primary"), cdn="korean"),
                  continuity.SourcePath(self.cdn.url("history"), True, cdn="korean"),
                  continuity.SourcePath(self.cdn.url("akamai"), cdn="akamai")]
         with patch.object(continuity, "HISTORY_BUDGET", 0.05):
-            before = time.monotonic()
-            self.assertEqual(self.read(self.stream(paths)), INITIALIZATION + b"".join(MEDIA))
-            self.assertLess(time.monotonic() - before, 0.35)
+            self.assertEqual(self.read_while_source_blocked(self.stream(paths), history_release),
+                             INITIALIZATION + b"".join(MEDIA))
         self.assertGreater(self.cdn.hits['/akamai/1080p/1.m4v'], 0)
 
     def test_akamai_only_source_keeps_recording(self):
@@ -767,13 +792,13 @@ class LLHLSTests(unittest.TestCase):
     def test_standby_failure_and_delay_never_delay_primary_start(self):
         self.cdn.playlist("primary")
         self.cdn.playlist("akamai")
-        self.cdn.delays['/akamai/1080p/list.m3u8'] = 0.4
+        standby_release = threading.Event()
+        self.cdn.body_gates['/akamai/1080p/list.m3u8'] = standby_release
         self.cdn.statuses['/akamai/1080p/init.mp4'] = 503
         paths = [continuity.SourcePath(self.cdn.url("primary"), cdn="korean"),
                  continuity.SourcePath(self.cdn.url("akamai"), cdn="akamai")]
-        before = time.monotonic()
-        self.assertEqual(self.read(self.stream(paths)), INITIALIZATION + b"".join(MEDIA))
-        self.assertLess(time.monotonic() - before, 0.3)
+        self.assertEqual(self.read_while_source_blocked(self.stream(paths), standby_release),
+                         INITIALIZATION + b"".join(MEDIA))
 
     def test_standby_checks_initialization_and_preserves_primary(self):
         self.cdn.playlist("primary")

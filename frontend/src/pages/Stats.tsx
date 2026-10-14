@@ -53,7 +53,7 @@ function StorageCard({ storage, t }: { storage: StatsResponse['storage']; t: Ret
             toast.success(t("stats.storagePathCopied"));
         } catch { toast.error(t("stats.couldNotCopyTheStoragePath")); }
     };
-    return <div className="stats-storage grid min-w-0 border-y border-line">
+    return <div className="stats-storage grid min-w-0">
         <div className="stats-storage-section stats-disk-section min-w-0">
             <div className="stats-storage-heading"><p className="text-xs text-ink-faint">{t("stats.diskUsage")}</p><span className="text-xs font-medium" style={{color:tone}}>{t(spaceStatus)}</span></div>
             <strong className="stats-disk-percentage">{usageAvailable ? `${formatNumber(percentage)}%` : '—'}</strong>
@@ -153,7 +153,7 @@ export default function Stats() {
                 const { live, vod, storage, recent_sessions: recentSessions } = data;
                 return (
                     <>
-                        <div className="stats-summary gap-0">
+                        <div className="stats-summary workspace-summary gap-0">
                             <MetricCard icon={Clock} label={t("stats.completedLiveRecordingTime")} value={formatDuration(live.total_duration_seconds, language)} detail={`${formatCount(live.total_sessions, language, "session")} · ${t("live.recording")}: ${formatCount(live.active_recordings, language, "session")}`} tone="ok" />
                             <MetricCard icon={Video} label={t("stats.completedRecordingSize")} value={formatBytes(live.total_size_bytes)} detail={t("stats.totalCompletedLiveFiles")} tone="live" />
                             <MetricCard icon={Download} label={t("stats.videoDownloads")} value={formatCount(vod.total_completed, language, "item")} detail={`${t("platform.chzzk")} ${vod.by_type.chzzk} · ${t("stats.external")} ${vod.by_type.external}`} tone="primary" />
@@ -163,7 +163,7 @@ export default function Stats() {
                         <StorageCard storage={storage} t={t} />
                         <div className="grid grid-cols-1 gap-4">
                             <Card padded={false} className="stats-history overflow-hidden">
-                                <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-b border-line">
+                                <div className="workspace-panel-heading flex flex-wrap items-center justify-between gap-2">
                                     <div className="flex items-center gap-2">
                                         <div>
                                             <h2 className="text-sm font-semibold text-ink">{t("stats.channelHistory")}</h2>
@@ -209,7 +209,7 @@ export default function Stats() {
                             </Card>
 
                             <Card padded={false} className="stats-history overflow-hidden">
-                                <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-line">
+                                <div className="workspace-panel-heading flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2">
                                         <div>
                                             <h2 className="text-sm font-semibold text-ink">{t("stats.recentRecordings")}</h2>

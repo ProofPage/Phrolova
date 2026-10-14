@@ -1,4 +1,4 @@
-import { translate } from "../i18n";
+import { formatNumber, translate } from "../i18n";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Radio, WifiOff } from "lucide-react";
 import { api, type Channel, type PlatformStatus } from "../api/client";
@@ -9,7 +9,7 @@ import { RecordingChannelCard, RecordingChannelPanel } from "../components/dashb
 import { RecordingJobsPanel } from "../components/dashboard/RecordingJobsPanel";
 import { DashboardFilters, type StatusFilter, type ViewMode } from "../components/dashboard/DashboardFilters";
 import { useConfirm } from "../components/ui/ConfirmModal";
-import { Button, EmptyState, PageHeader } from "../components/ui/primitives";
+import { Button, EmptyState, MetricCard, PageHeader } from "../components/ui/primitives";
 import { useToast } from "../components/ui/Toast";
 import { useChannelReorder } from "../hooks/useChannelReorder";
 import { useChannelStream } from "../hooks/useChannelStream";
@@ -17,17 +17,6 @@ import { useCardGrid } from "../hooks/useCardGrid";
 import { getBroadcastStatus, getChannelKey } from "../utils/channel";
 import { getErrorMessage, localizedStatus } from "../utils/error";
 import { useLanguage } from "../contexts/LanguageContext";
-
-function DashboardMetric({ label, value, tone }: { label: string; value: number; tone?: "live" | "recording" }) {
-    const { t } = useLanguage();
-    return (
-        <div className="dashboard-metric">
-            <span className={tone === "live" && value > 0 ? "dashboard-metric-dot is-live" : tone === "recording" && value > 0 ? "dashboard-metric-dot is-recording" : "dashboard-metric-dot"} />
-            <span>{t(label)}</span>
-            <strong>{value}</strong>
-        </div>
-    );
-}
 
 export default function Dashboard() {
     const { t } = useLanguage();
@@ -309,12 +298,13 @@ export default function Dashboard() {
                 eyebrow={t("live.liveStreamManagement")}
                 title={t("live.title")}
                 meta={(
-                    <>
-                        <DashboardMetric label={translate("live.monitoredChannels")} value={channels.length} />
-                        <DashboardMetric label={translate("live.title")} value={liveCount} tone="live" />
-                        <DashboardMetric label={translate("live.recording")} value={recordingCount} tone="recording" />
-                    </>
+                    <div className="workspace-summary live-summary">
+                        <MetricCard label={translate("live.monitoredChannels")} value={formatNumber(channels.length)} />
+                        <MetricCard label={translate("live.title")} value={formatNumber(liveCount)} />
+                        <MetricCard label={translate("live.recording")} value={formatNumber(recordingCount)} />
+                    </div>
                 )}
+                metaPlacement="below"
                 actions={<AddChannelForm platformStatus={platformStatus} onAdded={fetchChannels} />}
                 actionsPlacement="below"
                 variant="plain"

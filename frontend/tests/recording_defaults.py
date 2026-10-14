@@ -82,11 +82,11 @@ async def main():
         await expect(mode).to_have_value("standard")
 
         await mode.select_option("force-timemachine")
-        await page.get_by_role("button", name="라이브 설정 저장", exact=True).click()
         await concurrent.fill("5")
         await page.get_by_role(
-            "button", name="영상 다운로드 설정 저장", exact=True
+            "button", name="변경사항 저장", exact=True
         ).click()
+        await expect(page.get_by_role("button", name="변경사항 저장", exact=True)).to_be_disabled()
         assert any(
             path.endswith("/live") and body["chzzk_stream_mode"] == "force-timemachine"
             for path, body in calls

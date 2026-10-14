@@ -2,16 +2,10 @@ import { translate } from "../i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBlocker } from "react-router-dom";
 import {
-    Bell,
     AlertCircle,
-    Download,
-    Info,
-    KeyRound,
-    Palette,
     Loader2,
     RefreshCw,
     Settings as SettingsIcon,
-    type LucideIcon,
 } from "lucide-react";
 import { api, type Settings as SettingsType } from "../api/client";
 import { AppearanceTab } from "../components/settings/AppearanceTab";
@@ -25,12 +19,12 @@ import { useLanguage } from "../contexts/LanguageContext";
 
 type TabId = "download" | "auth" | "notifications" | "appearance" | "info";
 
-const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
-    { id: "download", label: "settings.downloads", icon: Download },
-    { id: "auth", label: "settings.authentication", icon: KeyRound },
-    { id: "notifications", label: "settings.notifications", icon: Bell },
-    { id: "appearance", label: "settings.appearanceInSettings", icon: Palette },
-    { id: "info", label: "settings.aboutInSettings", icon: Info },
+const TABS: { id: TabId; label: string }[] = [
+    { id: "download", label: "settings.downloads" },
+    { id: "auth", label: "settings.authentication" },
+    { id: "notifications", label: "settings.notifications" },
+    { id: "appearance", label: "settings.appearanceInSettings" },
+    { id: "info", label: "settings.aboutInSettings" },
 ];
 
 const EMPTY_DIRTY: Record<TabId, boolean> = {
@@ -151,7 +145,6 @@ export default function Settings() {
             ) : <div className="space-y-4">
             <nav ref={tabsRef} className="settings-tabs flex min-w-0 items-center gap-1 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface-2 p-1.5" aria-label={t("settings.settingsTabs")}>
                 {TABS.map((tab) => {
-                    const Icon = tab.icon;
                     return (
                         <button
                             key={tab.id}
@@ -160,7 +153,6 @@ export default function Settings() {
                             aria-current={activeTab === tab.id ? "page" : undefined}
                             className={`relative flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] px-3 text-[12px] font-medium transition-all sm:px-3.5 sm:text-[13px] ${activeTab === tab.id ? "text-ink" : "text-ink-faint hover:bg-surface-3 hover:text-ink-muted"}`}
                         >
-                            <Icon className="w-4 h-4" />
                             {t(tab.label)}
                             {dirtyTabs[tab.id] && <span className="size-2 shrink-0 rounded-full bg-warn" />}
                             {tab.id === "info" && updateAvailable && <span className="size-2 shrink-0 rounded-full bg-ok" />}
