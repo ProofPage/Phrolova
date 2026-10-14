@@ -16,7 +16,8 @@ from typing import Optional
 
 import httpx
 
-from app.core.logger import logger
+from app.core.logger import logger as app_logger
+logger = app_logger.getChild("network")
 
 #: 플랫폼 API가 봇 트래픽으로 차단하지 않도록 일반 브라우저 UA를 사용한다.
 USER_AGENT = (

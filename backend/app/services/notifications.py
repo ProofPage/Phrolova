@@ -25,7 +25,8 @@ from enum import Enum
 from typing import Optional, Protocol, runtime_checkable
 
 from app.core.config import get_settings
-from app.core.logger import logger
+from app.core.logger import logger as app_logger
+logger = app_logger.getChild("notify")
 from app.store.repositories import NotificationRepository
 
 # ── Discord 제약 ────────────────────────────────────────
@@ -418,7 +419,7 @@ class NotificationService:
         self._running = True
         self._restore_pending()
         self._worker_task = asyncio.create_task(self._worker())
-        logger.info("📨 알림 서비스 시작.")
+        logger.info("알림 서비스 시작.")
 
     async def stop(self, drain_timeout: float = 5.0) -> None:
         """워커를 중지한다.
@@ -431,7 +432,7 @@ class NotificationService:
             try:
                 await asyncio.wait_for(self._drain(), timeout=drain_timeout)
             except asyncio.TimeoutError:
-                logger.info("📨 종료 대기 시간 초과 — 남은 알림은 보관합니다.")
+                logger.info("종료 대기 시간 초과 — 남은 알림은 보관합니다.")
             except Exception as e:
                 logger.error(f"알림 큐 비우기 실패: {e}")
 
@@ -450,7 +451,7 @@ class NotificationService:
 
         self._flush_pending(force=True)
         if self._pending:
-            logger.info(f"📨 미전송 알림 {len(self._pending)}건을 보관했습니다.")
+            logger.info(f"미전송 알림 {len(self._pending)}건을 보관했습니다.")
 
     async def _drain(self) -> None:
         """워커가 큐를 비울 때까지 기다린다 (재시도 대기 중인 항목은 제외)."""
@@ -633,7 +634,7 @@ class NotificationService:
         if alive:
             self._pending.extend(alive)
             self._wake.set()
-            logger.info(f"📨 이전 실행의 미전송 알림 {len(alive)}건을 복구했습니다.")
+            logger.info(f"이전 실행의 미전송 알림 {len(alive)}건을 복구했습니다.")
         if len(alive) < len(restored):
             logger.info(f"만료된 알림 {len(restored) - len(alive)}건은 건너뜁니다.")
         self._dirty = True

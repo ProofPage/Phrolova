@@ -24,7 +24,8 @@ import platform
 import random
 from typing import TYPE_CHECKING, Callable, Optional
 from app.core.config import get_settings
-from app.core.logger import logger
+from app.core.logger import logger as app_logger
+logger = app_logger.getChild("discord")
 from app.services.notifications import (
     DeliveryResult,
     EmbedPayload,
@@ -558,7 +559,7 @@ class DiscordBotService:
                 color="green",
                 fields={"발신": "테스트 커맨드"},
             )
-            return "📨 테스트 알림을 큐에 넣었습니다. 알림 채널을 확인하세요."
+            return "테스트 알림을 큐에 넣었습니다. 알림 채널을 확인하세요."
 
         @bot.tree.command(
             name="notify-test", description="알림 채널로 테스트 알림을 보냅니다"

@@ -26,6 +26,7 @@ export function ProgramUpdateCard({ onUpdateAvailabilityChange, embedded = false
         api.getUpdateStatus()
             .then((info) => {
                 setUpdateInfo(info);
+                setLoadError(Boolean(info.check_error));
                 onUpdateAvailabilityChange?.(info.has_update);
             })
             .catch(() => setLoadError(true))
@@ -38,8 +39,10 @@ export function ProgramUpdateCard({ onUpdateAvailabilityChange, embedded = false
         try {
             const info = await api.checkUpdateNow();
             setUpdateInfo(info);
+            setLoadError(Boolean(info.check_error));
             onUpdateAvailabilityChange?.(info.has_update);
-            if (info.checked_at || info.has_update) toast.success(info.has_update ? t("settings.aNewVersionIsAvailable") : t("settings.youAreUsingTheLatestVersion"));
+            if (info.check_error) toast.error(t("settings.couldNotCheckForUpdates"));
+            else if (info.checked_at || info.has_update) toast.success(info.has_update ? t("settings.aNewVersionIsAvailable") : t("settings.youAreUsingTheLatestVersion"));
         } catch (error) {
             setLoadError(true);
             toast.error(getErrorMessage(error, t("settings.couldNotCheckForUpdates")));
@@ -65,7 +68,7 @@ export function ProgramUpdateCard({ onUpdateAvailabilityChange, embedded = false
                     </div>
                 </div>
 
-                {loadError && <p role="status" className="text-xs text-warn">{t("settings.couldNotLoadUpdateInformationCheckAgain")}</p>}
+                {loadError && <p role="status" className="text-xs text-warn">{t("settings.couldNotLoadUpdateInformationCheckAgain")}{updateInfo?.check_error?.status && ` (HTTP ${updateInfo.check_error.status})`}</p>}
                 <div className={embedded ? "info-update-actions" : "flex flex-col sm:flex-row gap-3"}>
                     <Button icon={RefreshCcw} loading={checkingUpdate} onClick={handleCheckUpdate} className={embedded ? undefined : "flex-1"}>
                         {checkingUpdate ? t("live.checking") : t("settings.checkForUpdates")}

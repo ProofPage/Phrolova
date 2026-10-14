@@ -8,7 +8,13 @@
 
 ## [Unreleased]
 
+## [2.0.66] - 2026-10-14
+
 ### Changed
+- 모바일 등록 입력창·다운로드 정렬 선택창의 16px 글자 크기를 보장하고, 태블릿·가로 화면의 플랫폼 선택 항목을 44px 터치 영역으로 맞춥니다. 좁은 로그 화면의 작업 버튼은 2열로 정렬합니다.
+- 시작 전 점검의 구분선을 제거하고 항목·버전·긴 실행 경로를 정렬합니다.
+- 서버·HTTP·시스템 작업과 치지직·유튜브·숲·씨미 로그를 구분하고 녹화 오류의 채널·세션·원인·재시도 정보를 보강합니다. 정상 HTTP 조회는 기본 출력에서 제외하고 실패 요청은 파일에도 기록합니다.
+- 웹 오류 필터에 예외 스택을 함께 표시하고, 업데이트 조회 실패를 릴리즈 없음 또는 최신 버전 확인으로 잘못 알리지 않습니다.
 - 첨부 이미지를 흰 배경 없는 원형 투명 아이콘으로 편집해 Windows 실행 파일·트레이·브라우저에 적용합니다. ICO는 16~256px의 10개 크기를 포함합니다.
 - 삭제된 외부 라이선스 폴더를 복원하지 않고 고지를 `THIRD_PARTY_NOTICES`로 옮겨 Windows 빌드의 누락 파일 참조를 해소합니다.
 
@@ -924,7 +930,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.65...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.66...HEAD
+[2.0.66]: https://github.com/ProofPage/Phrolova/compare/v2.0.65...v2.0.66
 [2.0.65]: https://github.com/ProofPage/Phrolova/compare/v2.0.64...v2.0.65
 [2.0.64]: https://github.com/ProofPage/Phrolova/compare/v2.0.63...v2.0.64
 [2.0.63]: https://github.com/ProofPage/Phrolova/compare/v2.0.62...v2.0.63

@@ -425,7 +425,7 @@ body:has(.settings-save) .toast-stack { bottom: calc(76px + env(safe-area-inset-
 .toast-stack > * { flex-shrink: 0; }
 .ui-chip { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 @media (hover: none), (pointer: coarse) {
-  .ui-button, .ui-input, .ui-chip, .sidebar-nav-link, .top-search, .dashboard-filter, .dashboard-options summary, .tag-option, .dir-browser button, .settings-tabs button { min-height: 44px; }
+  .ui-button, .ui-input, .ui-chip, .sidebar-nav-link, .top-search, .dashboard-filter, .dashboard-options summary, .tag-option, .dir-browser button, .settings-tabs button, .ui-popover [role="option"] { min-height: 44px; }
   .ui-input { font-size: 16px; }
   .icon-button, .touch-control, .channel-row-card .channel-header-actions button, .tag-remove { min-width: 44px; min-height: 44px; }
   .tag-remove { width: 44px !important; height: 44px !important; }
@@ -599,6 +599,8 @@ dialog.ui-dialog { top: calc(var(--ui-viewport-top, 0px) + var(--ui-viewport-hei
 .channel-live-preview { max-width: 960px; }
 @media (max-width:639px), (pointer:coarse) {
   .media-add-form .ui-input, .media-add-form .ui-button { min-height: 44px; }
+  /* 등록 폼의 데스크톱 글자 크기가 터치 환경의 16px 규칙을 덮지 않게 한다. */
+  .media-add-form input.ui-input, .media-add-form textarea.ui-input { font-size: 16px; }
   .media-platform-trigger { height: 44px; }
 }
 
@@ -665,7 +667,8 @@ html[lang="ja-JP"], html[lang="zh-CN"], html[lang="zh-TW"] { line-break: strict;
   .logs-summary .ui-metric + .ui-metric { border-top: 1px solid var(--color-line); }
   .logs-level { padding: 10px 8px; }
   .logs-controls, .logs-content-heading, .logs-content-footer { padding-inline: 12px; }
-  .logs-actions { flex-basis: 100%; }
+  .logs-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); flex-basis: 100%; }
+  .logs-actions > .ui-button { width: 100%; }
   .logs-page .log-toolbar-row .ui-input { flex-basis: 100%; }
 }
 

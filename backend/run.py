@@ -144,69 +144,53 @@ def _run_dependency_check() -> bool:
         True: 모든 의존성 충족 (진행 가능)
         False: 의존성 미충족 (종료)
     """
-    print("=" * 60)
-    print("  Phrolova 의존성 검사")
-    print("=" * 60)
-
-    all_ok = True
-
-    # ── Python 버전 확인 ─────────────────────────────────────
-    py_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    if _check_python_version():
-        print(f"  [OK]  Python {py_ver}")
-    else:
-        print(f"  [!!]  Python {py_ver} - 3.12 이상이 필요합니다.")
-        all_ok = False
-
-    # ── FFmpeg 확인 ──────────────────────────────────────────
-    ffmpeg_path = _find_ffmpeg()
-    if ffmpeg_path:
-        print(f"  [OK]  FFmpeg: {ffmpeg_path}")
-    else:
-        print("  [!!]  FFmpeg를 찾을 수 없습니다.")
-        all_ok = False
-
+    from app.core.console import print_check, wrap_console_text
     from app.engine.media_tools import check_media_tool
-    ffmpeg_health = check_media_tool('ffmpeg')
-    if not ffmpeg_health['available']:
-        ffmpeg_path = None
-        all_ok = False
-        print('  [!!] FFmpeg 실행 확인에 실패했습니다.')
-    ffprobe_health = check_media_tool('ffprobe')
-    if ffprobe_health['available']:
-        print(f"  [OK]  FFprobe: {ffprobe_health['path']}")
-    else:
-        print("  [!!]  FFprobe 실행 확인 실패. 원본은 보관되며 후처리에는 FFprobe 설치가 필요합니다.")
-        print("        bin/ffprobe.exe 또는 FFPROBE_PATH를 설정하세요. 라이브 녹화는 계속 사용할 수 있습니다.")
+    from app.version import __version__
 
-    # ── Streamlink 확인 (라이브 녹화 필수) ──────────────────
+    print(f"\nPhrolova v{__version__} · 시작 전 점검\n")
+    warnings = 0
+    py_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    python_ok = _check_python_version()
+    print_check("정상" if python_ok else "오류", "Python", py_ver if python_ok else f"{py_ver} · 3.12 이상 필요")
+    all_ok = python_ok
+
+    ffmpeg_health = check_media_tool("ffmpeg")
+    ffmpeg_path = ffmpeg_health.get("path") if ffmpeg_health["available"] else None
+    if ffmpeg_path:
+        print_check("정상", "FFmpeg", ffmpeg_health.get("version", "실行確認").split(" Copyright")[0].removeprefix("ffmpeg version "), path=ffmpeg_path)
+    else:
+        print_check("오류", "FFmpeg", ffmpeg_health["message"])
+        all_ok = False
+
+    ffprobe_health = check_media_tool("ffprobe")
+    if ffprobe_health["available"]:
+        print_check("정상", "FFprobe", ffprobe_health.get("version", "실행 확인 완료").split(" Copyright")[0].removeprefix("ffprobe version "), path=ffprobe_health.get("path"))
+    else:
+        warnings += 1
+        print_check("주의", "FFprobe", ffprobe_health["message"])
+        print(wrap_console_text("원본 녹화는 계속합니다. 파일 검사·변환을 사용하려면 FFprobe를 설치하거나 FFPROBE_PATH를 설정하세요.", indent="         "))
+
     streamlink_version = _get_streamlink_version()
     if streamlink_version:
-        print(f"  [OK]  Streamlink: v{streamlink_version}")
+        print_check("정상", "Streamlink", f"v{streamlink_version}")
     else:
-        print("  [!!]  Streamlink를 찾을 수 없습니다. 라이브 녹화에 필요합니다.")
+        print_check("오류", "Streamlink", "패키지 없음 · 라이브 녹화에 필요")
         all_ok = False
 
-    # ── yt-dlp 확인 (없으면 자동 다운로드) ──────────────────
     ytdlp_path = _find_ytdlp()
-    if ytdlp_path:
-        print(f"  [OK]  yt-dlp: {ytdlp_path}")
-    else:
-        print("  [--]  yt-dlp를 찾을 수 없습니다. 자동 다운로드 시도 중...")
-        if IS_FROZEN:
-            bin_dir = Path(sys.executable).parent / "bin"
-        else:
-            bin_dir = Path(__file__).resolve().parent.parent / "bin"
+    if not ytdlp_path:
+        print_check("확인", "yt-dlp", "실행 파일 없음 · 설치 확인 중")
+        bin_dir = Path(sys.executable).parent / "bin" if IS_FROZEN else Path(__file__).resolve().parent.parent / "bin"
         ytdlp_path = _download_ytdlp(bin_dir)
-        if ytdlp_path:
-            print(f"  [OK]  yt-dlp 설치 완료: {ytdlp_path}")
-        else:
-            print("  [!!]  yt-dlp 설치 실패 — 녹화 기능이 동작하지 않을 수 있습니다.")
-
-    print("=" * 60)
+    if ytdlp_path:
+        print_check("정상", "yt-dlp", "실행 파일 확인", path=ytdlp_path)
+    else:
+        warnings += 1
+        print_check("주의", "yt-dlp", "설치 실패 · 동영상 다운로드와 일부 라이브 기능을 사용할 수 없습니다.")
 
     if all_ok:
-        print("  ✅ 녹화 의존성 확인 완료. 서버를 시작합니다...\n" if not ffprobe_health['available'] else "  ✅ 모든 의존성 확인 완료. 서버를 시작합니다...\n")
+        print(f"\n필수 항목 확인 완료 · 주의 {warnings}건. 서버를 시작합니다.\n" if warnings else "\n모든 항목 정상 · 서버를 시작합니다.\n")
         return True
 
     if sys.platform != "win32" or not sys.stdin.isatty():

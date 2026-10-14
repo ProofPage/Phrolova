@@ -17,7 +17,7 @@ from typing import Optional, Callable, Awaitable
 from urllib.parse import urlsplit, urlunsplit
 
 from app.core.config import get_settings
-from app.core.logger import logger
+from app.core.logger import logger, get_media_logger
 from app.engine.chzzk_time_machine import (
     resolve_time_machine_stream,
     resolve_live_cdn_stream,
@@ -47,6 +47,7 @@ class YtdlpLivePipeline:
 
     def __init__(self, channel_id: str) -> None:
         self._channel_id = channel_id
+        self._logger = logger.getChild("recording")
         self._state = RecordingState.IDLE
         self._process: Optional[asyncio.subprocess.Process] = None
         self._streamlink_fd: Optional[object] = None
@@ -164,13 +165,15 @@ class YtdlpLivePipeline:
             출력 파일 경로.
         """
         if self._state == RecordingState.RECORDING:
-            logger.warning(f"[{self._channel_id}] 이미 녹화 중입니다.")
+            self._logger.warning(f"[{self._channel_id}] 이미 녹화 중입니다.")
             return self._output_path or ""
 
         self._intentional_stop = False
         page_url = str(stream_obj) if stream_obj else ""
         self._source_resolver = source_resolver
         self._source_page_url = page_url
+        if page_url:
+            self._logger = get_media_logger(page_url).getChild("recording")
         settings = get_settings()
         live_start_index: Optional[int] = None
 
@@ -189,7 +192,7 @@ class YtdlpLivePipeline:
                     live_started_at.replace("Z", "+00:00")
                 )
             except ValueError:
-                logger.warning(
+                self._logger.warning(
                     f"[{self._channel_id}] 라이브 시작 시각을 읽지 못해 현재 시각을 파일명에 사용합니다."
                 )
         ext = "ts"
@@ -252,7 +255,7 @@ class YtdlpLivePipeline:
             try:
                 filename = template.format(**values)
             except (KeyError, ValueError, IndexError) as exc:
-                logger.warning(
+                self._logger.warning(
                     f"[{self._channel_id}] 파일명 형식이 잘못되어 기본 형식을 사용합니다: {exc}"
                 )
                 filename = default_template.format(**values)
@@ -306,7 +309,7 @@ class YtdlpLivePipeline:
                 http_headers = time_machine_stream.headers
                 live_start_index = time_machine_stream.live_start_index
                 time_machine_resolved = True
-                logger.info(
+                self._logger.info(
                     f"[{self._channel_id}] 치지직 타임머신 스트림 연결 "
                     f"(시작 오프셋={settings.effective_chzzk_time_machine_offset}초, "
                     f"시작 인덱스={live_start_index if live_start_index is not None else '기본'})"
@@ -317,7 +320,7 @@ class YtdlpLivePipeline:
                     raise RuntimeError(
                         f"[{self._channel_id}] 타임머신 스트림을 가져오지 못해 강제 녹화를 시작하지 못했습니다: {e}"
                     ) from e
-                logger.warning(
+                self._logger.warning(
                     f"[{self._channel_id}] 타임머신 스트림을 사용할 수 없어 일반 스트림으로 전환합니다: {e}"
                 )
 
@@ -351,7 +354,7 @@ class YtdlpLivePipeline:
                 if not fallback_cookie_file:
                     self._state = RecordingState.ERROR
                     raise
-                logger.warning(
+                self._logger.warning(
                     f"[{self._channel_id}] 쿠키 없이 URL 추출 실패, 로그인 쿠키로 다시 시도: {e}"
                 )
                 try:
@@ -526,7 +529,7 @@ class YtdlpLivePipeline:
             self._state = RecordingState.RECORDING
         elif kind == 'gap':
             self.warning_message = '복구하지 못한 녹화 구간이 있습니다. 원본을 구간별 파일로 보관합니다.'
-        logger.debug(f"[{self._channel_id}] 치지직 수신 상태: {json.dumps(safe, ensure_ascii=False)}")
+        self._logger.debug(f"[{self._channel_id}] 치지직 수신 상태: {json.dumps(safe, ensure_ascii=False)}")
 
     def _measure_ts(self, data):
         """Measure the MPEG-TS PCR clock without decoding or invoking FFmpeg."""
@@ -761,8 +764,10 @@ class YtdlpLivePipeline:
             self._ended_at = self._last_data_at
             if self._capture_ready and not self._capture_ready.done():
                 self._capture_ready.set_exception(failure)
-            logger.warning(
-                f"[{self._channel_id}] {self._redact_streamlink_error(str(error))}"
+            self._logger.warning(
+                "[%s] 녹화 수신 실패 · 세션=%s · 코드=%s · 재시도=%s · 상세=%s: %s",
+                self._channel_id, self.session_id, failure.code, self.retryable,
+                type(error).__name__, self._redact_streamlink_error(str(error)),
             )
         finally:
             for reader in readers:
@@ -1269,7 +1274,7 @@ class YtdlpLivePipeline:
         selected = self._select_preview_hls_format(info)
         width, height = selected.get("width"), selected.get("height")
         # Numeric metadata only; no format names, URLs, headers, or cookies.
-        logger.info(
+        self._logger.info(
             "라이브 미리보기 HLS 선택: %s×%s",
             width if isinstance(width, (int, float)) else "?",
             height if isinstance(height, (int, float)) else "?",
@@ -1325,7 +1330,7 @@ class YtdlpLivePipeline:
             cookie_file_path = self._write_cookie_file(cookie_str)
             cmd += ["--cookies", cookie_file_path]
 
-        logger.debug(f"[{self._channel_id}] yt-dlp 스트림 정보 조회")
+        self._logger.debug(f"[{self._channel_id}] yt-dlp 스트림 정보 조회")
 
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -1370,7 +1375,7 @@ class YtdlpLivePipeline:
         if not hls_url:
             raise RuntimeError("yt-dlp URL 추출 실패: HLS URL을 찾을 수 없음")
 
-        logger.debug(f"[{self._channel_id}] HLS URL 추출 완료")
+        self._logger.debug(f"[{self._channel_id}] HLS URL 추출 완료")
         return hls_url, http_headers, cookies
 
     @staticmethod
@@ -1403,7 +1408,7 @@ class YtdlpLivePipeline:
             )
         )
         if not trusted:
-            logger.warning(
+            self._logger.warning(
                 f"[{self._channel_id}] 미리보기 이미지 URL을 허용된 Chzzk CDN으로 확인하지 못했습니다."
             )
             return
@@ -1421,7 +1426,7 @@ class YtdlpLivePipeline:
                     or final_host.endswith(".pstatic.net")
                     or final_host.endswith(".nimg.naver.net")
                 ):
-                    logger.warning(
+                    self._logger.warning(
                         f"[{self._channel_id}] 미리보기 리디렉션 주소를 허용된 도메인으로 확인하지 못했습니다."
                     )
                     return
@@ -1432,7 +1437,7 @@ class YtdlpLivePipeline:
                 if not content_type.startswith("image/") or (
                     content_length and int(content_length) > 20 * 1024 * 1024
                 ):
-                    logger.warning(
+                    self._logger.warning(
                         f"[{self._channel_id}] 미리보기 응답이 이미지가 아니거나 20MB를 초과합니다."
                     )
                     return
@@ -1440,7 +1445,7 @@ class YtdlpLivePipeline:
                 async for chunk in response.aiter_bytes():
                     image_data.extend(chunk)
                     if len(image_data) > 20 * 1024 * 1024:
-                        logger.warning(
+                        self._logger.warning(
                             f"[{self._channel_id}] 미리보기 이미지가 20MB를 초과합니다."
                         )
                         return
@@ -1449,9 +1454,9 @@ class YtdlpLivePipeline:
                 extension = mimetypes.guess_extension(content_type) or ".jpg"
             preview_path = output_file.with_suffix(extension)
             await asyncio.to_thread(preview_path.write_bytes, image_data)
-            logger.info(f"[{self._channel_id}] 라이브 미리보기 저장: {preview_path}")
+            self._logger.info(f"[{self._channel_id}] 라이브 미리보기 저장: {preview_path}")
         except Exception as exc:
-            logger.warning(
+            self._logger.warning(
                 f"[{self._channel_id}] 미리보기 저장 실패 (녹화는 계속 진행): {exc}"
             )
 
@@ -1479,7 +1484,7 @@ class YtdlpLivePipeline:
             self._last_size = current_size
             self._last_check_time = now
         except Exception as e:
-            logger.error(f"[{self._channel_id}] 통계 업데이트 실패: {e}")
+            self._logger.error(f"[{self._channel_id}] 통계 업데이트 실패: {e}")
 
     async def _update_statistics_loop(self) -> None:
         """녹화 중 통계를 주기적으로 업데이트한다."""
@@ -1507,7 +1512,7 @@ class YtdlpLivePipeline:
         except asyncio.CancelledError:
             pass
         except Exception as e:
-            logger.error(f"[{self._channel_id}] 통계 루프 오류: {e}")
+            self._logger.error(f"[{self._channel_id}] 통계 루프 오류: {e}")
 
     def get_status(self) -> dict:
         """현재 녹화 상태를 딕셔너리로 반환 (FFmpegPipeline과 동일 구조)."""

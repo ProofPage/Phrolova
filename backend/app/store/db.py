@@ -26,7 +26,8 @@ from pathlib import Path
 from typing import Any, Iterator, Optional, Sequence
 
 from app.core.config import resolve_data_dir
-from app.core.logger import logger
+from app.core.logger import logger as app_logger
+logger = app_logger.getChild("storage")
 from app.store.schema import LATEST_VERSION, apply_migrations
 
 DB_FILENAME = "phrolova.db"
@@ -81,9 +82,9 @@ class Database:
             applied = apply_migrations(conn)
             if applied:
                 logger.info(
-                    f"🗃️ DB 스키마 마이그레이션 적용: {applied}건 (v{LATEST_VERSION})"
+                    f"DB 스키마 마이그레이션 적용: {applied}건 (v{LATEST_VERSION})"
                 )
-            logger.info(f"🗃️ 저장소 연결: {self._path}")
+            logger.info(f"저장소 연결: {self._path}")
             return conn
 
     def close(self) -> None:
@@ -100,7 +101,7 @@ class Database:
                 self._conn.close()
             finally:
                 self._conn = None
-            logger.info("🗃️ 저장소 연결 종료.")
+            logger.info("저장소 연결 종료.")
 
     # ── 실행 헬퍼 ───────────────────────────────────────
 

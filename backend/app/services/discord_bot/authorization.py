@@ -11,7 +11,8 @@ from __future__ import annotations
 from typing import Optional
 
 from app.core.config import get_settings
-from app.core.logger import logger
+from app.core.logger import logger as app_logger
+logger = app_logger.getChild("discord")
 
 _DENIED_MESSAGE = (
     "⛔ 이 봇을 제어할 권한이 없습니다.\n"

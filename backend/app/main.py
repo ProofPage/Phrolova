@@ -21,7 +21,8 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings, resolve_data_dir
 from app.core.http import close_http_client
-from app.core.logger import logger
+from app.core.logger import logger as app_logger
+logger = app_logger.getChild("startup")
 from app.engine.auth import AuthManager
 from app.engine.conductor import Conductor
 from app.services.recorder import RecorderService
@@ -81,31 +82,31 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     global _recorder_service, _updater_service, _notification_service
 
     settings = get_settings()
-    logger.info(f"🚀 {settings.app_name} 시작 중...")
+    logger.info(f"{settings.app_name} 시작 중...")
 
     # Discovery alone does not prove an executable can run (or its sibling exists).
     from app.engine.media_tools import check_media_tool
     for tool in ('ffmpeg', 'ffprobe'):
         health = await asyncio.to_thread(check_media_tool, tool)
         if health['available']:
-            logger.info(f"✅ {tool} 실행 확인: {health['path']}")
+            logger.info("%s 준비 완료 · %s\n경로: %s", tool, health.get("version", ""), health["path"])
         else:
-            logger.warning(f"⚠️ {health['message']} 프로그램 옆 bin 폴더에 FFmpeg와 FFprobe를 함께 설치하세요. 원본은 보관됩니다.")
+            logger.warning(f"{health['message']} 프로그램 옆 bin 폴더에 FFmpeg와 FFprobe를 함께 설치하세요. 원본은 보관됩니다.")
 
     # yt-dlp 경로 검증 (Windows exe 환경에서 없으면 자동 다운로드)
     try:
         ytdlp = settings.resolve_ytdlp_path(auto_download=True)
-        logger.info(f"✅ yt-dlp 확인: {ytdlp}")
+        logger.info("yt-dlp 준비 완료\n경로: %s", ytdlp)
     except Exception as e:
-        logger.warning(f"⚠️ yt-dlp 확인 실패: {e}")
+        logger.warning("yt-dlp 준비 실패 · 동영상 다운로드에 영향 · %s: %s", type(e).__name__, e, exc_info=True)
 
     # Streamlink는 라이브 HLS/DASH 세그먼트 수신에 사용한다.
     try:
         from importlib.metadata import version
 
-        logger.info(f"✅ Streamlink 확인: {version('streamlink')}")
+        logger.info(f"Streamlink 확인: {version('streamlink')}")
     except Exception as e:
-        logger.warning(f"⚠️ Streamlink 확인 실패: {e}")
+        logger.error("Streamlink 준비 실패 · 라이브 녹화 불가 · %s: %s", type(e).__name__, e, exc_info=True)
 
     # ── 저장소 ───────────────────────────────────────────
     # 다른 모든 서비스가 저장소에 의존하므로 가장 먼저 연다.
@@ -125,9 +126,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
 
     if auth.is_authenticated:
-        logger.info("🔑 인증 쿠키 로드 완료.")
+        logger.info("인증 쿠키 로드 완료.")
     else:
-        logger.info("🔓 비로그인 모드로 동작합니다.")
+        logger.info("비로그인 모드로 동작합니다.")
 
     # Discord Bot 시작 (토큰이 설정되어 있으면 자동 구동)
     # on_ready 콜백으로 연결 복구 즉시 대기 중인 알림을 흘려보낸다.
@@ -148,7 +149,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     _updater_service = UpdaterService(notifier=_notification_service)
     await _updater_service.start()
 
-    logger.info(f"✅ {settings.app_name} Engine Started!")
+    logger.info("%s 서버 준비 완료 · 버전=%s", settings.app_name, __version__)
 
     # Conductor 시작 (감시 루프 실행)
     await conductor.start()
@@ -156,7 +157,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     # ── 종료 ──
-    logger.info(f"🛑 {settings.app_name} 종료 중...")
+    logger.info(f"{settings.app_name} 종료 중...")
     if _updater_service:
         await _updater_service.stop()
     # Conductor를 먼저 멈춰야 종료 중 발생한 '녹화 완료' 알림이 큐에 들어간다.
@@ -174,7 +175,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     close_database()
     _recorder_service = None
     _notification_service = None
-    logger.info("👋 Goodbye!")
+    logger.info("서버 종료 완료")
 
 
 # ── 정적 파일 경로 ─────────────────────────────────────────
@@ -302,7 +303,7 @@ if STATIC_DIR.exists():
         return FileResponse(STATIC_DIR / "index.html")
 else:
     logger.warning(
-        "⚠️  static 폴더를 찾을 수 없습니다. 개발 환경(Vite dev server)으로 동작합니다. "
+        " static 폴더를 찾을 수 없습니다. 개발 환경(Vite dev server)으로 동작합니다. "
         "배포 시 'npm run build'를 먼저 실행하세요."
     )
 
