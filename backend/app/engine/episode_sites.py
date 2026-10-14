@@ -1,0 +1,409 @@
+"""첨부 Lua 플러그인의 작품·회차 규칙을 기존 동영상 큐에 연결한다."""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from html.parser import HTMLParser
+import json
+import re
+from urllib.parse import unquote, urlencode, urljoin, urlsplit, urlunsplit
+
+import httpx
+
+from app.core.http import USER_AGENT
+
+SITES = {
+    'anilife': {'name': '애니라이프', 'hosts': ('anilife01.tv', 'anilife1.tv'),
+                'media': ('aniplayer1.site', 'noblepulse539.com', 'quietsummit393.com', 'getvfa.store', 'getvfa.site', 's9.toki56.com')},
+    'linkani': {'name': 'Linkani', 'hosts': ('linkani.tv',),
+                'media': ('aniplayer1.site', 'noblepulse539.com', 'quietsummit393.com', 'getvfa.store', 'getvfa.site', 's9.toki56.com')},
+    'ohli24': {'name': '애니24', 'hosts': ('www.ohli24.net',),
+               # 현재 플레이어가 반환한 목록에서 1~7 호스트를 모두 확인했다.
+               'media': ('michealcdn.com', *(f'hol{i}ncloud2-nocdn.xyz' for i in range(1, 8)),
+                         *(f'ohli{i}ncloud3-nocdn.xyz' for i in range(1, 8)))},
+}
+AD_PATH = re.compile(r'/(?:ads?|banner|advert[^/]*|popunder|tracking)/', re.I)
+
+
+class EpisodeSiteError(ValueError):
+    pass
+
+
+def checked_url(value: str, domains, *, subdomains=False) -> str:
+    try:
+        if not isinstance(value, str) or re.search(r'[\s\x00-\x1f\x7f\\]', value):
+            raise ValueError
+        parts = urlsplit(value)
+        host = (parts.hostname or '').lower()
+        if (parts.scheme != 'https' or parts.username is not None or parts.password is not None
+                or parts.port not in (None, 443) or not any(host == d or subdomains and host.endswith('.'+d) for d in domains)):
+            raise ValueError
+        path = unquote(parts.path)
+        if re.search(r'[\x00-\x1f\x7f\\]', path) or AD_PATH.search(path):
+            raise ValueError
+        return str(httpx.URL(value))
+    except ValueError:
+        raise EpisodeSiteError('콘텐츠 주소의 호스트·HTTPS 경로를 확인할 수 없습니다.') from None
+
+
+def site_for_url(value: str) -> str | None:
+    try:
+        host = urlsplit(value).hostname
+        return next((site for site, data in SITES.items() if host in data['hosts']), None)
+    except ValueError:
+        return None
+
+
+def parse_episode_url(value: str) -> dict:
+    site = site_for_url(value)
+    if not site:
+        raise EpisodeSiteError('지원하는 작품 또는 회차 주소를 입력하세요.')
+    value = checked_url(value, SITES[site]['hosts'])
+    parts = urlsplit(value)
+    path = parts.path
+    if site == 'anilife':
+        match = re.fullmatch(r'/content/(\d+)(?:/([A-Za-z0-9_-]+))?/?', path)
+        if match:
+            work, episode = match.groups()
+            return dict(site=site, work=work, episode=episode,
+                        url=f'https://anilife01.tv/content/{work}'+(f'/{episode}' if episode else ''), collection=not episode)
+    elif site == 'linkani':
+        match = re.fullmatch(r'/watch/(\d+)/a(\d+)/k(\d+)/?', path)
+        if match:
+            work, source, number = match.groups()
+            return dict(site=site, work=work, episode=f'a{source}-k{number}',
+                        url=f'https://linkani.tv/watch/{work}/a{source}/k{number}/', collection=False)
+        match = re.fullmatch(r'/ani/(\d+)/?', path)
+        if match:
+            return dict(site=site, work=match[1], episode=None, url=f'https://linkani.tv/ani/{match[1]}/', collection=True)
+    else:
+        match = re.fullmatch(r'/(\d+)/[^/]+\.html', path)
+        if match:
+            return dict(site=site, work=match[1], episode=None,
+                        url=urlunsplit(('https', parts.netloc.lower(), path, '', '')), collection=True)
+    raise EpisodeSiteError('올바른 작품 또는 회차 주소를 입력하세요.')
+
+
+@dataclass
+class Node:
+    tag: str = ''
+    attrs: dict = field(default_factory=dict)
+    parent: Node | None = None
+    children: list = field(default_factory=list)
+
+    @property
+    def text(self):
+        return ''.join(child if isinstance(child, str) else child.text for child in self.children)
+
+    def find(self, tag=None, cls=None, **attrs):
+        result = []
+        for child in self.children:
+            if not isinstance(child, Node):
+                continue
+            if ((tag is None or child.tag == tag) and (not cls or cls in child.attrs.get('class', '').split())
+                    and all(k in child.attrs and (v is None or child.attrs[k] == v) for k, v in attrs.items())):
+                result.append(child)
+            result.extend(child.find(tag, cls, **attrs))
+        return result
+
+
+class Document(HTMLParser):
+    def __init__(self, text):
+        super().__init__(convert_charrefs=True)
+        self.root = self.current = Node()
+        self.feed(text)
+
+    def handle_starttag(self, tag, attrs):
+        node = Node(tag, dict(attrs), self.current)
+        self.current.children.append(node)
+        if tag not in {'area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr'}:
+            self.current = node
+
+    def handle_endtag(self, tag):
+        node = self.current
+        while node.parent:
+            if node.tag == tag:
+                self.current = node.parent
+                break
+            node = node.parent
+
+    def handle_data(self, data):
+        self.current.children.append(data)
+
+
+class SiteClient:
+    """다른 사이트의 쿠키를 빌리지 않고 리다이렉트마다 허용 호스트를 재확인한다."""
+    def __init__(self):
+        self.http = httpx.Client(timeout=15, follow_redirects=False, headers={'User-Agent': USER_AGENT})
+
+    def close(self): self.http.close()
+
+    def request(self, url, domains, *, referer=None, form=None, subdomains=False):
+        method = 'POST' if form is not None else 'GET'
+        for _ in range(6):
+            url = checked_url(url, domains, subdomains=subdomains)
+            headers = {'Referer': str(httpx.URL(referer or url)), 'Accept': 'text/html,application/json,application/vnd.apple.mpegurl'}
+            if form is not None: headers['X-Requested-With'] = 'XMLHttpRequest'
+            try:
+                with self.http.stream(method, url, headers=headers, data=form) as response:
+                    if response.status_code in (301,302,303,307,308):
+                        url = urljoin(url, response.headers.get('location', ''))
+                        if response.status_code == 303 or response.status_code in (301,302) and method == 'POST':
+                            method, form = 'GET', None
+                        continue
+                    if response.status_code in (401,403):
+                        raise EpisodeSiteError('사이트가 이 서버의 접근을 거부했습니다. 브라우저에서 접속 상태를 확인하세요. (HTTP '+str(response.status_code)+')')
+                    if response.status_code == 404: raise EpisodeSiteError('작품 또는 회차를 찾을 수 없습니다. (HTTP 404)')
+                    if response.status_code == 429: raise EpisodeSiteError('사이트 요청 한도에 도달했습니다. 잠시 후 다시 시도하세요. (HTTP 429)')
+                    response.raise_for_status()
+                    data = bytearray()
+                    for chunk in response.iter_bytes():
+                        data.extend(chunk)
+                        if len(data) > 3*1024*1024: raise EpisodeSiteError('사이트 응답 크기가 너무 큽니다.')
+                    return str(response.url), bytes(data).decode('utf-8-sig')
+            except (httpx.HTTPError, UnicodeError):
+                raise EpisodeSiteError('사이트 연결 또는 응답을 확인할 수 없습니다. 잠시 후 다시 시도하세요.') from None
+        raise EpisodeSiteError('사이트 주소 이동이 너무 많습니다.')
+
+    def json(self, url, domains, **kwargs):
+        final, text = self.request(url, domains, **kwargs)
+        try: return final, json.loads(text)
+        except ValueError: raise EpisodeSiteError('사이트 응답이 정상 JSON 형식이 아닙니다.') from None
+
+
+def _title(nodes):
+    if not nodes or not nodes[0].text.strip(): raise EpisodeSiteError('작품 제목을 확인할 수 없습니다.')
+    return nodes[0].text.strip()
+
+
+def _rows(rows):
+    if not rows or len(rows) > 10000: raise EpisodeSiteError('작품의 회차 목록을 확인할 수 없습니다.')
+    if len({row['id'] for row in rows}) != len(rows): raise EpisodeSiteError('중복된 회차 ID가 있습니다.')
+    return sorted(rows, key=lambda r:(r.get('number') is None, r.get('number') or 0, r['id']))
+
+
+def _ohli_parent(doc, address):
+    parents = [link for crumb in doc.find('ul', cls='page-breadcrumb') for link in crumb.find('a', href=None)
+               if link.parent and link.parent.tag == 'span']
+    if len(parents) != 1: raise EpisodeSiteError('회차가 속한 작품을 확인할 수 없습니다.')
+    return parse_episode_url(urljoin(address, parents[0].attrs['href'])), parents[0].text.strip()
+
+
+def load_catalog(url, client=None):
+    own = client is None
+    client = client or SiteClient()
+    try: return _load_catalog(parse_episode_url(url), client)
+    finally:
+        if own: client.close()
+
+
+def _load_catalog(route, client):
+    site, work, selected = route['site'], route['work'], route['episode']
+    hosts = SITES[site]['hosts']
+    rows = []
+    incomplete = False
+    if site == 'anilife':
+        final, _ = client.request(route['url'], hosts)
+        if parse_episode_url(final)['work'] != work: raise EpisodeSiteError('이동된 작품 ID가 다릅니다.')
+        origin = 'https://'+urlsplit(final).hostname
+        _, payload = client.json(origin+'/api/anime/'+work, hosts, referer=final)
+        item = payload.get('item') if isinstance(payload, dict) else None
+        if not isinstance(item, dict) or str(item.get('id')) != work or not isinstance(item.get('title'), str):
+            raise EpisodeSiteError('작품 API의 식별 정보가 다릅니다.')
+        title = item['title'].strip()
+        for episode in item.get('episodes') or []:
+            key = str(episode.get('key') or '')
+            if not re.fullmatch(r'[A-Za-z0-9_-]+', key): raise EpisodeSiteError('회차 ID가 올바르지 않습니다.')
+            if not selected or key == selected:
+                if episode.get('playbackUrl') != f'/api/playback/{work}/{key}': raise EpisodeSiteError('회차 재생 API가 다릅니다.')
+                rows.append(dict(id=key, title=str(episode.get('title') or '').strip(), number=_number(episode.get('number')),
+                    url=f'{origin}/content/{work}/{key}', available=episode.get('playable') is not False,
+                    source_type=episode.get('sourceType')))
+    elif site == 'linkani':
+        address = f'https://linkani.tv/ani/{work}/'
+        final, body = client.request(address, hosts, referer=route['url'])
+        if parse_episode_url(final)['work'] != work: raise EpisodeSiteError('이동된 작품 ID가 다릅니다.')
+        doc = Document(body).root
+        title = _title(doc.find('h1', cls='detail-info-title'))
+        seen = set()
+        for node in doc.find('a', cls='ep', href=None):
+            episode = parse_episode_url(urljoin(final, node.attrs['href']))
+            if episode['work'] != work or not episode['episode']: raise EpisodeSiteError('다른 작품의 회차가 포함되어 있습니다.')
+            key = episode['episode']
+            if (not selected or selected == key) and key not in seen:
+                seen.add(key)
+                number = int(key.split('-k')[1])
+                rows.append(dict(id=key, title=node.text.strip() or f'{number}화', number=number, url=episode['url'], available=True))
+        rows = _rows(rows)
+        # 사이트가 이전 회차를 목록에서 빼도 확인된 회차는 선택할 수 있게 한다.
+        incomplete = not selected and [row['number'] for row in rows] != list(range(1,len(rows)+1))
+    else:
+        final, body = client.request(route['url'], hosts)
+        if parse_episode_url(final)['work'] != work: raise EpisodeSiteError('이동된 작품·회차 ID가 다릅니다.')
+        doc = Document(body).root
+        title = _title(doc.find('h2'))
+        players = doc.find('iframe', id='video', src=None)
+        if len(players) == 1:
+            parent, title_work = _ohli_parent(doc, final)
+            rows = [dict(id=work, title=title, url=final, number=None, available=True)]
+            work, title = parent['work'], title_work
+        else:
+            for container in doc.find(cls='eps-item'):
+                for node in container.find('a', href=None):
+                    episode = parse_episode_url(urljoin(final,node.attrs['href']))
+                    number = re.search(r'(\d+(?:\.\d+)?)화', node.text)
+                    rows.append(dict(id=episode['work'], title=node.text.strip(), url=episode['url'],
+                                     number=float(number[1]) if number else None, available=True))
+    rows = _rows(rows)
+    if not title or any(not row['title'] for row in rows): raise EpisodeSiteError('작품·회차 제목이 비어 있습니다.')
+    return dict(source=site, id=work, title=title, url=route['url'], episodes=rows, incomplete=incomplete)
+
+
+def _number(value):
+    try:
+        number = float(value)
+        return number if 0 <= number < 1000000 else None
+    except (ValueError,TypeError): return None
+
+
+def _key_attributes(line):
+    if len(line)>8192: raise EpisodeSiteError('영상 키 속성이 너무 깁니다.')
+    text = line.partition(':')[2]
+    pairs, quoted = {}, set()
+    while text:
+        match = re.match(r'([A-Z][A-Z0-9-]*)=(?:"([^"\x00-\x1f]+)"|([^,\s"\x00-\x1f]+))(,|$)', text)
+        if not match or match[1] in pairs: raise EpisodeSiteError('영상 키 속성이 잘못되었거나 중복되었습니다.')
+        pairs[match[1]] = match[2] if match[2] is not None else match[3]
+        if match[2] is not None: quoted.add(match[1])
+        text = text[match.end():]
+        if match[4] and not text: raise EpisodeSiteError('영상 키 속성이 잘렸습니다.')
+    if set(pairs)-{'METHOD','URI','IV','KEYFORMAT','KEYFORMATVERSIONS'} or 'METHOD' in quoted:
+        raise EpisodeSiteError('지원하지 않는 영상 키 속성입니다.')
+    if pairs.get('METHOD') == 'NONE' and set(pairs)=={'METHOD'}: return
+    if (pairs.get('METHOD')!='AES-128' or 'URI' not in quoted
+            or 'KEYFORMAT' in pairs and ('KEYFORMAT' not in quoted or pairs['KEYFORMAT']!='identity')
+            or 'KEYFORMATVERSIONS' in pairs and ('KEYFORMATVERSIONS' not in quoted or pairs['KEYFORMATVERSIONS']!='1')
+            or 'IV' in pairs and ('IV' in quoted or not re.fullmatch(r'0[xX][0-9a-fA-F]{32}',pairs['IV']))):
+        raise EpisodeSiteError('보호된 영상 또는 지원하지 않는 영상 키 형식입니다.')
+
+
+def validate_hls(client, url, referer, domains, depth=0, visited=None):
+    visited = visited if visited is not None else set()
+    if depth >= 4 or len(visited) >= 128 or url in visited: raise EpisodeSiteError('재생목록 구조가 너무 깊거나 반복됩니다.')
+    visited.add(url)
+    final, body = client.request(url, domains, referer=referer, subdomains=True)
+    if not body.lstrip().startswith('#EXTM3U'): raise EpisodeSiteError('정상 HLS 재생목록이 아닙니다.')
+    if re.search(r'scte-?35|#EXT-X-CUE|interstitial|#EXT-X-DATERANGE|vast|SAMPLE-AES|#EXT-X-SESSION-KEY',body,re.I):
+        raise EpisodeSiteError('광고 구간 또는 보호된 재생목록은 지원하지 않습니다.')
+    master = '#EXT-X-STREAM-INF:' in body
+    count = 0
+    children = set()
+    for raw in body.splitlines():
+        line = raw.strip()
+        if line.startswith('#EXT-X-KEY:'): _key_attributes(line)
+        refs = re.findall(r'URI="([^"]+)"',line) if line.startswith('#') else [line] if line else []
+        for resource in refs:
+            child = urljoin(final,resource)
+            checked_url(child,domains,subdomains=True)
+            if not line.startswith('#'): count += 1
+            if master and (not line.startswith('#') or line.startswith('#EXT-X-MEDIA:') and 'TYPE=SUBTITLES' not in line):
+                children.add(child)
+    if not count or not master and '#EXT-X-ENDLIST' not in body: raise EpisodeSiteError('빈 재생목록이거나 아직 종료되지 않은 영상입니다.')
+    for child in sorted(children): validate_hls(client,child,referer,domains,depth+1,visited)
+    return final,body
+
+
+def _assigned(doc, name):
+    values = []
+    for script in doc.find('script'):
+        for match in re.finditer(r'\b'+re.escape(name)+r'\s*=\s*',script.text):
+            try: value,_ = json.JSONDecoder().raw_decode(script.text[match.end():].lstrip())
+            except ValueError: raise EpisodeSiteError('플레이어 JSON 설정이 잘렸거나 변경되었습니다.') from None
+            values.append(value)
+    if len(values) != 1 or not isinstance(values[0],dict): raise EpisodeSiteError('회차 플레이어 설정을 확인할 수 없습니다.')
+    return values[0]
+
+
+def extract_episode(url, client=None):
+    own = client is None
+    client = client or SiteClient()
+    try: return _extract_episode(url,client)
+    finally:
+        if own: client.close()
+
+
+def _extract_episode(url,client):
+    route = parse_episode_url(url)
+    catalog = load_catalog(url,client)
+    if len(catalog['episodes']) != 1 or route['collection'] and route['site'] != 'ohli24':
+        raise EpisodeSiteError('작품의 회차 목록에서 내려받을 회차를 선택하세요.')
+    episode = catalog['episodes'][0]
+    site = route['site']; data = SITES[site]; address = episode['url']
+    referer = address; subtitles = []
+    if site == 'anilife':
+        if not episode['available']: raise EpisodeSiteError('재생 파일이 없는 회차입니다.')
+        if episode['source_type'] not in ('anilife','linkkf','tvwiki','reanime'): raise EpisodeSiteError('지원하지 않는 회차 재생 제공자입니다.')
+        _, player = client.json(f'https://{urlsplit(address).hostname}/api/playback/{catalog["id"]}/{episode["id"]}',data['hosts'],referer=address)
+        if not isinstance(player,dict) or player.get('is_ad') or player.get('advertisement'): raise EpisodeSiteError('회차 재생 응답을 확인할 수 없습니다.')
+        media = player.get('videoUrl')
+        if player.get('subtitleUrl'): subtitles.append(('ko',player['subtitleUrl']))
+    else:
+        final, body = client.request(address,data['hosts'])
+        if parse_episode_url(final)['work'] != parse_episode_url(address)['work'] or parse_episode_url(final)['episode'] != route['episode']:
+            raise EpisodeSiteError('이동된 회차 ID가 다릅니다.')
+        doc = Document(body).root
+        if site == 'linkani':
+            videos = doc.find('video',id='linktv-video')
+            sources = [node for video in videos for node in video.find('source',src=None)]
+            if len(sources)==1:
+                if sources[0].attrs.get('type') not in ('application/x-mpegURL','application/vnd.apple.mpegurl'): raise EpisodeSiteError('지원하지 않는 재생 형식입니다.')
+                media = urljoin(final,sources[0].attrs['src'])
+            elif not sources:
+                player = _assigned(doc,'player_aaaa')
+                source,number = episode['id'][1:].split('-k')
+                if (player.get('flag')!='play' or str(player.get('id'))!=catalog['id'] or str(player.get('sid'))!=source
+                        or str(player.get('nid'))!=number or player.get('from')!='sub' or player.get('encrypt')!=0):
+                    raise EpisodeSiteError('회차 플레이어 식별 정보가 변경되었습니다.')
+                if player.get('trysee')!=0 or player.get('points')!=0: raise EpisodeSiteError('미리보기 또는 권한이 필요한 회차는 지원하지 않습니다.')
+                media = player.get('actual_url')
+                if player.get('is_ad') or player.get('advertisement') or media!=player.get('url'): raise EpisodeSiteError('본편 재생 주소를 확인할 수 없습니다.')
+            else: raise EpisodeSiteError('복수의 회차 재생 소스가 있습니다.')
+            for video in videos:
+                for track in video.find('track',kind='subtitles',src=None):
+                    lang = track.attrs.get('srclang','')
+                    if not re.fullmatch(r'[A-Za-z0-9-]+',lang): raise EpisodeSiteError('자막 언어를 확인할 수 없습니다.')
+                    subtitles.append((lang,urljoin(final,track.attrs['src'])))
+        else:
+            parent,_ = _ohli_parent(doc,final)
+            if parent['work']!=catalog['id']: raise EpisodeSiteError('회차의 작품 연결이 변경되었습니다.')
+            nodes = doc.find('iframe',id='video',src=None)
+            if len(nodes)!=1: raise EpisodeSiteError('회차 플레이어를 확인할 수 없습니다.')
+            player = urljoin(final,nodes[0].attrs['src'])
+            checked_url(player,('michealcdn.com',))
+            match = re.fullmatch(r'/video/([a-fA-F0-9]{32})',urlsplit(player).path)
+            if not match: raise EpisodeSiteError('지원하지 않는 플레이어 경로입니다.')
+            player_final,html = client.request(player,('michealcdn.com',),referer=address)
+            if player_final != player: raise EpisodeSiteError('플레이어 주소가 변경되었습니다.')
+            bundles = [urljoin(player,node.attrs['src']) for node in Document(html).root.find('script',src=None)
+                       if urlsplit(urljoin(player,node.attrs['src'])).hostname=='michealcdn.com'
+                       and urlsplit(urljoin(player,node.attrs['src'])).path=='/player/assets/scripts.php']
+            if len(bundles)!=1: raise EpisodeSiteError('플레이어 설정을 확인할 수 없습니다.')
+            _,script = client.request(bundles[0],('michealcdn.com',),referer=player)
+            if '/player/index.php?data=' not in script or '&do=getVideo' not in script: raise EpisodeSiteError('영상 발급 구조가 변경되었습니다.')
+            _,payload = client.json('https://michealcdn.com/player/index.php?'+urlencode({'data':match[1],'do':'getVideo'}),
+                ('michealcdn.com',),referer=player,form={'hash':match[1],'r':address})
+            if not isinstance(payload,dict) or payload.get('hls') is not True or payload.get('is_ad') not in (None,False) or payload.get('advertisement') not in (None,False):
+                raise EpisodeSiteError('회차 HLS 발급 응답을 확인할 수 없습니다.')
+            media = payload.get('securedLink')
+            checked_url(media,('michealcdn.com',))
+            referer = player
+    final,manifest = validate_hls(client,media,referer,data['media'])
+    subtitle_info = {}
+    for lang,target in subtitles:
+        _,text = client.request(target,data['media'],referer=referer,subdomains=True)
+        if not text.lstrip().startswith('WEBVTT') or ' --> ' not in text: raise EpisodeSiteError('정상 VTT 자막을 확인할 수 없습니다.')
+        subtitle_info.setdefault(lang,[]).append({'ext':'vtt','data':text})
+    title = episode['title'] if episode['title'].startswith(catalog['title']) else f'{catalog["title"]} · {episode["title"]}'
+    return dict(id=episode['id'],title=title,series=catalog['title'],
+                episode=episode['title'],episode_number=episode.get('number'),webpage_url=address,
+                uploader=data['name'],url=final,manifest=manifest,subtitles=subtitle_info,
+                http_headers={'User-Agent':USER_AGENT,'Referer':referer},is_live=False)

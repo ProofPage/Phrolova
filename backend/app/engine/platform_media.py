@@ -4,6 +4,9 @@ from app.engine.platform_auth import redact_media_error
 
 def media_platform(url: str) -> str:
     host = (urlsplit(url).hostname or '').lower()
+    if host in ('anilife01.tv', 'anilife1.tv'): return 'anilife'
+    if host == 'linkani.tv': return 'linkani'
+    if host == 'www.ohli24.net': return 'ohli24'
     if host in ('tiktok.com', 'www.tiktok.com', 'm.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com'): return 'tiktok'
     if host in ('twitch.tv', 'www.twitch.tv', 'm.twitch.tv', 'go.twitch.tv', 'clips.twitch.tv', 'player.twitch.tv'): return 'twitch'
     if host in ('kick.com', 'www.kick.com'): return 'kick'
@@ -15,6 +18,12 @@ def media_platform(url: str) -> str:
 
 def canonical_platform_video(url: str) -> str:
     platform = media_platform(url)
+    if platform in ('anilife', 'linkani', 'ohli24'):
+        from app.engine.episode_sites import parse_episode_url
+        route = parse_episode_url(url)
+        if route['collection'] and platform != 'ohli24':
+            raise ValueError('작품의 회차 목록에서 내려받을 회차를 선택하세요.')
+        return route['url']
     if platform == 'tiktok':
         from app.engine.tiktok import canonical_tiktok_video_url
         return canonical_tiktok_video_url(url)
@@ -54,6 +63,12 @@ def platform_ydl(url: str, options: dict):
     opts = dict(options)
     if opts.get('logger'):
         opts['logger'] = SafeMediaLogger(opts['logger'])
+    if media_platform(url) in ('anilife', 'linkani', 'ohli24'):
+        from app.engine.episode_extractor import EpisodeSiteIE
+        ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(EpisodeSiteIE())
+        ydl.add_default_info_extractors()
+        return ydl
     if media_platform(url) == 'cime':
         from app.engine.cime_extractor import CimeIE
         ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
