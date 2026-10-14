@@ -43,6 +43,8 @@ class CDN:
         self.assets = {}
         self.responses = {}
         self.delays = {}
+        self.request_events = {}
+        self.body_gates = {}
         self.trickle = {}
         self.statuses = {}
         self.truncate = set()
@@ -67,6 +69,10 @@ class CDN:
                         owner.active += 1
                         owner.peak = max(owner.peak, owner.active)
                 try:
+                    if event := owner.request_events.get(path):
+                        event.set()
+                    if gate := owner.body_gates.get(path):
+                        gate.wait(timeout=5)
                     time.sleep(owner.delays.get(path, 0))
                     status = owner.statuses.get(path, 200 if path in owner.assets else 404)
                     body = owner.assets.get(path, b"") if status == 200 else b""
@@ -205,10 +211,16 @@ class DeliveryTests(unittest.TestCase):
     def test_slow_primary_hedges_and_does_not_duplicate(self):
         self.cdn.playlist("primary")
         self.cdn.playlist("backup")
-        self.cdn.delays['/primary/1080p/1.m4v'] = 0.2
-        result = self.read(self.stream([(self.cdn.url("primary"), False),
-                                       (self.cdn.url("backup"), True)]))
+        # 빠른 CI에서도 0.2초 지연이 먼저 끝나지 않도록 백업 요청과 응답 순서를 고정한다.
+        backup_requested = threading.Event()
+        self.cdn.request_events['/backup/1080p/1.m4v'] = backup_requested
+        self.cdn.body_gates['/primary/1080p/1.m4v'] = backup_requested
+        self.session.set_option("stream-segment-timeout", 10)
+        with patch.object(continuity, "RECOVERY_TIMEOUT", 10):
+            result = self.read(self.stream([(self.cdn.url("primary"), False),
+                                           (self.cdn.url("backup"), True)]))
         self.assertEqual(result, INITIALIZATION + b"".join(MEDIA))
+        self.assertTrue(backup_requested.is_set())
         self.assertGreater(self.cdn.hits['/backup/1080p/1.m4v'], 0)
         self.assertLessEqual(self.cdn.peak, 4)
 
