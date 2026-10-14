@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Palette, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import type { Settings as SettingsType } from "../../api/client";
 import { THEMES, type ThemeId, useTheme } from "../../contexts/ThemeContext";
 import { LANGUAGE_OPTIONS, useLanguage } from "../../contexts/LanguageContext";
-import { Button, Card, CardHeader, Field, Input, Select } from "../ui/primitives";
+import { Button, Card, Field, Input, Select } from "../ui/primitives";
 
 interface Props {
     settings: SettingsType | null;
@@ -23,8 +23,7 @@ export function AppearanceTab({ onDirtyChange }: Props) {
     useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
 
     return (
-        <Card className="space-y-5">
-            <CardHeader icon={Palette} title={t("settings.appearance")} />
+        <Card className="appearance-settings">
 
             <Field label={t("settings.language")}>
                 <Select
@@ -72,16 +71,17 @@ export function AppearanceTab({ onDirtyChange }: Props) {
                 </div>
             </Field>
 
+            <div className="appearance-actions">
             <Button
                 icon={RotateCcw}
                 onClick={() => {
                     resetAll();
                     setTitleInput("Phrolova");
                 }}
-                className="w-full"
             >
                 {t("settings.resetAppearance")}
             </Button>
+            </div>
         </Card>
     );
 }

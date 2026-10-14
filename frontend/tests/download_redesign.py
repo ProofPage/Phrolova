@@ -110,8 +110,8 @@ async def main():
         await expect(live.locator('.recording-channel .platform-chzzk').first).to_be_visible()
         assert await live.locator('.recording-channel .platform-chzzk').first.evaluate(style_read) == download_badge_style
         await live.close()
-        await page.locator('[data-task-id="3"]').get_by_role('button',name='720p',exact=True).click()
-        await expect(page.locator('[data-task-id="3"]').get_by_role('button',name='720p',exact=True)).to_have_attribute('aria-pressed','true')
+        await page.locator('[data-task-id="3"]').get_by_role('button', name='720p', exact=True).click()
+        await expect(page.locator('[data-task-id="3"]').get_by_role('button', name='720p', exact=True)).to_have_attribute('aria-pressed', 'true')
         await expect(page.locator('[data-task-id="3"] .download-task-meta')).not_to_contain_text('720p')
         await expect(page.locator('[data-task-id="3"] .download-task-controls')).not_to_contain_text('화질 선택')
         await expect(page.locator('[data-task-id="3"] [role=group][aria-label="다운로드 해상도"]')).to_be_visible()
@@ -139,7 +139,9 @@ async def main():
         tasks[4]['error_message']='Connection interrupted diagnostic'
         await expect(page.locator('[data-task-id="complete"]')).to_be_visible(timeout=6000)
         summary=page.get_by_label('전체 작업 현황')
-        for label in ('진행 중 2','대기 중 1','완료 1','실패 1'):await expect(summary).to_contain_text(label)
+        for label, count in (('진행 중','2'),('대기 중','1'),('완료','1'),('실패','1')):
+            metric=summary.locator('.ui-metric').filter(has=page.get_by_text(label, exact=True))
+            await expect(metric.locator('.ui-metric-value')).to_have_text(count)
         completed=page.locator('[data-task-id="complete"]')
         await expect(completed).to_contain_text('다운로드 완료');await expect(completed).to_contain_text('파일 확인 필요')
         await completed.get_by_role('button',name='다시 검사',exact=True).click()

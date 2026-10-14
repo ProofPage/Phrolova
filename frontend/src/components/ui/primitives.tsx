@@ -27,12 +27,13 @@ import { useLanguage } from "../../contexts/LanguageContext";
  * 페이지마다 제각각이던 제목 영역을 하나의 시각적 진입점으로 묶는다.
  * 핵심 상태와 주요 액션을 첫 화면에서 함께 읽을 수 있게 한다.
  */
-export function PageHeader({ title, description, meta, actions, actionsPlacement = "inline" }: {
+export function PageHeader({ title, description, meta, metaPlacement = "inline", actions, actionsPlacement = "inline" }: {
     icon?: LucideIcon;
     eyebrow?: string;
     title: string;
     description?: ReactNode;
     meta?: ReactNode;
+    metaPlacement?: "inline" | "below";
     actions?: ReactNode;
     actionsPlacement?: "inline" | "inline-top" | "below";
     variant?: "default" | "plain";
@@ -45,10 +46,11 @@ export function PageHeader({ title, description, meta, actions, actionsPlacement
                     <h1 className="page-title">{t(title)}</h1>
                     {description && <p className="page-description">{typeof description === "string" ? t(description) : description}</p>}
                 </div>
-                {meta && <div className="page-summary">{meta}</div>}
+                {meta && metaPlacement === "inline" && <div className="page-summary">{meta}</div>}
                 {actions && actionsPlacement !== "below" && <div className="page-actions">{actions}</div>}
             </div>
-            {actions && actionsPlacement === "below" && <div className="page-actions">{actions}</div>}
+            {meta && metaPlacement === "below" && <div className="page-summary-block">{meta}</div>}
+            {actions && actionsPlacement === "below" && <div className="page-actions workspace-input-panel">{actions}</div>}
         </header>
     );
 }
@@ -56,7 +58,7 @@ export function PageHeader({ title, description, meta, actions, actionsPlacement
 /* ── MetricCard ──────────────────────────────────────── */
 
 export function MetricCard({ label, value, detail }: {
-    icon: LucideIcon;
+    icon?: LucideIcon;
     label: string;
     value: ReactNode;
     detail?: ReactNode;
@@ -85,7 +87,7 @@ export function Card({
         <section
             className={clsx(
                 "ui-panel",
-                padded && "p-4 max-sm:p-3",
+                padded ? "ui-panel-padded p-4 max-sm:p-3" : "ui-panel-flush",
                 className,
             )}
             {...props}

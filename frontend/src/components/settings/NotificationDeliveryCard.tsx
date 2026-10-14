@@ -110,7 +110,7 @@ export function NotificationDeliveryCard({ settings, refreshSignal }: Props) {
                 </p>
             )}
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            {!!status?.transports?.length && <div className="grid gap-3 sm:grid-cols-2">
                 {(status?.transports ?? []).map((transport) => (
                     <div
                         key={transport.name}
@@ -131,7 +131,7 @@ export function NotificationDeliveryCard({ settings, refreshSignal }: Props) {
                         )}
                     </div>
                 ))}
-            </div>
+            </div>}
 
             {status?.available && (
                 <>

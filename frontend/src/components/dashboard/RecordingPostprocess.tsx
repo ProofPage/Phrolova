@@ -13,7 +13,7 @@ function readableLog(value: unknown, prefix = ''): string {
     return `${prefix}${String(value)}`;
 }
 
-export function RecordingPostprocess({job}:{job:RecordingJob}) {
+export function RecordingPostprocess({job,plainActions=false}:{job:RecordingJob;plainActions?:boolean}) {
     useLanguage();
     const [busy,setBusy]=useState(false);const pending=useRef(false);const toast=useToast();
     if(job.state==='recording')return null;
@@ -59,13 +59,13 @@ export function RecordingPostprocess({job}:{job:RecordingJob}) {
         {job.source_cleanup_warning&&<p className="text-xs text-warn break-words">{localizedStatus(job.source_cleanup_warning,"errors.fileAccess")}</p>}
         </div>
         {!active&&<div className="recording-processing-actions flex flex-wrap items-center gap-2">
-            <Button icon={ExternalLink} title={job.can_open ? undefined : translate("live.noSavedSourceOrCompletedFile")} disabled={busy||job.can_open!==true} onClick={()=>window.open(api.recordingFileUrl(job.id),'_blank','noopener,noreferrer')}>{job.output_available?translate("live.openFile"):translate("live.openSourceFile")}</Button>
-            {job.output_available && hasSource && <Button icon={ExternalLink} disabled={busy} onClick={()=>window.open(api.recordingFileUrl(job.id,true),'_blank','noopener,noreferrer')}>{translate("live.openSourceFile")}</Button>}
-            <Button icon={FolderOpen} title={job.can_open ? undefined : translate("live.noSavedSourceOrCompletedFile")} disabled={busy||job.can_open!==true} onClick={()=>void act('folder')}>{translate("live.openSavedFolder")}</Button>
-            <Button icon={RefreshCw} title={job.can_inspect ? undefined : translate("live.inspectionIsAvailableAfterProcessingFinishesIfTheFileExists")} disabled={busy||job.can_inspect!==true} onClick={()=>void act('inspect')}>{translate("live.inspectAgain")}</Button>
-            {(job.state!=='completed'||warning)&&<><Button icon={RefreshCw} title={job.can_retry ? undefined : translate("live.aValidSourceFileFromAFinishedRecordingIsRequired")} disabled={busy||job.can_retry!==true} onClick={()=>void act('retry')}>{translate("live.convertAgain")}</Button>
+            <Button icon={plainActions ? undefined : ExternalLink} title={job.can_open ? undefined : translate("live.noSavedSourceOrCompletedFile")} disabled={busy||job.can_open!==true} onClick={()=>window.open(api.recordingFileUrl(job.id),'_blank','noopener,noreferrer')}>{job.output_available?translate("live.openFile"):translate("live.openSourceFile")}</Button>
+            {job.output_available && hasSource && <Button icon={plainActions ? undefined : ExternalLink} disabled={busy} onClick={()=>window.open(api.recordingFileUrl(job.id,true),'_blank','noopener,noreferrer')}>{translate("live.openSourceFile")}</Button>}
+            <Button icon={plainActions ? undefined : FolderOpen} title={job.can_open ? undefined : translate("live.noSavedSourceOrCompletedFile")} disabled={busy||job.can_open!==true} onClick={()=>void act('folder')}>{translate("live.openSavedFolder")}</Button>
+            <Button icon={plainActions ? undefined : RefreshCw} title={job.can_inspect ? undefined : translate("live.inspectionIsAvailableAfterProcessingFinishesIfTheFileExists")} disabled={busy||job.can_inspect!==true} onClick={()=>void act('inspect')}>{translate("live.inspectAgain")}</Button>
+            {(job.state!=='completed'||warning)&&<><Button icon={plainActions ? undefined : RefreshCw} title={job.can_retry ? undefined : translate("live.aValidSourceFileFromAFinishedRecordingIsRequired")} disabled={busy||job.can_retry!==true} onClick={()=>void act('retry')}>{translate("live.convertAgain")}</Button>
                 {job.target_format==='mp4'&&hasSource&&<Button title={job.can_retry ? undefined : translate("live.aValidSourceFileFromAFinishedRecordingIsRequired")} disabled={busy||job.can_retry!==true} onClick={()=>void act('mkv')}>{translate("live.convertToMKV")}</Button>}</>}
         </div>}
-        {!!Object.keys(job.diagnostics||{}).length&&<details className="recording-processing-diagnostics text-xs text-ink-muted"><summary className="cursor-pointer">{job.state === 'completed' ? translate("live.processingLog") : translate("live.errorDetails")}</summary><Button icon={Copy} className="mt-2" onClick={()=>void copyLog()}>{translate("live.copyLog")}</Button><pre className="mt-2 whitespace-pre-wrap [overflow-wrap:anywhere] max-h-40 overflow-auto">{log}</pre></details>}
+        {!!Object.keys(job.diagnostics||{}).length&&<details className="recording-processing-diagnostics text-xs text-ink-muted"><summary className="cursor-pointer">{job.state === 'completed' ? translate("live.processingLog") : translate("live.errorDetails")}</summary><Button icon={plainActions ? undefined : Copy} className="mt-2" onClick={()=>void copyLog()}>{translate("live.copyLog")}</Button><pre className="mt-2 whitespace-pre-wrap [overflow-wrap:anywhere] max-h-40 overflow-auto">{log}</pre></details>}
     </div>;
 }

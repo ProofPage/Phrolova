@@ -8,6 +8,18 @@
 
 ## [Unreleased]
 
+## [2.0.65] - 2026-10-14
+
+### Changed
+- 라이브·동영상·통계·설정을 로그 화면과 같은 카드 경계·제목 구분선·간격으로 정리합니다.
+- 라이브·동영상 상태 요약을 열로 구분하고 URL 입력과 필터 조작 영역을 정리합니다.
+- 동영상 화질 선택은 공용 버튼 스타일을 사용하고 선택한 값만 옅은 강조색으로 표시합니다.
+- 녹화 파일 처리 이력을 하나의 카드 안에 묶고 필터·상태·파일 조작을 구분합니다.
+- 정보 탭을 하나의 카드로 통합하고 반복 제목을 제거합니다. 업데이트는 맨 아래에, 저작권과 FFmpeg 안내는 라이선스 행 오른쪽에 표시합니다.
+- 인증 공통 안내를 목록 아래 안내 카드에 넣고 외관 탭의 중복 제목과 저장 버튼 위 선을 제거합니다.
+- 로그 파일 목록의 과도한 빈 공간을 줄이고 좌우 카드 높이와 파일 목록·보관 현황 간격을 맞춥니다.
+- 작은 화면과 긴 번역에서 버튼 줄바꿈·카드 간격을 보완합니다.
+
 ### Fixed
 - Linux/macOS/Termux 설치·관리의 런타임 경로와 배포판별 패키지 처리를 보완하고 Node 최소 버전을 22로 맞춥니다. FFprobe도 별도로 검사합니다.
 - macOS BSD 심볼릭 링크 처리, Homebrew 버전별 Python/Node 탐색과 Finder 파일 위치 열기를 지원합니다.
@@ -908,7 +920,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.64...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.65...HEAD
+[2.0.65]: https://github.com/ProofPage/Phrolova/compare/v2.0.64...v2.0.65
 [2.0.64]: https://github.com/ProofPage/Phrolova/compare/v2.0.63...v2.0.64
 [2.0.63]: https://github.com/ProofPage/Phrolova/compare/v2.0.62...v2.0.63
 [2.0.62]: https://github.com/ProofPage/Phrolova/compare/v2.0.61...v2.0.62

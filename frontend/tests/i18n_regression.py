@@ -127,6 +127,9 @@ async def main():
                 assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth'),(locale,environment)
                 await dialog.get_by_role('button',name=d['common.close'],exact=True).click()
                 await page.set_viewport_size({'width':390,'height':844})
+            # 모달 검사가 끝난 뒤 새 알림을 띄워 4초 만료와 언어 전환 검사가 경합하지 않게 한다.
+            await page.get_by_role('button',name=d['settings.checkForUpdates'],exact=True).click()
+            await expect(page.locator('.toast-stack')).to_contain_text(d['settings.aNewVersionIsAvailable'])
             await nav.get_by_role('button',name=d['settings.appearanceInSettings'],exact=True).click()
             selector=page.get_by_role('combobox',name=d['settings.language'],exact=True)
             await expect(selector.locator('option')).to_have_count(8)

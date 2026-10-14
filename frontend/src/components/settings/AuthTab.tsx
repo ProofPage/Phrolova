@@ -2,6 +2,7 @@ import { useLanguage } from "../../contexts/LanguageContext";
 import { useEffect } from "react";
 import { type Settings as SettingsType } from "../../api/client";
 import { PlatformCookieAuth } from "./PlatformCookieAuth";
+import { Card } from "../ui/primitives";
 
 interface Props {
     settings: SettingsType | null;
@@ -15,10 +16,12 @@ export function AuthTab({ onSaved, onDirtyChange }: Props) {
     useEffect(() => onDirtyChange?.(false), [onDirtyChange]);
     return (
         <div className="auth-settings">
-            <p className="settings-shared-hint">{t("settings.optionalPublicContentWorksWithoutCookiesRegisterANetscapeFormatCookieFileForContentThatRequiresSignIn")}</p>
             {(["chzzk", "youtube", "soop", "cime"] as const).map(platform => (
                 <PlatformCookieAuth key={platform} platform={platform} onSaved={onSaved} />
             ))}
+            <Card className="auth-guidance">
+                <p className="settings-shared-hint">{t("settings.optionalPublicContentWorksWithoutCookiesRegisterANetscapeFormatCookieFileForContentThatRequiresSignIn")}</p>
+            </Card>
         </div>
     );
 }

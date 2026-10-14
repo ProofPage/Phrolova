@@ -9,10 +9,11 @@ import { Button, Card, CardHeader } from "../ui/primitives";
 import { useLanguage } from "../../contexts/LanguageContext";
 
 interface Props {
+    embedded?: boolean;
     onUpdateAvailabilityChange?: (available: boolean) => void;
 }
 
-export function ProgramUpdateCard({ onUpdateAvailabilityChange }: Props) {
+export function ProgramUpdateCard({ onUpdateAvailabilityChange, embedded = false }: Props) {
     const toast = useToast();
     const { t } = useLanguage();
     const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
@@ -47,10 +48,12 @@ export function ProgramUpdateCard({ onUpdateAvailabilityChange }: Props) {
         }
     };
 
+    const Container = embedded ? "section" : Card;
     return (
         <>
-            <Card className="space-y-5">
-                <CardHeader icon={Terminal} title={translate("settings.appUpdates")} />
+            <Container className={embedded ? "info-section info-update-section" : "space-y-5"}>
+                {!embedded && <CardHeader icon={Terminal} title={translate("settings.appUpdates")} />}
+                <div className={embedded ? "info-update-body" : "space-y-5"}>
                 <div className="info-version-summary bg-surface-3 p-2.5 rounded-[var(--radius-control)] border border-line flex flex-col items-start sm:flex-row sm:items-center justify-between gap-4 [overflow-wrap:anywhere]">
                     <div className="min-w-0">
                         <h4 className="text-sm font-medium text-ink mb-1">{t("settings.currentVersion")}</h4>
@@ -63,12 +66,12 @@ export function ProgramUpdateCard({ onUpdateAvailabilityChange }: Props) {
                 </div>
 
                 {loadError && <p role="status" className="text-xs text-warn">{t("settings.couldNotLoadUpdateInformationCheckAgain")}</p>}
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <Button icon={RefreshCcw} loading={checkingUpdate} onClick={handleCheckUpdate} className="flex-1">
+                <div className={embedded ? "info-update-actions" : "flex flex-col sm:flex-row gap-3"}>
+                    <Button icon={RefreshCcw} loading={checkingUpdate} onClick={handleCheckUpdate} className={embedded ? undefined : "flex-1"}>
                         {checkingUpdate ? t("live.checking") : t("settings.checkForUpdates")}
                     </Button>
                     {updateInfo?.has_update && (
-                        <Button variant="primary" icon={Gift} onClick={() => setShowUpdateModal(true)} className="flex-1">
+                        <Button variant="primary" icon={Gift} onClick={() => setShowUpdateModal(true)} className={embedded ? undefined : "flex-1"}>
                             {t("settings.updateToVVersion", {version: updateInfo.latest_version})}
                         </Button>
                     )}
@@ -82,7 +85,8 @@ export function ProgramUpdateCard({ onUpdateAvailabilityChange }: Props) {
                         </div>
                     </div>
                 )}
-            </Card>
+                </div>
+            </Container>
 
             {showUpdateModal && updateInfo && <UpdateModal info={updateInfo} onClose={() => setShowUpdateModal(false)} />}
         </>
