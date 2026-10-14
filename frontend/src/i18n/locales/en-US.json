@@ -837,5 +837,6 @@
   "logs.exportHint": "Save the entire selected log file in its original form.",
   "logs.exportStarted": "Log download started.",
   "logs.couldNotExport": "Could not export the log.",
-  "settings.filenameVariables": "Available variables"
+  "settings.filenameVariables": "Available variables",
+  "settings.ytdlpInstallHint": "Install yt-dlp in the app environment or place its executable in the bin folder beside the app."
 }

@@ -837,5 +837,6 @@
   "logs.exportHint": "以原始格式保存所选日志文件的全部内容。",
   "logs.exportStarted": "已开始下载日志。",
   "logs.couldNotExport": "无法导出日志。",
-  "settings.filenameVariables": "可用变量"
+  "settings.filenameVariables": "可用变量",
+  "settings.ytdlpInstallHint": "请在应用运行环境中安装 yt-dlp，或将其可执行文件放入应用旁的 bin 文件夹。"
 }

@@ -138,7 +138,7 @@ def test_streamlink_health_uses_recording_package(monkeypatch, case):
         assert result['code'] == ('tool_missing' if case == 'missing' else 'tool_failed')
 
 
-def test_tools_api_includes_streamlink_and_preserves_ffmpeg_probe(monkeypatch):
+def test_tools_api_includes_all_runtime_media_tools(monkeypatch):
     from app.api.system import router
     calls = []
     def inspect(name):
@@ -149,6 +149,39 @@ def test_tools_api_includes_streamlink_and_preserves_ffmpeg_probe(monkeypatch):
     app.include_router(router)
     result = TestClient(app).get('/api/system/media-tools')
     assert result.status_code == 200
-    assert set(result.json()) == set(calls) == {'streamlink', 'ffmpeg', 'ffprobe'}
+    assert set(result.json()) == set(calls) == {'streamlink', 'yt-dlp', 'ffmpeg', 'ffprobe'}
+    assert result.json()['yt-dlp'] == {'available': True, 'path': 'yt-dlp', 'version': 'fixture'}
     assert result.json()['streamlink']['available'] is False
     assert result.json()['ffmpeg']['available'] is True
+
+
+@pytest.mark.parametrize('case', ['stable', 'nightly', 'missing', 'permission', 'timeout', 'bad_exit', 'empty', 'wrong_binary'])
+def test_ytdlp_inspection_uses_runtime_binary_without_download(monkeypatch, case):
+    binary = 'C:/한글 도구/bin/yt-dlp.exe'
+    def resolve(_, *, auto_download):
+        assert auto_download is False
+        if case == 'missing':
+            raise FileNotFoundError()
+        return binary
+    monkeypatch.setattr(Settings, 'resolve_ytdlp_path', resolve)
+    calls = []
+    def run(args, **kwargs):
+        calls.append(args)
+        assert args == [binary, '--version']
+        assert kwargs['timeout'] == 5 and not kwargs.get('shell')
+        if case == 'permission': raise PermissionError('access denied')
+        if case == 'timeout': raise subprocess.TimeoutExpired(args, 5)
+        output = {'stable': b'2026.10.14\r\n', 'nightly': b'2026.10.14.232354.dev0\n',
+                  'empty': b'', 'wrong_binary': b'Python 3.12.10'}.get(case, b'2026.10.14')
+        return subprocess.CompletedProcess(args, 1 if case == 'bad_exit' else 0, output, b'')
+    monkeypatch.setattr('app.engine.media_tools.subprocess.run', run)
+    result = check_media_tool('yt-dlp')
+    assert result['available'] == (case in ('stable', 'nightly'))
+    if case == 'missing':
+        assert not calls and result['code'] == 'tool_missing' and 'path' not in result
+    else:
+        assert result['path'] == binary
+        if case in ('stable', 'nightly'):
+            assert result['version'] == ('2026.10.14' if case == 'stable' else '2026.10.14.232354.dev0')
+        else:
+            assert result['code'] == 'tool_failed'

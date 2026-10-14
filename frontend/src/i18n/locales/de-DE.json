@@ -837,5 +837,6 @@
   "logs.exportHint": "Die gesamte ausgewählte Protokolldatei im Originalformat speichern.",
   "logs.exportStarted": "Der Protokolldownload wurde gestartet.",
   "logs.couldNotExport": "Das Protokoll konnte nicht exportiert werden.",
-  "settings.filenameVariables": "Verfügbare Variablen"
+  "settings.filenameVariables": "Verfügbare Variablen",
+  "settings.ytdlpInstallHint": "Installiere yt-dlp in der App-Umgebung oder lege die ausführbare Datei im bin-Ordner neben der App ab."
 }

@@ -837,5 +837,6 @@
   "logs.exportHint": "Сохранить выбранный файл журнала целиком в исходном формате.",
   "logs.exportStarted": "Загрузка журнала началась.",
   "logs.couldNotExport": "Не удалось экспортировать журнал.",
-  "settings.filenameVariables": "Доступные переменные"
+  "settings.filenameVariables": "Доступные переменные",
+  "settings.ytdlpInstallHint": "Установите yt-dlp в среде приложения или поместите исполняемый файл в папку bin рядом с приложением."
 }

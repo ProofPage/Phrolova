@@ -837,5 +837,6 @@
   "logs.exportHint": "선택한 로그 파일 전체를 원문 그대로 저장합니다.",
   "logs.exportStarted": "로그 다운로드를 시작했습니다.",
   "logs.couldNotExport": "로그를 내보내지 못했습니다.",
-  "settings.filenameVariables": "사용 가능한 변수"
+  "settings.filenameVariables": "사용 가능한 변수",
+  "settings.ytdlpInstallHint": "yt-dlp를 실행 환경에 설치하거나 프로그램 옆 bin 폴더에 실행 파일을 배치하세요."
 }

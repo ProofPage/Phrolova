@@ -8,6 +8,18 @@
 
 ## [Unreleased]
 
+## [2.0.67] - 2026-10-14
+
+### Added
+- Display the actual yt-dlp executable version and expandable installation path in Settings → Information, alongside Streamlink, FFmpeg and FFprobe.
+- Distinguish missing tools, execution failures and unavailable status requests; inspection never downloads or updates yt-dlp.
+
+### Changed
+- Simplify the startup heading to the application name and version.
+- Rewrite the repository overview and README in English, with separate packaged Windows and source-installation instructions.
+- Standardize all published release descriptions in English and keep versioned copies in `docs/release-notes/`.
+
+
 ## [2.0.66] - 2026-10-14
 
 ### Changed
@@ -930,7 +942,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.66...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.67...HEAD
+[2.0.67]: https://github.com/ProofPage/Phrolova/compare/v2.0.66...v2.0.67
 [2.0.66]: https://github.com/ProofPage/Phrolova/compare/v2.0.65...v2.0.66
 [2.0.65]: https://github.com/ProofPage/Phrolova/compare/v2.0.64...v2.0.65
 [2.0.64]: https://github.com/ProofPage/Phrolova/compare/v2.0.63...v2.0.64

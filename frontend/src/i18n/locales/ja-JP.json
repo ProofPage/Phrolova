@@ -837,5 +837,6 @@
   "logs.exportHint": "選択したログファイル全体を元の形式で保存します。",
   "logs.exportStarted": "ログのダウンロードを開始しました。",
   "logs.couldNotExport": "ログをエクスポートできませんでした。",
-  "settings.filenameVariables": "使用できる変数"
+  "settings.filenameVariables": "使用できる変数",
+  "settings.ytdlpInstallHint": "アプリの実行環境に yt-dlp をインストールするか、アプリと同じ場所の bin フォルダーに実行ファイルを配置してください。"
 }
