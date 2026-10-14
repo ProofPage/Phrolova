@@ -18,6 +18,8 @@ const PLATFORM_DOT_STYLES: Record<Platform, string> = {
     soop: "bg-soop",
     cime: "bg-cime",
     kick: "bg-kick",
+    twitch: "bg-twitch",
+    tiktok: "bg-tiktok",
 };
 
 interface Props {
@@ -97,6 +99,8 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
         : selectedPlatform === "soop" ? "live.soopChannelIDOrHttpsPlaySoopliveCom"
         : selectedPlatform === "cime" ? "live.cimeChannelIDOrHttpsCiMe"
         : selectedPlatform === "kick" ? "live.kickChannelIDOrHttpsKickCom"
+        : selectedPlatform === "twitch" ? "live.twitchChannelIDOrHttpsTwitchTv"
+        : selectedPlatform === "tiktok" ? "live.tiktokChannelIDOrHttpsTiktokCom"
         : "live.channelID";
 
     return (

@@ -2,7 +2,7 @@
 
 **Record live streams. Download videos. Manage your archive.**
 
-Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, SOOP, CIME and Kick**. Monitor channels, preview broadcasts, manage downloads and verify saved media in one web dashboard. Run the packaged app on Windows, or install from source on Linux, macOS or Android with Termux.
+Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, SOOP, CIME, Kick, Twitch and TikTok**. Monitor channels, preview broadcasts, manage downloads and verify saved media in one web dashboard. Run the packaged app on Windows, or install from source on Linux, macOS or Android with Termux.
 
 [Download](https://github.com/ProofPage/Phrolova/releases/latest) · [Release notes](docs/release-notes/README.md) · [Changelog](docs/CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [MIT License](LICENSE)
 
@@ -30,6 +30,8 @@ The interface supports **Korean, English, Japanese, Spanish, German, Simplified 
 | SOOP | Monitoring, preview and manual/automatic recording | VODs and multi-part videos | Platform cookies |
 | CIME | Monitoring, preview and manual/automatic recording | VODs and clips | Platform cookies |
 | Kick | Streamlink monitoring integration, preview and manual/automatic recording | VODs and clips via yt-dlp | Optional Kick cookies; required for sign-in-only qualities |
+| Twitch | Monitoring, preview and manual/automatic recording via Streamlink | VODs and individual clips via yt-dlp | Optional Twitch Netscape cookies |
+| TikTok | Monitoring, frame previews and manual/automatic recording via Streamlink | Individual videos and short share links via yt-dlp | Optional TikTok Netscape cookies |
 
 External links use yt-dlp's supported extractors. Available formats and access follow the source platform. YouTube imports skip live/upcoming entries and videos already queued in a non-error state. Authenticated YouTube video downloads/imports are separate from automatic live recording; authenticated automatic YouTube live recording is not established by cookie registration.
 
@@ -157,7 +159,11 @@ Source installations read root `.env`, with `backend/.env` as a legacy fallback.
 
 Use absolute media paths. Relative paths follow the working directory; the source manager starts from `backend/`. Enter actual paths in `.env` rather than relying on shell-variable expansion. Saved preferences are preserved when defaults change in a later release.
 
-CHZZK account cookies use `NID_AUT` and `NID_SES`. YouTube, SOOP, CIME and Kick use their corresponding `*_COOKIE_FILE` settings. Kick uses registered cookies for both live quality resolution and VOD extraction so sign-in-only qualities can appear. Register a Netscape cookie file under Settings → Authentication → Kick, then refresh the quality list or retry video metadata. Only advertised qualities are offered; explicitly requested 1080p is never silently replaced with 720p. Kick cookies and API authorization stay scoped to Kick and are not forwarded to unrelated media CDNs.
+CHZZK account cookies use `NID_AUT` and `NID_SES`. YouTube, SOOP, CIME, Kick, Twitch and TikTok use their corresponding `*_COOKIE_FILE` settings. Kick uses registered cookies for both live quality resolution and VOD extraction so sign-in-only qualities can appear. Register a Netscape cookie file under Settings → Authentication → Kick, then refresh the quality list or retry video metadata. Only advertised qualities are offered; explicitly requested 1080p is never silently replaced with 720p. Kick cookies and API authorization stay scoped to Kick and are not forwarded to unrelated media CDNs.
+
+Twitch accepts channel IDs and channel URLs for live monitoring, `/videos/<id>` URLs for VODs, and `clips.twitch.tv/<slug>` or channel clip URLs for clips. Register an optional cookie file under Settings → Authentication → Twitch when account access is needed. The `auth-token` cookie is passed through Streamlink's Twitch API option; OAuth headers are not forwarded to media CDNs. The recorder uses the Twitch-specific HLS reader for stream transitions. Deleted, unavailable or restricted videos remain errors. See the [Streamlink Twitch documentation](https://streamlink.github.io/cli/plugins/twitch.html) for authentication and client-integrity requirements.
+
+TikTok live URLs use `https://www.tiktok.com/@username/live`. The Streamlink plugin supplies FLV inputs, which the recorder remuxes to TS with FFmpeg using stream copy; it does not re-encode the video or audio. FFmpeg reads local pipes rather than upstream URLs. Live previews use refreshed images because the input is FLV. Video downloads accept `@username/video/<id>`, `vm.tiktok.com`, `vt.tiktok.com` and `tiktok.com/t/` links. Live share links are rejected from the video queue. TikTok is separate from Douyin. Register cookies under Settings → Authentication → TikTok when access requires an account.
 
 YouTube video extraction first tries public access and retries recognized authentication failures with registered cookies.
 

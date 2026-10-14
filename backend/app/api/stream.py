@@ -24,7 +24,7 @@ def _to_composite_key(raw: str) -> str:
     - chzzk URL 형식도 extract_channel_id로 ID만 추출 후 chzzk 키로 변환
     """
     # 알려진 플랫폼 접두사가 있으면 composite_key로 간주
-    for prefix in ("chzzk:", "youtube:", "soop:", "cime:", "kick:"):
+    for prefix in ("chzzk:", "youtube:", "soop:", "cime:", "kick:", "twitch:", "tiktok:"):
         if raw.startswith(prefix):
             return raw
     # 레거시: 순수 chzzk ID 또는 chzzk URL
@@ -148,6 +148,8 @@ async def live_preview(channel_id: str):
     from fastapi.responses import JSONResponse
 
     platform, identifier = Conductor.parse_composite_key(channel_id)
+    if platform == Platform.TIKTOK:
+        raise HTTPException(400, "TikTok은 이미지 미리보기 API를 사용합니다.")
     key = Conductor.make_composite_key(platform, identifier)
     try:
         url = await get_recorder_service().get_live_preview_url(key)
@@ -205,7 +207,7 @@ async def live_preview_frame(channel_id: str, force: bool = False):
     from fastapi.responses import JSONResponse
 
     platform, identifier = Conductor.parse_composite_key(channel_id)
-    if platform not in (Platform.SOOP, Platform.CIME):
+    if platform not in (Platform.SOOP, Platform.CIME, Platform.TIKTOK):
         raise HTTPException(400, "이 플랫폼은 영상 미리보기를 사용합니다.")
     conductor = get_recorder_service()._conductor
     key = Conductor.make_composite_key(platform, identifier)

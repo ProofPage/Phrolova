@@ -1,12 +1,16 @@
 import type { Platform } from '../api/client';
 import { parseChzzkChannelInput } from './chzzkChannel';
 import { parseKickChannelInput } from './kickUrls';
+import { parseTwitchChannelInput } from './twitchUrls';
+import { parseTikTokChannelInput } from './tiktokUrls';
 
 export const SOOP_CHANNEL_HOSTS = new Set(['play.sooplive.co.kr', 'play.sooplive.com', 'www.sooplive.com', 'station.sooplive.com', 'play.afreecatv.com', 'bj.afreecatv.com']);
 
 /** Normalize user input, never send a URL with credentials to a platform API. */
 export function parsePlatformChannelInput(platform: Platform, value: string): string | null {
     const text = value.trim();
+    if (platform === 'tiktok') return parseTikTokChannelInput(text);
+    if (platform === 'twitch') return parseTwitchChannelInput(text);
     if (platform === 'kick') return parseKickChannelInput(text);
     if (platform === 'chzzk') return parseChzzkChannelInput(text);
     if (platform !== 'soop' && platform !== 'cime') return text || null;

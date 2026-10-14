@@ -7,9 +7,12 @@ import { Button } from "../ui/primitives";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { preferredNativePreviewUrl, preferredPreviewLevel } from "../../utils/livePreviewQuality";
 
+import { LiveFramePreview } from "./LiveFramePreview";
+
 type PreviewProps = { channelKey: string; isLive: boolean; name: string; poster?: string; broadcastState?: string };
 export function LivePreview(props: PreviewProps) {
     useLanguage();
+    if (props.channelKey.startsWith("tiktok:")) return <LiveFramePreview {...props} />;
     return <HlsLivePreview {...props} />;
 }
 function HlsLivePreview({ channelKey, isLive, name, poster, broadcastState }: PreviewProps) {

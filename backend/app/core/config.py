@@ -215,6 +215,8 @@ class Settings(BaseSettings):
     soop_cookie_file: Optional[str] = None
     cime_cookie_file: Optional[str] = None
     kick_cookie_file: Optional[str] = None
+    twitch_cookie_file: Optional[str] = None
+    tiktok_cookie_file: Optional[str] = None
 
 
     def resolve_ytdlp_path(self, auto_download: bool = False) -> str:
