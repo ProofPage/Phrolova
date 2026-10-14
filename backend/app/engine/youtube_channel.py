@@ -9,7 +9,7 @@ import uuid
 
 import yt_dlp
 
-from app.engine.youtube_support import youtube_cookie_fallback, youtube_auth_message, YouTubeAuthenticationError, runtime_options
+from app.engine.youtube_support import youtube_cookie_fallback, youtube_auth_message, youtube_access_error, YouTubeAuthenticationError, youtube_options
 from app.core.logger import get_media_logger
 
 
@@ -17,7 +17,7 @@ def channel_entries(url, stopped):
     # process=False keeps playlist generators lazy, including nested channel tabs.
     # Processing the result normally enumerates the entire channel before returning.
     options = {
-        **runtime_options(),
+        **youtube_options(),
         "logger": get_media_logger(url),
         "ignoreconfig": True, "extract_flat": True, "skip_download": True,
         "quiet": True, "no_warnings": True, "socket_timeout": 10,
@@ -57,6 +57,9 @@ def channel_entries(url, stopped):
             try:
                 yield from collect(cookie_file)
             except Exception as authenticated_error:
+                access_error = youtube_access_error(authenticated_error)
+                if access_error:
+                    raise access_error from None
                 message = youtube_auth_message(authenticated_error, has_cookies=True)
                 if message:
                     raise YouTubeAuthenticationError(message) from None

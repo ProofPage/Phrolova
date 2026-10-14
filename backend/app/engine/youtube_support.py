@@ -45,6 +45,18 @@ def runtime_cli_options():
     return args
 
 
+def youtube_extractor_command():
+    # 배포 파일 옆의 오래된 yt-dlp.exe 대신 앱과 같은 추출기를 별도 프로세스에서 사용한다.
+    if getattr(sys, 'frozen', False):
+        return [sys.executable, '--youtube-worker']
+    return [sys.executable, str(Path(__file__).with_name('youtube_worker.py'))]
+
+
+def youtube_options():
+    return {**runtime_options(), 'sleep_interval_requests': 1,
+            'sleep_interval': 5, 'max_sleep_interval': 10}
+
+
 def require_runtime_cli_options():
     args = runtime_cli_options()
     if not args:
@@ -77,8 +89,27 @@ class YouTubeAuthenticationError(ValueError):
     """A user-facing authentication failure without upstream credentials."""
 
 
+class YouTubeAccessError(YouTubeAuthenticationError):
+    def __init__(self, code, message):
+        super().__init__(message)
+        self.code = code
+
+
+def youtube_access_error(error):
+    if isinstance(error, YouTubeAccessError):
+        return error
+    text = str(error).lower()
+    if 'not a bot' in text:
+        return YouTubeAccessError('youtube_bot_check', '유튜브가 이 서버의 접속에 봇 확인을 요청했습니다. 잠시 후 다시 시도하거나 서버 네트워크·VPN·프록시 상태를 확인하세요.')
+    if 'too many requests' in text or 'http error 429' in text:
+        return YouTubeAccessError('youtube_rate_limit', '유튜브 요청 한도에 도달했습니다. 잠시 후 다시 시도하고 동시 다운로드 수를 줄여 주세요.')
+    return None
+
+
 def youtube_auth_message(error, *, has_cookies=False):
     text = str(error).lower()
+    if youtube_access_error(error):
+        return None
     if "private video" in text:
         return (
             "등록된 유튜브 계정에 이 비공개 영상의 시청 권한이 있는지 확인해 주세요."
@@ -124,7 +155,10 @@ def youtube_auth_message(error, *, has_cookies=False):
 @contextmanager
 def youtube_cookie_fallback(error):
     """Borrow explicit user cookies only after a confirmed authentication error."""
-    message = youtube_auth_message(error)
+    access_error = youtube_access_error(error)
+    if access_error and (isinstance(error, YouTubeAccessError) or not get_settings().youtube_cookie_file):
+        raise access_error from None
+    message = youtube_auth_message(error) or (str(access_error) if access_error else None)
     if message is None:
         raise error
     with ExitStack() as stack:
@@ -152,6 +186,9 @@ async def with_youtube_cookie_fallback(operation):
             try:
                 return await operation(cookie_file)
             except Exception as authenticated_error:
+                access_error = youtube_access_error(authenticated_error)
+                if access_error:
+                    raise access_error from None
                 message = youtube_auth_message(authenticated_error, has_cookies=True)
                 if message:
                     raise YouTubeAuthenticationError(message) from None

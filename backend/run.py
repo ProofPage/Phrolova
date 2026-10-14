@@ -370,6 +370,11 @@ def _run_server(settings, stop_event: threading.Event) -> None:
 # ── 진입점 ───────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    if sys.argv[1:2] == ['--youtube-worker']:
+        from app.engine.youtube_worker import main
+        main(sys.argv[2:])
+        sys.exit(0)
+
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 

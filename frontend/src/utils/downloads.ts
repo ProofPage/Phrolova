@@ -1,5 +1,6 @@
 import type { DownloadSource, Platform, VodTask } from '../api/client';
 import { canonicalVodUrl } from './vodUrls';
+import { canonicalKickVideoUrl } from './kickUrls';
 
 export type { DownloadSource } from '../api/client';
 export function detectDownloadPlatform(value: string): Platform | 'external' {
@@ -7,6 +8,7 @@ export function detectDownloadPlatform(value: string): Platform | 'external' {
         const host = new URL(value).hostname;
         if (host === 'chzzk.naver.com') return 'chzzk';
         if (['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(host)) return 'youtube';
+        if (host === 'kick.com' || host === 'www.kick.com') return 'kick';
         if (host === 'ci.me' || host === 'www.ci.me') return 'cime';
         if (['vod.sooplive.com', 'vod.sooplive.co.kr', 'vod.afreecatv.com'].includes(host)) return 'soop';
 
@@ -35,6 +37,10 @@ export function normalizeDownloadInput(value: string, source: DownloadSource): {
                 parsed.hash = ''; return { url: parsed.href, collection: true, source: 'youtube' };
             }
             return null;
+        }
+        if (host === 'kick.com' || host === 'www.kick.com') {
+            const url = canonicalKickVideoUrl(text);
+            return url ? { url, collection: false, source: 'kick' } : null;
         }
         if (host === 'chzzk.naver.com') { const url = canonicalVodUrl(text); return url ? { url, collection: false, source: 'chzzk' } : null; }
         if (host === 'ci.me' || host === 'www.ci.me') {

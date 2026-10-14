@@ -15,7 +15,11 @@ class RecordingError(RuntimeError):
 def classify_recording_error(error: Exception) -> RecordingError:
     if isinstance(error, RecordingError):
         return error
-    from app.engine.youtube_support import YouTubeAuthenticationError
+    from app.engine.youtube_support import YouTubeAuthenticationError, youtube_access_error
+
+    access_error = youtube_access_error(error)
+    if access_error:
+        return RecordingError(access_error.code, str(access_error))
 
     if isinstance(error, YouTubeAuthenticationError):
         return RecordingError("authentication", str(error))

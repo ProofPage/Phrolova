@@ -838,5 +838,14 @@
   "logs.exportStarted": "Log download started.",
   "logs.couldNotExport": "Could not export the log.",
   "settings.filenameVariables": "Available variables",
-  "settings.ytdlpInstallHint": "Install yt-dlp in the app environment or place its executable in the bin folder beside the app."
+  "settings.ytdlpInstallHint": "Install yt-dlp in the app environment or place its executable in the bin folder beside the app.",
+  "errors.youtubeBotCheck": "YouTube requested a bot check for this server. Wait before retrying, or check the server network, VPN and proxy settings.",
+  "errors.youtubeRateLimit": "YouTube request limit reached. Wait before retrying and reduce simultaneous downloads.",
+  "platform.kick": "Kick",
+  "live.kickChannelIDOrHttpsKickCom": "Kick channel ID or https://kick.com/...",
+  "errors.kickAccess": "Kick denied access from this server. Check the server network and content visibility.",
+  "errors.kickRateLimit": "Kick request limit reached. Try again later.",
+  "errors.kickNotFound": "Kick channel or video not found. Check the URL and whether it was deleted.",
+  "live.kickQualityAuthentication": "Shows the qualities offered by this channel. Register Kick cookies in Authentication to access qualities that require sign-in.",
+  "errors.kickQualityUnavailable": "The selected Kick quality is unavailable. Check the registered cookies and current quality list."
 }

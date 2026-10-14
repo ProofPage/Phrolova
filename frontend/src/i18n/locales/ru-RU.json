@@ -838,5 +838,14 @@
   "logs.exportStarted": "Загрузка журнала началась.",
   "logs.couldNotExport": "Не удалось экспортировать журнал.",
   "settings.filenameVariables": "Доступные переменные",
-  "settings.ytdlpInstallHint": "Установите yt-dlp в среде приложения или поместите исполняемый файл в папку bin рядом с приложением."
+  "settings.ytdlpInstallHint": "Установите yt-dlp в среде приложения или поместите исполняемый файл в папку bin рядом с приложением.",
+  "errors.youtubeBotCheck": "YouTube запросил проверку на бота для этого сервера. Повторите попытку позже или проверьте сеть, VPN и прокси сервера.",
+  "errors.youtubeRateLimit": "Достигнут лимит запросов YouTube. Повторите попытку позже и уменьшите число одновременных загрузок.",
+  "platform.kick": "Kick",
+  "live.kickChannelIDOrHttpsKickCom": "ID канала Kick или https://kick.com/...",
+  "errors.kickAccess": "Kick отклонил доступ с этого сервера. Проверьте сеть сервера и доступность контента.",
+  "errors.kickRateLimit": "Достигнут лимит запросов Kick. Повторите попытку позже.",
+  "errors.kickNotFound": "Канал или видео Kick не найдено. Проверьте ссылку и не был ли контент удалён.",
+  "live.kickQualityAuthentication": "Показывает качество, доступное на этом канале. Добавьте cookies Kick на вкладке аутентификации для качества, требующего входа.",
+  "errors.kickQualityUnavailable": "Выбранное качество Kick недоступно. Проверьте добавленные cookies и текущий список качества."
 }

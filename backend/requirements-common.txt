@@ -2,7 +2,7 @@ fastapi
 python-multipart
 httpx[socks]
 aiofiles
-yt-dlp[default]>=2026.8.19
+yt-dlp[default]>=2026.10.10.233141.dev0
 streamlink>=8.6.2,<9
 ffmpeg-python
 python-dotenv

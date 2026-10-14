@@ -32,7 +32,7 @@ export function ChannelDownloadModal({ platform, name, channel, channelId, onClo
     const [saving, setSaving] = useState(false);
     const [outputFormat,setOutputFormat] = useState(channel?.output_format || 'inherit');
     const [saveError, setSaveError] = useState<string | null>(null);
-    const dynamicQuality = platform === 'soop' || platform === 'cime';
+    const dynamicQuality = platform === 'soop' || platform === 'cime' || platform === 'kick';
     const [quality, setQuality] = useState(channel?.recording_quality || 'best');
     const [qualities, setQualities] = useState<LiveQuality[]>([]);
     const [qualityLoading, setQualityLoading] = useState(false);
@@ -60,7 +60,7 @@ export function ChannelDownloadModal({ platform, name, channel, channelId, onClo
     }, [channel]);
 
     useEffect(() => {
-        if (platform !== 'soop' && platform !== 'cime') return;
+        if (platform !== 'soop' && platform !== 'cime' && platform !== 'kick') return;
         const controller = new AbortController();
         setQualityLoading(true);
         setQualityMessage('');
@@ -118,6 +118,7 @@ export function ChannelDownloadModal({ platform, name, channel, channelId, onClo
                         <Button type="button" icon={RefreshCw} loading={qualityLoading} disabled={saving} aria-label={t("live.refreshQualityOptions")} title={t("live.refreshQualityOptions")} onClick={() => setQualityRefresh(value => value + 1)}>{t("live.refresh")}</Button>
                     </div>
                 </Field>}
+                {platform === 'kick' && <p className="text-xs text-ink-muted">{t('live.kickQualityAuthentication')}</p>}
                 {!dynamicQuality && <Field label={translate("live.recordingQuality")} htmlFor="channel-recording-quality" hint={translate("live.changesApplyToTheNextRecording")}><Select id="channel-recording-quality" value={quality} disabled={saving} onChange={e=>setQuality(e.target.value)} options={['best','1080p','720p','480p'].map(value=>({value,label:value==='best'?translate("live.highestQuality"):value}))}/></Field>}
                 <RecordingSourceFormatField label={translate("live.recordingSourceFormat")} />
                 <Field label={translate("live.outputFormatAfterRecording")} htmlFor="channel-output-format" hint={translate("live.changesApplyToTheNextRecording")}>

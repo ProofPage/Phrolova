@@ -1,7 +1,7 @@
 """
 Phrolova: Conductor (비동기 오케스트레이터)
 다중 채널 감시 루프를 관리하고, 방송 시작 시 자동 녹화를 트리거한다.
-CHZZK, YouTube, SOOP, CIME를 단일 Conductor로 통합 관리한다.
+CHZZK, YouTube, SOOP, CIME, Kick을 단일 Conductor로 통합 관리한다.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ class Conductor:
     """비동기 오케스트레이터.
 
     Python asyncio를 활용하여 단일 스레드로 수십 개의 채널을 동시 감시한다.
-    CHZZK, YouTube, SOOP, CIME를 통합 관리한다.
+    CHZZK, YouTube, SOOP, CIME, Kick을 통합 관리한다.
 
     채널 키 형식: "platform:channel_id" (예: "chzzk:abc123", "youtube:someuser")
     기존 Chzzk 전용 키("abc123")는 자동으로 "chzzk:abc123"으로 마이그레이션된다.
@@ -121,13 +121,14 @@ class Conductor:
 
                 self._youtube_engine = YoutubeLiveEngine()
             return self._youtube_engine
-        elif platform in (Platform.SOOP, Platform.CIME):
+        elif platform in (Platform.SOOP, Platform.CIME, Platform.KICK):
             if platform not in self._extra_engines:
                 from app.engine.soop import SoopLiveEngine
                 from app.engine.cime import CimeLiveEngine
+                from app.engine.kick import KickLiveEngine
 
                 self._extra_engines[platform] = (
-                    SoopLiveEngine if platform == Platform.SOOP else CimeLiveEngine
+                    {Platform.SOOP: SoopLiveEngine, Platform.CIME: CimeLiveEngine, Platform.KICK: KickLiveEngine}[platform]
                 )()
             return self._extra_engines[platform]
         else:
@@ -141,17 +142,17 @@ class Conductor:
         if not task.is_live:
             raise ValueError("오프라인")
         engine = self._get_engine(task.platform)
-        if task.platform in (Platform.CHZZK, Platform.SOOP, Platform.CIME):
+        if task.platform in (Platform.CHZZK, Platform.SOOP, Platform.CIME, Platform.KICK):
             return await engine.get_preview_url(task.channel_id)
         page_url = engine.get_stream_url(task.channel_id)
         pipeline = YtdlpLivePipeline(task.channel_id)
-        from app.engine.youtube_support import youtube_cookies
+        from app.engine.youtube_support import with_youtube_cookie_fallback
 
-        with youtube_cookies() as cookie_file:
-            url, _, _ = await asyncio.wait_for(
-                pipeline._extract_preview_hls_url(page_url, cookie_file=cookie_file),
-                timeout=30,
-            )
+        url, _, _ = await asyncio.wait_for(
+            with_youtube_cookie_fallback(
+                lambda cookie_file: pipeline._extract_preview_hls_url(page_url, cookie_file=cookie_file)
+            ), timeout=30,
+        )
         return url
 
     @staticmethod
@@ -1063,7 +1064,7 @@ class Conductor:
 
                 extra["source_resolver"] = resolve_youtube
                 cookie_str = None
-            elif task.platform in (Platform.SOOP, Platform.CIME):
+            elif task.platform in (Platform.SOOP, Platform.CIME, Platform.KICK):
                 extra["source_resolver"] = (
                     lambda selected_quality: engine.resolve_stream(
                         task.channel_id, selected_quality
@@ -1199,7 +1200,7 @@ class Conductor:
                 ),
                 "channel_url": (
                     self._get_engine(task.platform).get_stream_url(task.channel_id)
-                    if task.platform in (Platform.SOOP, Platform.CIME)
+                    if task.platform in (Platform.SOOP, Platform.CIME, Platform.KICK)
                     else None
                 ),
                 "is_live": task.is_live,
