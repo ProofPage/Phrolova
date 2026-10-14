@@ -81,7 +81,7 @@ def test_other_video_platform_reuses_resolver_without_starting_recording(monkeyp
     monkeypatch.setattr(YtdlpLivePipeline, "_extract_preview_hls_url", resolver)
     monkeypatch.setattr("app.engine.youtube_support.youtube_cookies", lambda: nullcontext("temporary-cookie-copy"))
     assert asyncio.run(conductor.get_live_preview_url("youtube:channel")) == "https://example.com/live.m3u8"
-    resolver.assert_awaited_once_with("https://www.youtube.com/@channel/live", cookie_file="temporary-cookie-copy")
+    resolver.assert_awaited_once_with("https://www.youtube.com/@channel/live", cookie_file=None)
     assert channel.pipeline is None
 
 

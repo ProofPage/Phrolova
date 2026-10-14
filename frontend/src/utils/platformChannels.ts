@@ -1,11 +1,13 @@
 import type { Platform } from '../api/client';
 import { parseChzzkChannelInput } from './chzzkChannel';
+import { parseKickChannelInput } from './kickUrls';
 
 export const SOOP_CHANNEL_HOSTS = new Set(['play.sooplive.co.kr', 'play.sooplive.com', 'www.sooplive.com', 'station.sooplive.com', 'play.afreecatv.com', 'bj.afreecatv.com']);
 
 /** Normalize user input, never send a URL with credentials to a platform API. */
 export function parsePlatformChannelInput(platform: Platform, value: string): string | null {
     const text = value.trim();
+    if (platform === 'kick') return parseKickChannelInput(text);
     if (platform === 'chzzk') return parseChzzkChannelInput(text);
     if (platform !== 'soop' && platform !== 'cime') return text || null;
     const validId = (id: string) => (platform === 'soop' ? /^[A-Za-z0-9_]{1,100}$/ : /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,99}$/).test(id) ? platform === 'soop' ? id.toLowerCase() : id : null;

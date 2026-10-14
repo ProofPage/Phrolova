@@ -8,6 +8,18 @@
 
 ## [Unreleased]
 
+## [2.0.68] - 2026-10-14
+
+### Added
+- Add Kick channel monitoring, Streamlink live resolution/capture, HLS previews, real quality lists, and yt-dlp VOD/clip downloads.
+- Add scoped Kick cookie upload/status/removal. Use registered authentication for live and VOD qualities, and fail clearly when explicitly requested 1080p is unavailable.
+- Add Kick URL validation, platform badges, source selection, logging and translations in all eight languages.
+
+### Fixed
+- Apply Node/EJS runtime settings to YouTube metadata extraction and use the app's yt-dlp version in cancellable live workers instead of an independently installed CLI.
+- Raise the yt-dlp dependency floor to the official October 2026 client update; preserve upstream client selection and pace requests/downloads.
+- Make live previews public-first, preserving optional account-cookie fallback for restricted content and isolating bot challenges/rate limits from account permissions.
+
 ## [2.0.67] - 2026-10-14
 
 ### Added
@@ -942,7 +954,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.67...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.68...HEAD
+[2.0.68]: https://github.com/ProofPage/Phrolova/compare/v2.0.67...v2.0.68
 [2.0.67]: https://github.com/ProofPage/Phrolova/compare/v2.0.66...v2.0.67
 [2.0.66]: https://github.com/ProofPage/Phrolova/compare/v2.0.65...v2.0.66
 [2.0.65]: https://github.com/ProofPage/Phrolova/compare/v2.0.64...v2.0.65

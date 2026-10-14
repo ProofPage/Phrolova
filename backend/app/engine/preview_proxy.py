@@ -115,7 +115,7 @@ class PreviewProxy:
         headers = {"User-Agent": USER_AGENT}
         # Browser requests remain same-origin; platform headers and domain-scoped
         # cookies are sent only by the verified server-side media transport.
-        origins = {"soop": "https://play.sooplive.com", "cime": "https://ci.me"}
+        origins = {"soop": "https://play.sooplive.com", "cime": "https://ci.me", "kick": "https://kick.com"}
         origin = origins.get(node["platform"])
         if origin:
             headers.update({"Origin": origin, "Referer": origin + "/"})
@@ -130,7 +130,7 @@ class PreviewProxy:
         async with self.limit:
             async with httpx.AsyncClient(
                 verify=preview_ca_bundle(), timeout=15, follow_redirects=False,
-                cookies=platform_cookie_jar(node["platform"]) if origin else None
+                cookies=platform_cookie_jar(node["platform"]) if node["platform"] in ("soop", "cime", "kick") else None
             ) as client:
                 url = node["url"]
                 for _ in range(4):

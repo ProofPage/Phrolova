@@ -838,5 +838,14 @@
   "logs.exportStarted": "ログのダウンロードを開始しました。",
   "logs.couldNotExport": "ログをエクスポートできませんでした。",
   "settings.filenameVariables": "使用できる変数",
-  "settings.ytdlpInstallHint": "アプリの実行環境に yt-dlp をインストールするか、アプリと同じ場所の bin フォルダーに実行ファイルを配置してください。"
+  "settings.ytdlpInstallHint": "アプリの実行環境に yt-dlp をインストールするか、アプリと同じ場所の bin フォルダーに実行ファイルを配置してください。",
+  "errors.youtubeBotCheck": "YouTube がこのサーバーの接続に対してボット確認を要求しました。時間をおいて再試行するか、サーバーのネットワーク、VPN、プロキシ設定を確認してください。",
+  "errors.youtubeRateLimit": "YouTube のリクエスト上限に達しました。時間をおいて再試行し、同時ダウンロード数を減らしてください。",
+  "platform.kick": "Kick",
+  "live.kickChannelIDOrHttpsKickCom": "Kick チャンネルIDまたは https://kick.com/...",
+  "errors.kickAccess": "Kick がこのサーバーからの接続を拒否しました。ネットワークとコンテンツの公開状態を確認してください。",
+  "errors.kickRateLimit": "Kick のリクエスト上限に達しました。しばらくしてから再試行してください。",
+  "errors.kickNotFound": "Kick のチャンネルまたは動画が見つかりません。URLと削除の有無を確認してください。",
+  "live.kickQualityAuthentication": "チャンネルが提供する画質を表示します。ログインが必要な画質を利用するには、認証タブで Kick のCookieを登録してください。",
+  "errors.kickQualityUnavailable": "選択した Kick の画質は利用できません。登録済みCookieと現在の画質一覧を確認してください。"
 }

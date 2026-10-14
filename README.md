@@ -2,7 +2,7 @@
 
 **Record live streams. Download videos. Manage your archive.**
 
-Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, SOOP and CIME**. Monitor channels, preview broadcasts, manage downloads and verify saved media in one web dashboard. Run the packaged app on Windows, or install from source on Linux, macOS or Android with Termux.
+Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, SOOP, CIME and Kick**. Monitor channels, preview broadcasts, manage downloads and verify saved media in one web dashboard. Run the packaged app on Windows, or install from source on Linux, macOS or Android with Termux.
 
 [Download](https://github.com/ProofPage/Phrolova/releases/latest) · [Release notes](docs/release-notes/README.md) · [Changelog](docs/CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [MIT License](LICENSE)
 
@@ -29,8 +29,13 @@ The interface supports **Korean, English, Japanese, Spanish, German, Simplified 
 | YouTube | Monitoring, preview and manual/automatic recording | Videos and channel imports | Uploaded cookies for authenticated video access |
 | SOOP | Monitoring, preview and manual/automatic recording | VODs and multi-part videos | Platform cookies |
 | CIME | Monitoring, preview and manual/automatic recording | VODs and clips | Platform cookies |
+| Kick | Streamlink monitoring integration, preview and manual/automatic recording | VODs and clips via yt-dlp | Optional Kick cookies; required for sign-in-only qualities |
 
 External links use yt-dlp's supported extractors. Available formats and access follow the source platform. YouTube imports skip live/upcoming entries and videos already queued in a non-error state. Authenticated YouTube video downloads/imports are separate from automatic live recording; authenticated automatic YouTube live recording is not established by cookie registration.
+
+YouTube uses the app's Python yt-dlp engine for video metadata, downloads and isolated live-extraction workers, keeping these paths on the same version. The dependency floor includes the official October 2026 `tv_samsung` client update; newer compatible releases remain eligible. Public requests start without account cookies, even if a saved cookie path has become stale. Node.js/EJS options are applied to metadata as well as downloads. Private, members-only and age-restricted content still uses explicit account authentication.
+
+A server-side bot challenge or HTTP 429 is reported separately from content permissions. These restrictions can affect public videos; changing player clients or supplying a PO token cannot guarantee access from a blocked network. Check the server connection and any VPN/proxy, wait before retrying, and reduce simultaneous requests. See [YouTube extractor guidance](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#youtube) and the [official client update](https://github.com/yt-dlp/yt-dlp/pull/17805).
 
 ### Recording pipeline
 
@@ -152,7 +157,9 @@ Source installations read root `.env`, with `backend/.env` as a legacy fallback.
 
 Use absolute media paths. Relative paths follow the working directory; the source manager starts from `backend/`. Enter actual paths in `.env` rather than relying on shell-variable expansion. Saved preferences are preserved when defaults change in a later release.
 
-CHZZK account cookies use `NID_AUT` and `NID_SES`. YouTube, SOOP and CIME use their corresponding `*_COOKIE_FILE` settings. YouTube video extraction first tries public access and retries recognized authentication failures with registered cookies.
+CHZZK account cookies use `NID_AUT` and `NID_SES`. YouTube, SOOP, CIME and Kick use their corresponding `*_COOKIE_FILE` settings. Kick uses registered cookies for both live quality resolution and VOD extraction so sign-in-only qualities can appear. Register a Netscape cookie file under Settings → Authentication → Kick, then refresh the quality list or retry video metadata. Only advertised qualities are offered; explicitly requested 1080p is never silently replaced with 720p. Kick cookies and API authorization stay scoped to Kick and are not forwarded to unrelated media CDNs.
+
+YouTube video extraction first tries public access and retries recognized authentication failures with registered cookies.
 
 The dashboard/API has no built-in login. Keep the default loopback binding for local use. For remote administration, use an SSH tunnel or an authenticated proxy/private network:
 

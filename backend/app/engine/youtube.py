@@ -16,7 +16,7 @@ logger = app_logger.getChild("youtube")
 from app.core.config import get_settings
 from app.core.http import get_http_client
 from app.engine.base import LiveStatus
-from app.engine.youtube_support import runtime_cli_options, with_youtube_cookie_fallback
+from app.engine.youtube_support import runtime_cli_options, with_youtube_cookie_fallback, youtube_extractor_command
 
 
 class YoutubeLiveEngine:
@@ -156,15 +156,18 @@ class YoutubeLiveEngine:
         """yt-dlp 메타데이터 조회를 통해 라이브 여부를 검증한다."""
         import json as _json
 
-        ytdlp_path = get_settings().resolve_ytdlp_path()
         # --simulate -j 옵션으로 스트림 다운로드 없이 JSON 메타데이터만 조회
         cmd = [
-            ytdlp_path,
+            *youtube_extractor_command(),
             url,
             "--simulate",
             "-j",
             "--no-warnings",
             "--ignore-config",
+            "--no-playlist",
+            "--socket-timeout", "10",
+            "--extractor-retries", "1",
+            "--sleep-requests", "1",
             *runtime_cli_options(),
         ]
 

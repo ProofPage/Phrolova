@@ -17,6 +17,7 @@ const PLATFORM_DOT_STYLES: Record<Platform, string> = {
     youtube: "bg-youtube",
     soop: "bg-soop",
     cime: "bg-cime",
+    kick: "bg-kick",
 };
 
 interface Props {
@@ -95,6 +96,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
         : selectedPlatform === "youtube" ? "live.handleUsernameOrChannelID"
         : selectedPlatform === "soop" ? "live.soopChannelIDOrHttpsPlaySoopliveCom"
         : selectedPlatform === "cime" ? "live.cimeChannelIDOrHttpsCiMe"
+        : selectedPlatform === "kick" ? "live.kickChannelIDOrHttpsKickCom"
         : "live.channelID";
 
     return (

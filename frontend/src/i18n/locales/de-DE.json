@@ -838,5 +838,14 @@
   "logs.exportStarted": "Der Protokolldownload wurde gestartet.",
   "logs.couldNotExport": "Das Protokoll konnte nicht exportiert werden.",
   "settings.filenameVariables": "Verfügbare Variablen",
-  "settings.ytdlpInstallHint": "Installiere yt-dlp in der App-Umgebung oder lege die ausführbare Datei im bin-Ordner neben der App ab."
+  "settings.ytdlpInstallHint": "Installiere yt-dlp in der App-Umgebung oder lege die ausführbare Datei im bin-Ordner neben der App ab.",
+  "errors.youtubeBotCheck": "YouTube verlangt für diesen Server eine Bot-Prüfung. Warte vor einem erneuten Versuch oder prüfe Netzwerk, VPN und Proxy des Servers.",
+  "errors.youtubeRateLimit": "Das YouTube-Anfragelimit wurde erreicht. Warte vor einem erneuten Versuch und reduziere gleichzeitige Downloads.",
+  "platform.kick": "Kick",
+  "live.kickChannelIDOrHttpsKickCom": "Kick-Kanal-ID oder https://kick.com/...",
+  "errors.kickAccess": "Kick hat den Zugriff von diesem Server verweigert. Prüfe das Netzwerk und die Sichtbarkeit des Inhalts.",
+  "errors.kickRateLimit": "Das Anfragelimit von Kick wurde erreicht. Versuche es später erneut.",
+  "errors.kickNotFound": "Kick-Kanal oder Video nicht gefunden. Prüfe die URL und ob der Inhalt gelöscht wurde.",
+  "live.kickQualityAuthentication": "Zeigt die von diesem Kanal angebotenen Qualitätsstufen. Hinterlege Kick-Cookies unter Authentifizierung für Qualitätsstufen, die eine Anmeldung erfordern.",
+  "errors.kickQualityUnavailable": "Die gewählte Kick-Qualität ist nicht verfügbar. Prüfe die hinterlegten Cookies und die aktuelle Qualitätsliste."
 }

@@ -42,9 +42,9 @@ def quality_options(info: dict) -> list[dict]:
 def canonical_prepared_url(value: str, source: str = 'chzzk') -> str:
     from app.engine.platform_media import media_platform, canonical_platform_video
     detected = media_platform(value)
-    if detected in ('soop', 'cime'):
+    if detected in ('soop', 'cime', 'kick'):
         return canonical_platform_video(value)
-    if source in ('soop', 'cime'):
+    if source in ('soop', 'cime', 'kick'):
         raise ValueError('선택한 플랫폼의 다시보기 또는 클립 링크를 입력하세요.')
     if source == 'auto':
         source = detected

@@ -40,13 +40,16 @@ async def test_public_info_and_download_always_start_without_cookies(engine, tmp
     get_settings().youtube_cookie_file = str(cookie) if configured in {"missing", "valid"} else configured
     info = metadata(tmp_path)
     options = []
+    sessions = []
     def extract(ydl, *args, **kwargs):
         options.append(dict(ydl.params))
+        sessions.append(ydl.cookiejar)
         return info.copy()
     monkeypatch.setattr(yt_dlp.YoutubeDL, "extract_info", extract)
     process = yt_dlp.YoutubeDL.process_ie_result
     def download(ydl, *args, **kwargs):
         options.append(dict(ydl.params))
+        assert ydl.cookiejar is sessions[-1]
         return process(ydl, *args, **kwargs)
     monkeypatch.setattr(yt_dlp.YoutubeDL, "process_ie_result", download)
     assert (await engine.get_video_info(URL))["title"] == "Public video"
@@ -94,7 +97,7 @@ async def test_authenticated_download_uses_one_temporary_cookie_copy(engine, tmp
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("message", ["Sign in to confirm your age", "Login required", "Sign in to confirm you're not a bot",
+@pytest.mark.parametrize("message", ["Sign in to confirm your age", "Login required",
                                     "Private video", "Members-only content", "This video is available to members", "age-restricted content", "account required"])
 async def test_authentication_without_cookies_is_actionable_and_not_retried(engine, tmp_path, monkeypatch, message):
     calls = []

@@ -838,5 +838,14 @@
   "logs.exportStarted": "Se ha iniciado la descarga del registro.",
   "logs.couldNotExport": "No se ha podido exportar el registro.",
   "settings.filenameVariables": "Variables disponibles",
-  "settings.ytdlpInstallHint": "Instala yt-dlp en el entorno de la aplicación o coloca su ejecutable en la carpeta bin junto a la aplicación."
+  "settings.ytdlpInstallHint": "Instala yt-dlp en el entorno de la aplicación o coloca su ejecutable en la carpeta bin junto a la aplicación.",
+  "errors.youtubeBotCheck": "YouTube solicita una comprobación de bots para este servidor. Espera antes de reintentar o revisa la red, la VPN y el proxy del servidor.",
+  "errors.youtubeRateLimit": "Se alcanzó el límite de solicitudes de YouTube. Espera antes de reintentar y reduce las descargas simultáneas.",
+  "platform.kick": "Kick",
+  "live.kickChannelIDOrHttpsKickCom": "ID del canal de Kick o https://kick.com/...",
+  "errors.kickAccess": "Kick ha denegado el acceso desde este servidor. Comprueba la red y la visibilidad del contenido.",
+  "errors.kickRateLimit": "Se ha alcanzado el límite de solicitudes de Kick. Inténtalo más tarde.",
+  "errors.kickNotFound": "No se encuentra el canal o vídeo de Kick. Comprueba la URL y si se ha eliminado.",
+  "live.kickQualityAuthentication": "Muestra las calidades que ofrece este canal. Registra cookies de Kick en Autenticación para acceder a las que requieren iniciar sesión.",
+  "errors.kickQualityUnavailable": "La calidad de Kick seleccionada no está disponible. Comprueba las cookies registradas y la lista de calidades actual."
 }

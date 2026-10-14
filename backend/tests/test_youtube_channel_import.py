@@ -141,7 +141,7 @@ async def test_youtube_signin_error_does_not_retry(tmp_path, monkeypatch):
     engine._tasks[task.task_id] = task
     await asyncio.wait_for(engine._run_download(task.task_id), 3)
     assert task.state == VodDownloadState.ERROR
-    assert "설정 → 인증 → 유튜브" in task.error_message
+    assert "봇 확인" in task.error_message and "쿠키" not in task.error_message
     assert task.retry_count == 0
 
 

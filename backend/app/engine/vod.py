@@ -39,7 +39,7 @@ from app.engine.auth import AuthManager
 from app.engine.youtube_channel import ChannelImports
 from app.engine.youtube_support import (
     is_youtube_url,
-    runtime_options,
+    youtube_options,
     youtube_cookies,
     with_youtube_cookie_fallback,
     YouTubeAuthenticationError,
@@ -302,15 +302,20 @@ class VodEngine(VodPreparation):
                 else None
             )
         ]
-        if media_platform(task.source_url) in ("soop", "cime"):
+        if media_platform(task.source_url) in ("soop", "cime", "kick"):
             opts["hls_prefer_native"] = True
             opts["skip_unavailable_fragments"] = False
             opts["postprocessors"] = [
                 {"key": "FFmpegVideoRemuxer", "preferedformat": settings.vod_format}
             ]
         if is_youtube_url(task.url):
-            opts.update(runtime_options())
+            opts.update(youtube_options())
             opts["noplaylist"] = True
+        if media_platform(task.source_url) == 'kick' and task.quality.endswith('p') and task.quality[:-1].isdigit():
+            # 로그인 전용 해상도를 요청했는데 더 낮은 화질이 저장되는 성공으로 표시하지 않는다.
+            height = int(task.quality[:-1])
+            if height >= 1080:
+                opts['format'] = f'bestvideo*[height={height}]+bestaudio/best[height={height}]'
         if self._is_chzzk_url(task.url):
             opts["http_headers"] = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
@@ -448,6 +453,8 @@ class VodEngine(VodPreparation):
 
         async def extract(cookie_file):
             opts.pop("cookiefile", None)
+            if is_youtube_url(url):
+                opts.update(youtube_options())
             if cookie_file:
                 opts["cookiefile"] = cookie_file
             for attempt in range(2):
@@ -465,7 +472,15 @@ class VodEngine(VodPreparation):
                         raise ValueError('영상 정보 요청 시간이 초과되었습니다. 잠시 후 다시 조회하세요.') from None
                     await asyncio.sleep(0.5)
 
-        if media_platform(url) in ("soop", "cime"):
+        if media_platform(url) == "kick":
+            from app.engine.kick import kick_access_error
+            from app.engine.platform_auth import platform_cookie_file
+            with platform_cookie_file('kick') as cookie_file:
+                try:
+                    info = await extract(cookie_file)
+                except Exception as error:
+                    raise kick_access_error(error) or ValueError(redact_media_error(error)) from None
+        elif media_platform(url) in ("soop", "cime"):
             try:
                 info = await with_platform_cookie_fallback(media_platform(url), extract)
             except Exception as error:
@@ -919,6 +934,18 @@ class VodEngine(VodPreparation):
     async def _download_external(self, task_id: str, task: VodDownloadTask) -> None:
         """yt-dlp를 사용한 외부 URL(유튜브 등) 다운로드."""
         self._validate_media_url(task.url)
+        if media_platform(task.url) == "kick":
+            from app.engine.kick import kick_access_error
+            from app.engine.platform_auth import platform_cookie_file
+            with platform_cookie_file('kick') as cookie_file:
+                try:
+                    await self._download_with_ytdlp(task_id, task, cookie_file)
+                except Exception as error:
+                    access = kick_access_error(error)
+                    if access and not access.retryable:
+                        raise NonRetryableDownloadError(str(access)) from None
+                    raise
+            return
         if media_platform(task.url) in ("soop", "cime"):
             try:
                 await with_platform_cookie_fallback(
@@ -983,11 +1010,16 @@ class VodEngine(VodPreparation):
 
         chzzk_source = is_chzzk_vod_url(task.source_url)
         selected_cdn = task.cdn if chzzk_source else "default"
+        youtube_session = None
 
         def make_ydl(options):
             if chzzk_source:
                 return ChzzkCdnYoutubeDL(options, cdn=selected_cdn)
-            return platform_ydl(task.url, options)
+            ydl = platform_ydl(task.url, options)
+            if youtube_session is not None:
+                # 공개 게스트 세션도 서명 URL과 연결되므로 정보 조회 후 새 세션으로 바꾸지 않는다.
+                ydl.cookiejar = youtube_session
+            return ydl
 
         task.warning_message = None
         task.download_warning_message = None
@@ -1001,10 +1033,13 @@ class VodEngine(VodPreparation):
             opts_info["skip_unavailable_fragments"] = False
 
         def _extract_info() -> dict[str, Any] | None:
+            nonlocal youtube_session
             with make_ydl(opts_info) as ydl:
                 try:
                     return ydl.extract_info(task.url, download=False)
                 finally:
+                    if is_youtube_url(task.url):
+                        youtube_session = ydl.cookiejar
                     if selected_cdn == "akamai":
                         task.cdn_applied |= ydl.cdn_applied
 

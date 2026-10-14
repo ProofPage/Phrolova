@@ -5,7 +5,7 @@ import { useListboxPosition } from '../hooks/useListboxPosition';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { DownloadSource } from '../utils/downloads';
 
-const dots = { chzzk: 'bg-chzzk', youtube: 'bg-youtube', soop: 'bg-soop', cime: 'bg-cime', external: 'bg-ink-faint' };
+const dots = { chzzk: 'bg-chzzk', youtube: 'bg-youtube', soop: 'bg-soop', cime: 'bg-cime', kick: 'bg-kick', external: 'bg-ink-faint' };
 export function DownloadSourceSelect({ sources, value, disabled, onChange }: {
     sources: { id: DownloadSource; label: string }[]; value: DownloadSource;
     disabled: boolean; onChange: (value: DownloadSource) => void;

@@ -11,7 +11,7 @@ export const client = axios.create({
 
 // ── Types ───────────────────────────────────────────────
 
-export type Platform = "chzzk" | "youtube" | "soop" | "cime";
+export type Platform = "chzzk" | "youtube" | "soop" | "cime" | "kick";
 export type DownloadSource = Platform | 'external';
 export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
 export interface ChannelDownloadOptions {
@@ -27,6 +27,7 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
     youtube: "platform.youtube",
     soop: "platform.soop",
     cime: "platform.cime",
+    kick: "platform.kick",
 };
 
 export interface Channel {
@@ -213,9 +214,10 @@ export interface PlatformStatus {
     youtube: { enabled: boolean; authenticated: boolean };
     soop?: { enabled: boolean; authenticated: boolean };
     cime?: { enabled: boolean; authenticated: boolean };
+    kick?: { enabled: boolean; authenticated: boolean };
 }
 
-export type CookiePlatform = 'chzzk' | 'youtube' | 'soop' | 'cime';
+export type CookiePlatform = 'chzzk' | 'youtube' | 'soop' | 'cime' | 'kick';
 
 export interface PlatformCookieStatus {
     configured: boolean;
@@ -587,7 +589,7 @@ export const api = {
     },
     getLivePreviewFrame: async (channelKey: string, signal?: AbortSignal, force = false): Promise<Blob> =>
         (await client.get(`/stream/preview-frame/${encodeURIComponent(channelKey)}`, { responseType: 'blob', signal, params: force ? { force: true } : undefined, timeout: 60000 })).data,
-    getPlatformQualities: async (platform: 'soop' | 'cime', channel_id: string, signal?: AbortSignal) =>
+    getPlatformQualities: async (platform: 'soop' | 'cime' | 'kick', channel_id: string, signal?: AbortSignal) =>
         (await client.get<{ qualities: LiveQuality[]; live?: boolean; message?: string }>(`/platforms/${platform}/${encodeURIComponent(channel_id)}/qualities`, { signal })).data,
     getPlatformCookieStatus: async (platform: CookiePlatform): Promise<PlatformCookieStatus> =>
         (await client.get<PlatformCookieStatus>(`/platforms/${platform}/cookie`)).data,

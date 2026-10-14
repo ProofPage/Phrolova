@@ -4,6 +4,7 @@ from app.engine.platform_auth import redact_media_error
 
 def media_platform(url: str) -> str:
     host = (urlsplit(url).hostname or '').lower()
+    if host in ('kick.com', 'www.kick.com'): return 'kick'
     if host in ('ci.me', 'www.ci.me'): return 'cime'
     if host in ('vod.sooplive.com', 'vod.sooplive.co.kr', 'vod.afreecatv.com'): return 'soop'
     if host == 'chzzk.naver.com': return 'chzzk'
@@ -12,6 +13,9 @@ def media_platform(url: str) -> str:
 
 def canonical_platform_video(url: str) -> str:
     platform = media_platform(url)
+    if platform == 'kick':
+        from app.engine.kick import canonical_kick_video_url
+        return canonical_kick_video_url(url)
     if platform == 'soop':
         from app.engine.soop import normalize_soop_vod_url
         return normalize_soop_vod_url(url)

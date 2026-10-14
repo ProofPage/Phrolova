@@ -22,7 +22,7 @@ from app.engine.chzzk_time_machine import (
     resolve_time_machine_stream,
     resolve_live_cdn_stream,
 )
-from app.engine.youtube_support import is_youtube_url, require_runtime_cli_options
+from app.engine.youtube_support import is_youtube_url, require_runtime_cli_options, youtube_extractor_command
 
 from app.engine.pipeline.state import RecordingState
 from app.engine.recording_errors import RecordingError, classify_recording_error
@@ -1017,6 +1017,10 @@ class YtdlpLivePipeline:
             from streamlink.plugins.soop import SoopHLSStream
 
             stream_type = SoopHLSStream
+        if (urlsplit(source_page_url).hostname or "").lower() in ("kick.com", "www.kick.com"):
+            from streamlink.plugins.kick import KickHLSStream
+
+            stream_type = KickHLSStream
         if YtdlpLivePipeline._is_chzzk_live_page(source_page_url):
             from app.engine.chzzk_stream import ChzzkHLSStream
             channel_id = urlsplit(source_page_url).path.rstrip('/').rsplit('/', 1)[-1]
@@ -1234,7 +1238,7 @@ class YtdlpLivePipeline:
         import json as _json
 
         cmd = [
-            get_settings().resolve_ytdlp_path(),
+            *(youtube_extractor_command() if is_youtube_url(page_url) else [get_settings().resolve_ytdlp_path()]),
             page_url,
             "--format",
             "best[protocol^=m3u8]/bestvideo[protocol^=m3u8]/best/bestvideo+bestaudio",
@@ -1245,6 +1249,7 @@ class YtdlpLivePipeline:
         ]
         if is_youtube_url(page_url):
             cmd.extend(require_runtime_cli_options())
+            cmd.extend(['--no-playlist', '--socket-timeout', '10', '--extractor-retries', '1', '--sleep-requests', '1'])
         if cookie_file:
             cmd.extend(["--cookies", cookie_file])
         # Never log the command: page/stream URLs and cookie paths may be sensitive.
@@ -1254,7 +1259,7 @@ class YtdlpLivePipeline:
             stderr=asyncio.subprocess.PIPE,
         )
         try:
-            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
         except (asyncio.CancelledError, asyncio.TimeoutError):
             if proc.returncode is None:
                 proc.kill()
@@ -1262,8 +1267,9 @@ class YtdlpLivePipeline:
             raise
         if proc.returncode != 0:
             # stderr may contain signed URLs or upstream credentials.
+            from app.engine.platform_auth import redact_media_error
             raise RuntimeError(
-                f"미리보기 스트림 정보 조회 실패 (code={proc.returncode})"
+                f"미리보기 스트림 정보 조회 실패 (code={proc.returncode}): {redact_media_error(stderr.decode(errors='replace')[-2000:])}"
             )
         try:
             info = _json.loads(stdout.decode())
@@ -1302,7 +1308,7 @@ class YtdlpLivePipeline:
         """
         import json as _json
 
-        ytdlp_path = get_settings().resolve_ytdlp_path()
+        extractor = youtube_extractor_command() if is_youtube_url(page_url) else [get_settings().resolve_ytdlp_path()]
         height = re.match(r"(\d+)p", quality)
         fmt = (
             f"best[protocol^=m3u8][height<={height[1]}]/best[protocol^=m3u8]"
@@ -1311,7 +1317,7 @@ class YtdlpLivePipeline:
         )
 
         cmd = [
-            ytdlp_path,
+            *extractor,
             page_url,
             "--format",
             fmt,
@@ -1322,6 +1328,7 @@ class YtdlpLivePipeline:
 
         if is_youtube_url(page_url):
             cmd.extend(require_runtime_cli_options())
+            cmd.extend(['--no-playlist', '--socket-timeout', '10', '--extractor-retries', '1', '--sleep-requests', '1'])
 
         cookie_file_path: Optional[str] = None
         if cookie_file:
