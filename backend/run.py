@@ -148,7 +148,7 @@ def _run_dependency_check() -> bool:
     from app.engine.media_tools import check_media_tool
     from app.version import __version__
 
-    print(f"\nPhrolova v{__version__} · 시작 전 점검\n")
+    print(f"\nPhrolova v{__version__}\n")
     warnings = 0
     py_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     python_ok = _check_python_version()

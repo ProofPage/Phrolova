@@ -19,8 +19,9 @@ router = APIRouter(prefix="/api/system", tags=["System"])
 async def media_tools_status():
     import asyncio
     from app.engine.media_tools import check_media_tool
-    values = await asyncio.gather(*(asyncio.to_thread(check_media_tool, name) for name in ('streamlink', 'ffmpeg', 'ffprobe')))
-    return dict(zip(('streamlink', 'ffmpeg', 'ffprobe'), values))
+    names = ('streamlink', 'yt-dlp', 'ffmpeg', 'ffprobe')
+    values = await asyncio.gather(*(asyncio.to_thread(check_media_tool, name) for name in names))
+    return dict(zip(names, values))
 
 def _detect_environment() -> str:
     """현재 실행 환경을 감지한다."""

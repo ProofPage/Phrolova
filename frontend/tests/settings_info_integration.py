@@ -32,8 +32,8 @@ async def main():
             tool_calls+=1
             if fail_tools:return await route.fulfill(status=503,json={'detail':'도구 조회 실패'})
             return await route.fulfill(json={key:{'available':True,
-                'version':'8.6.2' if key=='streamlink' else key+' version 9.0.2-full_build-www.gyan.dev Copyright',
-                'path':'C:/한글 도구 폴더/'+('긴 경로/'*12)+key+'.exe'} for key in ('streamlink','ffmpeg','ffprobe')})
+                'version':'8.6.2' if key=='streamlink' else '2026.10.14' if key=='yt-dlp' else key+' version 9.0.2-full_build-www.gyan.dev Copyright',
+                'path':'C:/한글 도구 폴더/'+('긴 경로/'*12)+key+'.exe'} for key in ('streamlink','yt-dlp','ffmpeg','ffprobe')})
         return await mock(route)
     async with async_playwright() as p:
         browser=await p.chromium.launch()
@@ -89,6 +89,14 @@ async def main():
             row_geometry=await page.locator('.media-tool-list .ui-info-row').evaluate_all('es => es.map(e => { const r=e.getBoundingClientRect(); return {height:r.height,bottom:r.bottom,cardBottom:e.closest(".info-section").getBoundingClientRect().bottom}; })')
             assert max(row['height'] for row in row_geometry)-min(row['height'] for row in row_geometry)<=2, row_geometry
             assert row_geometry[-1]['cardBottom']-row_geometry[-1]['bottom']<=2, row_geometry
+            ytdlp=page.locator('.media-tool-list .ui-info-row').filter(has=page.locator('dt',has_text='yt-dlp'))
+            await expect(ytdlp).to_contain_text('v2026.10.14')
+            await ytdlp.locator('summary').click()
+            await expect(ytdlp.locator('details p')).to_be_visible()
+            await expect(ytdlp.locator('details p')).to_contain_text('yt-dlp.exe')
+            assert await page.evaluate('document.documentElement.scrollWidth<=innerWidth'),width
+            await page.screenshot(path=str(OUT/f'ytdlp-path-{width}.png'),full_page=True)
+            await ytdlp.locator('summary').click()
             assert tool_calls > 0
             before=update_calls
             await page.get_by_role('button',name='업데이트 확인',exact=True).click()
@@ -105,7 +113,7 @@ async def main():
         fail_tools=True
         await nav.get_by_role('button',name='외관',exact=True).click()
         await info.click()
-        await expect(page.get_by_text('도구 상태를 불러오지 못했습니다.',exact=True)).to_have_count(3)
+        await expect(page.get_by_text('도구 상태를 불러오지 못했습니다.',exact=True)).to_have_count(4)
         fail_tools=False
         await nav.get_by_role('button',name='외관',exact=True).click()
         await info.click()

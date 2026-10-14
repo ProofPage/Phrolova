@@ -837,5 +837,6 @@
   "logs.exportHint": "以原始格式儲存所選記錄檔的完整內容。",
   "logs.exportStarted": "已開始下載記錄檔。",
   "logs.couldNotExport": "無法匯出記錄檔。",
-  "settings.filenameVariables": "可用變數"
+  "settings.filenameVariables": "可用變數",
+  "settings.ytdlpInstallHint": "請在應用程式執行環境中安裝 yt-dlp，或將其執行檔放入應用程式旁的 bin 資料夾。"
 }

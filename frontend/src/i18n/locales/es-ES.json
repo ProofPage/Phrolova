@@ -837,5 +837,6 @@
   "logs.exportHint": "Guarda el archivo seleccionado completo en su formato original.",
   "logs.exportStarted": "Se ha iniciado la descarga del registro.",
   "logs.couldNotExport": "No se ha podido exportar el registro.",
-  "settings.filenameVariables": "Variables disponibles"
+  "settings.filenameVariables": "Variables disponibles",
+  "settings.ytdlpInstallHint": "Instala yt-dlp en el entorno de la aplicación o coloca su ejecutable en la carpeta bin junto a la aplicación."
 }
