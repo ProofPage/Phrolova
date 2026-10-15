@@ -992,7 +992,7 @@ class Conductor:
             await self.finalizer.start()
             engine = self._get_engine(task.platform)
             live_url = engine.get_stream_url(task.channel_id)
-            cookie_str = self._auth.get_ytdlp_cookies()
+            cookie_str = self._auth.get_ytdlp_cookies() if task.platform == Platform.CHZZK else None
             if not is_retry:
                 logger.debug(f"[{composite_key}] 스트림 CDN 준비 대기 (5초)...")
                 await asyncio.sleep(5)

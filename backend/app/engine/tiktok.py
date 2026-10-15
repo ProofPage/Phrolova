@@ -113,6 +113,7 @@ def _sdk_metadata(room: dict, name: str) -> dict:
 class TikTokLiveEngine:
     def __init__(self):
         self._cache: dict[str, tuple[float, dict]] = {}
+        self._stream_cache: dict[str, tuple[float, list[dict]]] = {}
 
     def get_stream_url(self, channel_id: str) -> str:
         return f'https://www.tiktok.com/@{normalize_tiktok_channel_id(channel_id)}/live'
@@ -157,6 +158,9 @@ class TikTokLiveEngine:
 
     async def _streams(self, channel_id: str) -> list[dict]:
         cid = normalize_tiktok_channel_id(channel_id)
+        cached = self._stream_cache.get(cid)
+        if cached and time.monotonic()-cached[0] < 4:
+            return [dict(item) for item in cached[1]]
         room = (await self._metadata(cid))['liveRoom']
         if room['status'] == 4:
             return []
@@ -192,11 +196,14 @@ class TikTokLiveEngine:
                 raise tiktok_access_error(error) or error from None
             finally:
                 session.http.close()
-        return await asyncio.to_thread(resolve)
+        variants = await asyncio.to_thread(resolve)
+        self._stream_cache[cid] = (time.monotonic(), variants)
+        return [dict(item) for item in variants]
 
     @staticmethod
     def _rank(item):
-        return (min(item.get('width') or 0, item.get('height') or 0), item.get('fps') or 0, item['weight'])
+        # 원본에는 FPS 메타데이터가 없기도 해, 같은 해상도의 저비트레이트 60fps 변형이 원본보다 앞서면 안 된다.
+        return (min(item.get('width') or 0, item.get('height') or 0), item['weight'], item.get('fps') or 0)
 
     async def get_qualities(self, channel_id: str) -> list[dict]:
         options = {}
@@ -224,4 +231,10 @@ class TikTokLiveEngine:
         return selected['url'], tiktok_headers(channel_id), None
 
     async def get_preview_url(self, channel_id: str) -> str:
-        return (await self.resolve_stream(channel_id, '720p'))[0]
+        return (await self.resolve_preview_stream(channel_id))[0]
+
+    async def resolve_preview_stream(self, channel_id: str) -> tuple[str, dict, None]:
+        variants = sorted(await self._streams(channel_id), key=self._rank, reverse=True)
+        if not variants:
+            raise ValueError('TikTok 채널이 오프라인입니다.')
+        return variants[0]['url'], tiktok_headers(channel_id), None

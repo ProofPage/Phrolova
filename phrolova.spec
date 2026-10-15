@@ -108,7 +108,7 @@ hidden_imports = [
 
 # ── 데이터 파일 ───────────────────────────────────────────────
 datas = [
-    ("THIRD_PARTY_NOTICES", "."),
+    ("LICENSE", "."),
     # 빌드된 프론트엔드 정적 파일
     ("backend/app/static", "app/static"),
     # 앱 아이콘

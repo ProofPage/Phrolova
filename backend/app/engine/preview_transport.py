@@ -67,9 +67,10 @@ async def decode_preview(cmd: list[str], url: str, headers: dict, platform: str,
         # CookieJar scopes every playlist/segment/redirect to its actual domain.
         session.http.cookies.update(platform_cookie_jar(platform))
     if platform == 'tiktok':
-        from streamlink.stream.http import HTTPStream
+        from app.engine.tiktok_transport import FLVPacketReader, open_flv_input
         session.http.cookies.update(platform_cookie_jar('tiktok'))
-        source = HTTPStream(session, url)
+        from types import SimpleNamespace
+        source = SimpleNamespace(open=lambda:open_flv_input(session,url))
     else:
         source = HLSStream(session, url)
     opening = asyncio.create_task(asyncio.to_thread(source.open))
@@ -79,6 +80,8 @@ async def decode_preview(cmd: list[str], url: str, headers: dict, platform: str,
     try:
         # Shield ensures a cancelled open still closes its reader when the thread returns.
         reader = await asyncio.shield(opening)
+        if platform == 'tiktok':
+            reader = FLVPacketReader(reader)
         process = await asyncio.create_subprocess_exec(*cmd, stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
             creationflags=getattr(__import__('subprocess'), 'CREATE_NO_WINDOW', 0))
@@ -109,7 +112,11 @@ async def decode_preview(cmd: list[str], url: str, headers: dict, platform: str,
         await process.wait()
         if process.returncode and transport_errors:
             raise transport_errors[-1]
-        return await tasks[1], await tasks[2], process.returncode
+        output, stderr = await tasks[1], await tasks[2]
+        source_error = getattr(reader, 'error', None)
+        if not output and isinstance(source_error, Exception):
+            raise source_error
+        return output, stderr, process.returncode
     finally:
         if process and process.returncode is None:
             process.kill()
@@ -128,3 +135,18 @@ async def decode_preview(cmd: list[str], url: str, headers: dict, platform: str,
             if not task.done(): task.cancel()
         if tasks: await asyncio.gather(*tasks, return_exceptions=True)
         session.http.close()
+
+
+async def decode_preview_bytes(cmd, data):
+    process = await asyncio.create_subprocess_exec(*cmd, stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        creationflags=getattr(__import__('subprocess'), 'CREATE_NO_WINDOW', 0))
+    try:
+        output, stderr = await asyncio.wait_for(process.communicate(data), timeout=12)
+        if len(output) > 8 * 1024 * 1024:
+            raise RuntimeError('미리보기 출력 크기 제한을 초과했습니다.')
+        return output, stderr[-65536:], process.returncode
+    finally:
+        if process.returncode is None:
+            process.kill()
+            await process.wait()

@@ -455,7 +455,24 @@ class YtdlpLivePipeline:
 
     async def _begin_receiver(self):
         self._ensure_start_allowed()
-        session, readers = await self._open_raw_readers(*self._resume_args)
+        preview_capture = None
+        if (urlsplit(self._source_page_url).hostname or '').lower() in ('tiktok.com','www.tiktok.com','m.tiktok.com'):
+            from app.engine.tiktok import normalize_tiktok_channel_id
+            from app.engine.tiktok_preview import register_capture
+            from app.engine.preview_frames import frame_previews
+            channel = normalize_tiktok_channel_id(self._source_page_url)
+            preview_capture = register_capture(channel)
+            self._tiktok_preview_capture = preview_capture
+        try:
+            if preview_capture:
+                # 먼저 공유 입력을 예약해 새 미리보기 접속을 막고, 진행 중인 한 장의 입력을 닫는다.
+                await frame_previews.finish_current_frame('tiktok:'+channel)
+            self._ensure_start_allowed()
+            session, readers = await self._open_raw_readers(*self._resume_args)
+        except BaseException:
+            if preview_capture:
+                preview_capture.close()
+            raise
         try:
             self._ensure_start_allowed()
         except RecordingError:
@@ -563,6 +580,7 @@ class YtdlpLivePipeline:
                 continuity_callback=lambda event: loop.call_soon_threadsafe(self._accept_continuity_event, event),
                 api_cookie=self._cookie_str,
                 continuity_buffer_dir=self._buffer_directory(),
+                **({'preview_capture': self._tiktok_preview_capture} if getattr(self, '_tiktok_preview_capture', None) else {}),
             )
             readers = []
             try:
@@ -953,6 +971,7 @@ class YtdlpLivePipeline:
         continuity_buffer_dir=None,
         continuity_callback=None,
         api_cookie=None,
+        preview_capture=None,
     ) -> tuple[object, object]:
         """Create a Streamlink reader, with a stream-copy TS adapter for TikTok FLV."""
         from streamlink import Streamlink
@@ -1006,9 +1025,10 @@ class YtdlpLivePipeline:
         if (urlsplit(source_page_url).hostname or "").lower() in ("tiktok.com", "www.tiktok.com", "m.tiktok.com"):
             from app.engine.platform_auth import platform_cookie_jar
             from app.engine.tiktok_transport import TikTokFLVStream
+            from app.engine.tiktok import normalize_tiktok_channel_id
             session.http.cookies.update(platform_cookie_jar('tiktok'))
             session.set_option('stream-timeout', 10)
-            return session, TikTokFLVStream(session, hls_url)
+            return session, TikTokFLVStream(session, hls_url, normalize_tiktok_channel_id(source_page_url), capture=preview_capture)
 
         # Read the manifest through Streamlink, without its FFmpeg-backed muxer.
         if urlsplit(hls_url).path.lower().endswith(".mpd"):
