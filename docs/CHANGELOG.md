@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+## [2.0.71] - 2026-10-15
+
+### Fixed
+- Restore Twitch live previews when playlists and video segments use different Twitch CDN hosts. Allow HTTPS ttvnw.net redirects and media only within Twitch preview sessions.
+- Keep signed segment URLs on the server, including Twitch prefetch tags, and omit unused Twitch trigger metadata containing signed URLs.
+- Extend preview regression coverage to Twitch CDN redirects, scoped cookies, unsafe/lookalike hosts and desktop/mobile browser playback.
+
 ## [2.0.70] - 2026-10-15
 
 ### Added
@@ -981,7 +988,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.70...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.71...HEAD
+[2.0.71]: https://github.com/ProofPage/Phrolova/compare/v2.0.70...v2.0.71
 [2.0.70]: https://github.com/ProofPage/Phrolova/compare/v2.0.69...v2.0.70
 [2.0.69]: https://github.com/ProofPage/Phrolova/compare/v2.0.68...v2.0.69
 [2.0.68]: https://github.com/ProofPage/Phrolova/compare/v2.0.67...v2.0.68
