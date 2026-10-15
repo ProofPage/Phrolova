@@ -302,7 +302,7 @@ class VodEngine(VodPreparation):
                 else None
             )
         ]
-        if media_platform(task.source_url) in ("soop", "cime", "kick", "twitch", "tiktok", "anilife", "linkani", "ohli24"):
+        if media_platform(task.source_url) in ("soop", "cime", "kick", "twitch", "tiktok", "bilibili", "anilife", "linkani", "ohli24"):
             opts["hls_prefer_native"] = True
             opts["skip_unavailable_fragments"] = False
             opts["postprocessors"] = [
@@ -310,6 +310,20 @@ class VodEngine(VodPreparation):
             ]
         if media_platform(task.source_url) in ("anilife", "linkani", "ohli24"):
             opts.update(writesubtitles=True, subtitleslangs=["all"], noplaylist=True)
+        if media_platform(task.source_url) == 'bilibili':
+            # 여러 파트가 있는 영상도 선택한 p 값의 한 편과 오디오만 함께 저장한다.
+            from app.core.http import USER_AGENT
+            opts.update(noplaylist=True, http_headers={
+                'User-Agent': USER_AGENT, 'Referer': task.url,
+                'Origin': 'https://www.bilibili.com',
+            })
+            if task.quality == 'best':
+                opts['format'] = 'bestvideo*+bestaudio/best'
+            elif task.quality == 'worst':
+                opts['format'] = 'worstvideo*+worstaudio/worst'
+            elif not task.prepared and task.quality.endswith('p') and task.quality[:-1].isdigit():
+                height = int(task.quality[:-1])
+                opts['format'] = f'bestvideo*[height<={height}]+bestaudio/best[height<={height}]'
         if is_youtube_url(task.url):
             opts.update(youtube_options())
             opts["noplaylist"] = True
@@ -385,6 +399,9 @@ class VodEngine(VodPreparation):
         """
         self._validate_media_url(url)
         url = canonical_platform_video(url)
+        if media_platform(url) == 'bilibili':
+            from app.engine.bilibili_support import resolve_bilibili_video_url
+            url = await resolve_bilibili_video_url(url)
         if self._is_chzzk_url(url) and "/clips/" in urlsplit(url).path:
             from app.engine.vod_preparation import canonical_vod_url
             import httpx
@@ -474,7 +491,19 @@ class VodEngine(VodPreparation):
                         raise ValueError('영상 정보 요청 시간이 초과되었습니다. 잠시 후 다시 조회하세요.') from None
                     await asyncio.sleep(0.5)
 
-        if media_platform(url) == "tiktok":
+        if media_platform(url) == 'bilibili':
+            from app.engine.bilibili import bilibili_access_error
+            from app.engine.platform_auth import platform_cookie_file
+            # 공개 영상도 로그인 계정에 제공되는 화질을 확인할 수 있도록 등록 쿠키를 사용한다.
+            opts['http_headers'] = {'Referer': url, 'Origin': 'https://www.bilibili.com'}
+            with platform_cookie_file('bilibili') as cookie_file:
+                try:
+                    info = await extract(cookie_file)
+                except Exception as error:
+                    raise bilibili_access_error(error) or ValueError(redact_media_error(error)) from None
+            if info and info.get('is_live'):
+                raise ValueError('Bilibili 라이브는 라이브 메뉴에서 채널을 등록하세요.')
+        elif media_platform(url) == "tiktok":
             from app.engine.tiktok import tiktok_access_error
             from app.engine.platform_auth import platform_cookie_file
             with platform_cookie_file("tiktok") as cookie_file:
@@ -564,6 +593,8 @@ class VodEngine(VodPreparation):
             formats.append(
                 {
                     "format_id": f.get("format_id"),
+                    "format": f.get("format"),
+                    "quality": f.get("quality"),
                     "ext": f.get("ext"),
                     "resolution": f.get("resolution", "audio only"),
                     "filesize": f.get("filesize"),
@@ -608,6 +639,9 @@ class VodEngine(VodPreparation):
         if cdn not in ("default", "akamai"):
             raise ValueError("지원하지 않는 CDN입니다.")
         url = canonical_platform_video(url)
+        if media_platform(url) == 'bilibili':
+            from app.engine.bilibili_support import resolve_bilibili_video_url
+            url = await resolve_bilibili_video_url(url)
         logger = get_media_logger(url)
         settings = get_settings()
         if output_dir is not None:
@@ -954,6 +988,20 @@ class VodEngine(VodPreparation):
     async def _download_external(self, task_id: str, task: VodDownloadTask) -> None:
         """yt-dlp를 사용한 외부 URL(유튜브 등) 다운로드."""
         self._validate_media_url(task.url)
+        if media_platform(task.url) == 'bilibili':
+            from app.engine.bilibili import bilibili_access_error
+            from app.engine.bilibili_support import resolve_bilibili_video_url
+            from app.engine.platform_auth import platform_cookie_file
+            task.url = await resolve_bilibili_video_url(task.url)
+            with platform_cookie_file('bilibili') as cookie_file:
+                try:
+                    await self._download_with_ytdlp(task_id, task, cookie_file)
+                except Exception as error:
+                    access = bilibili_access_error(error)
+                    if access and not access.retryable:
+                        raise NonRetryableDownloadError(str(access)) from None
+                    raise
+            return
         if media_platform(task.url) == "tiktok":
             from app.engine.tiktok import tiktok_access_error
             from app.engine.platform_auth import platform_cookie_file
@@ -1100,6 +1148,8 @@ class VodEngine(VodPreparation):
             raise RuntimeError("영상 정보를 가져올 수 없습니다.")
         if media_platform(task.source_url) == 'tiktok' and info.get('is_live'):
             raise NonRetryableDownloadError('TikTok 라이브는 라이브 메뉴에서 채널을 등록하세요.')
+        if media_platform(task.source_url) == 'bilibili' and info.get('is_live'):
+            raise NonRetryableDownloadError('Bilibili 라이브는 라이브 메뉴에서 채널을 등록하세요.')
         vod_title = info.get("title", "Unknown")
         uploader = info.get("uploader") or info.get("channel") or "Unknown Channel"
         task.title = f"[{uploader}] {vod_title}"

@@ -20,6 +20,7 @@ class Platform(str, Enum):
     KICK = "kick"
     TWITCH = "twitch"
     TIKTOK = "tiktok"
+    BILIBILI = "bilibili"
 
 
 class LiveStatus(TypedDict, total=False):
@@ -37,6 +38,7 @@ class LiveStatus(TypedDict, total=False):
     is_watchalong: Optional[bool]
     watchalong_tag: Optional[str]
     viewer_count: int
+    viewer_count_type: str
     thumbnail_url: str
     profile_image_url: str
 

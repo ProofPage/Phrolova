@@ -11,7 +11,7 @@ export const client = axios.create({
 
 // ── Types ───────────────────────────────────────────────
 
-export type Platform = "chzzk" | "youtube" | "soop" | "cime" | "kick" | "twitch" | "tiktok";
+export type Platform = "chzzk" | "youtube" | "soop" | "cime" | "kick" | "twitch" | "tiktok" | "bilibili";
 export type DownloadSource = Platform | 'anilife' | 'linkani' | 'ohli24' | 'external';
 export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
 export interface ChannelDownloadOptions {
@@ -30,6 +30,7 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
     kick: "platform.kick",
     twitch: "platform.twitch",
     tiktok: "platform.tiktok",
+    bilibili: "platform.bilibili",
 };
 
 export const DOWNLOAD_SOURCE_LABELS: Record<DownloadSource, string> = {
@@ -65,6 +66,7 @@ export interface Channel {
     title?: string;
     category?: string;
     viewer_count?: number;
+    viewer_count_type?: 'viewers' | 'popularity';
     thumbnail_url?: string;
     profile_image_url?: string;
     recording?: {
@@ -225,9 +227,10 @@ export interface PlatformStatus {
     kick?: { enabled: boolean; authenticated: boolean };
     twitch?: { enabled: boolean; authenticated: boolean };
     tiktok?: { enabled: boolean; authenticated: boolean };
+    bilibili?: { enabled: boolean; authenticated: boolean };
 }
 
-export type CookiePlatform = 'chzzk' | 'youtube' | 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok';
+export type CookiePlatform = 'chzzk' | 'youtube' | 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili';
 
 export interface PlatformCookieStatus {
     configured: boolean;
@@ -600,7 +603,7 @@ export const api = {
     },
     getLivePreviewFrame: async (channelKey: string, signal?: AbortSignal, force = false): Promise<Blob> =>
         (await client.get(`/stream/preview-frame/${encodeURIComponent(channelKey)}`, { responseType: 'blob', signal, params: force ? { force: true } : undefined, timeout: 60000 })).data,
-    getPlatformQualities: async (platform: 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok', channel_id: string, signal?: AbortSignal) =>
+    getPlatformQualities: async (platform: 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili', channel_id: string, signal?: AbortSignal) =>
         (await client.get<{ qualities: LiveQuality[]; live?: boolean; message?: string }>(`/platforms/${platform}/${encodeURIComponent(channel_id)}/qualities`, { signal })).data,
     getPlatformCookieStatus: async (platform: CookiePlatform): Promise<PlatformCookieStatus> =>
         (await client.get<PlatformCookieStatus>(`/platforms/${platform}/cookie`)).data,

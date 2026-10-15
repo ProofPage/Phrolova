@@ -1030,6 +1030,10 @@ class YtdlpLivePipeline:
             session.set_option('stream-timeout', 10)
             return session, TikTokFLVStream(session, hls_url, normalize_tiktok_channel_id(source_page_url), capture=preview_capture)
 
+        if (urlsplit(source_page_url).hostname or "").lower() == "live.bilibili.com":
+            from app.engine.platform_auth import platform_cookie_jar
+            session.http.cookies.update(platform_cookie_jar('bilibili'))
+
         # Read the manifest through Streamlink, without its FFmpeg-backed muxer.
         if urlsplit(hls_url).path.lower().endswith(".mpd"):
             session.http.close()

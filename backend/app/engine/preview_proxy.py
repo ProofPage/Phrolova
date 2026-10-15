@@ -79,6 +79,8 @@ class PreviewProxy:
         # 다른 플랫폼의 미리보기까지 이 CDN을 허용하지 않도록 범위를 제한한다.
         if platform == "twitch":
             trusted += ("ttvnw.net",)
+        if platform == "bilibili":
+            trusted += ("bilivideo.com", "bilivideo.cn", "biliapi.net")
         return PreviewProxy.valid(url) and (
             host in hosts
             or any(host == domain or host.endswith("." + domain) for domain in trusted)
@@ -126,7 +128,7 @@ class PreviewProxy:
         headers = {"User-Agent": USER_AGENT}
         # Browser requests remain same-origin; platform headers and domain-scoped
         # cookies are sent only by the verified server-side media transport.
-        origins = {"soop": "https://play.sooplive.com", "cime": "https://ci.me", "kick": "https://kick.com", "twitch": "https://www.twitch.tv"}
+        origins = {"soop": "https://play.sooplive.com", "cime": "https://ci.me", "kick": "https://kick.com", "twitch": "https://www.twitch.tv", "bilibili": "https://live.bilibili.com"}
         origin = origins.get(node["platform"])
         if origin:
             headers.update({"Origin": origin, "Referer": origin + "/"})
@@ -141,7 +143,7 @@ class PreviewProxy:
         async with self.limit:
             async with httpx.AsyncClient(
                 verify=preview_ca_bundle(), timeout=15, follow_redirects=False,
-                cookies=platform_cookie_jar(node["platform"]) if node["platform"] in ("soop", "cime", "kick", "twitch") else None
+                cookies=platform_cookie_jar(node["platform"]) if node["platform"] in ("soop", "cime", "kick", "twitch", "bilibili") else None
             ) as client:
                 url = node["url"]
                 for _ in range(4):

@@ -7,6 +7,7 @@ def media_platform(url: str) -> str:
     if host in ('anilife01.tv', 'anilife1.tv'): return 'anilife'
     if host == 'linkani.tv': return 'linkani'
     if host in ('www.ohli24.net', 'ohli24.net'): return 'ohli24'
+    if host in ('bilibili.com', 'www.bilibili.com', 'm.bilibili.com', 'live.bilibili.com', 'b23.tv'): return 'bilibili'
     if host in ('tiktok.com', 'www.tiktok.com', 'm.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com'): return 'tiktok'
     if host in ('twitch.tv', 'www.twitch.tv', 'm.twitch.tv', 'go.twitch.tv', 'clips.twitch.tv', 'player.twitch.tv'): return 'twitch'
     if host in ('kick.com', 'www.kick.com'): return 'kick'
@@ -24,6 +25,9 @@ def canonical_platform_video(url: str) -> str:
         if route['collection'] and platform != 'ohli24':
             raise ValueError('작품의 회차 목록에서 내려받을 회차를 선택하세요.')
         return route['url']
+    if platform == 'bilibili':
+        from app.engine.bilibili import canonical_bilibili_video_url
+        return canonical_bilibili_video_url(url)
     if platform == 'tiktok':
         from app.engine.tiktok import canonical_tiktok_video_url
         return canonical_tiktok_video_url(url)

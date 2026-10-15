@@ -8,6 +8,23 @@
 
 ## [Unreleased]
 
+## [2.0.74] - 2026-10-16
+
+### Added
+- Add Bilibili live room monitoring, Streamlink HLS recording, browser previews, alternate CDN selection and native fMP4 fallback.
+- Add Bilibili BV/av videos, selected parts, validated b23.tv links, separate video/audio merging and optional domain-scoped cookies.
+- Add Bilibili selectors, badges, authentication controls, popularity labels and translations across all eight interface languages.
+
+### Fixed
+- Prevent TikTok frame previews from interrupting live recordings by sharing the existing FLV input through a bounded keyframe buffer.
+- Preserve complete FLV packets, close HTTP responses explicitly, distinguish input interruptions from remux errors and preserve independent preview/recording cancellation.
+- Show Bilibili quality tiers together with actual cropped dimensions and avoid false quality-fallback warnings.
+- Replace failed profile images with the existing fallback icon and retry when the image URL changes.
+- Update Windows packaging to include the existing LICENSE after the removed notice file was deleted from the repository.
+
+### Documentation
+- Refresh the English README and repository description to match the current platforms, installation paths and authentication behavior.
+
 ## [2.0.73] - 2026-10-15
 
 ### Fixed
@@ -1003,7 +1020,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.73...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.74...HEAD
+[2.0.74]: https://github.com/ProofPage/Phrolova/compare/v2.0.73...v2.0.74
 [2.0.73]: https://github.com/ProofPage/Phrolova/compare/v2.0.72...v2.0.73
 [2.0.72]: https://github.com/ProofPage/Phrolova/compare/v2.0.71...v2.0.72
 [2.0.71]: https://github.com/ProofPage/Phrolova/compare/v2.0.70...v2.0.71

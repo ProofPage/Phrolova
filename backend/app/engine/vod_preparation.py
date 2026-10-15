@@ -22,6 +22,24 @@ def canonical_vod_url(value: str) -> str:
 
 def quality_options(info: dict) -> list[dict]:
     from app.engine.platform_media import media_platform
+    if media_platform(info.get('url', '')) == 'bilibili':
+        formats = [f for f in info.get('formats', [])
+                   if isinstance(f.get('height'), int) and f['height'] > 0 and f.get('vcodec') != 'none']
+        result, seen = [], set()
+        for item in sorted(formats, key=lambda f: (f['height'], f.get('fps') or 0), reverse=True):
+            height = item['height']
+            if height in seen:
+                continue
+            seen.add(height)
+            # 와이드 영상의 실제 높이는 886 등으로 잘릴 수 있어 제공 등급과 픽셀 크기를 함께 표시한다.
+            tier = re.search(r'\b(\d{3,4})P\b', item.get('format') or '', re.I)
+            label = f'{tier[1] if tier else height}p'
+            if tier and int(tier[1]) != height and item.get('width'):
+                label += f" · {item['width']}×{height}"
+            result.append({'value': f'{height}p', 'label': label, 'height': height,
+                           'width': item.get('width'), 'fps': item.get('fps'),
+                           'tier_height': int(tier[1]) if tier else height})
+        return result
     if media_platform(info.get('url', '')) == 'cime':
         formats = [f for f in info.get('formats', []) if f.get('height') and f.get('vcodec') != 'none']
         result, seen = [], set()
@@ -42,6 +60,9 @@ def quality_options(info: dict) -> list[dict]:
 def canonical_prepared_url(value: str, source: str = 'chzzk') -> str:
     from app.engine.platform_media import media_platform, canonical_platform_video
     detected = media_platform(value)
+    if source == 'bilibili' or detected == 'bilibili':
+        from app.engine.bilibili import canonical_bilibili_video_url
+        return canonical_bilibili_video_url(value)
     if detected in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'anilife', 'linkani', 'ohli24'):
         return canonical_platform_video(value)
     if source in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'anilife', 'linkani', 'ohli24'):
@@ -153,6 +174,11 @@ class VodPreparation:
                 task.quality = available[-1]
             elif preference in available:
                 task.quality = preference
+            elif re.fullmatch(r'[0-9]+p', preference) and any(
+                    item.get('tier_height') == int(preference[:-1]) for item in options):
+                # 1080P 등급의 1920×886 영상은 낮은 화질로 대체된 것이 아니다.
+                task.quality = next(item['value'] for item in options
+                                    if item.get('tier_height') == int(preference[:-1]))
             else:
                 target = int(preference[:-1]) if re.fullmatch(r'[0-9]+p', preference) else None
                 task.quality = next((o['value'] for o in options if target and (o.get('height') or (int(o['value'][:-1]) if re.fullmatch(r'\d+p', o['value']) else 0)) <= target), available[-1] if target else available[0])

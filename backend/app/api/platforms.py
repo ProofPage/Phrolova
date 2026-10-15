@@ -30,7 +30,7 @@ router = APIRouter(prefix="/api/platforms", tags=["Platforms"])
 class AddPlatformChannelRequest(ChannelDownloadOptions):
     """멀티 플랫폼 채널 추가 요청."""
 
-    platform: str = Field(..., description="플랫폼 (chzzk, youtube, soop, cime, kick, twitch, tiktok)")
+    platform: str = Field(..., description="플랫폼 (chzzk, youtube, soop, cime, kick, twitch, tiktok, bilibili)")
     channel_id: str = Field(..., description="채널 ID (플랫폼별 사용자 ID)")
     auto_record: bool = Field(True, description="방송 시작 시 자동 녹화 여부")
 
@@ -49,13 +49,19 @@ async def add_platform_channel(req: AddPlatformChannelRequest):
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="지원하지 않는 플랫폼입니다. 사용 가능: chzzk, youtube, soop, cime, kick, twitch, tiktok",
+            detail="지원하지 않는 플랫폼입니다. 사용 가능: chzzk, youtube, soop, cime, kick, twitch, tiktok, bilibili",
         )
 
     # URL로 입력해도 ID만 추출
     channel_id = req.channel_id
     if platform == Platform.YOUTUBE:
         channel_id = extract_youtube_id(channel_id)
+    elif platform == Platform.BILIBILI:
+        from app.engine.bilibili import normalize_bilibili_channel_id
+        try:
+            channel_id = normalize_bilibili_channel_id(channel_id)
+        except ValueError as error:
+            raise HTTPException(400, str(error)) from None
     elif platform == Platform.TIKTOK:
         from app.engine.tiktok import normalize_tiktok_channel_id
         try:
@@ -187,6 +193,7 @@ async def get_platform_status():
         "kick": {"enabled": True, "authenticated": bool(settings.kick_cookie_file)},
         "twitch": {"enabled": True, "authenticated": bool(settings.twitch_cookie_file)},
         "tiktok": {"enabled": True, "authenticated": bool(settings.tiktok_cookie_file)},
+        "bilibili": {"enabled": True, "authenticated": bool(settings.bilibili_cookie_file)},
     }
 
 
@@ -326,7 +333,7 @@ async def delete_chzzk_cookie():
 @router.get('/{platform}/{channel_id}/qualities', summary='현재 라이브 화질 조회')
 async def platform_qualities(platform: str, channel_id: str):
     from app.main import get_recorder_service
-    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok'):
+    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili'):
         raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     try:
         engine = get_recorder_service()._conductor._get_engine(Platform(platform))
@@ -341,7 +348,7 @@ async def platform_qualities(platform: str, channel_id: str):
 @router.get('/{platform}/cookie', summary='플랫폼 쿠키 파일 상태')
 async def platform_cookie_status_api(platform: str):
     from app.engine.platform_auth import platform_cookie_status
-    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     return platform_cookie_status(platform)
 
 @router.post('/{platform}/cookie', summary='플랫폼 쿠키 파일 등록')
@@ -349,7 +356,7 @@ async def platform_cookie_upload(platform: str, file: UploadFile = File(...)):
     import tempfile
     import os
     from app.engine.platform_auth import read_cookie_jar
-    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     content = await file.read(1024 * 1024 + 1)
     if len(content) > 1024 * 1024: raise HTTPException(400, '쿠키 파일은 1MB 이하여야 합니다.')
     destination = _COOKIE_SAVE_PATH.with_name(f'{platform}_cookies.txt')
@@ -372,7 +379,7 @@ async def platform_cookie_upload(platform: str, file: UploadFile = File(...)):
 
 @router.delete('/{platform}/cookie', summary='플랫폼 쿠키 파일 제거')
 async def platform_cookie_delete(platform: str):
-    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     _COOKIE_SAVE_PATH.with_name(f'{platform}_cookies.txt').unlink(missing_ok=True)
     _update_env_file({f'{platform.upper()}_COOKIE_FILE': ''})
     get_settings.cache_clear()

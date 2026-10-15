@@ -873,5 +873,8 @@
   "platform.linkani": "Linkani",
   "platform.ohli24": "Ohli24",
   "episodes.start": "選択した話をダウンロード（{count}）",
-  "episodes.partial": "サイトに掲載された話のみ表示します。一部の以前の話が欠けています。"
+  "episodes.partial": "サイトに掲載された話のみ表示します。一部の以前の話が欠けています。",
+  "platform.bilibili": "Bilibili",
+  "live.bilibiliRoomIDOrHttpsLiveBilibiliCom": "Bilibili ルーム ID または https://live.bilibili.com/...",
+  "live.popularity": "人気度"
 }
