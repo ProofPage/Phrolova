@@ -273,4 +273,4 @@ The build produces `dist/Phrolova.exe`, bundles Node.js and application icons, a
 
 [Linux](docs/linux-guide.md) · [macOS](docs/macos-guide.md) · [Termux](docs/termux-guide.md) · [Platform support](docs/native-platform-support.md) · [Contribution guide](CONTRIBUTING.md)
 
-[MIT](LICENSE). Copyright (c) 2026 Serian (github.com/eruminyu). Original attribution is preserved; subsequent contributions are recorded in Git history. See [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES). FFmpeg/FFprobe are installed separately and follow their own licenses.
+[MIT](LICENSE). FFmpeg/FFprobe are installed separately and follow their own licenses.
