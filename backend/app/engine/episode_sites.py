@@ -149,9 +149,11 @@ class SiteClient:
     def close(self): self.http.close()
 
     def request(self, url, domains, *, referer=None, form=None, subdomains=False, headers=None):
+        from app.engine.tls_compat import enable_tls_compat, is_connection_reset
         method = 'POST' if form is not None else 'GET'
         origin = urlsplit(url).netloc
-        for _ in range(6):
+        redirects, retried_hosts = 0, set()
+        while redirects < 6:
             url = checked_url(url, domains, subdomains=subdomains)
             request_headers = {'Referer': str(httpx.URL(referer or url)), 'Accept': 'text/html,application/json,application/vnd.apple.mpegurl'}
             if form is not None: request_headers['X-Requested-With'] = 'XMLHttpRequest'
@@ -160,6 +162,7 @@ class SiteClient:
             try:
                 with self.http.stream(method, url, headers=request_headers, data=form) as response:
                     if response.status_code in (301,302,303,307,308):
+                        redirects += 1
                         url = urljoin(url, response.headers.get('location', ''))
                         if response.status_code == 303 or response.status_code in (301,302) and method == 'POST':
                             method, form = 'GET', None
@@ -174,6 +177,13 @@ class SiteClient:
                         data.extend(chunk)
                         if len(data) > 3*1024*1024: raise EpisodeSiteError('사이트 응답 크기가 너무 큽니다.')
                     return str(response.url), bytes(data).decode('utf-8-sig')
+            except httpx.ConnectError as error:
+                host = urlsplit(url).hostname
+                # HTTP 전송 전에 끊긴 TLS 연결만 한 번 재시도하므로 POST를 중복 실행하지 않는다.
+                if host not in retried_hosts and is_connection_reset(error) and enable_tls_compat(self.http, host):
+                    retried_hosts.add(host)
+                    continue
+                raise EpisodeSiteError('사이트 HTTPS 연결을 확인할 수 없습니다. 접속 회선을 확인하세요.') from None
             except (httpx.HTTPError, UnicodeError):
                 raise EpisodeSiteError('사이트 연결 또는 응답을 확인할 수 없습니다. 잠시 후 다시 시도하세요.') from None
         raise EpisodeSiteError('사이트 주소 이동이 너무 많습니다.')

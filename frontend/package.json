@@ -1,7 +1,7 @@
 {
   "name": "phrolova",
   "private": true,
-  "version": "2.0.72",
+  "version": "2.0.73",
   "description": "Self-hosted live recording and video downloads for CHZZK, YouTube, SOOP, CIME, Kick, Twitch and TikTok.",
   "author": "Serian (https://github.com/eruminyu)",
   "license": "MIT",
