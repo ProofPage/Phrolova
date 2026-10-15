@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+## [2.0.73] - 2026-10-15
+
+### Fixed
+- Recover episode-site connections that reset during the initial HTTPS handshake using a single host-scoped TLS ClientHello record-splitting retry.
+- Preserve certificate and hostname verification, proxies, cookies and HTTP request boundaries. Certificate failures, HTTP denials and response-read failures do not trigger the retry.
+- Verify complete 1080p TVWiki-backed Anilife downloads, complete Anilife/Linkani downloads and native-HLS Ohli24 sample playback after connection recovery.
+
 ## [2.0.72] - 2026-10-15
 
 ### Fixed
@@ -996,7 +1003,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.72...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.73...HEAD
+[2.0.73]: https://github.com/ProofPage/Phrolova/compare/v2.0.72...v2.0.73
 [2.0.72]: https://github.com/ProofPage/Phrolova/compare/v2.0.71...v2.0.72
 [2.0.71]: https://github.com/ProofPage/Phrolova/compare/v2.0.70...v2.0.71
 [2.0.70]: https://github.com/ProofPage/Phrolova/compare/v2.0.69...v2.0.70
