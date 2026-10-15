@@ -6,7 +6,7 @@ def media_platform(url: str) -> str:
     host = (urlsplit(url).hostname or '').lower()
     if host in ('anilife01.tv', 'anilife1.tv'): return 'anilife'
     if host == 'linkani.tv': return 'linkani'
-    if host == 'www.ohli24.net': return 'ohli24'
+    if host in ('www.ohli24.net', 'ohli24.net'): return 'ohli24'
     if host in ('tiktok.com', 'www.tiktok.com', 'm.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com'): return 'tiktok'
     if host in ('twitch.tv', 'www.twitch.tv', 'm.twitch.tv', 'go.twitch.tv', 'clips.twitch.tv', 'player.twitch.tv'): return 'twitch'
     if host in ('kick.com', 'www.kick.com'): return 'kick'

@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 import json
+import math
 import re
 from urllib.parse import unquote, urlencode, urljoin, urlsplit, urlunsplit
 
@@ -16,16 +17,20 @@ SITES = {
                 'media': ('aniplayer1.site', 'noblepulse539.com', 'quietsummit393.com', 'getvfa.store', 'getvfa.site', 's9.toki56.com')},
     'linkani': {'name': 'Linkani', 'hosts': ('linkani.tv',),
                 'media': ('aniplayer1.site', 'noblepulse539.com', 'quietsummit393.com', 'getvfa.store', 'getvfa.site', 's9.toki56.com')},
-    'ohli24': {'name': '애니24', 'hosts': ('www.ohli24.net',),
-               # 현재 플레이어가 반환한 목록에서 1~7 호스트를 모두 확인했다.
-               'media': ('michealcdn.com', *(f'hol{i}ncloud2-nocdn.xyz' for i in range(1, 8)),
-                         *(f'ohli{i}ncloud3-nocdn.xyz' for i in range(1, 8)))},
+    'ohli24': {'name': '애니24', 'hosts': ('www.ohli24.net', 'ohli24.net'),
+               'players': ('michealcdn.com', 'cdndania.com'),
+               # 회차별로 다른 세대의 CDN을 반환하므로 확인된 호스트 계열을 함께 허용한다.
+               'media': ('michealcdn.com', 'cdndania.com', *(f'tue{i}bcloud-starcdn.xyz' for i in range(1, 8)),
+                         *(f'hol{i}ncloud2-nocdn.xyz' for i in range(1, 8)),
+                         *(f'ohli{i}ncloud{generation}-nocdn.xyz' for generation in range(1, 6) for i in range(1, 8)))},
 }
 AD_PATH = re.compile(r'/(?:ads?|banner|advert[^/]*|popunder|tracking)/', re.I)
 
 
 class EpisodeSiteError(ValueError):
-    pass
+    def __init__(self, message, *, status=None):
+        super().__init__(message)
+        self.status = status
 
 
 def checked_url(value: str, domains, *, subdomains=False) -> str:
@@ -61,7 +66,7 @@ def parse_episode_url(value: str) -> dict:
     parts = urlsplit(value)
     path = parts.path
     if site == 'anilife':
-        match = re.fullmatch(r'/content/(\d+)(?:/([A-Za-z0-9_-]+))?/?', path)
+        match = re.fullmatch(r'/content/(\d+)(?:/([A-Za-z0-9_-]+|\d+\.\d+))?/?', path)
         if match:
             work, episode = match.groups()
             return dict(site=site, work=work, episode=episode,
@@ -77,6 +82,12 @@ def parse_episode_url(value: str) -> dict:
             return dict(site=site, work=match[1], episode=None, url=f'https://linkani.tv/ani/{match[1]}/', collection=True)
     else:
         match = re.fullmatch(r'/(\d+)/[^/]+\.html', path)
+        if not match and (parts.query or parts.fragment) and re.search(r'\.html(?:[?#].*)?$', value):
+            # 사이트가 제목의 물음표를 인코딩하지 않은 링크도 ID로 정상 페이지에 연결한다.
+            match = re.fullmatch(r'/(\d+)/[^/]+', path)
+            if match:
+                return dict(site=site, work=match[1], episode=None,
+                            url=f'https://{parts.netloc.lower()}/{match[1]}/index.html', collection=True)
         if match:
             return dict(site=site, work=match[1], episode=None,
                         url=urlunsplit(('https', parts.netloc.lower(), path, '', '')), collection=True)
@@ -137,21 +148,24 @@ class SiteClient:
 
     def close(self): self.http.close()
 
-    def request(self, url, domains, *, referer=None, form=None, subdomains=False):
+    def request(self, url, domains, *, referer=None, form=None, subdomains=False, headers=None):
         method = 'POST' if form is not None else 'GET'
+        origin = urlsplit(url).netloc
         for _ in range(6):
             url = checked_url(url, domains, subdomains=subdomains)
-            headers = {'Referer': str(httpx.URL(referer or url)), 'Accept': 'text/html,application/json,application/vnd.apple.mpegurl'}
-            if form is not None: headers['X-Requested-With'] = 'XMLHttpRequest'
+            request_headers = {'Referer': str(httpx.URL(referer or url)), 'Accept': 'text/html,application/json,application/vnd.apple.mpegurl'}
+            if form is not None: request_headers['X-Requested-With'] = 'XMLHttpRequest'
+            # 재생 증명 헤더는 발급받은 API 호스트에서만 쓰고 CDN 이동에는 넘기지 않는다.
+            if urlsplit(url).netloc == origin: request_headers.update(headers or {})
             try:
-                with self.http.stream(method, url, headers=headers, data=form) as response:
+                with self.http.stream(method, url, headers=request_headers, data=form) as response:
                     if response.status_code in (301,302,303,307,308):
                         url = urljoin(url, response.headers.get('location', ''))
                         if response.status_code == 303 or response.status_code in (301,302) and method == 'POST':
                             method, form = 'GET', None
                         continue
                     if response.status_code in (401,403):
-                        raise EpisodeSiteError('사이트가 이 서버의 접근을 거부했습니다. 브라우저에서 접속 상태를 확인하세요. (HTTP '+str(response.status_code)+')')
+                        raise EpisodeSiteError('사이트가 이 서버의 접근을 거부했습니다. 브라우저에서 접속 상태를 확인하세요. (HTTP '+str(response.status_code)+')', status=response.status_code)
                     if response.status_code == 404: raise EpisodeSiteError('작품 또는 회차를 찾을 수 없습니다. (HTTP 404)')
                     if response.status_code == 429: raise EpisodeSiteError('사이트 요청 한도에 도달했습니다. 잠시 후 다시 시도하세요. (HTTP 429)')
                     response.raise_for_status()
@@ -213,7 +227,7 @@ def _load_catalog(route, client):
         for episode in item.get('episodes') or []:
             key = str(episode.get('key') or '')
             if not re.fullmatch(r'[A-Za-z0-9_-]+', key): raise EpisodeSiteError('회차 ID가 올바르지 않습니다.')
-            if not selected or key == selected:
+            if not selected or key == selected or _number(selected) is not None and _number(episode.get('number')) == _number(selected):
                 if episode.get('playbackUrl') != f'/api/playback/{work}/{key}': raise EpisodeSiteError('회차 재생 API가 다릅니다.')
                 rows.append(dict(id=key, title=str(episode.get('title') or '').strip(), number=_number(episode.get('number')),
                     url=f'{origin}/content/{work}/{key}', available=episode.get('playable') is not False,
@@ -331,6 +345,25 @@ def extract_episode(url, client=None):
         if own: client.close()
 
 
+def _anilife_playback(client, address, work, episode):
+    origin = 'https://' + urlsplit(address).hostname
+    hosts = SITES['anilife']['hosts']
+    for attempt in range(2):
+        _, session = client.json(origin+'/api/playback/session', hosts, referer=address,
+                                 form={}, headers={'X-Anilife-Player': '1'})
+        if (not isinstance(session, dict) or not isinstance(session.get('token'), str)
+                or not re.fullmatch(r'[A-Za-z0-9._~-]{1,4096}', session['token'])
+                or isinstance(session.get('expiresAt'), bool) or not isinstance(session.get('expiresAt'), (int, float))
+                or not math.isfinite(session['expiresAt']) or session['expiresAt'] <= 0):
+            raise EpisodeSiteError('사이트의 재생 세션 발급 응답을 확인할 수 없습니다.')
+        try:
+            # 사이트의 일반 플레이어와 같은 게스트 세션·HttpOnly 쿠키를 사용한다.
+            return client.json(origin+f'/api/playback/{work}/{episode}', hosts, referer=address,
+                               headers={'X-Anilife-Playback': session['token'], 'X-Anilife-Delivery': 'source-v1'})[1]
+        except EpisodeSiteError as error:
+            if error.status != 403 or attempt: raise
+
+
 def _extract_episode(url,client):
     route = parse_episode_url(url)
     catalog = load_catalog(url,client)
@@ -342,7 +375,7 @@ def _extract_episode(url,client):
     if site == 'anilife':
         if not episode['available']: raise EpisodeSiteError('재생 파일이 없는 회차입니다.')
         if episode['source_type'] not in ('anilife','linkkf','tvwiki','reanime'): raise EpisodeSiteError('지원하지 않는 회차 재생 제공자입니다.')
-        _, player = client.json(f'https://{urlsplit(address).hostname}/api/playback/{catalog["id"]}/{episode["id"]}',data['hosts'],referer=address)
+        player = _anilife_playback(client, address, catalog['id'], episode['id'])
         if not isinstance(player,dict) or player.get('is_ad') or player.get('advertisement'): raise EpisodeSiteError('회차 재생 응답을 확인할 수 없습니다.')
         media = player.get('videoUrl')
         if player.get('subtitleUrl'): subtitles.append(('ko',player['subtitleUrl']))
@@ -378,23 +411,25 @@ def _extract_episode(url,client):
             nodes = doc.find('iframe',id='video',src=None)
             if len(nodes)!=1: raise EpisodeSiteError('회차 플레이어를 확인할 수 없습니다.')
             player = urljoin(final,nodes[0].attrs['src'])
-            checked_url(player,('michealcdn.com',))
+            checked_url(player,data['players'])
             match = re.fullmatch(r'/video/([a-fA-F0-9]{32})',urlsplit(player).path)
             if not match: raise EpisodeSiteError('지원하지 않는 플레이어 경로입니다.')
-            player_final,html = client.request(player,('michealcdn.com',),referer=address)
-            if player_final != player: raise EpisodeSiteError('플레이어 주소가 변경되었습니다.')
+            player_final,html = client.request(player,data['players'],referer=address)
+            if urlsplit(player_final).path != urlsplit(player).path: raise EpisodeSiteError('플레이어 주소가 변경되었습니다.')
+            player = player_final
+            player_host = urlsplit(player).hostname
             bundles = [urljoin(player,node.attrs['src']) for node in Document(html).root.find('script',src=None)
-                       if urlsplit(urljoin(player,node.attrs['src'])).hostname=='michealcdn.com'
+                       if urlsplit(urljoin(player,node.attrs['src'])).hostname==player_host
                        and urlsplit(urljoin(player,node.attrs['src'])).path=='/player/assets/scripts.php']
             if len(bundles)!=1: raise EpisodeSiteError('플레이어 설정을 확인할 수 없습니다.')
-            _,script = client.request(bundles[0],('michealcdn.com',),referer=player)
+            _,script = client.request(bundles[0],(player_host,),referer=player)
             if '/player/index.php?data=' not in script or '&do=getVideo' not in script: raise EpisodeSiteError('영상 발급 구조가 변경되었습니다.')
-            _,payload = client.json('https://michealcdn.com/player/index.php?'+urlencode({'data':match[1],'do':'getVideo'}),
-                ('michealcdn.com',),referer=player,form={'hash':match[1],'r':address})
+            _,payload = client.json('https://'+player_host+'/player/index.php?'+urlencode({'data':match[1],'do':'getVideo'}),
+                (player_host,),referer=player,form={'hash':match[1],'r':address})
             if not isinstance(payload,dict) or payload.get('hls') is not True or payload.get('is_ad') not in (None,False) or payload.get('advertisement') not in (None,False):
                 raise EpisodeSiteError('회차 HLS 발급 응답을 확인할 수 없습니다.')
             media = payload.get('securedLink')
-            checked_url(media,('michealcdn.com',))
+            checked_url(media,data['players'])
             referer = player
     final,manifest = validate_hls(client,media,referer,data['media'])
     subtitle_info = {}

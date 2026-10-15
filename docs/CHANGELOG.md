@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+## [2.0.72] - 2026-10-15
+
+### Fixed
+- Restore Anilife playback using the site's current guest proof and HttpOnly playback-cookie issuance, with one renewal on expiry and API-host-only proof headers.
+- Preserve per-task episode cookies between metadata extraction and HLS transfer for Anilife, Linkani and Ohli24.
+- Support Ohli24's cdndania player, current bounded CDN host families, bare-host links and titles containing an unescaped question mark.
+- Resolve numeric/fractional Anilife episode selectors and verify cookie-protected encrypted downloads, subtitle saving and responsive episode selection.
+
 ## [2.0.71] - 2026-10-15
 
 ### Fixed
@@ -988,7 +996,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.71...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.72...HEAD
+[2.0.72]: https://github.com/ProofPage/Phrolova/compare/v2.0.71...v2.0.72
 [2.0.71]: https://github.com/ProofPage/Phrolova/compare/v2.0.70...v2.0.71
 [2.0.70]: https://github.com/ProofPage/Phrolova/compare/v2.0.69...v2.0.70
 [2.0.69]: https://github.com/ProofPage/Phrolova/compare/v2.0.68...v2.0.69

@@ -1055,6 +1055,7 @@ class VodEngine(VodPreparation):
         chzzk_source = is_chzzk_vod_url(task.source_url)
         selected_cdn = task.cdn if chzzk_source else "default"
         youtube_session = None
+        episode_session = None
 
         def make_ydl(options):
             if chzzk_source:
@@ -1063,6 +1064,9 @@ class VodEngine(VodPreparation):
             if youtube_session is not None:
                 # 공개 게스트 세션도 서명 URL과 연결되므로 정보 조회 후 새 세션으로 바꾸지 않는다.
                 ydl.cookiejar = youtube_session
+            elif episode_session is not None:
+                # 회차 재생 API가 발급한 세션을 실제 조각 전송까지 유지해야 한다.
+                ydl.cookiejar = episode_session
             return ydl
 
         task.warning_message = None
@@ -1077,13 +1081,15 @@ class VodEngine(VodPreparation):
             opts_info["skip_unavailable_fragments"] = False
 
         def _extract_info() -> dict[str, Any] | None:
-            nonlocal youtube_session
+            nonlocal youtube_session, episode_session
             with make_ydl(opts_info) as ydl:
                 try:
                     return ydl.extract_info(task.url, download=False)
                 finally:
                     if is_youtube_url(task.url):
                         youtube_session = ydl.cookiejar
+                    elif media_platform(task.url) in ('anilife', 'linkani', 'ohli24'):
+                        episode_session = ydl.cookiejar
                     if selected_cdn == "akamai":
                         task.cdn_applied |= ydl.cdn_applied
 

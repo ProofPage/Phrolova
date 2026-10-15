@@ -53,9 +53,11 @@ async def main():
         await expect(page.get_by_role('alert')).to_have_count(0)
         value=await page.evaluate('''async()=>{
           const {parseEpisodeInput:p}=await import('/src/utils/episodeSites.ts');
-          return [p('https://linkani.tv/ani/42/?x=1'),p('https://www.ohli24.net/2/한글.html'),p('https://linkani.tv.evil/ani/42'),p('https://u:p@linkani.tv/ani/42')];
+          return [p('https://linkani.tv/ani/42/?x=1'),p('https://www.ohli24.net/2/한글.html'),p('https://linkani.tv.evil/ani/42'),p('https://u:p@linkani.tv/ani/42'),p('https://ohli24.net/2/한글.html'),p('https://anilife01.tv/content/1/1.5')];
         }''')
-        assert value[0]=={'url':WORK,'collection':True,'source':'linkani'} and value[1]['collection'] and value[2:]==[None,None]
+        assert value[0]=={'url':WORK,'collection':True,'source':'linkani'} and value[1]['collection'] and value[2:4]==[None,None]
+        assert value[4]['source']=='ohli24' and value[4]['collection']
+        assert value[5]=={'url':'https://anilife01.tv/content/1/1.5','source':'anilife','collection':False}
         await page.get_by_role('combobox',name='다운로드 플랫폼',exact=True).click()
         await page.get_by_role('option',name='Linkani',exact=True).click()
         panel=page.get_by_test_id('vod-preparation')
