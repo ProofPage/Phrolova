@@ -11,7 +11,7 @@ Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, SO
 | Area | What it provides |
 | --- | --- |
 | Live | Automatic/manual recording, channel tags and filters, per-channel preferences, CHZZK Time Machine and recording conditions |
-| Previews | In-dashboard live playback, independent of recording, with loading states and retry controls |
+| Previews | In-dashboard HLS playback or refreshed frames, with loading states and retry controls; TikTok shares the recording input while recording |
 | Videos | VODs, clips, supported external links, YouTube channel imports, quality selection, queues, speed limits and task controls |
 | Media processing | FFmpeg finalization to MKV/MP4, FFprobe inspection, processing history, source preservation on failure and retry actions |
 | Statistics | Recording duration and size, download totals, channel activity, recent sessions, disk usage and separate live/video paths |
@@ -35,15 +35,15 @@ The interface supports **Korean, English, Japanese, Spanish, German, Simplified 
 | Bilibili | Room monitoring, HLS previews and manual/automatic recording via Streamlink | BV/av videos, selected parts and b23.tv share links via yt-dlp | Optional Bilibili Netscape cookies |
 | Anilife / Linkani / Ohli24 | — | Work/episode links, episode selection, HLS videos and VTT subtitles | Normal site playback session |
 
-Bilibili live rooms accept a numeric room ID or `https://live.bilibili.com/<room>`. The recorder prefers MPEG-TS HLS and keeps native quality IDs such as `qn_10000`. Bilibili's popularity metric is identified separately from viewer counts. Videos accept BV/av IDs and `b23.tv` links; `?p=2` selects a single part. Separate DASH video and audio tracks are merged into the configured container. Cropped videos display both the provider's quality tier and actual pixel dimensions. Register a Netscape cookie file under **Settings → Authentication → Bilibili** when account access or additional qualities are needed. Cookies remain scoped to `bilibili.com`.
+Bilibili live rooms accept a numeric room ID or `https://live.bilibili.com/<room>`. The recorder prefers MPEG-TS HLS, tries alternate CDNs and preserves native fMP4 HLS when needed. Available native quality IDs are retained; a stream with no advertised quality ID is shown as Original rather than an inferred resolution. Bilibili's popularity metric is identified separately from viewer counts. Videos accept BV/av IDs and `b23.tv` links; `?p=2` selects a single part. Separate DASH video and audio tracks are merged into the configured container. Cropped videos display both the provider's quality tier and actual pixel dimensions. Register a Netscape cookie file under **Settings → Authentication → Bilibili** when account access or additional qualities are needed. Cookies remain scoped to `bilibili.com`.
 
 For episode-based sources, paste a work link in **Videos** and select up to 100 episodes. These sources use the existing queue, quality controls and media inspection. See [episode source adapters](docs/video-site-adapters.md) for URL formats and validation details.
 
 External links use yt-dlp's supported extractors. Available formats and access follow the source platform. YouTube imports skip live/upcoming entries and videos already queued in a non-error state. Authenticated YouTube video downloads/imports are separate from automatic live recording; authenticated automatic YouTube live recording is not established by cookie registration.
 
-YouTube uses the app's Python yt-dlp engine for video metadata, downloads and isolated live-extraction workers, keeping these paths on the same version. The dependency floor includes the official October 2026 `tv_samsung` client update; newer compatible releases remain eligible. Public requests start without account cookies, even if a saved cookie path has become stale. Node.js/EJS options are applied to metadata as well as downloads. Private, members-only and age-restricted content still uses explicit account authentication.
+YouTube uses the same Python yt-dlp dependency for video metadata, downloads and isolated live-extraction workers. Public requests start without account cookies, even if a saved cookie path has become stale. Node.js/EJS options are applied to metadata as well as downloads. Private, members-only and age-restricted content still uses explicit account authentication.
 
-A server-side bot challenge or HTTP 429 is reported separately from content permissions. These restrictions can affect public videos; changing player clients or supplying a PO token cannot guarantee access from a blocked network. Check the server connection and any VPN/proxy, wait before retrying, and reduce simultaneous requests. See [YouTube extractor guidance](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#youtube) and the [official client update](https://github.com/yt-dlp/yt-dlp/pull/17805).
+A server-side bot challenge or HTTP 429 is reported separately from content permissions. These restrictions can affect public videos; the app reports them as connection or rate-limit errors instead of a successful download. Check the server connection and any VPN/proxy, wait before retrying, and reduce simultaneous requests. See [YouTube extractor guidance](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#youtube) and the [official client update](https://github.com/yt-dlp/yt-dlp/pull/17805).
 
 ### Recording pipeline
 
@@ -81,7 +81,7 @@ The repository distributes a Windows executable and source archives. It does not
 Verify the downloaded file in PowerShell, using its actual filename, and compare the result with `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash .\Phrolova-v2.0.67-windows-x64.exe -Algorithm SHA256
+Get-FileHash -LiteralPath (Read-Host 'Downloaded executable path') -Algorithm SHA256
 ```
 
 ### Linux
@@ -162,10 +162,11 @@ Source installations read root `.env`, with `backend/.env` as a legacy fallback.
 | `VOD_FORMAT`, `VOD_MAX_SPEED` | `mp4`, `0` for unlimited speed in MB/s |
 | `KEEP_DOWNLOAD_PARTS` | `false` |
 | `FILE_INSPECTION_TIMEOUT` | `120` seconds; allowed range 1–600 |
+| `YOUTUBE_COOKIE_FILE`, `SOOP_COOKIE_FILE`, `CIME_COOKIE_FILE`, `KICK_COOKIE_FILE`, `TWITCH_COOKIE_FILE`, `TIKTOK_COOKIE_FILE`, `BILIBILI_COOKIE_FILE` | Optional Netscape cookie files; upload through Settings → Authentication |
 
 Use absolute media paths. Relative paths follow the working directory; the source manager starts from `backend/`. Enter actual paths in `.env` rather than relying on shell-variable expansion. Saved preferences are preserved when defaults change in a later release.
 
-CHZZK account cookies use `NID_AUT` and `NID_SES`. YouTube, SOOP, CIME, Kick, Twitch and TikTok use their corresponding `*_COOKIE_FILE` settings. Kick uses registered cookies for both live quality resolution and VOD extraction so sign-in-only qualities can appear. Register a Netscape cookie file under Settings → Authentication → Kick, then refresh the quality list or retry video metadata. Only advertised qualities are offered; explicitly requested 1080p is never silently replaced with 720p. Kick cookies and API authorization stay scoped to Kick and are not forwarded to unrelated media CDNs.
+CHZZK account cookies use `NID_AUT` and `NID_SES`. YouTube, SOOP, CIME, Kick, Twitch, TikTok and Bilibili use their corresponding `*_COOKIE_FILE` settings. Kick uses registered cookies for both live quality resolution and VOD extraction so sign-in-only qualities can appear. Register a Netscape cookie file under Settings → Authentication → Kick, then refresh the quality list or retry video metadata. Only advertised qualities are offered; explicitly requested 1080p is never silently replaced with 720p. Kick cookies and API authorization stay scoped to Kick and are not forwarded to unrelated media CDNs.
 
 Twitch accepts channel IDs and channel URLs for live monitoring, `/videos/<id>` URLs for VODs, and `clips.twitch.tv/<slug>` or channel clip URLs for clips. Register an optional cookie file under Settings → Authentication → Twitch when account access is needed. The `auth-token` cookie is passed through Streamlink's Twitch API option; OAuth headers are not forwarded to media CDNs. The recorder uses the Twitch-specific HLS reader for stream transitions. Deleted, unavailable or restricted videos remain errors. See the [Streamlink Twitch documentation](https://streamlink.github.io/cli/plugins/twitch.html) for authentication and client-integrity requirements.
 
@@ -276,4 +277,4 @@ The build produces `dist/Phrolova.exe`, bundles Node.js and application icons, a
 
 [Linux](docs/linux-guide.md) · [macOS](docs/macos-guide.md) · [Termux](docs/termux-guide.md) · [Platform support](docs/native-platform-support.md) · [Contribution guide](CONTRIBUTING.md)
 
-(LICENSE). FFmpeg/FFprobe are installed separately and follow their own licenses.
+[MIT](LICENSE). FFmpeg/FFprobe are installed separately and follow their own licenses.
