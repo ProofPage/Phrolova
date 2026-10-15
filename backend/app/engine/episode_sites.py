@@ -13,6 +13,10 @@ import httpx
 from app.core.http import USER_AGENT
 
 SITES = {
+    'tvwiki': {'name': '티비위키', 'hosts': ('tvwiki54.net',),
+               'players': ('player.bunny-frame.online', 'bunny-cdn-player.online'),
+               'media': ('poorcdn.com', 'toki56.com', 'amberbloom784.site', 'azuretrail425.site',
+                         'breezymeadow545.site', 'cedarshore437.site', 'feff3f33.site', 'quietharbor140.site')},
     'anilife': {'name': '애니라이프', 'hosts': ('anilife01.tv', 'anilife1.tv'),
                 'media': ('aniplayer1.site', 'noblepulse539.com', 'quietsummit393.com', 'getvfa.store', 'getvfa.site', 's9.toki56.com')},
     'linkani': {'name': 'Linkani', 'hosts': ('linkani.tv',),
@@ -65,6 +69,9 @@ def parse_episode_url(value: str) -> dict:
     value = checked_url(value, SITES[site]['hosts'])
     parts = urlsplit(value)
     path = parts.path
+    if site == 'tvwiki':
+        from app.engine.tvwiki import parse_tvwiki_url
+        return parse_tvwiki_url(value)
     if site == 'anilife':
         match = re.fullmatch(r'/content/(\d+)(?:/([A-Za-z0-9_-]+|\d+\.\d+))?/?', path)
         if match:
@@ -148,24 +155,25 @@ class SiteClient:
 
     def close(self): self.http.close()
 
-    def request(self, url, domains, *, referer=None, form=None, subdomains=False, headers=None):
+    def request(self, url, domains, *, referer=None, form=None, json_body=None, subdomains=False, headers=None, binary=False):
         from app.engine.tls_compat import enable_tls_compat, is_connection_reset
-        method = 'POST' if form is not None else 'GET'
+        method = 'POST' if form is not None or json_body is not None else 'GET'
         origin = urlsplit(url).netloc
         redirects, retried_hosts = 0, set()
         while redirects < 6:
             url = checked_url(url, domains, subdomains=subdomains)
             request_headers = {'Referer': str(httpx.URL(referer or url)), 'Accept': 'text/html,application/json,application/vnd.apple.mpegurl'}
-            if form is not None: request_headers['X-Requested-With'] = 'XMLHttpRequest'
+            if method == 'POST': request_headers['X-Requested-With'] = 'XMLHttpRequest'
             # 재생 증명 헤더는 발급받은 API 호스트에서만 쓰고 CDN 이동에는 넘기지 않는다.
             if urlsplit(url).netloc == origin: request_headers.update(headers or {})
             try:
-                with self.http.stream(method, url, headers=request_headers, data=form) as response:
+                body_args = {'json': json_body} if json_body is not None else {'data': form}
+                with self.http.stream(method, url, headers=request_headers, **body_args) as response:
                     if response.status_code in (301,302,303,307,308):
                         redirects += 1
                         url = urljoin(url, response.headers.get('location', ''))
                         if response.status_code == 303 or response.status_code in (301,302) and method == 'POST':
-                            method, form = 'GET', None
+                            method, form, json_body = 'GET', None, None
                         continue
                     if response.status_code in (401,403):
                         raise EpisodeSiteError('사이트가 이 서버의 접근을 거부했습니다. 브라우저에서 접속 상태를 확인하세요. (HTTP '+str(response.status_code)+')', status=response.status_code)
@@ -176,7 +184,7 @@ class SiteClient:
                     for chunk in response.iter_bytes():
                         data.extend(chunk)
                         if len(data) > 3*1024*1024: raise EpisodeSiteError('사이트 응답 크기가 너무 큽니다.')
-                    return str(response.url), bytes(data).decode('utf-8-sig')
+                    return str(response.url), bytes(data) if binary else bytes(data).decode('utf-8-sig')
             except httpx.ConnectError as error:
                 host = urlsplit(url).hostname
                 # HTTP 전송 전에 끊긴 TLS 연결만 한 번 재시도하므로 POST를 중복 실행하지 않는다.
@@ -221,6 +229,9 @@ def load_catalog(url, client=None):
 
 
 def _load_catalog(route, client):
+    if route['site'] == 'tvwiki':
+        from app.engine.tvwiki import load_tvwiki_catalog
+        return load_tvwiki_catalog(route, client)
     site, work, selected = route['site'], route['work'], route['episode']
     hosts = SITES[site]['hosts']
     rows = []
@@ -376,6 +387,9 @@ def _anilife_playback(client, address, work, episode):
 
 def _extract_episode(url,client):
     route = parse_episode_url(url)
+    if route['site'] == 'tvwiki':
+        from app.engine.tvwiki import extract_tvwiki_episode
+        return extract_tvwiki_episode(route, client)
     catalog = load_catalog(url,client)
     if len(catalog['episodes']) != 1 or route['collection'] and route['site'] != 'ohli24':
         raise EpisodeSiteError('작품의 회차 목록에서 내려받을 회차를 선택하세요.')

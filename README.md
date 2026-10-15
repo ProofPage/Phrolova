@@ -34,6 +34,7 @@ The interface supports **Korean, English, Japanese, Spanish, German, Simplified 
 | TikTok | Monitoring, frame previews and manual/automatic recording via Streamlink | Individual videos and short share links via yt-dlp | Optional TikTok Netscape cookies |
 | Bilibili | Room monitoring, HLS previews and manual/automatic recording via Streamlink | BV/av videos, selected parts and b23.tv share links via yt-dlp | Optional Bilibili Netscape cookies |
 | Anilife / Linkani / Ohli24 | — | Work/episode links, episode selection, HLS videos and VTT subtitles | Normal site playback session |
+| TVWiki (티비위키) | — | Work/episode selection and HLS videos at tvwiki54.net | Normal guest playback session |
 
 Bilibili live rooms accept a numeric room ID or `https://live.bilibili.com/<room>`. The recorder prefers MPEG-TS HLS, tries alternate CDNs and preserves native fMP4 HLS when needed. Available native quality IDs are retained; a stream with no advertised quality ID is shown as Original rather than an inferred resolution. Bilibili's popularity metric is identified separately from viewer counts. Videos accept BV/av IDs and `b23.tv` links; `?p=2` selects a single part. Separate DASH video and audio tracks are merged into the configured container. Cropped videos display both the provider's quality tier and actual pixel dimensions. Register a Netscape cookie file under **Settings → Authentication → Bilibili** when account access or additional qualities are needed. Cookies remain scoped to `bilibili.com`.
 

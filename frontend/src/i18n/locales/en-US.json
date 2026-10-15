@@ -872,6 +872,7 @@
   "platform.anilife": "Anilife",
   "platform.linkani": "Linkani",
   "platform.ohli24": "Ohli24",
+  "platform.tvwiki": "TVWiki",
   "episodes.start": "Download selected episodes ({count})",
   "episodes.partial": "Only episodes listed by the site are shown. Some earlier episodes are missing.",
   "platform.bilibili": "Bilibili",

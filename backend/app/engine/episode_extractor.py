@@ -7,7 +7,7 @@ from app.engine.episode_sites import EpisodeSiteError, SiteClient, extract_episo
 
 class EpisodeSiteIE(InfoExtractor):
     IE_NAME = 'phrolova:episodes'
-    _VALID_URL = r'https://(?:anilife(?:01|1)\.tv/content/\d+/(?:[A-Za-z0-9_-]+|\d+\.\d+)|linkani\.tv/watch/\d+/a\d+/k\d+/?|(?:www\.)?ohli24\.net/\d+/[^/?#]+\.html)(?:[?#].*)?$'
+    _VALID_URL = r'https://(?:anilife(?:01|1)\.tv/content/\d+/(?:[A-Za-z0-9_-]+|\d+\.\d+)|linkani\.tv/watch/\d+/a\d+/k\d+/?|tvwiki54\.net/(?:movie|kor_movie|drama|ent|sisa|world|ott_ent|short_drama|ani_movie|animation|old_ent|old_drama)/[1-9]\d*/[1-9]\d*/?|(?:www\.)?ohli24\.net/\d+/[^/?#]+\.html)(?:[?#].*)?$'
 
     def _real_extract(self, url):
         client = SiteClient()

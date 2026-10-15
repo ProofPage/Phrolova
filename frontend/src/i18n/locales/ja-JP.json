@@ -872,6 +872,7 @@
   "platform.anilife": "Anilife",
   "platform.linkani": "Linkani",
   "platform.ohli24": "Ohli24",
+  "platform.tvwiki": "TVWiki",
   "episodes.start": "選択した話をダウンロード（{count}）",
   "episodes.partial": "サイトに掲載された話のみ表示します。一部の以前の話が欠けています。",
   "platform.bilibili": "Bilibili",
