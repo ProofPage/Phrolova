@@ -4,6 +4,69 @@ import pytest
 from app.engine.preview_proxy import PreviewProxy
 
 
+@pytest.mark.asyncio
+async def test_twitch_playlist_cdn_redirect_segments_and_prefetch(monkeypatch):
+    from http.cookiejar import Cookie, CookieJar
+    jar = CookieJar()
+    jar.set_cookie(Cookie(0, "auth-token", "PRIVATE", None, False, ".twitch.tv", True, True,
+                          "/", True, True, None, True, None, None, {}, False))
+    monkeypatch.setattr("app.engine.preview_proxy.platform_cookie_jar", lambda _: jar)
+    monkeypatch.setattr("app.engine.preview_proxy.preview_ca_bundle", lambda: True)
+    requests = []
+
+    async def handler(request):
+        requests.append(request)
+        if request.url.host == "apn21.playlist.ttvnw.net":
+            return httpx.Response(302, headers={"location": "https://apn22.playlist.ttvnw.net/live.m3u8?token=SECRET"})
+        if request.url.path.endswith(".m3u8"):
+            return httpx.Response(200, text=(
+                '#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXTINF:2,\n'
+                'https://7325bab210ad.j.cloudfront.hls.ttvnw.net/live/segment.ts?sig=SECRET\n'
+                '#EXT-X-TWITCH-PREFETCH:https://7325bab210ad.j.cloudfront.hls.ttvnw.net/live/next.ts?sig=SECRET\n'
+                '#EXT-X-DATERANGE:ID="trigger-1",CLASS="twitch-trigger",START-DATE="2026-10-14T22:45:30Z",X-TV-TWITCH-TRIGGER-URL="https://trigger.ttvnw.net/trigger?sig=SECRET"\n'
+            ))
+        assert request.url.params['sig'] == 'SECRET'
+        return httpx.Response(200, content=b"video")
+
+    original = httpx.AsyncClient
+    monkeypatch.setattr("app.engine.preview_proxy.httpx.AsyncClient",
+                        lambda **kwargs: original(transport=httpx.MockTransport(handler), **kwargs))
+    proxy = PreviewProxy()
+    token = proxy.register("twitch:joe_bartolozzi", "twitch", "https://apn21.playlist.ttvnw.net/live.m3u8?token=SECRET")
+    data, kind, status, _ = await proxy.fetch(token)
+    assert status == 200 and kind == "application/vnd.apple.mpegurl"
+    assert b"SECRET" not in data and b"ttvnw.net" not in data
+    assert b"twitch-trigger" not in data
+    lines = data.decode().splitlines()
+    for uri in (lines[3], lines[4].split(":", 1)[1]):
+        child_token = uri.split("/")[-2]
+        assert (await proxy.fetch(child_token))[0] == b"video"
+    assert len(requests) == 4
+    assert all(request.headers["origin"] == "https://www.twitch.tv" for request in requests)
+    assert all("cookie" not in request.headers and "authorization" not in request.headers for request in requests)
+
+
+@pytest.mark.parametrize("url", [
+    "https://ttvnw.net.attacker.example/segment.ts",
+    "https://fakettvnw.net/segment.ts",
+    "https://127.0.0.1/segment.ts",
+    "https://user:secret@video.ttvnw.net/segment.ts",
+    "http://video.ttvnw.net/segment.ts",
+])
+def test_twitch_cdn_rejects_unsafe_or_lookalike_hosts(url):
+    proxy = PreviewProxy()
+    token = proxy.register("twitch:a", "twitch", "https://apn21.playlist.ttvnw.net/live.m3u8")
+    with pytest.raises(ValueError):
+        proxy.rewrite(proxy.nodes[token], "#EXTM3U\n" + url + "\n")
+
+
+def test_twitch_cdn_permission_does_not_extend_to_other_platforms():
+    proxy = PreviewProxy()
+    token = proxy.register("chzzk:a", "chzzk", "https://live.navercdn.com/master.m3u8")
+    with pytest.raises(ValueError):
+        proxy.rewrite(proxy.nodes[token], "#EXTM3U\nhttps://video.hls.ttvnw.net/segment.ts\n")
+
+
 def test_all_manifest_uri_types_hide_signatures_and_preserve_extensions():
     proxy = PreviewProxy()
     token = proxy.register(

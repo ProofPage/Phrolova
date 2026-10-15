@@ -75,8 +75,9 @@ async def main():
             body = b"#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=500000,RESOLUTION=640x360\nvideo.m3u8?token=SECRET\n"
         elif request.url.path == "/video.m3u8":
             body = (media / "video.m3u8").read_text()
+            prefix = "https://video.hls.ttvnw.net/" if request.url.host.endswith(".ttvnw.net") else ""
             body = "\n".join(
-                line + "?token=SECRET" if line.endswith(".ts") else line
+                prefix + line + "?token=SECRET" if line.endswith(".ts") else line
                 for line in body.splitlines()
             ).encode()
         else:
@@ -102,8 +103,10 @@ async def main():
         ) as backend:
             async with async_playwright() as p:
                 browser = await p.chromium.launch()
-                for platform, width in ((p, w) for p in ("chzzk", "soop", "cime") for w in (320, 1440)):
+                for platform, width in ((p, w) for p in ("chzzk", "soop", "cime", "twitch") for w in (320, 1440)):
                     channel.update(platform=platform, composite_key=f"{platform}:details-0")
+                    host = "apn21.playlist.ttvnw.net" if platform == "twitch" else "live.navercdn.com"
+                    service.get_live_preview_url.return_value = f"https://{host}/master.m3u8?token=SECRET"
                     service._conductor._channels = {channel["composite_key"]: SimpleNamespace(is_live=True)}
                     context = await browser.new_context(
                         viewport={"width": width, "height": 1000}
@@ -123,6 +126,7 @@ async def main():
                                 assert (
                                     b"SECRET" not in result.content
                                     and b"navercdn" not in result.content
+                                    and b"ttvnw.net" not in result.content
                                 )
                             responses.append(path)
                             return await route.fulfill(
@@ -143,6 +147,8 @@ async def main():
                         f'[data-channel-key="{channel["composite_key"]}"]'
                     )
                     await card.locator(".recording-detail-action").click()
+                    panel_id = await card.locator(".recording-detail-action").get_attribute("aria-controls")
+                    panel = page.locator(f'[id="{panel_id}"]')
                     await page.wait_for_function(
                         "document.querySelector('video')?.videoWidth===640"
                     )
@@ -151,12 +157,12 @@ async def main():
                         ("list", "목록으로 보기"),
                     ):
                         await page.get_by_role("button", name=label, exact=True).click()
-                        before = await card.locator("video").evaluate(
+                        before = await panel.locator("video").evaluate(
                             "v=>v.currentTime"
                         )
                         await page.wait_for_timeout(1000)
                         assert (
-                            await card.locator("video").evaluate("v=>v.currentTime")
+                            await panel.locator("video").evaluate("v=>v.currentTime")
                             > before
                         )
                         assert await page.evaluate(
@@ -165,7 +171,7 @@ async def main():
                         await page.screenshot(
                             path=str(OUT / f"{platform}-{width}-{mode}.png"), full_page=True
                         )
-                    video = card.locator("video")
+                    video = panel.locator("video")
                     assert await video.evaluate("v=>v.controls")
                     await video.evaluate("v=>{v.pause();v.muted=false;v.volume=.25}")
                     paused = await video.evaluate("v=>v.currentTime")
@@ -186,14 +192,14 @@ async def main():
             {
                 "passed": True,
                 "widths": [320, 1440],
-                "platforms": ["chzzk", "soop", "cime"],
+                "platforms": ["chzzk", "soop", "cime", "twitch"],
                 "modes": ["grid", "list"],
                 "upstream_requests": len(upstream_requests),
             }
         )
     )
     print(
-        "Opaque proxy: master, variant and TS routes decoded real 640x360 HLS with working controls across three platforms and twelve browser combinations."
+        "Opaque proxy: master, variant and TS routes decoded real 640x360 HLS with working controls across four platforms and sixteen browser combinations."
     )
 
 

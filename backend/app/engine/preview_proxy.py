@@ -62,7 +62,7 @@ class PreviewProxy:
         return token
 
     @staticmethod
-    def allowed(url, hosts):
+    def allowed(url, hosts, platform=None):
         host = urlsplit(url).hostname or ""
         trusted = (
             "navercdn.com",
@@ -75,6 +75,10 @@ class PreviewProxy:
             "sooplive.com",
             "sooplive.co.kr",
         )
+        # Twitch 재생 목록과 영상 조각은 서로 다른 ttvnw.net 호스트를 쓴다.
+        # 다른 플랫폼의 미리보기까지 이 CDN을 허용하지 않도록 범위를 제한한다.
+        if platform == "twitch":
+            trusted += ("ttvnw.net",)
         return PreviewProxy.valid(url) and (
             host in hosts
             or any(host == domain or host.endswith("." + domain) for domain in trusted)
@@ -83,7 +87,7 @@ class PreviewProxy:
     def rewrite(self, node, body):
         def replace(uri):
             url = urljoin(node["url"], uri)
-            if not self.allowed(url, node["hosts"]):
+            if not self.allowed(url, node["hosts"], node["platform"]):
                 raise ValueError("미리보기 CDN 주소가 허용되지 않습니다.")
             token = self.register(node["key"], node["platform"], url, node["hosts"])
             suffix = urlsplit(url).path.rsplit(".", 1)[-1].lower()
@@ -96,7 +100,14 @@ class PreviewProxy:
 
         lines = []
         for line in body.splitlines():
-            if line.strip().startswith("#"):
+            if (node["platform"] == "twitch" and line.startswith("#EXT-X-DATERANGE:")
+                    and 'X-TV-TWITCH-TRIGGER-URL="' in line):
+                # 영상 재생에 쓰지 않는 Twitch 전용 트리거의 서명 주소는 전달하지 않는다.
+                continue
+            if node["platform"] == "twitch" and line.startswith("#EXT-X-TWITCH-PREFETCH:"):
+                # Twitch 전용 태그에도 서명된 영상 주소가 들어가므로 브라우저에 노출하지 않는다.
+                line = "#EXT-X-TWITCH-PREFETCH:" + replace(line.split(":", 1)[1].strip())
+            elif line.strip().startswith("#"):
                 line = re.sub(
                     r'URI="([^"]+)"',
                     lambda match: 'URI="' + replace(match[1]) + '"',
@@ -144,7 +155,7 @@ class PreviewProxy:
                     ) as response:
                         if response.is_redirect:
                             url = urljoin(url, response.headers.get("location", ""))
-                            if not self.allowed(url, node["hosts"]):
+                            if not self.allowed(url, node["hosts"], node["platform"]):
                                 raise ValueError("허용되지 않은 CDN 이동입니다.")
                             continue
                         response.raise_for_status()
