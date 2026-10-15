@@ -2,7 +2,7 @@
 
 **Record live streams. Download videos. Manage your archive.**
 
-Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, SOOP, CIME, Kick, Twitch and TikTok**. Monitor channels, preview broadcasts, manage downloads and verify saved media in one web dashboard. Run the packaged app on Windows, or install from source on Linux, macOS or Android with Termux.
+Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, SOOP, CIME, Kick, Twitch, TikTok and Bilibili**. Monitor channels, preview broadcasts, manage downloads and verify saved media in one web dashboard. Run the packaged app on Windows, or install from source on Linux, macOS or Android with Termux.
 
 [Download](https://github.com/ProofPage/Phrolova/releases/latest) · [Release notes](docs/release-notes/README.md) · [Changelog](docs/CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [MIT License](LICENSE)
 
@@ -32,7 +32,10 @@ The interface supports **Korean, English, Japanese, Spanish, German, Simplified 
 | Kick | Streamlink monitoring integration, preview and manual/automatic recording | VODs and clips via yt-dlp | Optional Kick cookies; required for sign-in-only qualities |
 | Twitch | Monitoring, preview and manual/automatic recording via Streamlink | VODs and individual clips via yt-dlp | Optional Twitch Netscape cookies |
 | TikTok | Monitoring, frame previews and manual/automatic recording via Streamlink | Individual videos and short share links via yt-dlp | Optional TikTok Netscape cookies |
+| Bilibili | Room monitoring, HLS previews and manual/automatic recording via Streamlink | BV/av videos, selected parts and b23.tv share links via yt-dlp | Optional Bilibili Netscape cookies |
 | Anilife / Linkani / Ohli24 | — | Work/episode links, episode selection, HLS videos and VTT subtitles | Normal site playback session |
+
+Bilibili live rooms accept a numeric room ID or `https://live.bilibili.com/<room>`. The recorder prefers MPEG-TS HLS and keeps native quality IDs such as `qn_10000`. Bilibili's popularity metric is identified separately from viewer counts. Videos accept BV/av IDs and `b23.tv` links; `?p=2` selects a single part. Separate DASH video and audio tracks are merged into the configured container. Cropped videos display both the provider's quality tier and actual pixel dimensions. Register a Netscape cookie file under **Settings → Authentication → Bilibili** when account access or additional qualities are needed. Cookies remain scoped to `bilibili.com`.
 
 For episode-based sources, paste a work link in **Videos** and select up to 100 episodes. These sources use the existing queue, quality controls and media inspection. See [episode source adapters](docs/video-site-adapters.md) for URL formats and validation details.
 

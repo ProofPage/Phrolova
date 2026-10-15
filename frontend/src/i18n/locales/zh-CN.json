@@ -873,5 +873,8 @@
   "platform.linkani": "Linkani",
   "platform.ohli24": "Ohli24",
   "episodes.start": "下载已选剧集（{count}）",
-  "episodes.partial": "仅显示网站列出的剧集，部分早期剧集缺失。"
+  "episodes.partial": "仅显示网站列出的剧集，部分早期剧集缺失。",
+  "platform.bilibili": "Bilibili",
+  "live.bilibiliRoomIDOrHttpsLiveBilibiliCom": "Bilibili 直播间 ID 或 https://live.bilibili.com/...",
+  "live.popularity": "人气"
 }

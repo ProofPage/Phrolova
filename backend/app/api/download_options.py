@@ -17,7 +17,8 @@ class ChannelDownloadOptions(BaseModel):
     @classmethod
     def validate_quality(cls, value):
         import re
-        if value is not None and value not in ('best', 'worst') and not re.fullmatch(r'\d{2,4}p(?:\d{1,3}(?:\.\d+)?)?', value):
+        # Bilibili의 qn은 픽셀 높이가 아니므로 가짜 해상도로 변환하지 않고 보존한다.
+        if value is not None and value not in ('best', 'worst') and not re.fullmatch(r'(?:\d{2,4}p(?:\d{1,3}(?:\.\d+)?)?|qn_[1-9]\d{0,4})', value):
             raise ValueError('올바른 녹화 화질을 선택하세요.')
         return value
 

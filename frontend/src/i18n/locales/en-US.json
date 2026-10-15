@@ -873,5 +873,8 @@
   "platform.linkani": "Linkani",
   "platform.ohli24": "Ohli24",
   "episodes.start": "Download selected episodes ({count})",
-  "episodes.partial": "Only episodes listed by the site are shown. Some earlier episodes are missing."
+  "episodes.partial": "Only episodes listed by the site are shown. Some earlier episodes are missing.",
+  "platform.bilibili": "Bilibili",
+  "live.bilibiliRoomIDOrHttpsLiveBilibiliCom": "Bilibili room ID or https://live.bilibili.com/...",
+  "live.popularity": "Popularity"
 }

@@ -4,6 +4,7 @@ import { canonicalVodUrl } from './vodUrls';
 import { canonicalKickVideoUrl } from './kickUrls';
 import { canonicalTwitchVideoUrl, TWITCH_HOSTS } from './twitchUrls';
 import { canonicalTikTokVideoUrl, TIKTOK_HOSTS } from './tiktokUrls';
+import { canonicalBilibiliVideoUrl, BILIBILI_HOSTS } from './bilibiliUrls';
 
 export type { DownloadSource } from '../api/client';
 export function detectDownloadPlatform(value: string): DownloadSource {
@@ -13,6 +14,7 @@ export function detectDownloadPlatform(value: string): DownloadSource {
         if (host === 'chzzk.naver.com') return 'chzzk';
         if (['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(host)) return 'youtube';
         if (TIKTOK_HOSTS.has(host)) return 'tiktok';
+        if (BILIBILI_HOSTS.has(host)) return 'bilibili';
         if (TWITCH_HOSTS.has(host)) return 'twitch';
         if (host === 'kick.com' || host === 'www.kick.com') return 'kick';
         if (host === 'ci.me' || host === 'www.ci.me') return 'cime';
@@ -24,6 +26,10 @@ export function detectDownloadPlatform(value: string): DownloadSource {
 
 export function normalizeDownloadInput(value: string, source: DownloadSource): { url: string; collection: boolean; source: DownloadSource } | null {
     let text = value.trim();
+    if (source === 'bilibili' && !text.includes('://')) {
+        const url = canonicalBilibiliVideoUrl(text);
+        return url ? { url, collection: false, source: 'bilibili' } : null;
+    }
     if (source === 'youtube') {
         if (/^@[^\s/?#]+$/.test(text)) text = `https://www.youtube.com/${text}`;
         else if (/^[A-Za-z0-9_-]{11}$/.test(text)) text = `https://www.youtube.com/watch?v=${text}`;
@@ -44,6 +50,10 @@ export function normalizeDownloadInput(value: string, source: DownloadSource): {
                 parsed.hash = ''; return { url: parsed.href, collection: true, source: 'youtube' };
             }
             return null;
+        }
+        if (BILIBILI_HOSTS.has(host)) {
+            const url = canonicalBilibiliVideoUrl(text);
+            return url ? { url, collection: false, source: 'bilibili' } : null;
         }
         if (TIKTOK_HOSTS.has(host)) {
             const url = canonicalTikTokVideoUrl(text);

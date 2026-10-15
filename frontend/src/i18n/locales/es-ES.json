@@ -873,5 +873,8 @@
   "platform.linkani": "Linkani",
   "platform.ohli24": "Ohli24",
   "episodes.start": "Descargar episodios seleccionados ({count})",
-  "episodes.partial": "Solo se muestran los episodios del sitio. Faltan algunos episodios anteriores."
+  "episodes.partial": "Solo se muestran los episodios del sitio. Faltan algunos episodios anteriores.",
+  "platform.bilibili": "Bilibili",
+  "live.bilibiliRoomIDOrHttpsLiveBilibiliCom": "ID de sala de Bilibili o https://live.bilibili.com/...",
+  "live.popularity": "Popularidad"
 }

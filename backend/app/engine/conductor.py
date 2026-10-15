@@ -121,16 +121,17 @@ class Conductor:
 
                 self._youtube_engine = YoutubeLiveEngine()
             return self._youtube_engine
-        elif platform in (Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK):
+        elif platform in (Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI):
             if platform not in self._extra_engines:
                 from app.engine.soop import SoopLiveEngine
                 from app.engine.cime import CimeLiveEngine
                 from app.engine.kick import KickLiveEngine
                 from app.engine.twitch import TwitchLiveEngine
                 from app.engine.tiktok import TikTokLiveEngine
+                from app.engine.bilibili import BilibiliLiveEngine
 
                 self._extra_engines[platform] = (
-                    {Platform.SOOP: SoopLiveEngine, Platform.CIME: CimeLiveEngine, Platform.KICK: KickLiveEngine, Platform.TWITCH: TwitchLiveEngine, Platform.TIKTOK: TikTokLiveEngine}[platform]
+                    {Platform.SOOP: SoopLiveEngine, Platform.CIME: CimeLiveEngine, Platform.KICK: KickLiveEngine, Platform.TWITCH: TwitchLiveEngine, Platform.TIKTOK: TikTokLiveEngine, Platform.BILIBILI: BilibiliLiveEngine}[platform]
                 )()
             return self._extra_engines[platform]
         else:
@@ -144,7 +145,7 @@ class Conductor:
         if not task.is_live:
             raise ValueError("오프라인")
         engine = self._get_engine(task.platform)
-        if task.platform in (Platform.CHZZK, Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK):
+        if task.platform in (Platform.CHZZK, Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI):
             return await engine.get_preview_url(task.channel_id)
         page_url = engine.get_stream_url(task.channel_id)
         pipeline = YtdlpLivePipeline(task.channel_id)
@@ -585,6 +586,7 @@ class Conductor:
         task.watchalong_tag = status.get("watchalong_tag")
         task.live_started_at = status.get("live_started_at")
         task.viewer_count = status.get("viewer_count", 0)
+        task.viewer_count_type = 'popularity' if status.get('viewer_count_type') == 'popularity' else 'viewers'
         task.thumbnail_url = status.get("thumbnail_url")
         task.profile_image_url = status.get("profile_image_url")
 
@@ -1066,7 +1068,7 @@ class Conductor:
 
                 extra["source_resolver"] = resolve_youtube
                 cookie_str = None
-            elif task.platform in (Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK):
+            elif task.platform in (Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI):
                 extra["source_resolver"] = (
                     lambda selected_quality: engine.resolve_stream(
                         task.channel_id, selected_quality
@@ -1202,7 +1204,7 @@ class Conductor:
                 ),
                 "channel_url": (
                     self._get_engine(task.platform).get_stream_url(task.channel_id)
-                    if task.platform in (Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK)
+                    if task.platform in (Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI)
                     else None
                 ),
                 "is_live": task.is_live,
@@ -1211,6 +1213,7 @@ class Conductor:
                 "title": task.title,
                 "category": task.category,
                 "viewer_count": task.viewer_count,
+                "viewer_count_type": task.viewer_count_type,
                 "thumbnail_url": task.thumbnail_url,
                 "profile_image_url": task.profile_image_url,
                 "tags": getattr(task, "tags", []),

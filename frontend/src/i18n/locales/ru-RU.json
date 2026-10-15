@@ -873,5 +873,8 @@
   "platform.linkani": "Linkani",
   "platform.ohli24": "Ohli24",
   "episodes.start": "Скачать выбранные серии ({count})",
-  "episodes.partial": "Показаны только серии из списка сайта. Некоторые ранние серии отсутствуют."
+  "episodes.partial": "Показаны только серии из списка сайта. Некоторые ранние серии отсутствуют.",
+  "platform.bilibili": "Bilibili",
+  "live.bilibiliRoomIDOrHttpsLiveBilibiliCom": "ID комнаты Bilibili или https://live.bilibili.com/...",
+  "live.popularity": "Популярность"
 }

@@ -1,7 +1,7 @@
 import { getActiveLocale, formatNumber } from "../../i18n";
 import { translate } from "../../i18n";
-import { memo, useRef, type CSSProperties } from 'react';
-import { Loader2, Play, Settings2, Square, Users } from 'lucide-react';
+import { memo, useRef, useState, type CSSProperties } from 'react';
+import { Loader2, Play, Settings2, Square, TrendingUp, Users } from 'lucide-react';
 import { RecordingPostprocess } from './RecordingPostprocess';
 import { clsx } from 'clsx';
 import { type Channel } from '../../api/client';
@@ -61,14 +61,21 @@ function RecordingChannelHeader({ channel, pendingAction }: Pick<ChannelItemProp
     const { t } = useLanguage();
     const name = channel.channel_name || channel.channel_id;
     const tags = channel.tags || [];
+    // 외부 CDN이 이미지를 거부해도 깨진 그림을 남기지 않고 주소가 갱신되면 다시 시도한다.
+    const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
+    const avatarUrl = channel.profile_image_url;
+    // Bilibili의 online 값은 동시 시청자 수가 아니라 플랫폼 인기도다.
+    const popularity = channel.viewer_count_type === 'popularity' || (!channel.viewer_count_type && channel.platform === 'bilibili');
+    const countLabel = popularity ? 'live.popularity' : 'live.viewers';
+    const CountIcon = popularity ? TrendingUp : Users;
     return <header className="recording-channel-identity">
-        {channel.profile_image_url ? <img src={channel.profile_image_url} alt="" className="recording-avatar" />
+        {avatarUrl && failedAvatar !== avatarUrl ? <img key={avatarUrl} src={avatarUrl} alt="" className="recording-avatar" referrerPolicy="no-referrer" onError={() => setFailedAvatar(avatarUrl)} onLoad={() => setFailedAvatar(null)} />
             : <span className="recording-avatar recording-avatar-fallback" aria-hidden="true"><Users className="size-4" /></span>}
         <div className="recording-channel-copy">
             <div className="recording-channel-name"><h3 title={name}>{name}</h3><PlatformBadge platform={channel.platform || 'chzzk'} /></div>
             <p className="recording-broadcast-title" title={channel.title || undefined}>{channel.is_live && channel.title ? channel.title : t(channel.broadcast_status === 'checking' ? translate("live.checkingLiveStatus") : channel.broadcast_status === 'error' ? translate("live.couldNotCheckLiveStatus") : translate("live.thisChannelIsCurrentlyOffline"))}</p>
             {(channel.is_live || tags.length > 0) && <div className="recording-channel-meta">
-                {channel.is_live && finite(channel.viewer_count) && <span className="recording-viewers" title={`${t("live.viewers")}: ${channel.viewer_count.toLocaleString(getActiveLocale())}`}><Users className="size-3" aria-hidden="true" /><span>{t("live.viewers")} {channel.viewer_count.toLocaleString(getActiveLocale())}</span></span>}
+                {channel.is_live && finite(channel.viewer_count) && <span className="recording-viewers" title={`${t(countLabel)}: ${channel.viewer_count.toLocaleString(getActiveLocale())}`}><CountIcon className="size-3" aria-hidden="true" /><span>{t(countLabel)} {channel.viewer_count.toLocaleString(getActiveLocale())}</span></span>}
                 {tags.slice(0, 2).map(tag => <span className="recording-tag" key={tag} title={tag}>{tag}</span>)}
                 {tags.length > 2 && <span className="recording-tag-overflow" title={tags.slice(2).join(', ')}>+{tags.length - 2}</span>}
             </div>}

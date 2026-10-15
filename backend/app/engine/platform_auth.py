@@ -12,9 +12,9 @@ from typing import Callable, Awaitable, TypeVar
 
 from app.core.config import get_settings
 
-DOMAINS = {'soop': ('sooplive.com', 'sooplive.co.kr', 'afreecatv.com'), 'cime': ('ci.me',), 'kick': ('kick.com',), 'twitch': ('twitch.tv',), 'tiktok': ('tiktok.com',),
+DOMAINS = {'soop': ('sooplive.com', 'sooplive.co.kr', 'afreecatv.com'), 'cime': ('ci.me',), 'kick': ('kick.com',), 'twitch': ('twitch.tv',), 'tiktok': ('tiktok.com',), 'bilibili': ('bilibili.com',),
            'chzzk': ('naver.com',), 'youtube': ('youtube.com', 'google.com')}
-NAMES = {'soop': '숲', 'cime': '씨미', 'kick': 'Kick', 'twitch': 'Twitch', 'tiktok': 'TikTok'}
+NAMES = {'soop': '숲', 'cime': '씨미', 'kick': 'Kick', 'twitch': 'Twitch', 'tiktok': 'TikTok', 'bilibili': 'Bilibili'}
 T = TypeVar('T')
 
 

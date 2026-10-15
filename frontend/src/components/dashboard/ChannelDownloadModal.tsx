@@ -32,7 +32,7 @@ export function ChannelDownloadModal({ platform, name, channel, channelId, onClo
     const [saving, setSaving] = useState(false);
     const [outputFormat,setOutputFormat] = useState(channel?.output_format || 'inherit');
     const [saveError, setSaveError] = useState<string | null>(null);
-    const dynamicQuality = platform === 'soop' || platform === 'cime' || platform === 'kick' || platform === 'twitch' || platform === 'tiktok';
+    const dynamicQuality = platform === 'soop' || platform === 'cime' || platform === 'kick' || platform === 'twitch' || platform === 'tiktok' || platform === 'bilibili';
     const [quality, setQuality] = useState(channel?.recording_quality || 'best');
     const [qualities, setQualities] = useState<LiveQuality[]>([]);
     const [qualityLoading, setQualityLoading] = useState(false);
@@ -60,7 +60,7 @@ export function ChannelDownloadModal({ platform, name, channel, channelId, onClo
     }, [channel]);
 
     useEffect(() => {
-        if (platform !== 'soop' && platform !== 'cime' && platform !== 'kick' && platform !== 'twitch' && platform !== 'tiktok') return;
+        if (platform !== 'soop' && platform !== 'cime' && platform !== 'kick' && platform !== 'twitch' && platform !== 'tiktok' && platform !== 'bilibili') return;
         const controller = new AbortController();
         setQualityLoading(true);
         setQualityMessage('');

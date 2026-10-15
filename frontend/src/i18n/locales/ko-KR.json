@@ -873,5 +873,8 @@
   "platform.linkani": "Linkani",
   "platform.ohli24": "애니24",
   "episodes.start": "선택한 회차 다운로드 ({count})",
-  "episodes.partial": "사이트에 표시된 회차만 제공합니다. 일부 이전 회차가 목록에서 빠져 있습니다."
+  "episodes.partial": "사이트에 표시된 회차만 제공합니다. 일부 이전 회차가 목록에서 빠져 있습니다.",
+  "platform.bilibili": "Bilibili",
+  "live.bilibiliRoomIDOrHttpsLiveBilibiliCom": "Bilibili 방송실 ID 또는 https://live.bilibili.com/...",
+  "live.popularity": "인기도"
 }

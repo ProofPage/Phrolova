@@ -39,6 +39,7 @@ class ChannelTask:
     category: Optional[str] = None
     live_started_at: Optional[str] = None
     viewer_count: int = 0
+    viewer_count_type: str = 'viewers'
     thumbnail_url: Optional[str] = None
     profile_image_url: Optional[str] = None
     tags: list[str] = field(default_factory=list)
