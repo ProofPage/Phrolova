@@ -4,7 +4,7 @@
 
 Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, SOOP, CIME, Kick, Twitch, TikTok and Bilibili**. Monitor channels, preview broadcasts, manage downloads and verify saved media in one web dashboard. Run the packaged app on Windows, or install from source on Linux, macOS or Android with Termux.
 
-[Download](https://github.com/ProofPage/Phrolova/releases/latest) · [Release notes](docs/release-notes/README.md) · [Changelog](docs/CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [MIT License](LICENSE)
+[Download](https://github.com/ProofPage/Phrolova/releases/latest) · [Release notes](docs/release-notes/README.md) · [Changelog](docs/CHANGELOG.md)
 
 ## Features
 
@@ -273,8 +273,8 @@ The build produces `dist/Phrolova.exe`, bundles Node.js and application icons, a
 | Update check returns HTTP 404 | Private release metadata requires authentication; use your authorized checkout or GitHub download |
 | Termux build fails | Check build tools, free space and the [Termux guide](docs/termux-guide.md) |
 
-## Documentation and license
+## Documentation
 
-[Linux](docs/linux-guide.md) · [macOS](docs/macos-guide.md) · [Termux](docs/termux-guide.md) · [Platform support](docs/native-platform-support.md) · [Contribution guide](CONTRIBUTING.md)
+[Linux](docs/linux-guide.md) · [macOS](docs/macos-guide.md) · [Termux](docs/termux-guide.md) · [Platform support](docs/native-platform-support.md)
 
-[MIT](LICENSE). FFmpeg/FFprobe are installed separately and follow their own licenses.
+FFmpeg/FFprobe are installed separately and follow their own licenses.

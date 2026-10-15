@@ -53,7 +53,6 @@ VERSION_RESOURCE = VSVersionInfo(
                 StringStruct("FileDescription", "Phrolova — 라이브 감시·녹화 및 아카이브 도구"),
                 StringStruct("FileVersion", APP_VERSION),
                 StringStruct("InternalName", "Phrolova"),
-                StringStruct("LegalCopyright", "Copyright (c) 2026 Serian (github.com/eruminyu). MIT License."),
                 StringStruct("OriginalFilename", "Phrolova.exe"),
                 StringStruct("ProductName", "Phrolova"),
                 StringStruct("ProductVersion", APP_VERSION),
@@ -108,7 +107,6 @@ hidden_imports = [
 
 # ── 데이터 파일 ───────────────────────────────────────────────
 datas = [
-    ("LICENSE", "."),
     # 빌드된 프론트엔드 정적 파일
     ("backend/app/static", "app/static"),
     # 앱 아이콘
