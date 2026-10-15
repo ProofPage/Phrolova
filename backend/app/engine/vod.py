@@ -302,13 +302,13 @@ class VodEngine(VodPreparation):
                 else None
             )
         ]
-        if media_platform(task.source_url) in ("soop", "cime", "kick", "twitch", "tiktok", "bilibili", "anilife", "linkani", "ohli24"):
+        if media_platform(task.source_url) in ("soop", "cime", "kick", "twitch", "tiktok", "bilibili", "anilife", "linkani", "ohli24", "tvwiki"):
             opts["hls_prefer_native"] = True
             opts["skip_unavailable_fragments"] = False
             opts["postprocessors"] = [
                 {"key": "FFmpegVideoRemuxer", "preferedformat": settings.vod_format}
             ]
-        if media_platform(task.source_url) in ("anilife", "linkani", "ohli24"):
+        if media_platform(task.source_url) in ("anilife", "linkani", "ohli24", "tvwiki"):
             opts.update(writesubtitles=True, subtitleslangs=["all"], noplaylist=True)
         if media_platform(task.source_url) == 'bilibili':
             # 여러 파트가 있는 영상도 선택한 p 값의 한 편과 오디오만 함께 저장한다.
@@ -1136,7 +1136,7 @@ class VodEngine(VodPreparation):
                 finally:
                     if is_youtube_url(task.url):
                         youtube_session = ydl.cookiejar
-                    elif media_platform(task.url) in ('anilife', 'linkani', 'ohli24'):
+                    elif media_platform(task.url) in ('anilife', 'linkani', 'ohli24', 'tvwiki'):
                         episode_session = ydl.cookiejar
                     if selected_cdn == "akamai":
                         task.cdn_applied |= ydl.cdn_applied

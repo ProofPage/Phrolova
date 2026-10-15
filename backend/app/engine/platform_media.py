@@ -4,6 +4,7 @@ from app.engine.platform_auth import redact_media_error
 
 def media_platform(url: str) -> str:
     host = (urlsplit(url).hostname or '').lower()
+    if host == 'tvwiki54.net': return 'tvwiki'
     if host in ('anilife01.tv', 'anilife1.tv'): return 'anilife'
     if host == 'linkani.tv': return 'linkani'
     if host in ('www.ohli24.net', 'ohli24.net'): return 'ohli24'
@@ -19,7 +20,7 @@ def media_platform(url: str) -> str:
 
 def canonical_platform_video(url: str) -> str:
     platform = media_platform(url)
-    if platform in ('anilife', 'linkani', 'ohli24'):
+    if platform in ('anilife', 'linkani', 'ohli24', 'tvwiki'):
         from app.engine.episode_sites import parse_episode_url
         route = parse_episode_url(url)
         if route['collection'] and platform != 'ohli24':
@@ -67,9 +68,13 @@ def platform_ydl(url: str, options: dict):
     opts = dict(options)
     if opts.get('logger'):
         opts['logger'] = SafeMediaLogger(opts['logger'])
-    if media_platform(url) in ('anilife', 'linkani', 'ohli24'):
+    if media_platform(url) in ('anilife', 'linkani', 'ohli24', 'tvwiki'):
         from app.engine.episode_extractor import EpisodeSiteIE
-        ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
+        if media_platform(url) == 'tvwiki':
+            from app.engine.tvwiki_downloader import TVWikiYoutubeDL
+            ydl = TVWikiYoutubeDL(opts, auto_init=False)
+        else:
+            ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
         ydl.add_info_extractor(EpisodeSiteIE())
         ydl.add_default_info_extractors()
         return ydl

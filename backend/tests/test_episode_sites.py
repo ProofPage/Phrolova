@@ -273,7 +273,7 @@ def test_catalog_api_errors_and_no_queue_mutation(monkeypatch):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize('encrypted',[False,True])
-@pytest.mark.parametrize('episode_url',[EP,'https://anilife01.tv/content/1/one',OHLI_EP])
+@pytest.mark.parametrize('episode_url',[EP,'https://anilife01.tv/content/1/one',OHLI_EP,'https://tvwiki54.net/drama/42/11'])
 async def test_real_upstream_download_and_inspection(local_hls,monkeypatch,encrypted,episode_url):
     base,directory=local_hls
     from app.engine import episode_extractor

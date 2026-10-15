@@ -12,7 +12,7 @@ export const client = axios.create({
 // ── Types ───────────────────────────────────────────────
 
 export type Platform = "chzzk" | "youtube" | "soop" | "cime" | "kick" | "twitch" | "tiktok" | "bilibili";
-export type DownloadSource = Platform | 'anilife' | 'linkani' | 'ohli24' | 'external';
+export type DownloadSource = Platform | 'anilife' | 'linkani' | 'ohli24' | 'tvwiki' | 'external';
 export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
 export interface ChannelDownloadOptions {
     output_format?: 'mp4' | 'mkv' | null;
@@ -34,7 +34,7 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
 };
 
 export const DOWNLOAD_SOURCE_LABELS: Record<DownloadSource, string> = {
-    ...PLATFORM_LABELS, anilife: 'platform.anilife', linkani: 'platform.linkani', ohli24: 'platform.ohli24', external: 'download.externalVideo',
+    ...PLATFORM_LABELS, anilife: 'platform.anilife', linkani: 'platform.linkani', ohli24: 'platform.ohli24', tvwiki: 'platform.tvwiki', external: 'download.externalVideo',
 };
 export interface VideoEpisode { id: string; title: string; url: string; number?: number | null; available: boolean; }
 export interface VideoCatalog { source: DownloadSource; id: string; title: string; url: string; episodes: VideoEpisode[]; incomplete?:boolean; }

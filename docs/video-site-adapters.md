@@ -9,10 +9,17 @@ In **Videos**, select a source and paste a work or episode URL. Work links open 
 | Anilife | `https://anilife01.tv/content/<work>` | `/content/<work>/<episode>`; `anilife1.tv` is also accepted |
 | Linkani | `https://linkani.tv/ani/<work>/` | `/watch/<work>/a<source>/k<number>/` |
 | Ohli24 | `https://www.ohli24.net/<id>/<title>.html` (`ohli24.net` also accepted) | Same URL shape; the page determines whether it is a work or episode |
+| TVWiki (티비위키) | `https://tvwiki54.net/<category>/<work>` | `/<category>/<work>/<episode>`; categories include drama, ent, movie and animation |
 
 Only listed episodes are returned. Linkani lists that omit earlier episodes carry an explicit incomplete-list notice; missing episodes are never guessed. Work/episode identity and Ohli24 parent breadcrumbs are checked again before extraction. Site JavaScript is parsed only as normal JSON data, never evaluated.
 
 Requests use HTTPS, bounded responses and explicit site/player/CDN allowlists. Redirect destinations and every manifest reference are checked. Cookies from normal player issuance stay within one extraction/download session, including the transition from metadata extraction to actual media transfer; credentials from other platforms are not borrowed.
+
+TVWiki is a separate Videos source. Its catalog uses the site's actual episode links, with duplicate thumbnail links removed. The adapter follows the current guest session and player configuration requests, parses configuration data without executing site JavaScript, and validates the issued HLS playlist and its resources. It prefers the player's advertised native/casting HLS rendition and registers its ordinary guest session on that rendition's issuing host. Standard 16-byte AES-128 keys use the existing native downloader and local remux/inspection pipeline; browser-specific key decoders are not executed. A denied site/player response is reported as an access error.
+
+If an advertised TVWiki CDN fragment fails, the downloader retries that exact playlist resource on the issuing media server, preserving its path and query. This retry applies only to validated playlist resources and media hosts, strips explicit cross-host credentials, and keeps the existing cookie jar's domain rules. A failed CDN host is avoided for subsequent fragments of the same task; unavailable fragments are never silently skipped.
+
+The October 16, 2026 TVWiki check retrieved a 14-episode public catalog and downloaded a complete 1,375.354-second episode through the actual VOD engine, including origin recovery for blocked CDN fragments. The final 631,200,903-byte MKV contains 1920×1080 H.264 video and AAC audio, passed media inspection, and completed a full FFmpeg decode with no errors. Tests also cover native guest-session issuance, key validation, origin/resource boundaries, encrypted local HLS downloads, all 13 source choices, episode-to-queue requests, and 320/390/768/1440-pixel layouts.
 
 Some connections reset before the site's HTTPS handshake finishes. In that case the site client retries the same allowed host once, splitting the TLS ClientHello across standard TLS records. The original certificate/hostname verification, cookies and proxy settings remain in use. HTTP errors, certificate failures and resets while reading an HTTP response do not trigger this retry; a session-creation POST is never repeated after it has been sent.
 

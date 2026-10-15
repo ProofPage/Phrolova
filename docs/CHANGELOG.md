@@ -8,6 +8,18 @@
 
 ## [Unreleased]
 
+## [2.0.75] - 2026-10-16
+
+### Added
+- Add TVWiki (티비위키) to Videos with work/episode URLs, episode selection, the existing persistent download queue and eight-language source labels.
+- Follow the site's normal guest/native HLS session, preserve task cookies, validate standard AES-128 keys and inspect finalized media.
+- Retry failed advertised CDN fragments on the issuing media server without skipping missing fragments or forwarding explicit cross-host credentials.
+
+### Fixed
+- Record YouTube live HLS with separate video/audio renditions by preserving the master playlist and requested recording quality.
+- Preserve YouTube ID3v2.3 audio tags during Streamlink capture and remux only after closing both source writers.
+- Remove stale references to deleted project documents from the README and Windows packaging inputs.
+
 ## [2.0.74] - 2026-10-16
 
 ### Added
@@ -1020,7 +1032,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.74...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.75...HEAD
+[2.0.75]: https://github.com/ProofPage/Phrolova/compare/v2.0.74...v2.0.75
 [2.0.74]: https://github.com/ProofPage/Phrolova/compare/v2.0.73...v2.0.74
 [2.0.73]: https://github.com/ProofPage/Phrolova/compare/v2.0.72...v2.0.73
 [2.0.72]: https://github.com/ProofPage/Phrolova/compare/v2.0.71...v2.0.72

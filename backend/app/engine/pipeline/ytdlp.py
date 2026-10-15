@@ -1077,7 +1077,13 @@ class YtdlpLivePipeline:
                 return video
         else:
             def make_stream(uri, **kwargs):
-                return stream_type(session, uri, **kwargs)
+                stream = stream_type(session, uri, **kwargs)
+                if is_youtube_url(source_page_url):
+                    # YouTube audio can contain ID3v2.3, while Streamlink's
+                    # packed-audio parser accepts only ID3v2.4. Preserve tags
+                    # and packets for the post-capture FFmpeg remux instead.
+                    stream.parse_packed_audio = False
+                return stream
         try:
             response = session.http.get(hls_url)
             response.raise_for_status()
@@ -1160,6 +1166,27 @@ class YtdlpLivePipeline:
         return session, stream
 
     @staticmethod
+    def _hls_master_url(candidate: dict) -> Optional[str]:
+        """Keep separate audio renditions connected through the HLS master."""
+        value = candidate.get("manifest_url")
+        if not isinstance(value, str) or any(c.isspace() for c in value):
+            return None
+        try:
+            parsed = urlsplit(value)
+            parsed.port
+            if parsed.scheme not in ("http", "https") or not parsed.hostname:
+                return None
+            if parsed.username or parsed.password:
+                return None
+            if parsed.path.lower().endswith(
+                (".mpd", ".mp4", ".webm", ".ts", ".aac", ".mp3")
+            ):
+                return None
+        except ValueError:
+            return None
+        return value
+
+    @staticmethod
     def _select_preview_hls_format(info: dict) -> dict:
         """Prefer actual Full HD dimensions without changing recording quality.
 
@@ -1177,29 +1204,6 @@ class YtdlpLivePipeline:
             except (TypeError, ValueError):
                 return 0
             return number if math.isfinite(number) and number > 0 else 0
-
-        def master_url(candidate: dict) -> Optional[str]:
-            # yt-dlp's HLS manifest_url retains rendition groups that disappear
-            # when its extracted video-only variant is played on its own.
-            value = candidate.get("manifest_url")
-            if not isinstance(value, str) or any(
-                character.isspace() for character in value
-            ):
-                return None
-            try:
-                parsed = urlsplit(value)
-                parsed.port  # Validate the port before handing this URL to a browser.
-                if parsed.scheme not in ("http", "https") or not parsed.hostname:
-                    return None
-                if parsed.username or parsed.password:
-                    return None
-                if parsed.path.lower().endswith(
-                    (".mpd", ".mp4", ".webm", ".ts", ".aac", ".mp3")
-                ):
-                    return None
-            except ValueError:
-                return None
-            return value
 
         candidates = []
         for candidate in [
@@ -1236,7 +1240,7 @@ class YtdlpLivePipeline:
             if codec and not codec.startswith(("avc", "h264")):
                 continue
             video_only = candidate.get("acodec") == "none"
-            master = master_url(candidate) if video_only else None
+            master = YtdlpLivePipeline._hls_master_url(candidate) if video_only else None
             # Without a master we cannot reconnect separate audio. Prefer a
             # usable A/V rendition, while still allowing truly silent broadcasts
             # when no other video format is available.
@@ -1350,6 +1354,19 @@ class YtdlpLivePipeline:
             if height
             else "best[protocol^=m3u8]"
         )
+        youtube = is_youtube_url(page_url)
+        if youtube:
+            # YouTube live HLS can expose only separate video/audio renditions.
+            # Resolve a video format, then let Streamlink select both tracks
+            # from its master playlist using the requested recording quality.
+            preference = "worst" if quality == "worst" else "best"
+            limit = f"[height<={height[1]}]" if height else ""
+            selectors = [f"{preference}[protocol^=m3u8]{limit}",
+                         f"{preference}video[protocol^=m3u8]{limit}"]
+            if limit:
+                selectors += [f"{preference}[protocol^=m3u8]",
+                              f"{preference}video[protocol^=m3u8]"]
+            fmt = "/".join(selectors)
 
         cmd = [
             *extractor,
@@ -1402,6 +1419,7 @@ class YtdlpLivePipeline:
 
         info = _json.loads(stdout.decode())
 
+        selected = info
         hls_url: Optional[str] = info.get("url")
         http_headers: dict[str, str] = info.get("http_headers", {})
         cookies: Optional[str] = info.get("cookies")
@@ -1410,9 +1428,19 @@ class YtdlpLivePipeline:
             # audio/video 분리 포맷인 경우 첫 번째 URL 사용
             formats = info.get("requested_formats", [])
             if formats:
-                hls_url = formats[0].get("url")
-                http_headers = formats[0].get("http_headers", {})
-                cookies = formats[0].get("cookies")
+                selected = formats[0]
+                hls_url = selected.get("url")
+                http_headers = selected.get("http_headers") or http_headers
+                cookies = selected.get("cookies") or cookies
+
+        if youtube and selected.get("acodec") == "none":
+            master = self._hls_master_url(selected)
+            if not master:
+                raise RecordingError(
+                    "youtube_hls_audio",
+                    "유튜브 영상·음성 분리 스트림의 HLS 마스터 주소를 찾지 못했습니다. 다시 시도하세요.",
+                )
+            hls_url = master
 
         if not hls_url:
             raise RuntimeError("yt-dlp URL 추출 실패: HLS URL을 찾을 수 없음")

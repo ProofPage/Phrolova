@@ -2,12 +2,17 @@ import type { DownloadSource } from '../api/client';
 
 export const EPISODE_HOSTS: Record<string, DownloadSource> = {
     'anilife01.tv': 'anilife', 'anilife1.tv': 'anilife', 'linkani.tv': 'linkani', 'www.ohli24.net': 'ohli24', 'ohli24.net': 'ohli24',
+    'tvwiki54.net': 'tvwiki',
 };
 export function parseEpisodeInput(value: string): { url: string; collection: boolean; source: DownloadSource } | null {
     try {
         const url = new URL(value.trim());
         const source = EPISODE_HOSTS[url.hostname];
         if (!source || url.protocol !== 'https:' || url.username || url.password || url.port || /[\x00-\x1f\x7f\\]/.test(decodeURIComponent(url.pathname))) return null;
+        if (source === 'tvwiki') {
+            const match = url.pathname.match(/^\/(movie|kor_movie|drama|ent|sisa|world|ott_ent|short_drama|ani_movie|animation|old_ent|old_drama)\/([1-9]\d*)(?:\/([1-9]\d*))?\/?$/);
+            return match ? {url:`https://tvwiki54.net/${match[1]}/${match[2]}${match[3]?'/'+match[3]:''}`,collection:!match[3],source} : null;
+        }
         if (source === 'anilife') {
             const match = url.pathname.match(/^\/content\/(\d+)(?:\/([A-Za-z0-9_-]+|\d+\.\d+))?\/?$/);
             return match ? {url:`https://anilife01.tv/content/${match[1]}${match[2]?'/'+match[2]:''}`,collection:!match[2],source} : null;
@@ -29,5 +34,5 @@ export function parseEpisodeInput(value: string): { url: string; collection: boo
 }
 
 export function isEpisodeSource(source: DownloadSource) {
-    return source === 'anilife' || source === 'linkani' || source === 'ohli24';
+    return source === 'anilife' || source === 'linkani' || source === 'ohli24' || source === 'tvwiki';
 }
