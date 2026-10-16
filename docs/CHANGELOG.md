@@ -36,50 +36,50 @@
 ### Fixed
 - Gracefully update existing recording job entries upon `source_path` collisions in `register_capture`, eliminating SQLite `IntegrityError: UNIQUE constraint failed: recording_jobs.source_path` and subsequent `read of closed file` errors when restarting recordings.
 
-## [2.0.80-preview.9] - 2026-10-16
+## [2.0.80-preview.09] - 2026-10-16
 
 ### Added
 - Real-time video and audio player for TikTok live previews using browser `mpegts.js` and streaming FLV proxy pipe, replacing periodic static frame image polling.
 
-## [2.0.80-preview.8] - 2026-10-16
+## [2.0.80-preview.08] - 2026-10-16
 
 ### Fixed
 - Optimize Bilibili CDN probe timeouts to swiftly bypass unreachable overseas endpoints and route to active HLS/fMP4 CDNs, resolving "미리보기를 불러올 수 없습니다" failures.
 - Send platform-specific room Referer headers in the preview proxy for Bilibili to prevent 403 Forbidden media errors.
 
-## [2.0.80-preview.7] - 2026-10-16
+## [2.0.80-preview.07] - 2026-10-16
 
 ### Fixed
 - Eliminate false-alarm "재연결 중" / "녹화 중" status flickering during CHZZK recording by removing premature recovery events during routine segment downloads and verifying packet reception silence before transitioning UI state.
 
-## [2.0.80-preview.6] - 2026-10-16
+## [2.0.80-preview.06] - 2026-10-16
 
 ### Fixed
 - Tolerate container duration normalization during stream-copy remuxing when TS inputs contain timestamp discontinuities, fixing false-positive "원본과 변환 파일의 길이가 다릅니다" errors on RPLAY streams.
 - Increase Streamlink queue deadline factor to prevent premature stream termination on live HLS broadcasts.
 
-## [2.0.80-preview.5] - 2026-10-16
+## [2.0.80-preview.05] - 2026-10-16
 
 ### Fixed
 - Fix missing `USER_AGENT` import in `downloader.py` time-machine preview fallback, allowing cookie-less CHZZK broadcasts to resolve instantly without transient 502 errors.
 - Add descriptive error logging for live preview resolution failures.
 
-## [2.0.80-preview.4] - 2026-10-16
+## [2.0.80-preview.04] - 2026-10-16
 
 ### Fixed
 - Query the official time-machine endpoint directly using `liveId` when standard playback media is omitted for restricted/adult CHZZK broadcasts without cookies, resolving live preview instantly without transient 502 errors.
 
-## [2.0.80-preview.3] - 2026-10-16
+## [2.0.80-preview.03] - 2026-10-16
 
 ### Fixed
 - Tolerate container timestamp normalization during stream-copy remuxing when live streams contain timestamp discontinuities or non-monotonic DTS warnings, resolving false-positive "변환 후 프레임레이트가 달라졌습니다" inspection failures on RPLAY and HLS streams.
 
-## [2.0.80-preview.2] - 2026-10-16
+## [2.0.80-preview.02] - 2026-10-16
 
 ### Fixed
 - Allow a brief startup grace period (up to 2 seconds) for a newly starting CHZZK recording pipeline to establish its media connection when serving previews without cookies, eliminating transient 502 HTTP errors.
 
-## [2.0.80-preview.1] - 2026-10-16
+## [2.0.80-preview.01] - 2026-10-16
 
 ### Added
 - Automatically renew RPLAY authentication using `refreshToken` and atomically update the saved session file before token expiration or upon 401 challenges.
