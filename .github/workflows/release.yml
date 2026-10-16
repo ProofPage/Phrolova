@@ -100,11 +100,17 @@ jobs:
           $asset = "dist/Phrolova-$env:RELEASE_TAG-windows-x64.exe"
           $checksums = "dist/SHA256SUMS.txt"
           $version = $env:RELEASE_TAG.TrimStart('v')
-          $isPrerelease = $env:RELEASE_TAG -match '-'
-          $flags = if ($isPrerelease) { @('--prerelease') } else { @('--latest') }
-          if ($env:GITHUB_REF_TYPE -eq 'tag') {
-            gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md @flags --verify-tag
+          if ($env:RELEASE_TAG.Contains("-")) {
+            if ($env:GITHUB_REF_TYPE -eq 'tag') {
+              gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --prerelease --verify-tag
+            } else {
+              gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --prerelease --target $env:GITHUB_SHA
+            }
           } else {
-            gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md @flags --target $env:GITHUB_SHA
+            if ($env:GITHUB_REF_TYPE -eq 'tag') {
+              gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --latest --verify-tag
+            } else {
+              gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --latest --target $env:GITHUB_SHA
+            }
           }
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
