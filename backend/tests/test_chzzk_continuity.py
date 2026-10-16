@@ -789,6 +789,22 @@ class LLHLSTests(unittest.TestCase):
         paths = [continuity.SourcePath(self.cdn.url("primary"), False, "llhls", "akamai")]
         self.assertEqual(self.read(self.stream(paths)), INITIALIZATION + b"".join(groups))
 
+    def test_short_recovery_deadline_reserves_akamai_attempt(self):
+        self.cdn.playlist("primary")
+        self.cdn.playlist("history")
+        self.cdn.playlist("akamai")
+        self.cdn.statuses['/primary/1080p/1.m4v'] = 404
+        history_release = threading.Event()
+        self.cdn.body_gates['/history/1080p/list.m3u8'] = history_release
+        paths = [continuity.SourcePath(self.cdn.url("primary"), cdn="korean"),
+                 continuity.SourcePath(self.cdn.url("history"), True, cdn="korean"),
+                 continuity.SourcePath(self.cdn.url("akamai"), cdn="akamai")]
+        # Keep the normal history budget: a shorter shared recovery deadline
+        # must still allow the available alternate CDN to deliver the interval.
+        self.assertEqual(self.read_while_source_blocked(self.stream(paths), history_release),
+                         INITIALIZATION + b"".join(MEDIA))
+        self.assertGreater(self.cdn.hits['/akamai/1080p/1.m4v'], 0)
+
     def test_standby_failure_and_delay_never_delay_primary_start(self):
         self.cdn.playlist("primary")
         self.cdn.playlist("akamai")

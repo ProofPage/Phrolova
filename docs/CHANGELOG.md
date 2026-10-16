@@ -17,6 +17,7 @@
 - Provide 10 live platforms, 17 video source choices and 887 translation keys across eight interface languages.
 
 ### Fixed
+- Reserve an alternate CDN attempt within CHZZK's shared recovery deadline when history lookup is delayed.
 - Rewrite low-latency HLS prefetch URLs through the preview proxy without exposing signed media links.
 - Preserve actionable authentication and access errors when resolving live previews.
 - Reject denied playback responses, locked media, unavailable quality selections and mismatched broadcaster/video identities.

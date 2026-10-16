@@ -1567,6 +1567,9 @@ class ChzzkContinuityWriter(HLSStreamWriter):
 
                 lookup_group("korean")
                 history_started = time.monotonic()
+                # A shared recovery window may already be nearly exhausted.
+                # Reserve time for Akamai instead of spending it all on history.
+                history_budget = min(HISTORY_BUDGET, max(0, deadline - history_started) / 2)
                 akamai_started = False
                 has_akamai = any(p.cdn == "akamai" for p in self.source.paths)
                 while (futures or lookups or pending or (has_akamai and not akamai_started)) and not self.source.stop.is_set() and time.monotonic() < deadline:
@@ -1599,7 +1602,7 @@ class ChzzkContinuityWriter(HLSStreamWriter):
                     # considered too, under the same recovery deadline.
                     exhausted = "korean" not in lookups and not pending and not futures
                     if has_akamai and not akamai_started and (
-                            exhausted or time.monotonic() - history_started >= HISTORY_BUDGET):
+                            exhausted or time.monotonic() - history_started >= history_budget):
                         akamai_started = lookup_group("akamai")
                     while pending and len(futures) < 2:
                         alternative = pending.pop(0)
