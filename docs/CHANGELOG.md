@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.4] - 2026-10-16
+
+### Fixed
+- Query the official time-machine endpoint directly using `liveId` when standard playback media is omitted for restricted/adult CHZZK broadcasts without cookies, resolving live preview instantly without transient 502 errors.
+
 ## [2.0.80-preview.3] - 2026-10-16
 
 ### Fixed

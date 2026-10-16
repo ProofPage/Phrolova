@@ -6,6 +6,7 @@ Download executable assets from GitHub Releases. Historical filenames, tags and 
 
 ## Versions
 
+- [v2.0.80-preview.4](v2.0.80-preview.4.md)
 - [v2.0.80-preview.3](v2.0.80-preview.3.md)
 - [v2.0.80-preview.2](v2.0.80-preview.2.md)
 - [v2.0.80-preview.1](v2.0.80-preview.1.md)

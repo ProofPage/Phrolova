@@ -86,14 +86,45 @@ class ChzzkLiveEngine:
         return response.json().get("content") or {}
 
     async def get_preview_url(self, channel_id: str) -> str:
-        from app.engine.chzzk_time_machine import _media_path
+        from app.engine.chzzk_time_machine import (
+            TIME_MACHINE_URL,
+            _media_path,
+            get_http_client,
+        )
 
         content = await self.get_live_detail(channel_id)
         if content.get("status") != "OPEN":
             raise ValueError("오프라인")
         playback = json.loads(content.get("livePlaybackJson") or "{}")
-        # Standard live playback, never the recording time-machine playlist.
-        return _media_path(playback.get("media") or [])
+        media = playback.get("media") or []
+        if media:
+            return _media_path(media)
+
+        # Standard playback is omitted for restricted/adult content without login cookies.
+        # Query the official time-machine endpoint using the liveId to obtain the granted HLS URL directly.
+        live_id = content.get("liveId")
+        if live_id:
+            try:
+                headers = {
+                    "User-Agent": USER_AGENT,
+                    "Origin": "https://chzzk.naver.com",
+                    "Referer": "https://chzzk.naver.com/",
+                }
+                response = await get_http_client().get(
+                    TIME_MACHINE_URL.format(live_id=live_id),
+                    headers=headers,
+                    timeout=10.0,
+                )
+                if response.status_code == 200:
+                    tm_content = response.json().get("content") or {}
+                    tm_playback = tm_content.get("playback") or {}
+                    tm_media = tm_playback.get("media") or []
+                    if tm_media:
+                        return _media_path(tm_media)
+            except Exception:
+                pass
+
+        return _media_path([])
 
     def get_stream_url(self, channel_id: str) -> str:
         """치지직 라이브 URL을 반환한다.

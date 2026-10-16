@@ -156,7 +156,7 @@ class Conductor:
                 # Some live-detail responses omit ordinary playback even while
                 # the recording's advertised time-machine source is receiving.
                 # Allow a brief grace period for a starting pipeline to begin receiving.
-                for _ in range(10):
+                for _ in range(25):
                     if self._channels.get(composite_key) is not task or not task.is_live:
                         raise ValueError("오프라인") from None
                     pipeline = task.pipeline
