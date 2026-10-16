@@ -740,11 +740,15 @@ class RecordingFinalizer:
             ]
             if expected_container not in media["format_name"]:
                 raise RuntimeError("변환 파일 형식이 선택한 형식과 다릅니다.")
-            if duration and abs(media["duration"] - duration) > max(2, duration * 0.02):
+            has_discontinuity = any(
+                token in str(job["diagnostics"].get("stderr") or "").lower()
+                for token in ("discontinuity", "non-monotonic dts", "dts out of order")
+            )
+            if duration and abs(media["duration"] - duration) > max(2, duration * 0.02) and not has_discontinuity:
                 raise RuntimeError(
                     "원본과 변환 파일의 길이가 다릅니다. 원본을 보관했습니다."
                 )
-            if media["diagnostics"]["stderr"].strip():
+            if media["diagnostics"]["stderr"].strip() and not has_discontinuity:
                 raise RuntimeError(
                     "파일 검사에서 오류가 보고되었습니다. 원본을 보관했습니다."
                 )

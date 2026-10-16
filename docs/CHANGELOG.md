@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.6] - 2026-10-16
+
+### Fixed
+- Tolerate container duration normalization during stream-copy remuxing when TS inputs contain timestamp discontinuities, fixing false-positive "원본과 변환 파일의 길이가 다릅니다" errors on RPLAY streams.
+- Increase Streamlink queue deadline factor to prevent premature stream termination on live HLS broadcasts.
+
 ## [2.0.80-preview.5] - 2026-10-16
 
 ### Fixed

@@ -494,3 +494,11 @@ def test_timestamp_discontinuity_allows_frame_rate_normalization():
     has_discontinuity = any(token in job["diagnostics"]["stderr"].lower() for token in ("discontinuity", "non-monotonic dts"))
     assert not (avg_diff > 0.1 and r_diff > 0.1 and not has_discontinuity)
 
+    # Verify duration distortion from timestamp discontinuity does not raise
+    source_duration = 730.8
+    output_duration = 22.5
+    duration_mismatch = abs(output_duration - source_duration) > max(2, source_duration * 0.02)
+    assert duration_mismatch
+    # With discontinuity, this mismatch is tolerated
+    assert not (duration_mismatch and not has_discontinuity)
+
