@@ -557,7 +557,8 @@ class YtdlpLivePipeline:
             if role == 'selected':
                 self.cdn = 'akamai' if safe['cdn'] == 'akamai' else 'default'
         elif kind == 'recovery_started' and self._state == RecordingState.RECORDING:
-            self._state = RecordingState.RECONNECTING
+            if self._last_data_at is None or (datetime.now() - self._last_data_at).total_seconds() > 5.0:
+                self._state = RecordingState.RECONNECTING
         elif kind == 'recovery_completed' and self._state == RecordingState.RECONNECTING:
             self._state = RecordingState.RECORDING
         elif kind == 'gap':

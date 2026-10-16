@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.7] - 2026-10-16
+
+### Fixed
+- Eliminate false-alarm "재연결 중" / "녹화 중" status flickering during CHZZK recording by removing premature recovery events during routine segment downloads and verifying packet reception silence before transitioning UI state.
+
 ## [2.0.80-preview.6] - 2026-10-16
 
 ### Fixed

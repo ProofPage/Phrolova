@@ -1777,8 +1777,6 @@ class ChzzkContinuityWriter(HLSStreamWriter):
                             self.boundary(None, reason)
                     break
                 segment, future, _ = item
-                waited_at = time.monotonic()
-                announced = False
                 while not self.closed:
                     try:
                         result = future.result(timeout=0.2)
@@ -1787,10 +1785,6 @@ class ChzzkContinuityWriter(HLSStreamWriter):
                         self.write(segment, result)
                         break
                     except TimeoutError:
-                        if not announced and time.monotonic() - waited_at >= HEDGE_DELAY:
-                            self.source.emit("recovery_started", at=timestamp(segment.date))
-                            self.source.recovering = True
-                            announced = True
                         continue
                     except BroadcastEnded:
                         self.fail(self.previous, segment, "broadcast_ended", missing_next=True)
