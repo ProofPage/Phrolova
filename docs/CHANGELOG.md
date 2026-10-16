@@ -8,6 +8,18 @@
 
 ## [Unreleased]
 
+## [2.0.76] - 2026-10-16
+
+### Added
+- Add TVChak (티비착), Animaru (애니마루) and Ani365 (애니365) to Videos, preserving all 16 sources, episode selection, persistent queues, media inspection and eight-language labels.
+- Add domain-scoped TVChak cookie settings and clear access-verification errors.
+- Download Ani365's advertised HLS renditions and provided VTT subtitles, including variant playlist names and hashed subtitle filenames.
+
+### Fixed
+- Accept changing numbered website hosts for Anilife, TVWiki, TVChak and Animaru while preserving exact website cookie/session scope and separate player/CDN validation.
+- Avoid treating randomized media filenames as advertisement tags.
+- Preserve validated Ani365 playlist content between extraction and native HLS transfer, using the issuing media server for same-episode assets.
+
 ## [2.0.75] - 2026-10-16
 
 ### Added
@@ -1032,7 +1044,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.75...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.76...HEAD
+[2.0.76]: https://github.com/ProofPage/Phrolova/compare/v2.0.75...v2.0.76
 [2.0.75]: https://github.com/ProofPage/Phrolova/compare/v2.0.74...v2.0.75
 [2.0.74]: https://github.com/ProofPage/Phrolova/compare/v2.0.73...v2.0.74
 [2.0.73]: https://github.com/ProofPage/Phrolova/compare/v2.0.72...v2.0.73

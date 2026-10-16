@@ -333,7 +333,7 @@ def get_platform_logger(platform: str | None, component: str | None = None) -> l
     if platform is None:
         return logger.getChild(component) if component else logger
     value = str(getattr(platform, "value", platform)).split(":", 1)[0].lower()
-    if value not in {"chzzk", "youtube", "soop", "cime", "kick", "twitch", "tiktok", "bilibili", "anilife", "linkani", "ohli24", "tvwiki", "x_spaces", "external"}:
+    if value not in {"chzzk", "youtube", "soop", "cime", "kick", "twitch", "tiktok", "bilibili", "anilife", "linkani", "ohli24", "tvwiki", "tvchak", "animaru", "ohli365", "x_spaces", "external"}:
         value = "external"
     child = logger.getChild(value)
     return child.getChild(component) if component else child
@@ -342,6 +342,7 @@ def get_platform_logger(platform: str | None, component: str | None = None) -> l
 def get_media_logger(url: str) -> logging.Logger:
     """플랫폼 로그를 공용 핸들러로 전달한다. 파일 핸들러는 공유한다."""
     from urllib.parse import urlsplit
+    from app.core.episode_domains import numbered_site_for_host
 
     try:
         host = (urlsplit(url).hostname or "").lower()
@@ -353,14 +354,14 @@ def get_media_logger(url: str) -> logging.Logger:
         platform = "chzzk"
     elif any(host == domain or host.endswith("." + domain) for domain in ("sooplive.com", "sooplive.co.kr", "afreecatv.com")):
         platform = "soop"
-    elif host in {"anilife01.tv", "anilife1.tv"}:
-        platform = "anilife"
+    elif numbered := numbered_site_for_host(host):
+        platform = numbered
     elif host == "linkani.tv":
         platform = "linkani"
-    elif host == "tvwiki54.net":
-        platform = "tvwiki"
     elif host == "www.ohli24.net":
         platform = "ohli24"
+    elif host == "v2.ohli365.org":
+        platform = "ohli365"
     elif host in {"bilibili.com", "www.bilibili.com", "m.bilibili.com", "live.bilibili.com", "b23.tv"}:
         platform = "bilibili"
     elif host in {"tiktok.com", "www.tiktok.com", "m.tiktok.com", "vm.tiktok.com", "vt.tiktok.com"}:

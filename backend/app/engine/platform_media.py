@@ -1,11 +1,13 @@
 """Platform classification and extractors for the existing VOD queue."""
 from urllib.parse import urlsplit
+from app.core.episode_domains import numbered_site_for_host
 from app.engine.platform_auth import redact_media_error
 
 def media_platform(url: str) -> str:
     host = (urlsplit(url).hostname or '').lower()
-    if host == 'tvwiki54.net': return 'tvwiki'
-    if host in ('anilife01.tv', 'anilife1.tv'): return 'anilife'
+    numbered = numbered_site_for_host(host)
+    if numbered: return numbered
+    if host == 'v2.ohli365.org': return 'ohli365'
     if host == 'linkani.tv': return 'linkani'
     if host in ('www.ohli24.net', 'ohli24.net'): return 'ohli24'
     if host in ('bilibili.com', 'www.bilibili.com', 'm.bilibili.com', 'live.bilibili.com', 'b23.tv'): return 'bilibili'
@@ -20,7 +22,7 @@ def media_platform(url: str) -> str:
 
 def canonical_platform_video(url: str) -> str:
     platform = media_platform(url)
-    if platform in ('anilife', 'linkani', 'ohli24', 'tvwiki'):
+    if platform in ('anilife', 'linkani', 'ohli24', 'tvwiki', 'tvchak', 'animaru', 'ohli365'):
         from app.engine.episode_sites import parse_episode_url
         route = parse_episode_url(url)
         if route['collection'] and platform != 'ohli24':
@@ -68,7 +70,7 @@ def platform_ydl(url: str, options: dict):
     opts = dict(options)
     if opts.get('logger'):
         opts['logger'] = SafeMediaLogger(opts['logger'])
-    if media_platform(url) in ('anilife', 'linkani', 'ohli24', 'tvwiki'):
+    if media_platform(url) in ('anilife', 'linkani', 'ohli24', 'tvwiki', 'tvchak', 'animaru', 'ohli365'):
         from app.engine.episode_extractor import EpisodeSiteIE
         if media_platform(url) == 'tvwiki':
             from app.engine.tvwiki_downloader import TVWikiYoutubeDL

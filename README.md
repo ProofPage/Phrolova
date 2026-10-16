@@ -35,6 +35,9 @@ The interface supports **Korean, English, Japanese, Spanish, German, Simplified 
 | Bilibili | Room monitoring, HLS previews and manual/automatic recording via Streamlink | BV/av videos, selected parts and b23.tv share links via yt-dlp | Optional Bilibili Netscape cookies |
 | Anilife / Linkani / Ohli24 | — | Work/episode links, episode selection, HLS videos and VTT subtitles | Normal site playback session |
 | TVWiki (티비위키) | — | Work/episode selection and HLS videos at tvwiki54.net | Normal guest playback session |
+| TVChak (티비착) | — | Work/episode selection and original MP4 videos at tvchak208.com | Optional browser cookie file for site access checks |
+| Animaru (애니마루) | — | Work/episode selection, HLS videos and provided VTT subtitles at animaru1.com | Public reader/player API |
+| Ani365 (애니365) | — | Work/episode selection, HLS quality variants and provided VTT subtitles at v2.ohli365.org | Public catalog/playback API and MegaPlay delivery |
 
 Bilibili live rooms accept a numeric room ID or `https://live.bilibili.com/<room>`. The recorder prefers MPEG-TS HLS, tries alternate CDNs and preserves native fMP4 HLS when needed. Available native quality IDs are retained; a stream with no advertised quality ID is shown as Original rather than an inferred resolution. Bilibili's popularity metric is identified separately from viewer counts. Videos accept BV/av IDs and `b23.tv` links; `?p=2` selects a single part. Separate DASH video and audio tracks are merged into the configured container. Cropped videos display both the provider's quality tier and actual pixel dimensions. Register a Netscape cookie file under **Settings → Authentication → Bilibili** when account access or additional qualities are needed. Cookies remain scoped to `bilibili.com`.
 
@@ -163,9 +166,13 @@ Source installations read root `.env`, with `backend/.env` as a legacy fallback.
 | `VOD_FORMAT`, `VOD_MAX_SPEED` | `mp4`, `0` for unlimited speed in MB/s |
 | `KEEP_DOWNLOAD_PARTS` | `false` |
 | `FILE_INSPECTION_TIMEOUT` | `120` seconds; allowed range 1–600 |
-| `YOUTUBE_COOKIE_FILE`, `SOOP_COOKIE_FILE`, `CIME_COOKIE_FILE`, `KICK_COOKIE_FILE`, `TWITCH_COOKIE_FILE`, `TIKTOK_COOKIE_FILE`, `BILIBILI_COOKIE_FILE` | Optional Netscape cookie files; upload through Settings → Authentication |
+| `YOUTUBE_COOKIE_FILE`, `SOOP_COOKIE_FILE`, `CIME_COOKIE_FILE`, `KICK_COOKIE_FILE`, `TWITCH_COOKIE_FILE`, `TIKTOK_COOKIE_FILE`, `BILIBILI_COOKIE_FILE`, `TVCHAK_COOKIE_FILE` | Optional Netscape cookie files; upload through Settings → Authentication |
 
 Use absolute media paths. Relative paths follow the working directory; the source manager starts from `backend/`. Enter actual paths in `.env` rather than relying on shell-variable expansion. Saved preferences are preserved when defaults change in a later release.
+
+TVChak accepts work and episode links under `tvchak208.com/index.php/vod/`. Site access checks can require a browser cookie export from the same internet connection as the server. Register it under **Settings → Authentication → TVChak**. The application reports access checks explicitly and keeps those cookies scoped to the site; it does not solve challenges.
+
+Animaru, TVChak, TVWiki and Anilife also accept changing numeric domain suffixes (`animaru[0-9]+.com`, `tvchak[0-9]+.com`, `tvwiki[0-9]+.net`, `anilife[0-9]+.tv`). Paste the current work/episode address; its hostname is preserved throughout selection and downloading. Website redirects stay within the same domain family, and cookies remain scoped to each original domain.
 
 CHZZK account cookies use `NID_AUT` and `NID_SES`. YouTube, SOOP, CIME, Kick, Twitch, TikTok and Bilibili use their corresponding `*_COOKIE_FILE` settings. Kick uses registered cookies for both live quality resolution and VOD extraction so sign-in-only qualities can appear. Register a Netscape cookie file under Settings → Authentication → Kick, then refresh the quality list or retry video metadata. Only advertised qualities are offered; explicitly requested 1080p is never silently replaced with 720p. Kick cookies and API authorization stay scoped to Kick and are not forwarded to unrelated media CDNs.
 

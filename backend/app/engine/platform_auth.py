@@ -11,10 +11,11 @@ from pathlib import Path
 from typing import Callable, Awaitable, TypeVar
 
 from app.core.config import get_settings
+from app.core.episode_domains import numbered_site_for_host
 
-DOMAINS = {'soop': ('sooplive.com', 'sooplive.co.kr', 'afreecatv.com'), 'cime': ('ci.me',), 'kick': ('kick.com',), 'twitch': ('twitch.tv',), 'tiktok': ('tiktok.com',), 'bilibili': ('bilibili.com',),
+DOMAINS = {'soop': ('sooplive.com', 'sooplive.co.kr', 'afreecatv.com'), 'cime': ('ci.me',), 'kick': ('kick.com',), 'twitch': ('twitch.tv',), 'tiktok': ('tiktok.com',), 'bilibili': ('bilibili.com',), 'tvchak': (),
            'chzzk': ('naver.com',), 'youtube': ('youtube.com', 'google.com')}
-NAMES = {'soop': '숲', 'cime': '씨미', 'kick': 'Kick', 'twitch': 'Twitch', 'tiktok': 'TikTok', 'bilibili': 'Bilibili'}
+NAMES = {'soop': '숲', 'cime': '씨미', 'kick': 'Kick', 'twitch': 'Twitch', 'tiktok': 'TikTok', 'bilibili': 'Bilibili', 'tvchak': '티비착'}
 T = TypeVar('T')
 
 
@@ -49,7 +50,10 @@ def read_cookie_jar(path: Path, platform: str, *, include_expired: bool = False)
     jar._really_load(io.StringIO('\n'.join(normalized) + '\n'), str(path), True, include_expired)
     for cookie in list(jar):
         domain = cookie.domain.lstrip('.').lower()
-        if not any(domain == allowed or domain.endswith('.' + allowed) for allowed in DOMAINS[platform]):
+        # TVChak's numbered domains are separate cookie scopes, never aliases.
+        allowed = (numbered_site_for_host(domain) == 'tvchak' if platform == 'tvchak' else
+                   any(domain == host or domain.endswith('.' + host) for host in DOMAINS[platform]))
+        if not allowed:
             jar.clear(cookie.domain, cookie.path, cookie.name)
     return jar
 

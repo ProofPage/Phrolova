@@ -11,13 +11,21 @@ from urllib.parse import unquote, urlencode, urljoin, urlsplit, urlunsplit
 import httpx
 
 from app.core.http import USER_AGENT
+from app.core.episode_domains import NUMBERED_SITE_HOSTS, numbered_site_for_host
 
 SITES = {
-    'tvwiki': {'name': '티비위키', 'hosts': ('tvwiki54.net',),
+    'ohli365': {'name': '애니365', 'hosts': ('v2.ohli365.org',), 'players': ('megaplay.buzz',),
+                'media': ('nexabloom.top', 'qeltrix.top', 'silverorbit.top', 'broforgotsave.online')},
+    'animaru': {'name': '애니마루', 'hosts': (NUMBERED_SITE_HOSTS['animaru'],),
+                'api': ('api.storagewebtoon.store',),
+                'media': ('api.storagewebtoon.store', 'play.storagewebtoon.store')},
+    'tvchak': {'name': '티비착', 'hosts': (NUMBERED_SITE_HOSTS['tvchak'],),
+               'media': ('bodaponi.b-cdn.net',)},
+    'tvwiki': {'name': '티비위키', 'hosts': (NUMBERED_SITE_HOSTS['tvwiki'],),
                'players': ('player.bunny-frame.online', 'bunny-cdn-player.online'),
                'media': ('poorcdn.com', 'toki56.com', 'amberbloom784.site', 'azuretrail425.site',
                          'breezymeadow545.site', 'cedarshore437.site', 'feff3f33.site', 'quietharbor140.site')},
-    'anilife': {'name': '애니라이프', 'hosts': ('anilife01.tv', 'anilife1.tv'),
+    'anilife': {'name': '애니라이프', 'hosts': (NUMBERED_SITE_HOSTS['anilife'],),
                 'media': ('aniplayer1.site', 'noblepulse539.com', 'quietsummit393.com', 'getvfa.store', 'getvfa.site', 's9.toki56.com')},
     'linkani': {'name': 'Linkani', 'hosts': ('linkani.tv',),
                 'media': ('aniplayer1.site', 'noblepulse539.com', 'quietsummit393.com', 'getvfa.store', 'getvfa.site', 's9.toki56.com')},
@@ -37,6 +45,13 @@ class EpisodeSiteError(ValueError):
         self.status = status
 
 
+def _host_allowed(host, domains, *, subdomains=False):
+    if not host or len(host) > 253 or any(len(label) > 63 for label in host.split('.')):
+        return False
+    return any(bool(domain.fullmatch(host)) if isinstance(domain, re.Pattern)
+               else host == domain or subdomains and host.endswith('.'+domain) for domain in domains)
+
+
 def checked_url(value: str, domains, *, subdomains=False) -> str:
     try:
         if not isinstance(value, str) or re.search(r'[\s\x00-\x1f\x7f\\]', value):
@@ -44,7 +59,7 @@ def checked_url(value: str, domains, *, subdomains=False) -> str:
         parts = urlsplit(value)
         host = (parts.hostname or '').lower()
         if (parts.scheme != 'https' or parts.username is not None or parts.password is not None
-                or parts.port not in (None, 443) or not any(host == d or subdomains and host.endswith('.'+d) for d in domains)):
+                or parts.port not in (None, 443) or not _host_allowed(host, domains, subdomains=subdomains)):
             raise ValueError
         path = unquote(parts.path)
         if re.search(r'[\x00-\x1f\x7f\\]', path) or AD_PATH.search(path):
@@ -57,7 +72,7 @@ def checked_url(value: str, domains, *, subdomains=False) -> str:
 def site_for_url(value: str) -> str | None:
     try:
         host = urlsplit(value).hostname
-        return next((site for site, data in SITES.items() if host in data['hosts']), None)
+        return next((site for site, data in SITES.items() if _host_allowed(host or '', data['hosts'])), None)
     except ValueError:
         return None
 
@@ -69,6 +84,15 @@ def parse_episode_url(value: str) -> dict:
     value = checked_url(value, SITES[site]['hosts'])
     parts = urlsplit(value)
     path = parts.path
+    if site == 'ohli365':
+        from app.engine.ohli365 import parse_ohli365_url
+        return parse_ohli365_url(value)
+    if site == 'animaru':
+        from app.engine.animaru import parse_animaru_url
+        return parse_animaru_url(value)
+    if site == 'tvchak':
+        from app.engine.tvchak import parse_tvchak_url
+        return parse_tvchak_url(value)
     if site == 'tvwiki':
         from app.engine.tvwiki import parse_tvwiki_url
         return parse_tvwiki_url(value)
@@ -77,7 +101,7 @@ def parse_episode_url(value: str) -> dict:
         if match:
             work, episode = match.groups()
             return dict(site=site, work=work, episode=episode,
-                        url=f'https://anilife01.tv/content/{work}'+(f'/{episode}' if episode else ''), collection=not episode)
+                        url=f'https://{parts.hostname}/content/{work}'+(f'/{episode}' if episode else ''), collection=not episode)
     elif site == 'linkani':
         match = re.fullmatch(r'/watch/(\d+)/a(\d+)/k(\d+)/?', path)
         if match:
@@ -152,16 +176,26 @@ class SiteClient:
     """다른 사이트의 쿠키를 빌리지 않고 리다이렉트마다 허용 호스트를 재확인한다."""
     def __init__(self):
         self.http = httpx.Client(timeout=15, follow_redirects=False, headers={'User-Agent': USER_AGENT})
+        self._tvchak_cookies_loaded = set()
 
     def close(self): self.http.close()
 
-    def request(self, url, domains, *, referer=None, form=None, json_body=None, subdomains=False, headers=None, binary=False):
+    def request(self, url, domains, *, referer=None, form=None, json_body=None, subdomains=False, headers=None, binary=False, prefix_bytes=None):
         from app.engine.tls_compat import enable_tls_compat, is_connection_reset
+        if prefix_bytes is not None and (not binary or type(prefix_bytes) is not int or not 1 <= prefix_bytes <= 65536):
+            raise ValueError('Invalid binary probe size')
         method = 'POST' if form is not None or json_body is not None else 'GET'
         origin = urlsplit(url).netloc
         redirects, retried_hosts = 0, set()
         while redirects < 6:
             url = checked_url(url, domains, subdomains=subdomains)
+            host = urlsplit(url).hostname
+            if numbered_site_for_host(host) == 'tvchak' and host not in self._tvchak_cookies_loaded:
+                from app.engine.platform_auth import platform_cookie_jar
+                for cookie in platform_cookie_jar('tvchak'):
+                    if cookie.domain.lstrip('.').lower() == host:
+                        self.http.cookies.jar.set_cookie(cookie)
+                self._tvchak_cookies_loaded.add(host)
             request_headers = {'Referer': str(httpx.URL(referer or url)), 'Accept': 'text/html,application/json,application/vnd.apple.mpegurl'}
             if method == 'POST': request_headers['X-Requested-With'] = 'XMLHttpRequest'
             # 재생 증명 헤더는 발급받은 API 호스트에서만 쓰고 CDN 이동에는 넘기지 않는다.
@@ -169,6 +203,11 @@ class SiteClient:
             try:
                 body_args = {'json': json_body} if json_body is not None else {'data': form}
                 with self.http.stream(method, url, headers=request_headers, **body_args) as response:
+                    if response.headers.get('x-amzn-waf-action') in ('challenge', 'captcha') or response.headers.get('cf-mitigated') == 'challenge':
+                        guidance = ('서버와 같은 인터넷 연결의 브라우저에서 사이트를 연 뒤 설정 → 인증에 티비착 쿠키 파일을 등록하세요.'
+                                    if numbered_site_for_host(host) == 'tvchak'
+                                    else '브라우저에서 접속 상태와 인증 설정을 확인하세요.')
+                        raise EpisodeSiteError('사이트 접속 확인이 필요합니다. '+guidance+' (HTTP '+str(response.status_code)+')', status=response.status_code)
                     if response.status_code in (301,302,303,307,308):
                         redirects += 1
                         url = urljoin(url, response.headers.get('location', ''))
@@ -181,9 +220,12 @@ class SiteClient:
                     if response.status_code == 429: raise EpisodeSiteError('사이트 요청 한도에 도달했습니다. 잠시 후 다시 시도하세요. (HTTP 429)')
                     response.raise_for_status()
                     data = bytearray()
-                    for chunk in response.iter_bytes():
-                        data.extend(chunk)
+                    for chunk in response.iter_bytes(chunk_size=prefix_bytes or 65536):
+                        data.extend(chunk[:max(0, prefix_bytes-len(data))] if prefix_bytes is not None else chunk)
+                        if prefix_bytes is not None and len(data) >= prefix_bytes: break
                         if len(data) > 3*1024*1024: raise EpisodeSiteError('사이트 응답 크기가 너무 큽니다.')
+                    if response.status_code == 202 and not data:
+                        raise EpisodeSiteError('사이트 접속 확인이 필요합니다. 브라우저에서 접속 상태와 인증 설정을 확인하세요. (HTTP 202)', status=202)
                     return str(response.url), bytes(data) if binary else bytes(data).decode('utf-8-sig')
             except httpx.ConnectError as error:
                 host = urlsplit(url).hostname
@@ -229,6 +271,15 @@ def load_catalog(url, client=None):
 
 
 def _load_catalog(route, client):
+    if route['site'] == 'ohli365':
+        from app.engine.ohli365 import load_ohli365_catalog
+        return load_ohli365_catalog(route, client)
+    if route['site'] == 'animaru':
+        from app.engine.animaru import load_animaru_catalog
+        return load_animaru_catalog(route, client)
+    if route['site'] == 'tvchak':
+        from app.engine.tvchak import load_tvchak_catalog
+        return load_tvchak_catalog(route, client)
     if route['site'] == 'tvwiki':
         from app.engine.tvwiki import load_tvwiki_catalog
         return load_tvwiki_catalog(route, client)
@@ -238,8 +289,11 @@ def _load_catalog(route, client):
     incomplete = False
     if site == 'anilife':
         final, _ = client.request(route['url'], hosts)
-        if parse_episode_url(final)['work'] != work: raise EpisodeSiteError('이동된 작품 ID가 다릅니다.')
+        target = parse_episode_url(final)
+        if target['site'] != site or target['work'] != work: raise EpisodeSiteError('이동된 작품 ID가 다릅니다.')
+        route = target
         origin = 'https://'+urlsplit(final).hostname
+        hosts = (urlsplit(final).hostname,)
         _, payload = client.json(origin+'/api/anime/'+work, hosts, referer=final)
         item = payload.get('item') if isinstance(payload, dict) else None
         if not isinstance(item, dict) or str(item.get('id')) != work or not isinstance(item.get('title'), str):
@@ -321,13 +375,15 @@ def _key_attributes(line):
         raise EpisodeSiteError('보호된 영상 또는 지원하지 않는 영상 키 형식입니다.')
 
 
-def validate_hls(client, url, referer, domains, depth=0, visited=None):
+def validate_hls(client, url, referer, domains, depth=0, visited=None, *, headers=None):
     visited = visited if visited is not None else set()
     if depth >= 4 or len(visited) >= 128 or url in visited: raise EpisodeSiteError('재생목록 구조가 너무 깊거나 반복됩니다.')
     visited.add(url)
-    final, body = client.request(url, domains, referer=referer, subdomains=True)
+    final, body = client.request(url, domains, referer=referer, subdomains=True, **({'headers':headers} if headers else {}))
     if not body.lstrip().startswith('#EXTM3U'): raise EpisodeSiteError('정상 HLS 재생목록이 아닙니다.')
-    if re.search(r'scte-?35|#EXT-X-CUE|interstitial|#EXT-X-DATERANGE|vast|SAMPLE-AES|#EXT-X-SESSION-KEY',body,re.I):
+    # Ad markers are playlist tags, not arbitrary substrings of segment names.
+    # SAMPLE-AES and other protected key methods are checked by _key_attributes.
+    if re.search(r'^\s*#(?:EXT-X-(?:CUE|DATERANGE|SESSION-KEY)\b|(?:EXT(?:-X|-OATCLS)?-)?SCTE-?35\b|(?:EXT-X-)?(?:VAST|INTERSTITIAL)\b)',body,re.I|re.M):
         raise EpisodeSiteError('광고 구간 또는 보호된 재생목록은 지원하지 않습니다.')
     master = '#EXT-X-STREAM-INF:' in body
     count = 0
@@ -343,7 +399,7 @@ def validate_hls(client, url, referer, domains, depth=0, visited=None):
             if master and (not line.startswith('#') or line.startswith('#EXT-X-MEDIA:') and 'TYPE=SUBTITLES' not in line):
                 children.add(child)
     if not count or not master and '#EXT-X-ENDLIST' not in body: raise EpisodeSiteError('빈 재생목록이거나 아직 종료되지 않은 영상입니다.')
-    for child in sorted(children): validate_hls(client,child,referer,domains,depth+1,visited)
+    for child in sorted(children): validate_hls(client,child,referer,domains,depth+1,visited,headers=headers)
     return final,body
 
 
@@ -368,7 +424,8 @@ def extract_episode(url, client=None):
 
 def _anilife_playback(client, address, work, episode):
     origin = 'https://' + urlsplit(address).hostname
-    hosts = SITES['anilife']['hosts']
+    # A playback proof is valid only on the API host that issued its cookie.
+    hosts = (urlsplit(address).hostname,)
     for attempt in range(2):
         _, session = client.json(origin+'/api/playback/session', hosts, referer=address,
                                  form={}, headers={'X-Anilife-Player': '1'})
@@ -387,6 +444,15 @@ def _anilife_playback(client, address, work, episode):
 
 def _extract_episode(url,client):
     route = parse_episode_url(url)
+    if route['site'] == 'ohli365':
+        from app.engine.ohli365 import extract_ohli365_episode
+        return extract_ohli365_episode(route, client)
+    if route['site'] == 'animaru':
+        from app.engine.animaru import extract_animaru_episode
+        return extract_animaru_episode(route, client)
+    if route['site'] == 'tvchak':
+        from app.engine.tvchak import extract_tvchak_episode
+        return extract_tvchak_episode(route, client)
     if route['site'] == 'tvwiki':
         from app.engine.tvwiki import extract_tvwiki_episode
         return extract_tvwiki_episode(route, client)
