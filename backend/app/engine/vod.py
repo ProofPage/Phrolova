@@ -303,7 +303,7 @@ class VodEngine(VodPreparation):
                 else None
             )
         ]
-        if media_platform(task.source_url) in ("soop", "cime", "popkontv", "kick", "twitch", "tiktok", "bilibili", "anilife", "linkani", "ohli24", "tvwiki", "tvchak", "animaru", "ohli365"):
+        if media_platform(task.source_url) in ("soop", "cime", "popkontv", "rplay", "kick", "twitch", "tiktok", "bilibili", "anilife", "linkani", "ohli24", "tvwiki", "tvchak", "animaru", "ohli365"):
             opts["hls_prefer_native"] = True
             opts["skip_unavailable_fragments"] = False
             opts["postprocessors"] = [
@@ -533,6 +533,11 @@ class VodEngine(VodPreparation):
         elif media_platform(url) in ("soop", "cime", "popkontv"):
             try:
                 info = await with_platform_cookie_fallback(media_platform(url), extract)
+            except Exception as error:
+                raise ValueError(redact_media_error(error)) from None
+        elif media_platform(url) == 'rplay':
+            try:
+                info = await extract(None)
             except Exception as error:
                 raise ValueError(redact_media_error(error)) from None
         elif is_youtube_url(url):
@@ -1061,6 +1066,17 @@ class VodEngine(VodPreparation):
                 if isinstance(error, DownloadCancelledError):
                     raise
                 raise RuntimeError(redact_media_error(error)) from None
+            return
+        if media_platform(task.url) == 'rplay':
+            try:
+                await self._download_with_ytdlp(task_id, task, None)
+            except Exception as error:
+                if isinstance(error, DownloadCancelledError):
+                    raise
+                text = redact_media_error(error)
+                if any(word in text for word in ('로그인', '세션', '시청 권한', 'DRM', '공개되지', '보호 방식')):
+                    raise NonRetryableDownloadError(text) from None
+                raise RuntimeError(text) from None
             return
         if is_youtube_url(task.url):
             try:

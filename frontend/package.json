@@ -1,8 +1,8 @@
 {
   "name": "phrolova",
   "private": true,
-  "version": "2.0.77",
-  "description": "Self-hosted live recording and video downloads for CHZZK, YouTube, SOOP, CIME, Kick, Twitch, TikTok, Bilibili, PandaTV and PopkonTV.",
+  "version": "2.0.78",
+  "description": "Self-hosted live recording and video downloads for CHZZK, YouTube, SOOP, CIME, Kick, Twitch, TikTok, Bilibili, PandaTV, PopkonTV and RPLAY.",
   "author": "Serian (https://github.com/eruminyu)",
   "license": "MIT",
   "repository": {

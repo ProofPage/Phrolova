@@ -12,6 +12,15 @@ export const SOOP_CHANNEL_HOSTS = new Set(['play.sooplive.co.kr', 'play.sooplive
 /** Normalize user input, never send a URL with credentials to a platform API. */
 export function parsePlatformChannelInput(platform: Platform, value: string): string | null {
     const text = value.trim();
+    if (platform === 'rplay') {
+        if (/^[a-fA-F0-9]{24}$/.test(text)) return text.toLowerCase();
+        try {
+            const url = new URL(text);
+            if (!['https:', 'http:'].includes(url.protocol) || !['rplay.live','www.rplay.live'].includes(url.hostname) || url.username || url.password || url.port) return null;
+            const match = url.pathname.match(/^\/live\/([a-fA-F0-9]{24})\/?$/);
+            return match ? match[1].toLowerCase() : null;
+        } catch { return null; }
+    }
     if (platform === 'popkontv') return parsePopkonTVChannelInput(text);
     if (platform === 'pandalive') return parsePandaliveChannelInput(text);
     if (platform === 'tiktok') return parseTikTokChannelInput(text);

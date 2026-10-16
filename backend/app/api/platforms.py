@@ -30,7 +30,7 @@ router = APIRouter(prefix="/api/platforms", tags=["Platforms"])
 class AddPlatformChannelRequest(ChannelDownloadOptions):
     """멀티 플랫폼 채널 추가 요청."""
 
-    platform: str = Field(..., description="플랫폼 (chzzk, youtube, soop, cime, kick, twitch, tiktok, bilibili, pandalive, popkontv)")
+    platform: str = Field(..., description="플랫폼 (chzzk, youtube, soop, cime, kick, twitch, tiktok, bilibili, pandalive, popkontv, rplay)")
     channel_id: str = Field(..., description="채널 ID (플랫폼별 사용자 ID)")
     auto_record: bool = Field(True, description="방송 시작 시 자동 녹화 여부")
 
@@ -49,13 +49,19 @@ async def add_platform_channel(req: AddPlatformChannelRequest):
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="지원하지 않는 플랫폼입니다. 사용 가능: chzzk, youtube, soop, cime, kick, twitch, tiktok, bilibili, pandalive, popkontv",
+            detail="지원하지 않는 플랫폼입니다. 사용 가능: chzzk, youtube, soop, cime, kick, twitch, tiktok, bilibili, pandalive, popkontv, rplay",
         )
 
     # URL로 입력해도 ID만 추출
     channel_id = req.channel_id
     if platform == Platform.YOUTUBE:
         channel_id = extract_youtube_id(channel_id)
+    elif platform == Platform.RPLAY:
+        from app.engine.rplay_live import normalize_rplay_channel_id
+        try:
+            channel_id = normalize_rplay_channel_id(channel_id)
+        except ValueError as error:
+            raise HTTPException(400, str(error)) from None
     elif platform == Platform.POPKONTV:
         from app.engine.popkontv import normalize_popkontv_channel_id
         try:
@@ -191,6 +197,7 @@ async def trigger_scan_now(composite_key: Optional[str] = None):
 async def get_platform_status():
     """각 플랫폼 엔진의 설정 완료 여부를 반환합니다."""
     settings = get_settings()
+    from app.engine.rplay import session_status
     return {
         "chzzk": {
             "enabled": True,
@@ -208,6 +215,7 @@ async def get_platform_status():
         "bilibili": {"enabled": True, "authenticated": bool(settings.bilibili_cookie_file)},
         "pandalive": {"enabled": True, "authenticated": bool(settings.pandalive_cookie_file)},
         "popkontv": {"enabled": True, "authenticated": bool(settings.popkontv_cookie_file)},
+        "rplay": {"enabled": True, "authenticated": session_status()["valid"]},
     }
 
 
@@ -224,6 +232,49 @@ else:
 
 
 
+
+
+def _save_credential(destination: Path, content: bytes | None, field: str):
+    """Commit the owned credential file and its configuration, or restore the old file."""
+    import os
+    import tempfile
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    directory = Path(tempfile.mkdtemp(prefix='.credential-', dir=destination.parent))
+    temporary, backup = directory / 'new', directory / 'previous'
+    changed = False
+    committed = False
+    try:
+        if destination.exists():
+            destination.replace(backup)
+            changed = True
+        if content is not None:
+            temporary.write_bytes(content)
+            os.chmod(temporary, 0o600)
+            temporary.replace(destination)
+            changed = True
+        _update_env_file({field.upper(): str(destination) if content is not None else ''}, raise_on_error=True)
+        committed = True
+    except Exception:
+        try:
+            if backup.exists():
+                backup.replace(destination)
+            elif changed:
+                destination.unlink(missing_ok=True)
+        except OSError:
+            # Preserve the backup for manual recovery rather than deleting the last good credentials.
+            raise HTTPException(500, f'인증 설정을 복구하지 못했습니다. 복구 파일 위치: {backup}') from None
+        raise HTTPException(500, '인증 설정을 저장하지 못했습니다. 저장 위치의 권한과 여유 공간을 확인하세요.') from None
+    finally:
+        try:
+            temporary.unlink(missing_ok=True)
+            if committed:
+                backup.unlink(missing_ok=True)
+            if not backup.exists():
+                directory.rmdir()
+        except OSError:
+            pass
+    get_settings.cache_clear()
+    setattr(get_settings(), field, str(destination) if content is not None else None)
 
 
 @router.get("/youtube/cookie")
@@ -271,20 +322,13 @@ async def upload_youtube_cookie(file: UploadFile = File(...)):
         if not len(jar):
             raise HTTPException(400, "사용 가능한 유튜브 로그인 쿠키가 없습니다.")
         jar.save(ignore_discard=True)
-        temporary.replace(destination)
-    _update_env_file({"YOUTUBE_COOKIE_FILE": str(destination)})
-    get_settings.cache_clear()
-    # Keep the existing configured field and add the shared status fields.
-    get_settings().youtube_cookie_file = str(destination)
+        _save_credential(destination, temporary.read_bytes(), "youtube_cookie_file")
     return await youtube_cookie_status()
 
 
 @router.delete("/youtube/cookie")
 async def delete_youtube_cookie():
-    _COOKIE_SAVE_PATH.with_name("youtube_cookies.txt").unlink(missing_ok=True)
-    _update_env_file({"YOUTUBE_COOKIE_FILE": ""})
-    get_settings.cache_clear()
-    get_settings().youtube_cookie_file = None
+    _save_credential(_COOKIE_SAVE_PATH.with_name("youtube_cookies.txt"), None, "youtube_cookie_file")
     return await youtube_cookie_status()
 
 
@@ -317,7 +361,10 @@ async def upload_chzzk_cookie(file: UploadFile = File(...)):
         except (OSError, UnicodeError, ValueError):
             raise HTTPException(400, "사용 가능한 치지직 로그인 쿠키가 포함된 Netscape 형식 파일을 선택하세요.") from None
     # Reuse the existing authentication path for Streamlink, live detection and VOD.
-    get_recorder_service().update_cookies(values["NID_AUT"], values["NID_SES"])
+    try:
+        get_recorder_service().update_cookies(values["NID_AUT"], values["NID_SES"])
+    except OSError:
+        raise HTTPException(500, "인증 설정을 저장하지 못했습니다. 저장 위치의 권한과 여유 공간을 확인하세요.") from None
     return await chzzk_cookie_status()
 
 
@@ -341,13 +388,16 @@ async def check_chzzk_cookie():
 @router.delete("/chzzk/cookie", summary="치지직 쿠키 제거")
 async def delete_chzzk_cookie():
     from app.main import get_recorder_service
-    get_recorder_service().update_cookies("", "")
+    try:
+        get_recorder_service().update_cookies("", "")
+    except OSError:
+        raise HTTPException(500, "인증 설정을 저장하지 못했습니다. 저장 위치의 권한과 여유 공간을 확인하세요.") from None
     return await chzzk_cookie_status()
 
 @router.get('/{platform}/{channel_id}/qualities', summary='현재 라이브 화질 조회')
 async def platform_qualities(platform: str, channel_id: str):
     from app.main import get_recorder_service
-    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv'):
+    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'rplay'):
         raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     try:
         engine = get_recorder_service()._conductor._get_engine(Platform(platform))
@@ -364,6 +414,39 @@ async def platform_cookie_status_api(platform: str):
     from app.engine.platform_auth import platform_cookie_status
     if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'tvchak'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     return platform_cookie_status(platform)
+
+
+@router.get('/rplay/session', summary='알플레이 세션 파일 등록 상태')
+async def rplay_session_status():
+    from app.engine.rplay import session_status
+    return session_status()
+
+
+@router.post('/rplay/session', summary='알플레이 세션 JSON 파일 등록')
+async def rplay_session_upload(file: UploadFile = File(...)):
+    import json
+    import os
+    import tempfile
+    from app.engine.rplay import parse_session
+    try:
+        session = parse_session(await file.read(16 * 1024 + 1))
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from None
+    destination = _COOKIE_SAVE_PATH.with_name('rplay_session.json')
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=destination.parent) as directory:
+        temporary = Path(directory) / 'session.json'
+        temporary.write_text(json.dumps(session), encoding='utf-8')
+        os.chmod(temporary, 0o600)
+        _save_credential(destination, temporary.read_bytes(), 'rplay_session_file')
+    return await rplay_session_status()
+
+
+@router.delete('/rplay/session', summary='알플레이 등록 세션 제거')
+async def rplay_session_delete():
+    # An environment-configured external file belongs to the user. Only remove our own copy.
+    _save_credential(_COOKIE_SAVE_PATH.with_name('rplay_session.json'), None, 'rplay_session_file')
+    return await rplay_session_status()
 
 @router.post('/{platform}/cookie', summary='플랫폼 쿠키 파일 등록')
 async def platform_cookie_upload(platform: str, file: UploadFile = File(...)):
@@ -385,17 +468,11 @@ async def platform_cookie_upload(platform: str, file: UploadFile = File(...)):
         except (OSError, UnicodeError, ValueError):
             raise HTTPException(400, '해당 플랫폼의 Netscape 형식 쿠키 파일을 선택하세요.') from None
         os.chmod(temporary, 0o600)
-        temporary.replace(destination)
-    _update_env_file({f'{platform.upper()}_COOKIE_FILE': str(destination)})
-    get_settings.cache_clear()
-    setattr(get_settings(), f'{platform}_cookie_file', str(destination))
+        _save_credential(destination, temporary.read_bytes(), f'{platform}_cookie_file')
     return await platform_cookie_status_api(platform)
 
 @router.delete('/{platform}/cookie', summary='플랫폼 쿠키 파일 제거')
 async def platform_cookie_delete(platform: str):
     if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'tvchak'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
-    _COOKIE_SAVE_PATH.with_name(f'{platform}_cookies.txt').unlink(missing_ok=True)
-    _update_env_file({f'{platform.upper()}_COOKIE_FILE': ''})
-    get_settings.cache_clear()
-    setattr(get_settings(), f'{platform}_cookie_file', None)
+    _save_credential(_COOKIE_SAVE_PATH.with_name(f'{platform}_cookies.txt'), None, f'{platform}_cookie_file')
     return {'configured': False, 'valid': False, 'expired': False, 'message': '쿠키 파일을 제거했습니다.'}

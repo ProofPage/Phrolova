@@ -113,7 +113,7 @@ def test_cookie_upload_validates_format_and_filters_other_domains(tmp_path, monk
     getter.cache_clear = lambda: None
     monkeypatch.setattr(platforms, "get_settings", getter)
     monkeypatch.setattr(platforms, "_COOKIE_SAVE_PATH", tmp_path / "x_cookies.txt")
-    monkeypatch.setattr(platforms, "_update_env_file", lambda values: setattr(settings, "youtube_cookie_file", values["YOUTUBE_COOKIE_FILE"]))
+    monkeypatch.setattr(platforms, "_update_env_file", lambda values, **kwargs: setattr(settings, "youtube_cookie_file", values["YOUTUBE_COOKIE_FILE"]))
     app = FastAPI()
     app.include_router(platforms.router)
     client = TestClient(app)

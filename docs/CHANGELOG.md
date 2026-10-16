@@ -8,6 +8,26 @@
 
 ## [Unreleased]
 
+## [2.0.78] - 2026-10-16
+
+### Added
+- Add RPLAY (알플레이) live monitoring, Streamlink HLS recording, opaque dashboard previews, video downloads and explicit session JSON import.
+- Respect content grants and separate UHD permission when offering live qualities. Keep account authorization scoped to the official API and supported media endpoints.
+- Provide 11 live platforms, 18 video source choices and 898 translation keys in eight languages.
+
+### Fixed
+- Return an error when authentication, notification or first-run settings cannot be saved, preserving the previous runtime configuration.
+- Restore uploaded credential files when persisting their configuration fails, including failed replacement and deletion.
+- Validate all notification inputs before applying changes; report the actual logged-out state after clearing CHZZK cookies.
+- Avoid writing cookies twice during initial setup.
+- Stop Windows source installation when npm is missing or dependency installation/build fails, instead of reporting success.
+
+### Validation
+- Add HTTP failure-injection regressions for credential replacement, removal, CHZZK authentication, notifications and initial setup.
+- Exercise the actual Windows batch installer with successful and failed npm commands in paths containing spaces.
+- Test RPLAY grant validation, credential scope, quality selection, local HLS recording/download, remux, inspection and responsive UI integration.
+- See the release notes and RPLAY support guide for production playback verification and native authenticated test coverage.
+
 ## [2.0.77] - 2026-10-16
 
 ### Added
@@ -1062,7 +1082,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.77...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.78...HEAD
+[2.0.78]: https://github.com/ProofPage/Phrolova/compare/v2.0.77...v2.0.78
 [2.0.77]: https://github.com/ProofPage/Phrolova/compare/v2.0.76...v2.0.77
 [2.0.76]: https://github.com/ProofPage/Phrolova/compare/v2.0.75...v2.0.76
 [2.0.75]: https://github.com/ProofPage/Phrolova/compare/v2.0.74...v2.0.75

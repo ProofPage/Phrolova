@@ -11,7 +11,7 @@ export const client = axios.create({
 
 // ── Types ───────────────────────────────────────────────
 
-export type Platform = "chzzk" | "youtube" | "soop" | "cime" | "kick" | "twitch" | "tiktok" | "bilibili" | "pandalive" | "popkontv";
+export type Platform = "chzzk" | "youtube" | "soop" | "cime" | "kick" | "twitch" | "tiktok" | "bilibili" | "pandalive" | "popkontv" | "rplay";
 export type DownloadSource = Exclude<Platform, "pandalive"> | 'anilife' | 'linkani' | 'ohli24' | 'ohli365' | 'tvwiki' | 'tvchak' | 'animaru' | 'external';
 export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
 export interface ChannelDownloadOptions {
@@ -33,6 +33,7 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
     bilibili: "platform.bilibili",
     pandalive: "platform.pandalive",
     popkontv: "platform.popkontv",
+    rplay: "platform.rplay",
 };
 
 // Live-only providers must also stay out of the fallback video source menu.
@@ -234,6 +235,7 @@ export interface PlatformStatus {
     bilibili?: { enabled: boolean; authenticated: boolean };
     pandalive?: { enabled: boolean; authenticated: boolean };
     popkontv?: { enabled: boolean; authenticated: boolean };
+    rplay?: { enabled: boolean; authenticated: boolean };
 }
 
 export type CookiePlatform = 'chzzk' | 'youtube' | 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'tvchak';
@@ -609,8 +611,14 @@ export const api = {
     },
     getLivePreviewFrame: async (channelKey: string, signal?: AbortSignal, force = false): Promise<Blob> =>
         (await client.get(`/stream/preview-frame/${encodeURIComponent(channelKey)}`, { responseType: 'blob', signal, params: force ? { force: true } : undefined, timeout: 60000 })).data,
-    getPlatformQualities: async (platform: 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv', channel_id: string, signal?: AbortSignal) =>
+    getPlatformQualities: async (platform: 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'rplay', channel_id: string, signal?: AbortSignal) =>
         (await client.get<{ qualities: LiveQuality[]; live?: boolean; message?: string }>(`/platforms/${platform}/${encodeURIComponent(channel_id)}/qualities`, { signal })).data,
+    getRplaySessionStatus: async (): Promise<PlatformCookieStatus> => (await client.get('/platforms/rplay/session')).data,
+    uploadRplaySession: async (file: File): Promise<PlatformCookieStatus> => {
+        const form = new FormData(); form.append('file', file);
+        return (await client.post('/platforms/rplay/session', form)).data;
+    },
+    deleteRplaySession: async (): Promise<PlatformCookieStatus> => (await client.delete('/platforms/rplay/session')).data,
     getPlatformCookieStatus: async (platform: CookiePlatform): Promise<PlatformCookieStatus> =>
         (await client.get<PlatformCookieStatus>(`/platforms/${platform}/cookie`)).data,
     checkPlatformCookies: async (platform: CookiePlatform): Promise<PlatformCookieStatus> =>

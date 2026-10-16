@@ -60,15 +60,24 @@ echo.
 echo ^> 프론트엔드 빌드
 where npm >nul 2>&1
 if errorlevel 1 (
-    echo   [!] npm을 찾을 수 없어 빌드를 건너뜁니다.
-    echo       Node.js 20 이상을 설치하면 웹 UI를 빌드할 수 있습니다: https://nodejs.org
-) else (
-    pushd "%ROOT%\frontend"
-    call npm ci --silent
-    call npm run build
-    popd
-    echo   [+] 빌드 완료
+    echo [X] npm을 찾을 수 없습니다. Node.js 22 이상을 설치하세요: https://nodejs.org
+    exit /b 1
 )
+pushd "%ROOT%\frontend"
+call npm ci --silent
+if errorlevel 1 (
+    popd
+    echo [X] 프론트엔드 의존성 설치 실패
+    exit /b 1
+)
+call npm run build
+if errorlevel 1 (
+    popd
+    echo [X] 프론트엔드 빌드 실패
+    exit /b 1
+)
+popd
+echo   [+] 빌드 완료
 
 echo.
 echo [완료] 실행: scripts\manage.bat start

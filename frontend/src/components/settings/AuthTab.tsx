@@ -2,6 +2,7 @@ import { useLanguage } from "../../contexts/LanguageContext";
 import { useEffect } from "react";
 import { type Settings as SettingsType } from "../../api/client";
 import { PlatformCookieAuth } from "./PlatformCookieAuth";
+import { RplaySessionAuth } from "./RplaySessionAuth";
 import { Card } from "../ui/primitives";
 
 interface Props {
@@ -19,6 +20,7 @@ export function AuthTab({ onSaved, onDirtyChange }: Props) {
             {(["chzzk", "youtube", "soop", "cime", "kick", "twitch", "tiktok", "bilibili", "pandalive", "popkontv", "tvchak"] as const).map(platform => (
                 <PlatformCookieAuth key={platform} platform={platform} onSaved={onSaved} />
             ))}
+            <RplaySessionAuth onSaved={onSaved} />
             <Card className="auth-guidance">
                 <p className="settings-shared-hint">{t("settings.optionalPublicContentWorksWithoutCookiesRegisterANetscapeFormatCookieFileForContentThatRequiresSignIn")}</p>
             </Card>

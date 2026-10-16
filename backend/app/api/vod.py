@@ -21,7 +21,7 @@ async def vod_capabilities():
     return {'sources': [
         {'id': 'chzzk', 'label': '치지직'}, {'id': 'youtube', 'label': '유튜브'},
         {'id': 'soop', 'label': '숲'}, {'id': 'cime', 'label': '씨미'},
-        {'id': 'kick', 'label': 'Kick'}, {'id': 'twitch', 'label': 'Twitch'}, {'id': 'tiktok', 'label': 'TikTok'}, {'id': 'bilibili', 'label': 'Bilibili'}, {'id': 'popkontv', 'label': 'PopkonTV'},
+        {'id': 'kick', 'label': 'Kick'}, {'id': 'twitch', 'label': 'Twitch'}, {'id': 'tiktok', 'label': 'TikTok'}, {'id': 'bilibili', 'label': 'Bilibili'}, {'id': 'popkontv', 'label': 'PopkonTV'}, {'id': 'rplay', 'label': 'platform.rplay'},
         {'id': 'anilife', 'label': 'platform.anilife'}, {'id': 'linkani', 'label': 'platform.linkani'},
         {'id': 'ohli24', 'label': 'platform.ohli24'},
         {'id': 'ohli365', 'label': 'platform.ohli365'},
@@ -262,7 +262,7 @@ async def cancel_channel_import(import_id: str):
 
 class VodPrepareRequest(BaseModel):
     urls: list[Annotated[str, Field(max_length=2048)]] = Field(..., min_length=1, max_length=100)
-    source: Literal['chzzk', 'youtube', 'soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'popkontv', 'anilife', 'linkani', 'ohli24', 'ohli365', 'tvwiki', 'tvchak', 'animaru', 'external', 'auto'] = 'auto'
+    source: Literal['chzzk', 'youtube', 'soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'popkontv', 'rplay', 'anilife', 'linkani', 'ohli24', 'ohli365', 'tvwiki', 'tvchak', 'animaru', 'external', 'auto'] = 'auto'
 
 
 class VodCatalogRequest(BaseModel):

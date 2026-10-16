@@ -23,6 +23,7 @@ class Platform(str, Enum):
     BILIBILI = "bilibili"
     PANDALIVE = "pandalive"
     POPKONTV = "popkontv"
+    RPLAY = "rplay"
 
 
 class LiveStatus(TypedDict, total=False):

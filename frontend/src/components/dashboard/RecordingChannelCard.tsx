@@ -75,7 +75,8 @@ function RecordingChannelHeader({ channel, pendingAction }: Pick<ChannelItemProp
             <div className="recording-channel-name"><h3 title={name}>{name}</h3><PlatformBadge platform={channel.platform || 'chzzk'} /></div>
             <p className="recording-broadcast-title" title={channel.title || undefined}>{channel.is_live && channel.title ? channel.title : t(channel.broadcast_status === 'checking' ? translate("live.checkingLiveStatus") : channel.broadcast_status === 'error' ? translate("live.couldNotCheckLiveStatus") : translate("live.thisChannelIsCurrentlyOffline"))}</p>
             {(channel.is_live || tags.length > 0) && <div className="recording-channel-meta">
-                {channel.is_live && finite(channel.viewer_count) && <span className="recording-viewers" title={`${t(countLabel)}: ${channel.viewer_count.toLocaleString(getActiveLocale())}`}><CountIcon className="size-3" aria-hidden="true" /><span>{t(countLabel)} {channel.viewer_count.toLocaleString(getActiveLocale())}</span></span>}
+                {/* RPLAY's viewer API does not provide a concurrent viewer count. */}
+                {channel.is_live && channel.platform !== 'rplay' && finite(channel.viewer_count) && <span className="recording-viewers" title={`${t(countLabel)}: ${channel.viewer_count.toLocaleString(getActiveLocale())}`}><CountIcon className="size-3" aria-hidden="true" /><span>{t(countLabel)} {channel.viewer_count.toLocaleString(getActiveLocale())}</span></span>}
                 {tags.slice(0, 2).map(tag => <span className="recording-tag" key={tag} title={tag}>{tag}</span>)}
                 {tags.length > 2 && <span className="recording-tag-overflow" title={tags.slice(2).join(', ')}>+{tags.length - 2}</span>}
             </div>}
