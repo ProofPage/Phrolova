@@ -14,11 +14,12 @@ import threading
 import time
 import unittest
 from collections import Counter
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 from unittest.mock import AsyncMock
 
 from streamlink import Streamlink
@@ -790,20 +791,33 @@ class LLHLSTests(unittest.TestCase):
         self.assertEqual(self.read(self.stream(paths)), INITIALIZATION + b"".join(groups))
 
     def test_short_recovery_deadline_reserves_akamai_attempt(self):
-        self.cdn.playlist("primary")
-        self.cdn.playlist("history")
-        self.cdn.playlist("akamai")
-        self.cdn.statuses['/primary/1080p/1.m4v'] = 404
-        history_release = threading.Event()
-        self.cdn.body_gates['/history/1080p/list.m3u8'] = history_release
-        paths = [continuity.SourcePath(self.cdn.url("primary"), cdn="korean"),
-                 continuity.SourcePath(self.cdn.url("history"), True, cdn="korean"),
-                 continuity.SourcePath(self.cdn.url("akamai"), cdn="akamai")]
-        # Keep the normal history budget: a shorter shared recovery deadline
-        # must still allow the available alternate CDN to deliver the interval.
-        self.assertEqual(self.read_while_source_blocked(self.stream(paths), history_release),
-                         INITIALIZATION + b"".join(MEDIA))
-        self.assertGreater(self.cdn.hits['/akamai/1080p/1.m4v'], 0)
+        # Test the deadline policy with a virtual clock, independently of OS
+        # socket/thread/disk scheduling. Real HTTP fallback tests remain above.
+        now = [0.0]
+        stop = SimpleNamespace(is_set=lambda: False,
+                               wait=lambda seconds: now.__setitem__(0, now[0] + seconds))
+        pending_history, ready_akamai = Future(), Future()
+        target, alternate, delivered = object(), object(), object()
+        ready_akamai.set_result([alternate])
+        failed_primary, successful_alternate = Future(), Future()
+        failed_primary.set_exception(continuity.Unavailable("gone", 404, "http"))
+        successful_alternate.set_result(delivered)
+        writer = object.__new__(continuity.ChzzkContinuityWriter)
+        writer.start_download = None
+        writer.source = SimpleNamespace(stop=stop, ended=False, changed=False,
+                                        paths=[SimpleNamespace(cdn="akamai")],
+                                        recovery_limit=lambda deadline: 0.6,
+                                        report_failure=Mock())
+        writer.lookup_slots = threading.BoundedSemaphore(3)
+        writer.lookups = SimpleNamespace(submit=Mock(side_effect=[pending_history, ready_akamai]))
+        writer.submit_request = Mock(side_effect=[failed_primary, successful_alternate])
+        with patch.object(continuity.time, "monotonic", lambda: now[0]):
+            self.assertIs(writer._fetch(target), delivered)
+        self.assertLess(now[0], 0.6)
+        self.assertEqual(writer.lookups.submit.call_count, 2)
+        self.assertIs(writer.submit_request.call_args.args[0], alternate)
+        self.assertTrue(pending_history.cancelled())
+        writer.source.report_failure.assert_not_called()
 
     def test_standby_failure_and_delay_never_delay_primary_start(self):
         self.cdn.playlist("primary")
