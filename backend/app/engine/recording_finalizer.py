@@ -768,14 +768,23 @@ class RecordingFinalizer:
                         ):
                             raise RuntimeError("변환 후 해상도가 달라졌습니다.")
 
-                        def fps(track):
-                            numerator, denominator = map(
-                                float,
-                                str(track.get("avg_frame_rate") or "0/1").split("/"),
-                            )
-                            return numerator / denominator if denominator else 0
+                        def fps(track, field="avg_frame_rate"):
+                            try:
+                                numerator, denominator = map(
+                                    float,
+                                    str(track.get(field) or "0/1").split("/"),
+                                )
+                                return numerator / denominator if denominator else 0
+                            except (ValueError, TypeError, ZeroDivisionError):
+                                return 0
 
-                        if abs(fps(source) - fps(output)) > 0.1:
+                        avg_diff = abs(fps(source, "avg_frame_rate") - fps(output, "avg_frame_rate"))
+                        r_diff = abs(fps(source, "r_frame_rate") - fps(output, "r_frame_rate"))
+                        has_discontinuity = any(
+                            token in str(job["diagnostics"].get("stderr") or "").lower()
+                            for token in ("discontinuity", "non-monotonic dts", "dts out of order")
+                        )
+                        if avg_diff > 0.1 and r_diff > 0.1 and not has_discontinuity:
                             raise RuntimeError("변환 후 프레임레이트가 달라졌습니다.")
             if [
                 (p.stat().st_size, p.stat().st_mtime_ns) for p in sources

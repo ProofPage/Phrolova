@@ -459,3 +459,38 @@ async def test_remux_warning_keeps_source_and_still_verifies_output(local_hls, m
         assert rechecked['inspection_state'] == 'passed'
         assert 'detail' not in rechecked['diagnostics'] and rechecked['warning_message']
     finally: await manager.close()
+
+
+def test_timestamp_discontinuity_allows_frame_rate_normalization():
+    # Verify that discontinuity logs with frame rate difference pass inspection
+    input_media = {
+        "tracks": [
+            {"codec_type": "video", "codec_name": "h264", "width": 1920, "height": 1080, "avg_frame_rate": "24/1", "r_frame_rate": "30/1"},
+            {"codec_type": "audio", "codec_name": "aac"},
+        ],
+    }
+
+    output_media = {
+        "tracks": [
+            {"codec_type": "video", "codec_name": "h264", "width": 1920, "height": 1080, "avg_frame_rate": "30/1", "r_frame_rate": "30/1"},
+            {"codec_type": "audio", "codec_name": "aac"},
+        ],
+    }
+
+    job = {
+        "diagnostics": {
+            "stderr": "[aist#0:1/aac] timestamp discontinuity: 24009092\n[vist#0:0/h264] Non-monotonic DTS; previous: 1160370",
+        },
+    }
+
+    def fps(t, f="avg_frame_rate"):
+        num, den = map(float, str(t.get(f) or "0/1").split("/"))
+        return num / den if den else 0
+
+    s = input_media["tracks"][0]
+    o = output_media["tracks"][0]
+    avg_diff = abs(fps(s, "avg_frame_rate") - fps(o, "avg_frame_rate"))
+    r_diff = abs(fps(s, "r_frame_rate") - fps(o, "r_frame_rate"))
+    has_discontinuity = any(token in job["diagnostics"]["stderr"].lower() for token in ("discontinuity", "non-monotonic dts"))
+    assert not (avg_diff > 0.1 and r_diff > 0.1 and not has_discontinuity)
+

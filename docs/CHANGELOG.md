@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.3] - 2026-10-16
+
+### Fixed
+- Tolerate container timestamp normalization during stream-copy remuxing when live streams contain timestamp discontinuities or non-monotonic DTS warnings, resolving false-positive "변환 후 프레임레이트가 달라졌습니다" inspection failures on RPLAY and HLS streams.
+
 ## [2.0.80-preview.2] - 2026-10-16
 
 ### Fixed
