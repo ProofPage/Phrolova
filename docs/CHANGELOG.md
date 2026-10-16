@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.10] - 2026-10-16
+
+### Fixed
+- Gracefully update existing recording job entries upon `source_path` collisions in `register_capture`, eliminating SQLite `IntegrityError: UNIQUE constraint failed: recording_jobs.source_path` and subsequent `read of closed file` errors when restarting recordings.
+
 ## [2.0.80-preview.9] - 2026-10-16
 
 ### Added

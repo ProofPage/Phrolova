@@ -224,18 +224,35 @@ class RecordingFinalizer:
             ).fetchone()
             if existing:
                 return existing["id"]
-            conn.execute(
-                "INSERT INTO recording_jobs(id,composite_key,source_path,state,payload,updated_at,session_id) VALUES(?,?,?,?,?,?,?)",
-                (
-                    job["id"],
-                    key,
-                    job["source_path"],
-                    job["state"],
-                    json.dumps(job, ensure_ascii=False),
-                    now(),
-                    session_id,
-                ),
-            )
+            conflict = conn.execute(
+                "SELECT id FROM recording_jobs WHERE source_path=?", (job["source_path"],)
+            ).fetchone()
+            if conflict:
+                conn.execute(
+                    "UPDATE recording_jobs SET id=?, composite_key=?, state=?, payload=?, updated_at=?, session_id=? WHERE source_path=?",
+                    (
+                        job["id"],
+                        key,
+                        job["state"],
+                        json.dumps(job, ensure_ascii=False),
+                        now(),
+                        session_id,
+                        job["source_path"],
+                    ),
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO recording_jobs(id,composite_key,source_path,state,payload,updated_at,session_id) VALUES(?,?,?,?,?,?,?)",
+                    (
+                        job["id"],
+                        key,
+                        job["source_path"],
+                        job["state"],
+                        json.dumps(job, ensure_ascii=False),
+                        now(),
+                        session_id,
+                    ),
+                )
         self._owned_captures.add(job["id"])
         if self.on_change:
             self.on_change()
