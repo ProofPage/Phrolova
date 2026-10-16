@@ -155,13 +155,15 @@ class Conductor:
             except TimeMachineUnavailableError:
                 # Some live-detail responses omit ordinary playback even while
                 # the recording's advertised time-machine source is receiving.
-                # Reuse that granted source; do not derive a new CDN URL.
-                if self._channels.get(composite_key) is not task or not task.is_live:
-                    raise ValueError("오프라인") from None
-                pipeline = task.pipeline
-                url = getattr(pipeline, 'preview_source_url', None)
-                if getattr(pipeline, 'channel_id', None) == task.channel_id and isinstance(url, str) and url:
-                    return url
+                # Allow a brief grace period for a starting pipeline to begin receiving.
+                for _ in range(10):
+                    if self._channels.get(composite_key) is not task or not task.is_live:
+                        raise ValueError("오프라인") from None
+                    pipeline = task.pipeline
+                    url = getattr(pipeline, 'preview_source_url', None)
+                    if getattr(pipeline, 'channel_id', None) == task.channel_id and isinstance(url, str) and url:
+                        return url
+                    await asyncio.sleep(0.2)
                 raise
         if task.platform in (Platform.CHZZK, Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY):
             return await engine.get_preview_url(task.channel_id)

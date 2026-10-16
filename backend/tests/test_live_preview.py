@@ -98,6 +98,29 @@ def test_chzzk_capture_preview_follows_the_selected_recovery_cdn():
     assert pipeline.preview_source_url == pipeline._resume_args[0]
 
 
+def test_chzzk_capture_preview_waits_for_starting_pipeline(monkeypatch):
+    pipeline = receiving_chzzk_pipeline()
+    target_url = pipeline._resume_args[0]
+    # Simulate a pipeline that finishes establishing connection after a brief delay
+    pipeline._resume_args = None
+    conductor = Conductor.__new__(Conductor)
+    channel = ChannelTask('channel', is_live=True, pipeline=pipeline)
+    conductor._channels = {channel.composite_key: channel}
+    conductor._get_engine = lambda _: SimpleNamespace(get_preview_url=AsyncMock(side_effect=TimeMachineUnavailableError('No playback')))
+
+    async def delayed_ready():
+        await asyncio.sleep(0.1)
+        pipeline._resume_args = (target_url,)
+
+    async def run_test():
+        task = asyncio.create_task(delayed_ready())
+        result = await conductor.get_live_preview_url(channel.composite_key)
+        await task
+        return result
+
+    assert asyncio.run(run_test()) == target_url
+
+
 def test_preview_leaves_recording_and_monitoring_untouched():
     conductor = Conductor.__new__(Conductor)
     pipeline = object()

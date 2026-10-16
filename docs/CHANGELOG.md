@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.2] - 2026-10-16
+
+### Fixed
+- Allow a brief startup grace period (up to 2 seconds) for a newly starting CHZZK recording pipeline to establish its media connection when serving previews without cookies, eliminating transient 502 HTTP errors.
+
 ## [2.0.80-preview.1] - 2026-10-16
 
 ### Added
