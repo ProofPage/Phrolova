@@ -264,13 +264,18 @@ class BilibiliLiveEngine:
         errors = []
         try:
             # 첫 CDN만 느리거나 차단되어도 같은 공개 방송의 대체 CDN으로 연결할 수 있어야 한다.
-            for url, container in selected.get('_sources', ((selected['url'], selected['container']),)):
+            sources = list(selected.get('_sources', ((selected['url'], selected['container']),)))
+            for idx, (url, container) in enumerate(sources):
                 try:
-                    response = session.http.get(url, timeout=(2, 3), retries=0)
+                    response = session.http.get(url, timeout=(1.0, 1.5), retries=0)
                     text = response.text.lstrip('\ufeff \r\n')
                     if not text.startswith('#EXTM3U') or len(text) > 1024*1024:
                         raise RuntimeError('Bilibili HLS 재생 목록 형식이 올바르지 않습니다.')
                     actual = 'fmp4' if '#EXT-X-MAP:' in text else container
+                    if idx > 0:
+                        # 성공한 살아있는 CDN을 1순위로 승격
+                        sources.insert(0, sources.pop(idx))
+                        selected['_sources'] = tuple(sources)
                     return url, actual
                 except Exception as error:
                     errors.append(error)

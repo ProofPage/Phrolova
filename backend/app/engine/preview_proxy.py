@@ -232,6 +232,9 @@ class PreviewProxy:
         if node["platform"] == "pandalive":
             from app.engine.pandalive import pandalive_headers
             headers.update(pandalive_headers(node["key"].split(":",1)[1]))
+        if node["platform"] == "bilibili":
+            from app.engine.bilibili import bilibili_headers
+            headers.update(bilibili_headers(node["key"].split(":",1)[1]))
         if range_header and re.fullmatch(r"bytes=\d+-\d*", range_header):
             headers["Range"] = range_header
         params = {

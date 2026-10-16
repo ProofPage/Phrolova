@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.8] - 2026-10-16
+
+### Fixed
+- Optimize Bilibili CDN probe timeouts to swiftly bypass unreachable overseas endpoints and route to active HLS/fMP4 CDNs, resolving "미리보기를 불러올 수 없습니다" failures.
+- Send platform-specific room Referer headers in the preview proxy for Bilibili to prevent 403 Forbidden media errors.
+
 ## [2.0.80-preview.7] - 2026-10-16
 
 ### Fixed
