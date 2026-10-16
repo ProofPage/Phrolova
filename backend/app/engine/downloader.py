@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from typing import Optional
 
-from app.core.http import get_http_client
+from app.core.http import USER_AGENT, get_http_client
 from app.core.logger import logger as app_logger
 
 logger = app_logger.getChild("chzzk")

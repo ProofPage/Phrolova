@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.5] - 2026-10-16
+
+### Fixed
+- Fix missing `USER_AGENT` import in `downloader.py` time-machine preview fallback, allowing cookie-less CHZZK broadcasts to resolve instantly without transient 502 errors.
+- Add descriptive error logging for live preview resolution failures.
+
 ## [2.0.80-preview.4] - 2026-10-16
 
 ### Fixed

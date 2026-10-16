@@ -8,6 +8,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import Field
 
+from app.core.logger import logger
 from app.core.utils import extract_channel_id
 from app.engine.base import Platform
 from app.engine.conductor import Conductor
@@ -161,6 +162,7 @@ async def live_preview(channel_id: str):
             message = "미리보기를 불러올 수 없습니다."
         raise HTTPException(409, message) from None
     except Exception as cause:
+        logger.warning("미리보기 주소 확인 실패 [%s]: %s: %s", key, type(cause).__name__, cause)
         # Resolver errors may contain signed URLs or upstream credentials.
         from app.engine.recording_errors import RecordingError
         if isinstance(cause, RecordingError):
