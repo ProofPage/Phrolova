@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.14] - 2026-10-16
+
+### Fixed
+- Fix TikTok live preview video player startup stalled by non-zero FLV stream PTS by synchronizing video playback position to live buffer edge.
+- Eliminate "문구를 표시할 수 없습니다." (common.textUnavailable) on preview timeout by replacing missing translation key with `live.previewUnavailable`.
+- Remove HTML `hidden` attribute throttle on video stage container to guarantee continuous frame decoding across Chromium and WebView2.
+- Configure main-thread demuxing (`enableWorker: false`) and live-sync latency chasing for mpegts.js player.
+
 ## [2.0.80-preview.13] - 2026-10-16
 
 ### Fixed

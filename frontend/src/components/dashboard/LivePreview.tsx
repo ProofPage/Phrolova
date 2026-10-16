@@ -24,8 +24,11 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
     const [message, setMessage] = useState("");
 
     const getMpegts = () => {
-        if (typeof mpegts !== "undefined" && mpegts && typeof mpegts.createPlayer === "function") return mpegts;
-        if (typeof window !== "undefined" && (window as any).mpegts && typeof (window as any).mpegts.createPlayer === "function") return (window as any).mpegts;
+        const direct = (mpegts as any)?.default || mpegts;
+        if (direct && typeof direct.createPlayer === "function") return direct;
+        const win = typeof window !== "undefined" ? (window as any).mpegts : null;
+        const winDirect = win?.default || win;
+        if (winDirect && typeof winDirect.createPlayer === "function") return winDirect;
         return null;
     };
 
@@ -63,6 +66,24 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
             setMessage("");
         };
 
+        const syncLiveEdge = () => {
+            if (!video || stopped) return;
+            try {
+                if (video.buffered && video.buffered.length > 0) {
+                    const start = video.buffered.start(0);
+                    const end = video.buffered.end(video.buffered.length - 1);
+                    if (video.currentTime < start || video.currentTime > end + 1) {
+                        video.currentTime = Math.max(start, end - 1.5);
+                    }
+                    if (video.paused) {
+                        video.play().catch(() => {});
+                    }
+                }
+            } catch {
+                // Ignore sync errors
+            }
+        };
+
         const fail = (reason?: string) => {
             if (stopped) return;
             failed = true;
@@ -70,12 +91,13 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
             clearTimeout(refreshTimer);
             detach();
             setState("error");
-            setMessage(reason || "live.couldNotLoadThePreview");
+            setMessage(reason || "live.previewUnavailable");
         };
 
         const recover = () => {
             if (stopped || failed || recovering) return;
             recovering = true;
+            clearTimeout(loadingTimer);
             detach();
             setState("loading");
             refreshTimer = setTimeout(() => { void load(); }, 3000);
@@ -83,9 +105,10 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
 
         const load = async () => {
             recovering = false;
+            clearTimeout(loadingTimer);
             loadingTimer = setTimeout(() => {
                 if (!stopped) { abort.abort(); fail(); }
-            }, 30000);
+            }, 35000);
             try {
                 const lib = getMpegts();
                 if (!lib || !lib.isSupported()) {
@@ -100,16 +123,21 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
                     url,
                 }, {
                     isLive: true,
-                    enableWorker: true,
+                    lazyLoad: false,
+                    enableWorker: false,
                     enableStashBuffer: false,
+                    liveSync: true,
                     liveBufferLatencyChasing: true,
-                    liveBufferLatencyMaxLatency: 2.5,
+                    liveBufferLatencyMaxLatency: 3.0,
                     liveBufferLatencyMinRemain: 0.5,
                     autoCleanupSourceBuffer: true,
                 });
                 player.on(lib.Events.ERROR, (type: any, detail: any) => {
                     console.warn("[Phrolova] 틱톡 실시간 플레이어 이벤트:", type, detail);
                     recover();
+                });
+                player.on(lib.Events.MEDIA_INFO, () => {
+                    syncLiveEdge();
                 });
                 player.attachMediaElement(video);
                 player.load();
@@ -125,8 +153,19 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
             }
         };
 
+        const onProgress = () => {
+            syncLiveEdge();
+        };
+
+        const onTimeUpdate = () => {
+            if (video.currentTime > 0) ready();
+        };
+
         video.addEventListener("canplay", ready);
         video.addEventListener("playing", ready);
+        video.addEventListener("loadeddata", ready);
+        video.addEventListener("progress", onProgress);
+        video.addEventListener("timeupdate", onTimeUpdate);
         video.addEventListener("error", recover);
         setState("loading");
         setMessage("");
@@ -139,6 +178,9 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
             clearTimeout(loadingTimer);
             video.removeEventListener("canplay", ready);
             video.removeEventListener("playing", ready);
+            video.removeEventListener("loadeddata", ready);
+            video.removeEventListener("progress", onProgress);
+            video.removeEventListener("timeupdate", onTimeUpdate);
             video.removeEventListener("error", recover);
             detach();
         };
@@ -146,9 +188,9 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
 
     return (
         <div className={`channel-live-preview${!isLive ? " is-offline" : ""}`} aria-label={`${name} ${t("live.livePreview")}`}>
-            <div className="channel-preview-stage">
+            <div className="channel-preview-stage relative size-full overflow-hidden">
                 {isLive && (
-                    <div className="channel-preview-player" hidden={state !== "ready"}>
+                    <div className="channel-preview-player absolute inset-0 size-full" style={{ opacity: state === "ready" ? 1 : 0, pointerEvents: state === "ready" ? "auto" : "none" }}>
                         <video ref={videoRef} controls autoPlay muted playsInline poster={poster} className="size-full object-contain" aria-label={`${name} LIVE`} />
                     </div>
                 )}
