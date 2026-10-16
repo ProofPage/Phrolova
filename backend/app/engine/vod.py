@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import math
 import os
+import re
 import subprocess
 import tempfile
 import threading
@@ -302,13 +303,13 @@ class VodEngine(VodPreparation):
                 else None
             )
         ]
-        if media_platform(task.source_url) in ("soop", "cime", "kick", "twitch", "tiktok", "bilibili", "anilife", "linkani", "ohli24", "tvwiki"):
+        if media_platform(task.source_url) in ("soop", "cime", "kick", "twitch", "tiktok", "bilibili", "anilife", "linkani", "ohli24", "tvwiki", "tvchak", "animaru", "ohli365"):
             opts["hls_prefer_native"] = True
             opts["skip_unavailable_fragments"] = False
             opts["postprocessors"] = [
                 {"key": "FFmpegVideoRemuxer", "preferedformat": settings.vod_format}
             ]
-        if media_platform(task.source_url) in ("anilife", "linkani", "ohli24", "tvwiki"):
+        if media_platform(task.source_url) in ("anilife", "linkani", "ohli24", "tvwiki", "tvchak", "animaru", "ohli365"):
             opts.update(writesubtitles=True, subtitleslangs=["all"], noplaylist=True)
         if media_platform(task.source_url) == 'bilibili':
             # 여러 파트가 있는 영상도 선택한 p 값의 한 편과 오디오만 함께 저장한다.
@@ -988,6 +989,14 @@ class VodEngine(VodPreparation):
     async def _download_external(self, task_id: str, task: VodDownloadTask) -> None:
         """yt-dlp를 사용한 외부 URL(유튜브 등) 다운로드."""
         self._validate_media_url(task.url)
+        if media_platform(task.url) == 'tvchak':
+            try:
+                await self._download_with_ytdlp(task_id, task, None)
+            except Exception as error:
+                if re.search(r'\(HTTP (?:202|401|403)\)', str(error)):
+                    raise NonRetryableDownloadError(redact_media_error(error)) from None
+                raise
+            return
         if media_platform(task.url) == 'bilibili':
             from app.engine.bilibili import bilibili_access_error
             from app.engine.bilibili_support import resolve_bilibili_video_url
@@ -1136,7 +1145,7 @@ class VodEngine(VodPreparation):
                 finally:
                     if is_youtube_url(task.url):
                         youtube_session = ydl.cookiejar
-                    elif media_platform(task.url) in ('anilife', 'linkani', 'ohli24', 'tvwiki'):
+                    elif media_platform(task.url) in ('anilife', 'linkani', 'ohli24', 'tvwiki', 'tvchak', 'animaru', 'ohli365'):
                         episode_session = ydl.cookiejar
                     if selected_cdn == "akamai":
                         task.cdn_applied |= ydl.cdn_applied

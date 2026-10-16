@@ -218,6 +218,7 @@ class Settings(BaseSettings):
     twitch_cookie_file: Optional[str] = None
     tiktok_cookie_file: Optional[str] = None
     bilibili_cookie_file: Optional[str] = None
+    tvchak_cookie_file: Optional[str] = None
 
 
     def resolve_ytdlp_path(self, auto_download: bool = False) -> str:

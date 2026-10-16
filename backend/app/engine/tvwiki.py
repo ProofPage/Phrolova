@@ -64,7 +64,7 @@ def _catalog(route, final, body, doc):
         if not episodes:
             raise EpisodeSiteError('티비위키 목록에서 요청한 회차를 찾지 못했습니다.')
     return dict(source='tvwiki', id=route['category']+'-'+route['work'], title=title,
-                url=route['url'], episodes=_rows(list(episodes.values())),
+                url=parse_tvwiki_url(final)['url'], episodes=_rows(list(episodes.values())),
                 incomplete=incomplete if route['collection'] else False)
 
 
@@ -197,7 +197,7 @@ def extract_tvwiki_episode(route, client):
     except (TypeError, ValueError):
         raise EpisodeSiteError('티비위키 회차 재생 식별 정보가 변경되었습니다.') from None
     origin = 'https://' + urlsplit(final).hostname
-    _, session = client.json(origin+'/api/create_session.php', SITES['tvwiki']['hosts'],
+    _, session = client.json(origin+'/api/create_session.php', (urlsplit(final).hostname,),
                              referer=final, json_body=data, headers={'Origin':origin})
     if not isinstance(session, dict) or session.get('success') is not True:
         raise EpisodeSiteError('티비위키 재생 세션을 발급하지 못했습니다. 다시 조회하세요.')

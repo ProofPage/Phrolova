@@ -1,7 +1,7 @@
 import { translate } from "../../i18n";
 import { useEffect, useRef, useState } from 'react';
 import { KeyRound, RefreshCw, Trash2, Upload } from 'lucide-react';
-import { api, PLATFORM_LABELS, type CookiePlatform, type PlatformCookieStatus } from '../../api/client';
+import { api, DOWNLOAD_SOURCE_LABELS, type CookiePlatform, type PlatformCookieStatus } from '../../api/client';
 import { getErrorMessage, localizedStatus } from '../../utils/error';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useConfirm } from '../ui/ConfirmModal';
@@ -13,7 +13,7 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
     const { t } = useLanguage();
     const toast = useToast();
     const confirm = useConfirm();
-    const name = t(PLATFORM_LABELS[platform]);
+    const name = t(DOWNLOAD_SOURCE_LABELS[platform]);
     const fileInput = useRef<HTMLInputElement>(null);
     const pending = useRef(false);
     const [status, setStatus] = useState<PlatformCookieStatus | null>(null);
@@ -64,6 +64,7 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
             {status?.configured && <Button variant="danger" icon={Trash2} disabled={busy} onClick={() => void remove()} aria-label={`${name} ${t("settings.removeCookieFile")}`}>{t("common.delete")}</Button>}
         </div>
         {status?.message && <p className="text-xs text-ink-muted [overflow-wrap:anywhere]" role="status">{localizedStatus(status.message, label)}</p>}
+        {platform === 'tvchak' && <p className="text-xs text-ink-muted">{t('settings.tvchakCookieHelp')}</p>}
         {platform === 'kick' && <p className="text-xs text-ink-muted">{t('live.kickQualityAuthentication')}</p>}
         {status?.expired && <p className="text-xs text-warn">{t("settings.exportCookiesAgainFromASignedInBrowserAndRegisterTheFile")}</p>}
         {error && <p role="alert" className="text-xs text-danger [overflow-wrap:anywhere]">{t(error)}</p>}
