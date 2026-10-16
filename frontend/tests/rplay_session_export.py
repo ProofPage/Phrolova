@@ -65,7 +65,7 @@ async def check(client, directory):
             await source.route('**/*', lambda route: route.fulfill(content_type='text/html', body='<title>Isolated RPLAY fixture</title>'))
             await source.goto('https://rplay.live/fixture')
             record = {'revision': 'fixture', 'session': {'user': {'oid': 'a' * 24, 'email': 'DO-NOT-EXPORT'},
-                'token': 'PRIVATE-fixture-access-token', 'loginType': 'rplay', 'refreshToken': 'DO-NOT-EXPORT'}}
+                'token': 'PRIVATE-fixture-access-token', 'loginType': 'rplay', 'refreshToken': 'PRIVATE-fixture-refresh-token'}}
             await source.evaluate('''record => new Promise((resolve,reject)=>{
                 const open=indexedDB.open('rplay-account-session',1);
                 open.onupgradeneeded=()=>open.result.createObjectStore('records');
@@ -80,7 +80,7 @@ async def check(client, directory):
             destination = directory / 'export.json'
             await download.save_as(destination)
             data = json.loads(destination.read_text())
-            assert data == {'accessToken': record['session']['token'], 'requestorOid': 'a' * 24, 'loginType': 'rplay'}
+            assert data == {'accessToken': record['session']['token'], 'requestorOid': 'a' * 24, 'loginType': 'rplay', 'refreshToken': 'PRIVATE-fixture-refresh-token'}
             assert 'DO-NOT-EXPORT' not in destination.read_text()
             assert rplay.parse_session(destination.read_bytes()) == data
             # CDP omits disk-backed file bodies from intercepted request.postData;

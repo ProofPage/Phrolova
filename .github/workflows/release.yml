@@ -4,8 +4,10 @@ on:
   push:
     branches:
       - "release/v*.*.*"
+      - "release/v*.*.*-*"
     tags:
       - "v*.*.*"
+      - "v*.*.*-*"
 
 permissions:
   contents: write
@@ -31,7 +33,7 @@ jobs:
         shell: pwsh
         run: |
           $tag = $env:GITHUB_REF_NAME -replace '^release/', ''
-          if ($tag -notmatch '^v[0-9]+[.][0-9]+[.][0-9]+$') { throw 'Invalid release version' }
+          if ($tag -notmatch '^v[0-9]+[.][0-9]+[.][0-9]+(-[a-zA-Z0-9.]+)?$') { throw 'Invalid release version' }
           "RELEASE_TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: 프론트엔드 의존성 설치
@@ -98,9 +100,11 @@ jobs:
           $asset = "dist/Phrolova-$env:RELEASE_TAG-windows-x64.exe"
           $checksums = "dist/SHA256SUMS.txt"
           $version = $env:RELEASE_TAG.TrimStart('v')
+          $isPrerelease = $env:RELEASE_TAG -match '-'
+          $flags = if ($isPrerelease) { @('--prerelease') } else { @('--latest') }
           if ($env:GITHUB_REF_TYPE -eq 'tag') {
-            gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --latest --verify-tag
+            gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md @flags --verify-tag
           } else {
-            gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --latest --target $env:GITHUB_SHA
+            gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md @flags --target $env:GITHUB_SHA
           }
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

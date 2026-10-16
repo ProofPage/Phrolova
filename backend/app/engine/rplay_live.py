@@ -61,7 +61,7 @@ def live_headers(channel_id):
 
 def account_session():
     try:
-        session = read_session()
+        session = read_session(auto_refresh=True)
         if session and session_expired(session):
             raise ExtractorError('알플레이 세션이 만료되었습니다. 설정 → 인증에서 세션 파일을 갱신하세요.')
         return session
@@ -86,6 +86,15 @@ class RplayLiveEngine:
         try:
             async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
                 response = await client.get(API + path, params=params, headers=headers)
+            if response.status_code == 401 and session and session.get('refreshToken'):
+                from app.engine.rplay import refresh_session_token
+                try:
+                    session = refresh_session_token(session)
+                    headers['Authorization'] = session['accessToken']
+                    async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
+                        response = await client.get(API + path, params=params, headers=headers)
+                except Exception:
+                    pass
             if response.status_code in (401, 403, 444, 999):
                 if optional_permission:
                     return None

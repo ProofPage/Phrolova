@@ -1,7 +1,53 @@
 import asyncio, json
 import httpx
 import pytest
-from app.engine.preview_proxy import PreviewProxy
+from app.engine.preview_proxy import PreviewProxy, trim_live_playlist
+
+
+def test_trim_live_playlist_trims_large_playlists_and_adjusts_media_sequence():
+    body = (
+        '#EXTM3U\n'
+        '#EXT-X-VERSION:6\n'
+        '#EXT-X-TARGETDURATION:4\n'
+        '#EXT-X-MEDIA-SEQUENCE:100\n'
+        '#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=1.5\n'
+        '#EXT-X-PART-INF:PART-TARGET=0.5\n'
+        '#EXT-X-MAP:URI="init.mp4"\n'
+    )
+    for i in range(10):
+        body += (
+            f'#EXT-X-PART:DURATION=0.5,URI="part{i}_0.m4s"\n'
+            f'#EXT-X-PART:DURATION=0.5,URI="part{i}_1.m4s"\n'
+            f'#EXTINF:4.000,\n'
+            f'segment{i}.mp4\n'
+        )
+    body += '#EXT-X-PRELOAD-HINT:TYPE=PART,URI="part10_0.m4s"\n'
+    trimmed = trim_live_playlist(body, max_segments=4)
+    assert '#EXT-X-MEDIA-SEQUENCE:106' in trimmed
+    assert '#EXT-X-SERVER-CONTROL' not in trimmed
+    assert '#EXT-X-PART-INF' not in trimmed
+    assert '#EXT-X-PART:' not in trimmed
+    assert '#EXT-X-PRELOAD-HINT' not in trimmed
+    assert '#EXT-X-MAP:URI="init.mp4"' in trimmed
+    assert 'segment0.mp4' not in trimmed
+    assert 'segment5.mp4' not in trimmed
+    assert 'segment6.mp4' in trimmed
+    assert 'segment9.mp4' in trimmed
+    assert trimmed.count('#EXTINF:') == 4
+
+
+def test_trim_live_playlist_leaves_short_playlist_alone():
+    body = (
+        '#EXTM3U\n'
+        '#EXT-X-VERSION:3\n'
+        '#EXT-X-TARGETDURATION:2\n'
+        '#EXTINF:2.0,\n'
+        'seg1.ts\n'
+        '#EXTINF:2.0,\n'
+        'seg2.ts\n'
+    )
+    trimmed = trim_live_playlist(body, max_segments=4)
+    assert trimmed == body
 
 
 @pytest.mark.asyncio

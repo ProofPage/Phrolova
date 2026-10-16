@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.1] - 2026-10-16
+
+### Added
+- Automatically renew RPLAY authentication using `refreshToken` and atomically update the saved session file before token expiration or upon 401 challenges.
+
+### Fixed
+- Eliminate live preview buffering for cookie-less CHZZK streams by trimming massive time-shift playlists down to the live edge and removing sub-second low-latency polling tags in the preview proxy.
+
 ## [2.0.79] - 2026-10-16
 
 ### Fixed

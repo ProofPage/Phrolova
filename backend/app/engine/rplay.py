@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import re
+import tempfile
+import threading
 import time
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -15,8 +18,12 @@ from app.core.config import get_settings
 
 ORIGIN = 'https://rplay.live'
 API = 'https://api.rplay.live/content'
+REFRESH_API = 'https://api.rplay.live/rplay/account/refresh-token'
 HOSTS = {'rplay.live', 'www.rplay.live'}
 MEDIA_HOSTS = {'api.rplay.live', 'pb.rplay.live', 'pb2.rplay.live', 'pb3.rplay.live', 'pb.sbcloudsec.net'}
+
+_log = logging.getLogger(__name__)
+_refresh_lock = threading.Lock()
 
 
 def canonical_rplay_video_url(value: str) -> str:
@@ -32,7 +39,7 @@ def canonical_rplay_video_url(value: str) -> str:
 
 
 def parse_session(content: bytes) -> dict[str, str]:
-    """Accept a small explicit export, never browser storage or a refresh token."""
+    """Accept an explicit export with access token and optional refresh token for auto-renewal."""
     try:
         if len(content) > 16 * 1024:
             raise ValueError
@@ -42,40 +49,129 @@ def parse_session(content: bytes) -> dict[str, str]:
         token = data.get('accessToken')
         oid = data.get('requestorOid')
         login_type = data.get('loginType', 'rplay')
+        refresh_token = data.get('refreshToken')
         if (not isinstance(token, str) or not re.fullmatch(r'[A-Za-z0-9._~+/=-]{16,8192}', token)
                 or not isinstance(oid, str) or not re.fullmatch(r'[a-fA-F0-9]{24}', oid)
                 or not isinstance(login_type, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,32}', login_type)):
             raise ValueError
-        return {'accessToken': token, 'requestorOid': oid.lower(), 'loginType': login_type}
+        result = {'accessToken': token, 'requestorOid': oid.lower(), 'loginType': login_type}
+        if refresh_token is not None:
+            if not isinstance(refresh_token, str) or not re.fullmatch(r'[A-Za-z0-9._~+/=-]{16,8192}', refresh_token):
+                raise ValueError
+            result['refreshToken'] = refresh_token
+        return result
     except (ValueError, UnicodeError):
         raise ValueError('accessToken과 requestorOid가 포함된 알플레이 세션 JSON 파일을 선택하세요.') from None
 
 
-def session_expired(session: dict) -> bool:
-    # This is a local expiry hint, not JWT signature verification; RPLAY validates the token.
+def session_token_exp(session: dict) -> float | None:
     try:
         payload = session['accessToken'].split('.')[1]
         data = json.loads(base64.urlsafe_b64decode(payload + '=' * (-len(payload) % 4)))
-        return float(data['exp']) <= time.time()
+        return float(data['exp'])
     except (KeyError, IndexError, ValueError, TypeError):
+        return None
+
+
+def session_needs_refresh(session: dict, margin_seconds: float = 300.0) -> bool:
+    """True if token is expired or within 5 minutes of expiring."""
+    exp = session_token_exp(session)
+    if exp is None:
         return False
+    return exp - time.time() <= margin_seconds
 
 
-def read_session() -> dict[str, str] | None:
+def session_expired(session: dict) -> bool:
+    # This is a local expiry hint, not JWT signature verification; RPLAY validates the token.
+    exp = session_token_exp(session)
+    if exp is None:
+        return False
+    return exp <= time.time()
+
+
+def refresh_session_token(session: dict) -> dict[str, str]:
+    """Exchange refreshToken for a fresh accessToken and atomically update the session file.
+    Matches RPLAY web player behavior (POST /rplay/account/refresh-token)."""
+    refresh_token = session.get('refreshToken')
+    if not refresh_token:
+        raise ExtractorError('알플레이 세션이 만료되었습니다. 설정에서 세션 파일을 갱신하세요.', expected=True)
+    headers = {
+        'Origin': ORIGIN,
+        'Referer': ORIGIN + '/',
+        'platform-type': 'rplay',
+        'refresh-token': refresh_token,
+        'User-Agent': 'Mozilla/5.0',
+    }
+    payload = {'requestorOid': session['requestorOid']}
+    try:
+        with httpx.Client(timeout=15, follow_redirects=False) as client:
+            response = client.post(REFRESH_API, json=payload, headers=headers)
+        if response.status_code in (401, 403):
+            raise ExtractorError('알플레이 리프레시 토큰이 만료되었거나 거부되었습니다. 설정에서 세션 파일을 다시 등록하세요.', expected=True)
+        response.raise_for_status()
+        data = response.json()
+        new_access = data.get('accessToken')
+        if not isinstance(new_access, str) or not re.fullmatch(r'[A-Za-z0-9._~+/=-]{16,8192}', new_access):
+            raise ExtractorError('알플레이 토큰 갱신 응답 형식이 올바르지 않습니다.', expected=True)
+        updated = dict(session)
+        updated['accessToken'] = new_access
+        new_refresh = data.get('refreshToken')
+        if isinstance(new_refresh, str) and re.fullmatch(r'[A-Za-z0-9._~+/=-]{16,8192}', new_refresh):
+            updated['refreshToken'] = new_refresh
+        _persist_session(updated)
+        return updated
+    except httpx.HTTPError as err:
+        raise ExtractorError(f'알플레이 토큰 갱신 서버 연결에 실패했습니다: {err}', expected=True) from None
+
+
+def _persist_session(session: dict[str, str]) -> None:
+    source = get_settings().rplay_session_file
+    if not source:
+        return
+    path = Path(source)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        raw = json.dumps(session, indent=2, ensure_ascii=False).encode('utf-8')
+        with tempfile.NamedTemporaryFile('wb', dir=path.parent, delete=False) as tmp:
+            tmp.write(raw)
+            tmp_path = Path(tmp.name)
+        tmp_path.replace(path)
+    except OSError as err:
+        _log.warning('알플레이 세션 파일 자동 저장 실패: %s', err)
+
+
+def read_session(*, auto_refresh: bool = False) -> dict[str, str] | None:
     source = get_settings().rplay_session_file
     if not source:
         return None
     try:
         with Path(source).open('rb') as stream:
-            return parse_session(stream.read(16 * 1024 + 1))
+            session = parse_session(stream.read(16 * 1024 + 1))
     except (OSError, ValueError):
         raise ExtractorError('알플레이 세션 파일을 읽지 못했습니다. 설정에서 다시 등록하세요.', expected=True) from None
+
+    if auto_refresh and session.get('refreshToken') and session_needs_refresh(session):
+        with _refresh_lock:
+            # Re-read under lock in case another thread already refreshed
+            try:
+                with Path(source).open('rb') as stream:
+                    current = parse_session(stream.read(16 * 1024 + 1))
+            except (OSError, ValueError):
+                current = session
+            if session_needs_refresh(current):
+                try:
+                    return refresh_session_token(current)
+                except Exception as err:
+                    _log.warning('알플레이 세션 사전 갱신 실패 (기존 토큰 계속 시도): %s', err)
+            return current
+
+    return session
 
 
 def session_status() -> dict:
     configured = bool(get_settings().rplay_session_file)
     try:
-        session = read_session()
+        session = read_session(auto_refresh=True)
         expired = bool(session and session_expired(session))
         return {'configured': configured, 'valid': bool(session and not expired), 'expired': expired}
     except ExtractorError:
@@ -99,7 +195,7 @@ def video_metadata(url: str) -> dict:
     oid = canonical.rsplit('/', 1)[-1]
     params = {'contentOid': oid, 'status': 'published', 'omitComments': 'true', 'requestCanView': 'true'}
     headers = {'Origin': ORIGIN, 'Referer': canonical, 'platform-type': 'rplay'}
-    session = read_session()
+    session = read_session(auto_refresh=True)
     if session:
         if session_expired(session):
             raise ExtractorError('알플레이 로그인 세션이 만료되었습니다. 설정에서 세션 파일을 갱신하세요.', expected=True)
@@ -109,6 +205,14 @@ def video_metadata(url: str) -> dict:
         # Account authorization must never follow a redirect or reach a media CDN.
         with httpx.Client(timeout=20, follow_redirects=False) as client:
             response = client.get(API, params=params, headers=headers)
+        if response.status_code == 401 and session and session.get('refreshToken'):
+            try:
+                session = refresh_session_token(session)
+                headers['Authorization'] = session['accessToken']
+                with httpx.Client(timeout=20, follow_redirects=False) as client:
+                    response = client.get(API, params=params, headers=headers)
+            except Exception:
+                pass
         if response.status_code == 401:
             raise ExtractorError('알플레이 로그인 세션이 유효하지 않습니다. 설정에서 다시 등록하세요.', expected=True)
         if response.status_code in (403, 444, 999):

@@ -19,6 +19,85 @@ if not any(isinstance(item, SafeMediaLogFilter) for item in _http_logger.filters
     _http_logger.addFilter(SafeMediaLogFilter())
 
 
+def trim_live_playlist(body: str, max_segments: int = 6) -> str:
+    """Trim large live or low-latency time-shift media playlists for preview efficiency.
+    Retains the latest segments, adjusts EXT-X-MEDIA-SEQUENCE, and strips sub-second
+    part/preload hints so low-latency polling does not starve the proxy semaphore."""
+    if '#EXTINF:' not in body:
+        return body
+
+    lines = body.splitlines()
+    header_lines: list[str] = []
+    segments: list[list[str]] = []
+    current_segment: list[str] = []
+    in_segments = False
+    media_sequence = 0
+    seq_index = -1
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith('#EXT-X-MEDIA-SEQUENCE:'):
+            try:
+                media_sequence = int(stripped.split(':', 1)[1])
+            except ValueError:
+                pass
+            seq_index = len(header_lines)
+            header_lines.append(line)
+            continue
+        if stripped.startswith(('#EXT-X-SERVER-CONTROL:', '#EXT-X-PART-INF:')):
+            continue
+        if stripped.startswith(('#EXT-X-PRELOAD-HINT:', '#EXT-X-RENDITION-REPORT:')):
+            continue
+
+        if stripped.startswith('#EXTINF:'):
+            in_segments = True
+            if current_segment:
+                segments.append(current_segment)
+                current_segment = []
+            current_segment.append(line)
+        elif in_segments:
+            if stripped.startswith('#EXT-X-PART:'):
+                continue
+            if stripped and not stripped.startswith('#'):
+                current_segment.append(line)
+                segments.append(current_segment)
+                current_segment = []
+            elif stripped.startswith('#EXT-X-DISCONTINUITY'):
+                current_segment.append(line)
+            elif stripped.startswith('#EXT-X-KEY:') or stripped.startswith('#EXT-X-MAP:'):
+                current_segment.append(line)
+            elif stripped:
+                current_segment.append(line)
+        else:
+            header_lines.append(line)
+
+    if current_segment:
+        segments.append(current_segment)
+
+    if len(segments) <= max_segments:
+        # Keep intact except stripped part/preload hints
+        result_lines = list(header_lines)
+        for seg in segments:
+            result_lines.extend(seg)
+        return '\n'.join(result_lines) + '\n'
+
+    dropped = len(segments) - max_segments
+    kept_segments = segments[-max_segments:]
+    new_sequence = media_sequence + dropped
+
+    if seq_index >= 0:
+        header_lines[seq_index] = f'#EXT-X-MEDIA-SEQUENCE:{new_sequence}'
+    else:
+        # Insert after #EXTM3U
+        insert_at = 1 if header_lines and header_lines[0].startswith('#EXTM3U') else 0
+        header_lines.insert(insert_at, f'#EXT-X-MEDIA-SEQUENCE:{new_sequence}')
+
+    result_lines = list(header_lines)
+    for seg in kept_segments:
+        result_lines.extend(seg)
+    return '\n'.join(result_lines) + '\n'
+
+
 class PreviewProxy:
     def __init__(self):
         self.nodes = {}
@@ -94,6 +173,8 @@ class PreviewProxy:
         )
 
     def rewrite(self, node, body):
+        body = trim_live_playlist(body)
+
         def replace(uri):
             url = urljoin(node["url"], uri)
             if not self.allowed(url, node["hosts"], node["platform"]):

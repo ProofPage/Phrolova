@@ -135,9 +135,10 @@ def test_session_upload_status_delete_and_capabilities(monkeypatch, tmp_path):
     app = FastAPI(); app.include_router(platforms.router); app.include_router(vod.router)
     with TestClient(app) as client:
         assert not client.get('/api/platforms/rplay/session').json()['configured']
-        result = client.post('/api/platforms/rplay/session', files={'file': ('session.json', json.dumps({**SESSION, 'refreshToken': 'NOT-SAVED'}))})
+        valid_refresh = 'r' * 32
+        result = client.post('/api/platforms/rplay/session', files={'file': ('session.json', json.dumps({**SESSION, 'refreshToken': valid_refresh}))})
         assert result.status_code == 200 and result.json()['valid']
-        assert 'PRIVATE' not in result.text and 'refreshToken' not in (tmp_path / 'rplay_session.json').read_text()
+        assert 'PRIVATE' not in result.text and valid_refresh in (tmp_path / 'rplay_session.json').read_text()
         saved = (tmp_path / 'rplay_session.json').read_bytes()
         assert client.post('/api/platforms/rplay/session', files={'file': ('bad.json', b'not json')}).status_code == 400
         assert (tmp_path / 'rplay_session.json').read_bytes() == saved
@@ -146,6 +147,45 @@ def test_session_upload_status_delete_and_capabilities(monkeypatch, tmp_path):
         assert 'rplay' in [p.value for p in Platform]
         assert not client.delete('/api/platforms/rplay/session').json()['configured']
         assert not (tmp_path / 'rplay_session.json').exists()
+
+
+def test_session_auto_refresh_on_expiration(monkeypatch, tmp_path):
+    # Expired access token with a valid refresh token triggers /rplay/account/refresh-token
+    jwt_expired = base64.urlsafe_b64encode(b'{"exp":1}').decode().rstrip('=')
+    jwt_fresh = base64.urlsafe_b64encode(b'{"exp":9999999999}').decode().rstrip('=')
+    fresh_access = f'header.{jwt_fresh}.signature'
+    fresh_refresh = 'new_refresh_' + 'x' * 32
+
+    session_path = tmp_path / 'rplay_session.json'
+    initial_session = {
+        'accessToken': f'header.{jwt_expired}.signature',
+        'requestorOid': SESSION['requestorOid'],
+        'loginType': 'rplay',
+        'refreshToken': 'old_refresh_' + 'x' * 32,
+    }
+    session_path.write_text(json.dumps(initial_session), encoding='utf-8')
+    get_settings().rplay_session_file = str(session_path)
+
+    refresh_called = []
+
+    def mock_post(url, **kwargs):
+        if url == rplay.REFRESH_API:
+            refresh_called.append(kwargs)
+            assert kwargs['headers']['refresh-token'] == initial_session['refreshToken']
+            assert kwargs['json']['requestorOid'] == SESSION['requestorOid']
+            return httpx.Response(200, json={'accessToken': fresh_access, 'refreshToken': fresh_refresh})
+        return httpx.Response(404)
+
+    monkeypatch.setattr(httpx.Client, 'post', mock_post)
+
+    status = rplay.session_status()
+    assert status['configured'] and status['valid'] and not status['expired']
+    assert len(refresh_called) == 1
+
+    # Check that disk file was atomically persisted with new credentials
+    reloaded = json.loads(session_path.read_text(encoding='utf-8'))
+    assert reloaded['accessToken'] == fresh_access
+    assert reloaded['refreshToken'] == fresh_refresh
 
 
 @pytest.mark.asyncio
