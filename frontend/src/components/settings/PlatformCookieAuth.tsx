@@ -1,7 +1,7 @@
 import { translate } from "../../i18n";
 import { useEffect, useRef, useState } from 'react';
 import { KeyRound, RefreshCw, Trash2, Upload } from 'lucide-react';
-import { api, DOWNLOAD_SOURCE_LABELS, type CookiePlatform, type PlatformCookieStatus } from '../../api/client';
+import { api, DOWNLOAD_SOURCE_LABELS, PLATFORM_LABELS, type CookiePlatform, type PlatformCookieStatus } from '../../api/client';
 import { getErrorMessage, localizedStatus } from '../../utils/error';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useConfirm } from '../ui/ConfirmModal';
@@ -13,7 +13,7 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
     const { t } = useLanguage();
     const toast = useToast();
     const confirm = useConfirm();
-    const name = t(DOWNLOAD_SOURCE_LABELS[platform]);
+    const name = t(platform === 'tvchak' ? DOWNLOAD_SOURCE_LABELS[platform] : PLATFORM_LABELS[platform]);
     const fileInput = useRef<HTMLInputElement>(null);
     const pending = useRef(false);
     const [status, setStatus] = useState<PlatformCookieStatus | null>(null);

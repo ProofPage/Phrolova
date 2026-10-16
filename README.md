@@ -2,7 +2,7 @@
 
 **Record live streams. Download videos. Manage your archive.**
 
-Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, SOOP, CIME, Kick, Twitch, TikTok and Bilibili**. Monitor channels, preview broadcasts, manage downloads and verify saved media in one web dashboard. Run the packaged app on Windows, or install from source on Linux, macOS or Android with Termux.
+Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, SOOP, CIME, Kick, Twitch, TikTok, Bilibili, PandaTV and PopkonTV**. Monitor channels, preview broadcasts, manage downloads and verify saved media in one web dashboard. Run the packaged app on Windows, or install from source on Linux, macOS or Android with Termux.
 
 [Download](https://github.com/ProofPage/Phrolova/releases/latest) · [Release notes](docs/release-notes/README.md) · [Changelog](docs/CHANGELOG.md)
 
@@ -23,6 +23,8 @@ The interface supports **Korean, English, Japanese, Spanish, German, Simplified 
 
 ### Supported sources
 
+The dashboard provides **10 live platforms** and **17 video source choices**, including supported external links. PandaTV is live-only; PopkonTV supports live broadcasts, VODs and clips.
+
 | Source | Live | Videos | Authentication when required |
 | --- | --- | --- | --- |
 | CHZZK | Monitoring, preview, manual/automatic recording and Time Machine | VODs and clips | Naver account cookies |
@@ -33,6 +35,8 @@ The interface supports **Korean, English, Japanese, Spanish, German, Simplified 
 | Twitch | Monitoring, preview and manual/automatic recording via Streamlink | VODs and individual clips via yt-dlp | Optional Twitch Netscape cookies |
 | TikTok | Monitoring, frame previews and manual/automatic recording via Streamlink | Individual videos and short share links via yt-dlp | Optional TikTok Netscape cookies |
 | Bilibili | Room monitoring, HLS previews and manual/automatic recording via Streamlink | BV/av videos, selected parts and b23.tv share links via yt-dlp | Optional Bilibili Netscape cookies |
+| PandaTV (팬더티비) | Channel monitoring, HLS previews and manual/automatic recording via Streamlink | — | Optional PandaTV Netscape cookies; identity-verified account access where required |
+| PopkonTV (팝콘티비) | Channel monitoring, HLS previews and manual/automatic recording via Streamlink | VODs and clips through the existing queue | PopkonTV Netscape cookies for sign-in-required access; verified account for adult broadcasts |
 | Anilife / Linkani / Ohli24 | — | Work/episode links, episode selection, HLS videos and VTT subtitles | Normal site playback session |
 | TVWiki (티비위키) | — | Work/episode selection and HLS videos at tvwiki54.net | Normal guest playback session |
 | TVChak (티비착) | — | Work/episode selection and original MP4 videos at tvchak208.com | Optional browser cookie file for site access checks |
@@ -40,6 +44,10 @@ The interface supports **Korean, English, Japanese, Spanish, German, Simplified 
 | Ani365 (애니365) | — | Work/episode selection, HLS quality variants and provided VTT subtitles at v2.ohli365.org | Public catalog/playback API and MegaPlay delivery |
 
 Bilibili live rooms accept a numeric room ID or `https://live.bilibili.com/<room>`. The recorder prefers MPEG-TS HLS, tries alternate CDNs and preserves native fMP4 HLS when needed. Available native quality IDs are retained; a stream with no advertised quality ID is shown as Original rather than an inferred resolution. Bilibili's popularity metric is identified separately from viewer counts. Videos accept BV/av IDs and `b23.tv` links; `?p=2` selects a single part. Separate DASH video and audio tracks are merged into the configured container. Cropped videos display both the provider's quality tier and actual pixel dimensions. Register a Netscape cookie file under **Settings → Authentication → Bilibili** when account access or additional qualities are needed. Cookies remain scoped to `bilibili.com`.
+
+PandaTV live channels accept a channel ID or `https://www.pandalive.co.kr/play/<channel>`. Available HLS qualities are read from the broadcast rather than guessed. Public broadcasts work without a cookie file; identity- or sign-in-required broadcasts report an authentication error. Register the site's authenticated Netscape cookies under **Settings → Authentication → PandaTV** when required; signing in to a browser alone does not authenticate the server. Cookies remain scoped to `pandalive.co.kr`. See [PandaTV support](docs/pandalive-support.md) for implementation and validation details.
+
+PopkonTV live channels accept the full `https://www.popkontv.com/live/view?castId=<channel>&partnerCode=<partner>` link or `channel@P-00117`. The partner code is preserved; a bare channel ID uses the site's default `P-00001`. Paste `/vod/<id>` or `/clip/<id>` links into **Videos → PopkonTV**. The app downloads the original video or advertised HLS qualities and inspects the saved file. When required, register the account's Netscape cookies under **Settings → Authentication → PopkonTV**. API authorization stays on `www.popkontv.com`; it is not forwarded to the media CDN. See [PopkonTV support](docs/popkontv-support.md) for validation details.
 
 For episode-based sources, paste a work link in **Videos** and select up to 100 episodes. These sources use the existing queue, quality controls and media inspection. See [episode source adapters](docs/video-site-adapters.md) for URL formats and validation details.
 
@@ -73,7 +81,7 @@ Phrolova prefers TS capture and preserves native fMP4/CMAF when TS is unavailabl
 
 The repository distributes a Windows executable and source archives. It does not ship macOS application bundles, Android APKs or Docker images. See [platform support](docs/native-platform-support.md) for implementation and validation scope.
 
-**Repository access:** This repository currently requires an authorized GitHub account. Clone with an authenticated credential helper or SSH key. Anonymous raw-file install links cannot access a private repository.
+The repository and published release files are public. You can clone the source or download the Windows app without signing in to GitHub.
 
 ### Windows
 
@@ -166,7 +174,7 @@ Source installations read root `.env`, with `backend/.env` as a legacy fallback.
 | `VOD_FORMAT`, `VOD_MAX_SPEED` | `mp4`, `0` for unlimited speed in MB/s |
 | `KEEP_DOWNLOAD_PARTS` | `false` |
 | `FILE_INSPECTION_TIMEOUT` | `120` seconds; allowed range 1–600 |
-| `YOUTUBE_COOKIE_FILE`, `SOOP_COOKIE_FILE`, `CIME_COOKIE_FILE`, `KICK_COOKIE_FILE`, `TWITCH_COOKIE_FILE`, `TIKTOK_COOKIE_FILE`, `BILIBILI_COOKIE_FILE`, `TVCHAK_COOKIE_FILE` | Optional Netscape cookie files; upload through Settings → Authentication |
+| `YOUTUBE_COOKIE_FILE`, `SOOP_COOKIE_FILE`, `CIME_COOKIE_FILE`, `KICK_COOKIE_FILE`, `TWITCH_COOKIE_FILE`, `TIKTOK_COOKIE_FILE`, `BILIBILI_COOKIE_FILE`, `PANDALIVE_COOKIE_FILE`, `POPKONTV_COOKIE_FILE`, `TVCHAK_COOKIE_FILE` | Optional Netscape cookie files; upload through Settings → Authentication |
 
 Use absolute media paths. Relative paths follow the working directory; the source manager starts from `backend/`. Enter actual paths in `.env` rather than relying on shell-variable expansion. Saved preferences are preserved when defaults change in a later release.
 
@@ -278,7 +286,7 @@ The build produces `dist/Phrolova.exe`, bundles Node.js and application icons, a
 | YouTube needs a JavaScript runtime | Keep Node.js 22+ available; restart after changing `PATH` |
 | Folder does not open | Use the returned path on the machine running Phrolova |
 | Port is in use | Check `phrolova status`, stop the old instance and wait for shutdown |
-| Update check returns HTTP 404 | Private release metadata requires authentication; use your authorized checkout or GitHub download |
+| Update check returns HTTP 404 | Confirm the release and repository URL, then retry in Settings → Information or use the public GitHub Releases page |
 | Termux build fails | Check build tools, free space and the [Termux guide](docs/termux-guide.md) |
 
 ## Documentation

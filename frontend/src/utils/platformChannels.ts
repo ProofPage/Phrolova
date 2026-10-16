@@ -4,12 +4,16 @@ import { parseKickChannelInput } from './kickUrls';
 import { parseTwitchChannelInput } from './twitchUrls';
 import { parseTikTokChannelInput } from './tiktokUrls';
 import { parseBilibiliChannelInput } from './bilibiliUrls';
+import { parsePandaliveChannelInput } from './pandaliveUrls';
+import { parsePopkonTVChannelInput } from './popkontvUrls';
 
 export const SOOP_CHANNEL_HOSTS = new Set(['play.sooplive.co.kr', 'play.sooplive.com', 'www.sooplive.com', 'station.sooplive.com', 'play.afreecatv.com', 'bj.afreecatv.com']);
 
 /** Normalize user input, never send a URL with credentials to a platform API. */
 export function parsePlatformChannelInput(platform: Platform, value: string): string | null {
     const text = value.trim();
+    if (platform === 'popkontv') return parsePopkonTVChannelInput(text);
+    if (platform === 'pandalive') return parsePandaliveChannelInput(text);
     if (platform === 'tiktok') return parseTikTokChannelInput(text);
     if (platform === 'bilibili') return parseBilibiliChannelInput(text);
     if (platform === 'twitch') return parseTwitchChannelInput(text);

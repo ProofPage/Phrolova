@@ -6,6 +6,7 @@ Download executable assets from GitHub Releases. Historical filenames, tags and 
 
 ## Versions
 
+- [v2.0.77](v2.0.77.md)
 - [v2.0.76](v2.0.76.md)
 - [v2.0.75](v2.0.75.md)
 - [v2.0.74](v2.0.74.md)

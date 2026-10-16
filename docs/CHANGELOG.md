@@ -8,6 +8,23 @@
 
 ## [Unreleased]
 
+## [2.0.77] - 2026-10-16
+
+### Added
+- Add PandaTV (팬더티비) live channel monitoring, Streamlink recording, HLS previews and domain-scoped authentication settings.
+- Add PopkonTV (팝콘티비) live monitoring, Streamlink recording, HLS previews, VODs and clips, preserving broadcaster partner codes.
+- Add PopkonTV cookie settings and an API adapter that keeps account authorization separate from media CDN requests.
+- Provide 10 live platforms, 17 video source choices and 887 translation keys across eight interface languages.
+
+### Fixed
+- Rewrite low-latency HLS prefetch URLs through the preview proxy without exposing signed media links.
+- Preserve actionable authentication and access errors when resolving live previews.
+- Reject denied playback responses, locked media, unavailable quality selections and mismatched broadcaster/video identities.
+
+### Documentation
+- Update the English README and repository description for the new platforms, current public repository access and authentication setup.
+- Document verified downloads, live playback and the scope of native authenticated recording tests.
+
 ## [2.0.76] - 2026-10-16
 
 ### Added
@@ -1044,7 +1061,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.76...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.77...HEAD
+[2.0.77]: https://github.com/ProofPage/Phrolova/compare/v2.0.76...v2.0.77
 [2.0.76]: https://github.com/ProofPage/Phrolova/compare/v2.0.75...v2.0.76
 [2.0.75]: https://github.com/ProofPage/Phrolova/compare/v2.0.74...v2.0.75
 [2.0.74]: https://github.com/ProofPage/Phrolova/compare/v2.0.73...v2.0.74

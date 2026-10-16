@@ -1034,6 +1034,14 @@ class YtdlpLivePipeline:
             from app.engine.platform_auth import platform_cookie_jar
             session.http.cookies.update(platform_cookie_jar('bilibili'))
 
+        if (urlsplit(source_page_url).hostname or "").lower() in ("pandalive.co.kr", "www.pandalive.co.kr"):
+            from app.engine.platform_auth import platform_cookie_jar
+            session.http.cookies.update(platform_cookie_jar("pandalive"))
+
+        if (urlsplit(source_page_url).hostname or "").lower() in ("popkontv.com", "www.popkontv.com"):
+            from app.engine.platform_auth import platform_cookie_jar
+            session.http.cookies.update(platform_cookie_jar("popkontv"))
+
         # Read the manifest through Streamlink, without its FFmpeg-backed muxer.
         if urlsplit(hls_url).path.lower().endswith(".mpd"):
             session.http.close()

@@ -1,4 +1,8 @@
 {
+  "platform.popkontv": "PopkonTV",
+  "live.popkontvChannelOrUrl": "PopkonTV-Live-URL oder Kanal-ID@Partnercode",
+  "platform.pandalive": "PandaTV",
+  "live.pandaliveChannelIDOrUrl": "PandaTV-Kanal-ID oder https://www.pandalive.co.kr/play/...",
   "platform.chzzk": "CHZZK",
   "platform.youtube": "YouTube",
   "platform.soop": "SOOP",

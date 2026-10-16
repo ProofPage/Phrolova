@@ -61,7 +61,7 @@ def test_capabilities_and_completed_file_open(monkeypatch, tmp_path):
     service.get_vod_task_status.return_value = {'state': 'completed', 'output_path': str(path)}
     monkeypatch.setattr('app.main.get_recorder_service', lambda: service)
     client = TestClient(app)
-    assert [source['id'] for source in client.get('/api/vod/capabilities').json()['sources']] == ['chzzk', 'youtube', 'soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'anilife', 'linkani', 'ohli24', 'ohli365', 'tvwiki', 'tvchak', 'animaru', 'external']
+    assert [source['id'] for source in client.get('/api/vod/capabilities').json()['sources']] == ['chzzk', 'youtube', 'soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'popkontv', 'anilife', 'linkani', 'ohli24', 'ohli365', 'tvwiki', 'tvchak', 'animaru', 'external']
     response = client.get('/api/vod/completed/file')
     assert response.status_code == 200 and response.content == path.read_bytes()
     assert response.headers['content-disposition'].startswith('inline')

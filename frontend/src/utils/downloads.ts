@@ -5,6 +5,7 @@ import { canonicalKickVideoUrl } from './kickUrls';
 import { canonicalTwitchVideoUrl, TWITCH_HOSTS } from './twitchUrls';
 import { canonicalTikTokVideoUrl, TIKTOK_HOSTS } from './tiktokUrls';
 import { canonicalBilibiliVideoUrl, BILIBILI_HOSTS } from './bilibiliUrls';
+import { canonicalPopkonTVVideoUrl } from './popkontvUrls';
 
 export type { DownloadSource } from '../api/client';
 export function detectDownloadPlatform(value: string): DownloadSource {
@@ -15,6 +16,7 @@ export function detectDownloadPlatform(value: string): DownloadSource {
         if (host === 'chzzk.naver.com') return 'chzzk';
         if (['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(host)) return 'youtube';
         if (TIKTOK_HOSTS.has(host)) return 'tiktok';
+        if (host === 'popkontv.com' || host === 'www.popkontv.com') return 'popkontv';
         if (BILIBILI_HOSTS.has(host)) return 'bilibili';
         if (TWITCH_HOSTS.has(host)) return 'twitch';
         if (host === 'kick.com' || host === 'www.kick.com') return 'kick';
@@ -51,6 +53,10 @@ export function normalizeDownloadInput(value: string, source: DownloadSource): {
                 parsed.hash = ''; return { url: parsed.href, collection: true, source: 'youtube' };
             }
             return null;
+        }
+        if (host === 'popkontv.com' || host === 'www.popkontv.com') {
+            const url = canonicalPopkonTVVideoUrl(text);
+            return url ? {url,collection:false,source:'popkontv'} : null;
         }
         if (BILIBILI_HOSTS.has(host)) {
             const url = canonicalBilibiliVideoUrl(text);

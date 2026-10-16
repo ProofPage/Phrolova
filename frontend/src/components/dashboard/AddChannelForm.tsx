@@ -21,6 +21,8 @@ const PLATFORM_DOT_STYLES: Record<Platform, string> = {
     twitch: "bg-twitch",
     tiktok: "bg-tiktok",
     bilibili: "bg-bilibili",
+    pandalive: "bg-pandalive",
+    popkontv: "bg-popkontv",
 };
 
 interface Props {
@@ -102,6 +104,8 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
         : selectedPlatform === "kick" ? "live.kickChannelIDOrHttpsKickCom"
         : selectedPlatform === "twitch" ? "live.twitchChannelIDOrHttpsTwitchTv"
         : selectedPlatform === "tiktok" ? "live.tiktokChannelIDOrHttpsTiktokCom"
+        : selectedPlatform === "popkontv" ? "live.popkontvChannelOrUrl"
+        : selectedPlatform === "pandalive" ? "live.pandaliveChannelIDOrUrl"
         : selectedPlatform === "bilibili" ? "live.bilibiliRoomIDOrHttpsLiveBilibiliCom"
         : "live.channelID";
 

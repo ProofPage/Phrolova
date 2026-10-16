@@ -21,6 +21,8 @@ class Platform(str, Enum):
     TWITCH = "twitch"
     TIKTOK = "tiktok"
     BILIBILI = "bilibili"
+    PANDALIVE = "pandalive"
+    POPKONTV = "popkontv"
 
 
 class LiveStatus(TypedDict, total=False):

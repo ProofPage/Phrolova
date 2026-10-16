@@ -1,4 +1,8 @@
 {
+  "platform.popkontv": "팝콘티비",
+  "live.popkontvChannelOrUrl": "팝콘티비 방송 링크 또는 채널ID@파트너코드",
+  "platform.pandalive": "팬더티비",
+  "live.pandaliveChannelIDOrUrl": "팬더티비 채널 ID 또는 https://www.pandalive.co.kr/play/...",
   "platform.chzzk": "치지직",
   "platform.youtube": "유튜브",
   "platform.soop": "숲",

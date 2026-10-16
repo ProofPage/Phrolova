@@ -24,7 +24,7 @@ def _to_composite_key(raw: str) -> str:
     - chzzk URL 형식도 extract_channel_id로 ID만 추출 후 chzzk 키로 변환
     """
     # 알려진 플랫폼 접두사가 있으면 composite_key로 간주
-    for prefix in ("chzzk:", "youtube:", "soop:", "cime:", "kick:", "twitch:", "tiktok:", "bilibili:"):
+    for prefix in ("chzzk:", "youtube:", "soop:", "cime:", "kick:", "twitch:", "tiktok:", "bilibili:", "pandalive:", "popkontv:"):
         if raw.startswith(prefix):
             return raw
     # 레거시: 순수 chzzk ID 또는 chzzk URL
@@ -160,8 +160,13 @@ async def live_preview(channel_id: str):
         if message not in ("오프라인", "이 채널은 영상 미리보기를 지원하지 않습니다."):
             message = "미리보기를 불러올 수 없습니다."
         raise HTTPException(409, message) from None
-    except Exception:
+    except Exception as cause:
         # Resolver errors may contain signed URLs or upstream credentials.
+        from app.engine.recording_errors import RecordingError
+        if isinstance(cause, RecordingError):
+            from app.engine.platform_auth import redact_media_error
+            status = 403 if any(word in cause.code for word in ('authentication','access','password','paid')) else 502
+            raise HTTPException(status, redact_media_error(cause)) from None
         raise HTTPException(
             502, "미리보기를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요."
         ) from None
