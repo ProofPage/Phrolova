@@ -1,8 +1,8 @@
 {
   "live.rplayChannelIDOrUrl": "RPLAY频道ID或 https://rplay.live/live/...",
   "platform.rplay": "RPLAY",
-  "settings.rplaySessionFile": "会话JSON文件",
-  "settings.rplaySessionHelp": "公开视频无需登录。需要身份验证的视频请导入RPLAY会话JSON文件。浏览器登录状态不会自动共享。",
+  "settings.rplaySessionFile": "登录信息文件",
+  "settings.rplaySessionHelp": "普通 Cookie 文件不包含 RPLAY 登录信息。请按以下步骤导出登录信息后导入文件。",
   "settings.rplaySessionUpdated": "RPLAY身份验证设置已保存。",
   "settings.rplaySessionRemove": "移除RPLAY会话",
   "settings.rplaySessionRemoveHelp": "移除已注册的会话？需要登录的视频将需要新的会话。",
@@ -896,5 +896,15 @@
   "episodes.partial": "仅显示网站列出的剧集，部分早期剧集缺失。",
   "platform.bilibili": "Bilibili",
   "live.bilibiliRoomIDOrHttpsLiveBilibiliCom": "Bilibili 直播间 ID 或 https://live.bilibili.com/...",
-  "live.popularity": "人气"
+  "live.popularity": "人气",
+  "settings.rplayExportCopy": "复制导出代码",
+  "settings.rplayExportHelp": "如何导出登录信息",
+  "settings.rplayExportStepOne": "在浏览器中登录 RPLAY，并等待页面加载完成。",
+  "settings.rplayExportStepTwo": "复制代码，在 RPLAY 页面的 F12 → Console（控制台）中运行。代码仅将登录信息保存为本地文件，不会向外部发送。",
+  "settings.rplayExportStepThree": "通过上方文件按钮导入下载的 rplay_session.json，无需手动编辑 JSON。",
+  "settings.rplayExportCopied": "代码已复制。请在已登录的 RPLAY 页面控制台运行。",
+  "settings.rplayExportCopyManually": "自动复制失败，请手动复制下方选中的代码。",
+  "settings.rplayExportWrongSite": "请在已登录的 RPLAY 页面运行：https://rplay.live/",
+  "settings.rplayExportSignedOut": "未找到登录信息。请重新登录 RPLAY、刷新页面后重试。",
+  "settings.rplayExportFailed": "无法导出登录信息。请检查 RPLAY 登录状态和浏览器存储访问权限。"
 }

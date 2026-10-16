@@ -33,6 +33,71 @@ def test_chzzk_preview_stops_when_offline(monkeypatch):
         asyncio.run(engine.get_preview_url("channel"))
 
 
+def receiving_chzzk_pipeline():
+    from datetime import datetime
+    from app.engine.pipeline import YtdlpLivePipeline, RecordingState
+    pipeline = YtdlpLivePipeline('channel')
+    pipeline._source_page_url = 'https://chzzk.naver.com/live/channel'
+    pipeline._state = RecordingState.RECORDING
+    pipeline._start_time = datetime.now()
+    pipeline._closed = False
+    pipeline.capture_format = 'fmp4'
+    pipeline._resume_args = ('https://live.navercdn.com/history/master.m3u8?token=PRIVATE', {}, None, 30, True, 'best')
+    return pipeline
+
+
+def test_chzzk_missing_public_playback_reuses_receiving_recording_without_cookies(monkeypatch):
+    from app.engine.auth import AuthManager
+    pipeline = receiving_chzzk_pipeline()
+    engine = ChzzkLiveEngine(AuthManager(nid_aut=None, nid_ses=None))
+    monkeypatch.setattr(engine, 'get_live_detail', AsyncMock(return_value={'status': 'OPEN', 'adult': True, 'livePlaybackJson': None}))
+    conductor = Conductor.__new__(Conductor)
+    channel = ChannelTask('channel', is_live=True, pipeline=pipeline)
+    conductor._channels = {channel.composite_key: channel}
+    conductor._get_engine = lambda _: engine
+    before = pipeline._resume_args
+    assert asyncio.run(conductor.get_live_preview_url(channel.composite_key)) == before[0]
+    assert pipeline._resume_args is before and channel.pipeline is pipeline and not pipeline._closed
+
+
+@pytest.mark.parametrize('change', ['not-started', 'stopped', 'closed', 'untrusted', 'other-platform', 'other-channel'])
+def test_chzzk_preview_cannot_reuse_unavailable_or_unrelated_recordings(change):
+    from app.engine.chzzk_time_machine import TimeMachineUnavailableError
+    from app.engine.pipeline import RecordingState
+    pipeline = receiving_chzzk_pipeline()
+    if change == 'not-started': pipeline._start_time = None
+    if change == 'stopped': pipeline._state = RecordingState.COMPLETED
+    if change == 'closed': pipeline._closed = True
+    if change == 'untrusted': pipeline._resume_args = ('https://untrusted.example/private.m3u8',)
+    if change == 'other-platform': pipeline._source_page_url = 'https://example.com/live/channel'
+    if change == 'other-channel': pipeline._channel_id = 'another'
+    conductor = Conductor.__new__(Conductor)
+    channel = ChannelTask('channel', is_live=True, pipeline=pipeline)
+    conductor._channels = {channel.composite_key: channel}
+    conductor._get_engine = lambda _: SimpleNamespace(get_preview_url=AsyncMock(side_effect=TimeMachineUnavailableError('No playback')))
+    with pytest.raises(TimeMachineUnavailableError):
+        asyncio.run(conductor.get_live_preview_url(channel.composite_key))
+
+
+@pytest.mark.parametrize('error', [ValueError('오프라인'), RuntimeError('permission denied')])
+def test_chzzk_preview_does_not_hide_offline_or_other_api_errors(error):
+    conductor = Conductor.__new__(Conductor)
+    channel = ChannelTask('channel', is_live=True, pipeline=receiving_chzzk_pipeline())
+    conductor._channels = {channel.composite_key: channel}
+    conductor._get_engine = lambda _: SimpleNamespace(get_preview_url=AsyncMock(side_effect=error))
+    with pytest.raises(type(error), match=str(error)):
+        asyncio.run(conductor.get_live_preview_url(channel.composite_key))
+
+
+def test_chzzk_capture_preview_follows_the_selected_recovery_cdn():
+    pipeline = receiving_chzzk_pipeline()
+    current = SimpleNamespace(url='https://recovery.akamaized.net/active.m3u8?token=PRIVATE')
+    pipeline._readers = [SimpleNamespace(stream=SimpleNamespace(continuity=SimpleNamespace(primary=current)))]
+    assert pipeline.preview_source_url == current.url
+    current.url = 'https://untrusted.example/active.m3u8'
+    assert pipeline.preview_source_url == pipeline._resume_args[0]
+
+
 def test_preview_leaves_recording_and_monitoring_untouched():
     conductor = Conductor.__new__(Conductor)
     pipeline = object()

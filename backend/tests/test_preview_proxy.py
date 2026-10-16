@@ -109,6 +109,9 @@ async def test_proxy_keeps_signed_query_and_limits_redirect_hosts(monkeypatch, c
 
     async def handler(request):
         requests.append(str(request.url))
+        assert request.headers['origin'] == 'https://chzzk.naver.com'
+        assert request.headers['referer'] == 'https://chzzk.naver.com/'
+        assert 'cookie' not in request.headers and 'authorization' not in request.headers
         return httpx.Response(
             200,
             content=b"#EXTM3U\nsegment.ts?token=SECRET\n",

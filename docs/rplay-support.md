@@ -8,7 +8,11 @@ The adapter requests the website's `/content` API with `requestCanView=true` and
 
 Public grants do not require an account. Videos requiring a subscription, purchase or adult verification require a session for an account that already has permission. Signing in to the Codex browser does not authenticate the separate Phrolova server.
 
-RPLAY sends an access token in the `Authorization` header, rather than relying on a Netscape cookie file. Import an explicit session JSON under **Settings → Authentication → RPLAY**, or set `RPLAY_SESSION_FILE` to its path. The file format is:
+RPLAY sends an access token in the `Authorization` header. Its current website stores the account session in IndexedDB (`rplay-account-session`, store `records`, key `session`), so ordinary Netscape cookie exports do not contain the authentication information required by this adapter.
+
+Under **Settings → Authentication → RPLAY**, choose **Copy export code**. Sign in to RPLAY in your browser, wait for the page to load, and run the copied code in that page's **F12 → Console**. The code reads the known account-session record in a read-only transaction and downloads `rplay_session.json`. It makes no network requests and exports only the access token, account ID and login type, excluding refresh tokens, profile details and other browser data. It rejects other origins and shows an error when no signed-in session is available. The expandable help also contains selectable code when automatic clipboard copying is unavailable.
+
+Choose the downloaded file in Phrolova. No manual JSON editing is needed. You can also set `RPLAY_SESSION_FILE` to its path. The compatible file format is:
 
 ```json
 {
@@ -18,7 +22,9 @@ RPLAY sends an access token in the `Authorization` header, rather than relying o
 }
 ```
 
-Use the values from your own authenticated RPLAY session: the `Authorization` header and `requestorOid` query parameter on the site's normal content request. Do not share the file. The import stores only these fields and `loginType`; refresh tokens and unrelated fields are discarded. The application does not extract browser storage, import browser credentials automatically, refresh tokens, subscribe, purchase content or complete identity verification. Replace the file when its access token expires. The status button checks the registered file and any JWT expiry; actual viewing permission is checked for each video by RPLAY.
+For manual creation, use the `Authorization` header and `requestorOid` query parameter on your own authenticated content request. Do not share the file. The import stores only these fields and `loginType`; refresh tokens and unrelated fields are discarded. The server cannot read your browser storage or import credentials automatically; the export code runs locally only when you explicitly execute it on RPLAY. Phrolova does not refresh tokens, subscribe, purchase content or complete identity verification. Replace the file when its access token expires. The status button checks the registered file and any JWT expiry; actual viewing permission is checked for each video by RPLAY.
+
+The upload explicitly uses multipart/form-data. The previous JSON request default could turn a valid file upload into a generic “Check your input” validation error; browser-to-API transport tests now exercise the real multipart parser rather than mocking a successful upload.
 
 For videos, account authorization is sent only to `https://api.rplay.live/content`, without following redirects. It is not copied to delivery requests, returned metadata, status responses or download history. Delivery URLs must use the observed RPLAY API/public CDN hosts. Signed URLs and authorization details are redacted in download errors.
 

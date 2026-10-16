@@ -138,7 +138,7 @@ class PreviewProxy:
         headers = {"User-Agent": USER_AGENT}
         # Browser requests remain same-origin; platform headers and domain-scoped
         # cookies are sent only by the verified server-side media transport.
-        origins = {"soop": "https://play.sooplive.com", "cime": "https://ci.me", "kick": "https://kick.com", "twitch": "https://www.twitch.tv", "bilibili": "https://live.bilibili.com", "pandalive": "https://www.pandalive.co.kr", "popkontv": "https://www.popkontv.com", "rplay": "https://rplay.live"}
+        origins = {"chzzk": "https://chzzk.naver.com", "soop": "https://play.sooplive.com", "cime": "https://ci.me", "kick": "https://kick.com", "twitch": "https://www.twitch.tv", "bilibili": "https://live.bilibili.com", "pandalive": "https://www.pandalive.co.kr", "popkontv": "https://www.popkontv.com", "rplay": "https://rplay.live"}
         origin = origins.get(node["platform"])
         if origin:
             headers.update({"Origin": origin, "Referer": origin + "/"})

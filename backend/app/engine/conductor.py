@@ -141,13 +141,28 @@ class Conductor:
             raise ValueError(f"지원하지 않는 플랫폼: {platform}")
 
     async def get_live_preview_url(self, composite_key: str) -> str:
-        """Resolve playback independently of the channel's recording pipeline."""
+        """Prefer standard playback, reusing a receiving CHZZK source if omitted."""
         task = self._channels.get(composite_key)
         if task is None:
             raise KeyError(composite_key)
         if not task.is_live:
             raise ValueError("오프라인")
         engine = self._get_engine(task.platform)
+        if task.platform == Platform.CHZZK:
+            from app.engine.chzzk_time_machine import TimeMachineUnavailableError
+            try:
+                return await engine.get_preview_url(task.channel_id)
+            except TimeMachineUnavailableError:
+                # Some live-detail responses omit ordinary playback even while
+                # the recording's advertised time-machine source is receiving.
+                # Reuse that granted source; do not derive a new CDN URL.
+                if self._channels.get(composite_key) is not task or not task.is_live:
+                    raise ValueError("오프라인") from None
+                pipeline = task.pipeline
+                url = getattr(pipeline, 'preview_source_url', None)
+                if getattr(pipeline, 'channel_id', None) == task.channel_id and isinstance(url, str) and url:
+                    return url
+                raise
         if task.platform in (Platform.CHZZK, Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY):
             return await engine.get_preview_url(task.channel_id)
         page_url = engine.get_stream_url(task.channel_id)

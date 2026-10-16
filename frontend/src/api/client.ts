@@ -616,7 +616,7 @@ export const api = {
     getRplaySessionStatus: async (): Promise<PlatformCookieStatus> => (await client.get('/platforms/rplay/session')).data,
     uploadRplaySession: async (file: File): Promise<PlatformCookieStatus> => {
         const form = new FormData(); form.append('file', file);
-        return (await client.post('/platforms/rplay/session', form)).data;
+        return (await client.post('/platforms/rplay/session', form, { headers: { 'Content-Type': 'multipart/form-data' } })).data;
     },
     deleteRplaySession: async (): Promise<PlatformCookieStatus> => (await client.delete('/platforms/rplay/session')).data,
     getPlatformCookieStatus: async (platform: CookiePlatform): Promise<PlatformCookieStatus> =>

@@ -1,8 +1,8 @@
 {
   "live.rplayChannelIDOrUrl": "ID de canal de RPLAY o https://rplay.live/live/...",
   "platform.rplay": "RPLAY",
-  "settings.rplaySessionFile": "Archivo JSON de sesión",
-  "settings.rplaySessionHelp": "Los vídeos públicos no requieren iniciar sesión. Importa un archivo JSON de sesión de RPLAY para los vídeos que requieren autenticación. La sesión del navegador no se comparte automáticamente.",
+  "settings.rplaySessionFile": "Archivo de acceso",
+  "settings.rplaySessionHelp": "Los archivos de cookies normales no incluyen los datos de acceso de RPLAY. Expórtalos siguiendo estos pasos e importa el archivo.",
   "settings.rplaySessionUpdated": "Configuración de autenticación de RPLAY guardada.",
   "settings.rplaySessionRemove": "Eliminar sesión de RPLAY",
   "settings.rplaySessionRemoveHelp": "¿Eliminar la sesión registrada? Los vídeos que requieren iniciar sesión necesitarán una sesión nueva.",
@@ -896,5 +896,15 @@
   "episodes.partial": "Solo se muestran los episodios del sitio. Faltan algunos episodios anteriores.",
   "platform.bilibili": "Bilibili",
   "live.bilibiliRoomIDOrHttpsLiveBilibiliCom": "ID de sala de Bilibili o https://live.bilibili.com/...",
-  "live.popularity": "Popularidad"
+  "live.popularity": "Popularidad",
+  "settings.rplayExportCopy": "Copiar código de exportación",
+  "settings.rplayExportHelp": "Cómo exportar los datos de acceso",
+  "settings.rplayExportStepOne": "Inicia sesión en RPLAY en el navegador y espera a que termine de cargar la página.",
+  "settings.rplayExportStepTwo": "Copia el código y ejecútalo en F12 → Console en la página de RPLAY. Guarda los datos de acceso en un archivo local sin enviarlos a ningún servidor.",
+  "settings.rplayExportStepThree": "Importa el archivo rplay_session.json descargado con el botón superior. No necesitas editar JSON manualmente.",
+  "settings.rplayExportCopied": "Código copiado. Ejecútalo en la consola de la página de RPLAY donde hayas iniciado sesión.",
+  "settings.rplayExportCopyManually": "No se pudo copiar automáticamente. Copia manualmente el código seleccionado debajo.",
+  "settings.rplayExportWrongSite": "Ejecuta esto en la página de RPLAY donde hayas iniciado sesión: https://rplay.live/",
+  "settings.rplayExportSignedOut": "No se encontraron datos de acceso. Vuelve a iniciar sesión en RPLAY, recarga la página e inténtalo de nuevo.",
+  "settings.rplayExportFailed": "No se pudieron exportar los datos. Comprueba tu sesión de RPLAY y el acceso al almacenamiento del navegador."
 }

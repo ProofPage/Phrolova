@@ -1,8 +1,8 @@
 {
   "live.rplayChannelIDOrUrl": "RPLAY頻道ID或 https://rplay.live/live/...",
   "platform.rplay": "RPLAY",
-  "settings.rplaySessionFile": "工作階段JSON檔案",
-  "settings.rplaySessionHelp": "公開影片無需登入。需要驗證的影片請匯入RPLAY工作階段JSON檔案。瀏覽器登入狀態不會自動共用。",
+  "settings.rplaySessionFile": "登入資訊檔案",
+  "settings.rplaySessionHelp": "一般 Cookie 檔案不包含 RPLAY 登入資訊。請依照下列步驟匯出登入資訊後匯入檔案。",
   "settings.rplaySessionUpdated": "RPLAY驗證設定已儲存。",
   "settings.rplaySessionRemove": "移除RPLAY工作階段",
   "settings.rplaySessionRemoveHelp": "移除已註冊的工作階段？需要登入的影片將需要新的工作階段。",
@@ -896,5 +896,15 @@
   "episodes.partial": "僅顯示網站列出的集數，部分較早的集數缺漏。",
   "platform.bilibili": "Bilibili",
   "live.bilibiliRoomIDOrHttpsLiveBilibiliCom": "Bilibili 直播間 ID 或 https://live.bilibili.com/...",
-  "live.popularity": "人氣"
+  "live.popularity": "人氣",
+  "settings.rplayExportCopy": "複製匯出程式碼",
+  "settings.rplayExportHelp": "如何匯出登入資訊",
+  "settings.rplayExportStepOne": "在瀏覽器登入 RPLAY，並等待頁面載入完成。",
+  "settings.rplayExportStepTwo": "複製程式碼，在 RPLAY 頁面的 F12 → Console（主控台）執行。程式碼僅將登入資訊儲存為本機檔案，不會傳送至外部。",
+  "settings.rplayExportStepThree": "透過上方檔案按鈕匯入下載的 rplay_session.json，不需手動編輯 JSON。",
+  "settings.rplayExportCopied": "程式碼已複製。請在已登入的 RPLAY 頁面主控台執行。",
+  "settings.rplayExportCopyManually": "自動複製失敗，請手動複製下方已選取的程式碼。",
+  "settings.rplayExportWrongSite": "請在已登入的 RPLAY 頁面執行：https://rplay.live/",
+  "settings.rplayExportSignedOut": "找不到登入資訊。請重新登入 RPLAY、重新整理頁面後再試。",
+  "settings.rplayExportFailed": "無法匯出登入資訊。請檢查 RPLAY 登入狀態與瀏覽器儲存空間的存取權限。"
 }

@@ -1,8 +1,8 @@
 {
   "live.rplayChannelIDOrUrl": "RPLAYチャンネルID または https://rplay.live/live/...",
   "platform.rplay": "RPLAY",
-  "settings.rplaySessionFile": "セッションJSONファイル",
-  "settings.rplaySessionHelp": "公開動画はログインなしで利用できます。認証が必要な動画にはRPLAYセッションJSONファイルを登録してください。ブラウザのログイン状態は自動共有されません。",
+  "settings.rplaySessionFile": "ログイン情報ファイル",
+  "settings.rplaySessionHelp": "通常のCookieファイルにはRPLAYのログイン情報が含まれません。以下の手順でログイン情報を書き出し、ファイルを登録してください。",
   "settings.rplaySessionUpdated": "RPLAYの認証設定を保存しました。",
   "settings.rplaySessionRemove": "RPLAYセッションを削除",
   "settings.rplaySessionRemoveHelp": "登録したセッションを削除しますか？ログイン専用動画には新しいセッションが必要です。",
@@ -896,5 +896,15 @@
   "episodes.partial": "サイトに掲載された話のみ表示します。一部の以前の話が欠けています。",
   "platform.bilibili": "Bilibili",
   "live.bilibiliRoomIDOrHttpsLiveBilibiliCom": "Bilibili ルーム ID または https://live.bilibili.com/...",
-  "live.popularity": "人気度"
+  "live.popularity": "人気度",
+  "settings.rplayExportCopy": "書き出しコードをコピー",
+  "settings.rplayExportHelp": "ログイン情報の書き出し方法",
+  "settings.rplayExportStepOne": "ブラウザーでRPLAYにログインし、ページの読み込み完了を待ちます。",
+  "settings.rplayExportStepTwo": "コードをコピーし、RPLAYページのF12 → Console（コンソール）で実行します。ログイン情報はローカルファイルに保存され、外部には送信されません。",
+  "settings.rplayExportStepThree": "ダウンロードしたrplay_session.jsonを上のファイル選択で登録します。JSONの手動編集は不要です。",
+  "settings.rplayExportCopied": "コピーしました。ログイン済みのRPLAYページのコンソールで実行してください。",
+  "settings.rplayExportCopyManually": "自動コピーに失敗しました。以下の選択されたコードを手動でコピーしてください。",
+  "settings.rplayExportWrongSite": "ログイン済みのRPLAYページで実行してください：https://rplay.live/",
+  "settings.rplayExportSignedOut": "ログイン情報がありません。RPLAYに再ログインし、ページを更新して再実行してください。",
+  "settings.rplayExportFailed": "ログイン情報を書き出せませんでした。RPLAYのログイン状態とブラウザーのストレージへのアクセスを確認してください。"
 }
