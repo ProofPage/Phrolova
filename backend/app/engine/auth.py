@@ -86,8 +86,10 @@ class AuthManager:
             return cookies.to_cookie_string()
         return None
 
-    def update_cookies(self, nid_aut: str, nid_ses: str) -> None:
+    def update_cookies(self, nid_aut: str, nid_ses: str, *, persist: bool = True) -> None:
         """런타임 및 파일에 쿠키를 갱신한다."""
+        if persist:
+            self._persist_env({"NID_AUT": nid_aut, "NID_SES": nid_ses})
         self._nid_aut = nid_aut
         self._nid_ses = nid_ses
 
@@ -97,12 +99,10 @@ class AuthManager:
         settings.nid_aut = nid_aut
         settings.nid_ses = nid_ses
 
-        # .env 파일에 저장
-        self._persist_env({"NID_AUT": nid_aut, "NID_SES": nid_ses})
-        logger.info("인증 쿠키가 업데이트되고 .env 파일에 저장되었습니다.")
+        logger.info("인증 쿠키가 업데이트되었습니다.")
 
 
     def _persist_env(self, updates: dict[str, str]) -> None:
         """.env 파일의 특정 키 값을 업데이트한다."""
         from app.core.utils import update_env_file
-        update_env_file(updates)
+        update_env_file(updates, raise_on_error=True)

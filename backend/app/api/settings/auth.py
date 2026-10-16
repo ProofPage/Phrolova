@@ -28,7 +28,10 @@ async def update_cookies(req: CookieUpdateRequest):
     from app.main import get_recorder_service
 
     service = get_recorder_service()
-    return service.update_cookies(req.nid_aut, req.nid_ses)
+    try:
+        return service.update_cookies(req.nid_aut, req.nid_ses)
+    except OSError:
+        raise HTTPException(500, "인증 설정을 저장하지 못했습니다. 저장 위치의 권한과 여유 공간을 확인하세요.") from None
 
 
 @router.post("/cookies/test", summary="쿠키 유효성 검증")

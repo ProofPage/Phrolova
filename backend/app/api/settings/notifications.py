@@ -9,7 +9,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
-from app.core.logger import logger
 from app.core.utils import update_env_file as _update_env_file
 
 from app.services.notifications import NotificationKind
@@ -57,11 +56,9 @@ async def update_discord_settings(req: DiscordSettingsUpdateRequest):
 
     updates = {}
     if req.discord_bot_token is not None:
-        settings.discord_bot_token = req.discord_bot_token if req.discord_bot_token.strip() else None
         updates["DISCORD_BOT_TOKEN"] = req.discord_bot_token.strip()
 
     if req.discord_notification_channel_id is not None:
-        settings.discord_notification_channel_id = req.discord_notification_channel_id if req.discord_notification_channel_id.strip() else None
         updates["DISCORD_NOTIFICATION_CHANNEL_ID"] = req.discord_notification_channel_id.strip()
 
     if req.discord_command_user_ids is not None:
@@ -70,11 +67,9 @@ async def update_discord_settings(req: DiscordSettingsUpdateRequest):
             for part in req.discord_command_user_ids.replace(";", ",").split(",")
             if part.strip()
         )
-        settings.discord_command_user_ids = cleaned or None
         updates["DISCORD_COMMAND_USER_IDS"] = cleaned
 
     if req.discord_command_channel_id is not None:
-        settings.discord_command_channel_id = req.discord_command_channel_id.strip() or None
         updates["DISCORD_COMMAND_CHANNEL_ID"] = req.discord_command_channel_id.strip()
 
     if req.discord_webhook_url is not None:
@@ -84,29 +79,33 @@ async def update_discord_settings(req: DiscordSettingsUpdateRequest):
                 status_code=400,
                 detail="Webhook URL은 https://로 시작해야 합니다.",
             )
-        settings.discord_webhook_url = url or None
         updates["DISCORD_WEBHOOK_URL"] = url
 
     if req.discord_notify_events is not None:
-        settings.discord_notify_events = _list_to_csv(req.discord_notify_events) or "none"
-        updates["DISCORD_NOTIFY_EVENTS"] = settings.discord_notify_events
+        updates["DISCORD_NOTIFY_EVENTS"] = _list_to_csv(req.discord_notify_events) or "none"
 
     if req.discord_mention_events is not None:
-        settings.discord_mention_events = _list_to_csv(req.discord_mention_events)
-        updates["DISCORD_MENTION_EVENTS"] = settings.discord_mention_events
+        updates["DISCORD_MENTION_EVENTS"] = _list_to_csv(req.discord_mention_events)
 
     if req.discord_mention_target is not None:
-        settings.discord_mention_target = req.discord_mention_target.strip() or "@here"
-        updates["DISCORD_MENTION_TARGET"] = settings.discord_mention_target
+        updates["DISCORD_MENTION_TARGET"] = req.discord_mention_target.strip() or "@here"
 
     if req.discord_notify_ttl is not None:
-        settings.discord_notify_ttl = req.discord_notify_ttl
         updates["DISCORD_NOTIFY_TTL"] = str(req.discord_notify_ttl)
 
     try:
-        _update_env_file(updates)
-    except Exception as e:
-        logger.error(f"설정 파일 저장 실패: {e}")
+        _update_env_file(updates, raise_on_error=True)
+    except OSError:
+        raise HTTPException(500, "알림 설정을 저장하지 못했습니다. 저장 위치의 권한과 여유 공간을 확인하세요.") from None
+
+    optional_fields = {"DISCORD_BOT_TOKEN", "DISCORD_NOTIFICATION_CHANNEL_ID", "DISCORD_COMMAND_USER_IDS",
+                       "DISCORD_COMMAND_CHANNEL_ID", "DISCORD_WEBHOOK_URL"}
+    for key, value in updates.items():
+        if key == "DISCORD_NOTIFY_TTL":
+            value = int(value)
+        elif key in optional_fields:
+            value = value or None
+        setattr(settings, key.lower(), value)
 
     return {
         "message": "Discord 설정이 업데이트되었습니다. 토큰/채널 변경은 재시작 후 적용됩니다.",

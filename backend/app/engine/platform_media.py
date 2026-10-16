@@ -7,6 +7,7 @@ def media_platform(url: str) -> str:
     host = (urlsplit(url).hostname or '').lower()
     numbered = numbered_site_for_host(host)
     if numbered: return numbered
+    if host in ('rplay.live', 'www.rplay.live'): return 'rplay'
     if host in ('popkontv.com','www.popkontv.com'): return 'popkontv'
     if host == 'v2.ohli365.org': return 'ohli365'
     if host == 'linkani.tv': return 'linkani'
@@ -23,6 +24,9 @@ def media_platform(url: str) -> str:
 
 def canonical_platform_video(url: str) -> str:
     platform = media_platform(url)
+    if platform == 'rplay':
+        from app.engine.rplay import canonical_rplay_video_url
+        return canonical_rplay_video_url(url)
     if platform in ('anilife', 'linkani', 'ohli24', 'tvwiki', 'tvchak', 'animaru', 'ohli365'):
         from app.engine.episode_sites import parse_episode_url
         route = parse_episode_url(url)
@@ -74,6 +78,12 @@ def platform_ydl(url: str, options: dict):
     opts = dict(options)
     if opts.get('logger'):
         opts['logger'] = SafeMediaLogger(opts['logger'])
+    if media_platform(url) == 'rplay':
+        from app.engine.rplay_extractor import RplayIE
+        ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(RplayIE())
+        ydl.add_default_info_extractors()
+        return ydl
     if media_platform(url) in ('anilife', 'linkani', 'ohli24', 'tvwiki', 'tvchak', 'animaru', 'ohli365'):
         from app.engine.episode_extractor import EpisodeSiteIE
         if media_platform(url) == 'tvwiki':

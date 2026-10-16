@@ -136,11 +136,11 @@ class TestAuthManager:
             assert auth.is_authenticated is True
 
             # .env 저장 함수 호출 확인
-            mock_update.assert_called_once_with({"NID_AUT": "new_aut", "NID_SES": "new_ses"})
+            mock_update.assert_called_once_with({"NID_AUT": "new_aut", "NID_SES": "new_ses"}, raise_on_error=True)
 
     def test_update_cookies_no_env_file(self):
         """
-        런타임 쿠키 업데이트는 파일 저장 성공 여부와 관계없이 동작해야 함
+        처음 저장할 때도 런타임 쿠키를 함께 갱신한다
         """
         auth = AuthManager(nid_aut="old_aut", nid_ses="old_ses")
 

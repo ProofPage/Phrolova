@@ -114,7 +114,10 @@ async def complete_setup(req: SetupCompleteRequest):
         env_updates["NID_AUT"] = str(req.nid_aut)
         env_updates["NID_SES"] = str(req.nid_ses)
 
-    _update_env_file(env_updates)
+    try:
+        _update_env_file(env_updates, raise_on_error=True)
+    except OSError:
+        raise HTTPException(500, "초기 설정을 저장하지 못했습니다. 저장 위치의 권한과 여유 공간을 확인하세요.") from None
 
     # in-memory 설정 즉시 반영
     settings = get_settings()
@@ -132,8 +135,8 @@ async def complete_setup(req: SetupCompleteRequest):
         try:
             from app.main import get_recorder_service
             service = get_recorder_service()
-            service.update_cookies(req.nid_aut, req.nid_ses)
-        except Exception:
+            service.update_cookies(req.nid_aut, req.nid_ses, persist=False)
+        except RuntimeError:
             pass  # 서비스 미초기화 상태면 무시 (Settings에 이미 반영됨)
 
     logger.info(f"✅ 초기 설정 완료. .env 생성됨: {_get_env_path()}")

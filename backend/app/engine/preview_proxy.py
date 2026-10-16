@@ -81,6 +81,9 @@ class PreviewProxy:
             trusted += ("ttvnw.net",)
         if platform == "pandalive":
             trusted = ("pandalive.co.kr", "live-video.net")
+        if platform == "rplay":
+            from app.engine.rplay_live import media_allowed
+            return PreviewProxy.valid(url) and media_allowed(url)
         if platform == "popkontv":
             trusted = ("live-popkontv.hscdn.com", "vod2.popkontv.hscdn.com")
         if platform == "bilibili":
@@ -135,13 +138,16 @@ class PreviewProxy:
         headers = {"User-Agent": USER_AGENT}
         # Browser requests remain same-origin; platform headers and domain-scoped
         # cookies are sent only by the verified server-side media transport.
-        origins = {"soop": "https://play.sooplive.com", "cime": "https://ci.me", "kick": "https://kick.com", "twitch": "https://www.twitch.tv", "bilibili": "https://live.bilibili.com", "pandalive": "https://www.pandalive.co.kr", "popkontv": "https://www.popkontv.com"}
+        origins = {"soop": "https://play.sooplive.com", "cime": "https://ci.me", "kick": "https://kick.com", "twitch": "https://www.twitch.tv", "bilibili": "https://live.bilibili.com", "pandalive": "https://www.pandalive.co.kr", "popkontv": "https://www.popkontv.com", "rplay": "https://rplay.live"}
         origin = origins.get(node["platform"])
         if origin:
             headers.update({"Origin": origin, "Referer": origin + "/"})
         if node["platform"] == "popkontv":
             from app.engine.popkontv import popkontv_live_url
             headers["Referer"] = popkontv_live_url(node["key"].split(":",1)[1])
+        if node["platform"] == "rplay":
+            from app.engine.rplay_live import live_headers
+            headers.update(live_headers(node["key"].split(":",1)[1]))
         if node["platform"] == "pandalive":
             from app.engine.pandalive import pandalive_headers
             headers.update(pandalive_headers(node["key"].split(":",1)[1]))

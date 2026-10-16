@@ -2,7 +2,7 @@
 
 **Record live streams. Download videos. Manage your archive.**
 
-Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, SOOP, CIME, Kick, Twitch, TikTok, Bilibili, PandaTV and PopkonTV**. Monitor channels, preview broadcasts, manage downloads and verify saved media in one web dashboard. Run the packaged app on Windows, or install from source on Linux, macOS or Android with Termux.
+Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, SOOP, CIME, Kick, Twitch, TikTok, Bilibili, PandaTV, PopkonTV and RPLAY**. Monitor channels, preview broadcasts, manage downloads and verify saved media in one web dashboard. Run the packaged app on Windows, or install from source on Linux, macOS or Android with Termux.
 
 [Download](https://github.com/ProofPage/Phrolova/releases/latest) · [Release notes](docs/release-notes/README.md) · [Changelog](docs/CHANGELOG.md)
 
@@ -23,7 +23,7 @@ The interface supports **Korean, English, Japanese, Spanish, German, Simplified 
 
 ### Supported sources
 
-The dashboard provides **10 live platforms** and **17 video source choices**, including supported external links. PandaTV is live-only; PopkonTV supports live broadcasts, VODs and clips.
+The dashboard provides **11 live platforms** and **18 video source choices**, including supported external links. PandaTV is live-only; PopkonTV supports live broadcasts, VODs and clips.
 
 | Source | Live | Videos | Authentication when required |
 | --- | --- | --- | --- |
@@ -37,6 +37,7 @@ The dashboard provides **10 live platforms** and **17 video source choices**, in
 | Bilibili | Room monitoring, HLS previews and manual/automatic recording via Streamlink | BV/av videos, selected parts and b23.tv share links via yt-dlp | Optional Bilibili Netscape cookies |
 | PandaTV (팬더티비) | Channel monitoring, HLS previews and manual/automatic recording via Streamlink | — | Optional PandaTV Netscape cookies; identity-verified account access where required |
 | PopkonTV (팝콘티비) | Channel monitoring, HLS previews and manual/automatic recording via Streamlink | VODs and clips through the existing queue | PopkonTV Netscape cookies for sign-in-required access; verified account for adult broadcasts |
+| RPLAY (알플레이) | Channel monitoring, granted HLS recording and previews | Videos and live archives with granted HLS, DASH or MP4 playback | Explicit session JSON for videos requiring sign-in; account viewing permission required |
 | Anilife / Linkani / Ohli24 | — | Work/episode links, episode selection, HLS videos and VTT subtitles | Normal site playback session |
 | TVWiki (티비위키) | — | Work/episode selection and HLS videos at tvwiki54.net | Normal guest playback session |
 | TVChak (티비착) | — | Work/episode selection and original MP4 videos at tvchak208.com | Optional browser cookie file for site access checks |
@@ -46,6 +47,8 @@ The dashboard provides **10 live platforms** and **17 video source choices**, in
 Bilibili live rooms accept a numeric room ID or `https://live.bilibili.com/<room>`. The recorder prefers MPEG-TS HLS, tries alternate CDNs and preserves native fMP4 HLS when needed. Available native quality IDs are retained; a stream with no advertised quality ID is shown as Original rather than an inferred resolution. Bilibili's popularity metric is identified separately from viewer counts. Videos accept BV/av IDs and `b23.tv` links; `?p=2` selects a single part. Separate DASH video and audio tracks are merged into the configured container. Cropped videos display both the provider's quality tier and actual pixel dimensions. Register a Netscape cookie file under **Settings → Authentication → Bilibili** when account access or additional qualities are needed. Cookies remain scoped to `bilibili.com`.
 
 PandaTV live channels accept a channel ID or `https://www.pandalive.co.kr/play/<channel>`. Available HLS qualities are read from the broadcast rather than guessed. Public broadcasts work without a cookie file; identity- or sign-in-required broadcasts report an authentication error. Register the site's authenticated Netscape cookies under **Settings → Authentication → PandaTV** when required; signing in to a browser alone does not authenticate the server. Cookies remain scoped to `pandalive.co.kr`. See [PandaTV support](docs/pandalive-support.md) for implementation and validation details.
+
+RPLAY live links (`https://rplay.live/live/<creator-id>`) are available in **Live → RPLAY**, and video links (`https://rplay.live/play/<video-id>`) are available in **Videos → RPLAY**. Public videos use the site's guest playback grant; sign-in-only videos use an explicitly imported session JSON under **Settings → Authentication → RPLAY**. Browser sign-in is separate from the server. Only granted, non-DRM media is downloaded; see [RPLAY authentication and validation](docs/rplay-support.md).
 
 PopkonTV live channels accept the full `https://www.popkontv.com/live/view?castId=<channel>&partnerCode=<partner>` link or `channel@P-00117`. The partner code is preserved; a bare channel ID uses the site's default `P-00001`. Paste `/vod/<id>` or `/clip/<id>` links into **Videos → PopkonTV**. The app downloads the original video or advertised HLS qualities and inspects the saved file. When required, register the account's Netscape cookies under **Settings → Authentication → PopkonTV**. API authorization stays on `www.popkontv.com`; it is not forwarded to the media CDN. See [PopkonTV support](docs/popkontv-support.md) for validation details.
 

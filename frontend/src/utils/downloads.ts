@@ -16,6 +16,7 @@ export function detectDownloadPlatform(value: string): DownloadSource {
         if (host === 'chzzk.naver.com') return 'chzzk';
         if (['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(host)) return 'youtube';
         if (TIKTOK_HOSTS.has(host)) return 'tiktok';
+        if (host === 'rplay.live' || host === 'www.rplay.live') return 'rplay';
         if (host === 'popkontv.com' || host === 'www.popkontv.com') return 'popkontv';
         if (BILIBILI_HOSTS.has(host)) return 'bilibili';
         if (TWITCH_HOSTS.has(host)) return 'twitch';
@@ -53,6 +54,10 @@ export function normalizeDownloadInput(value: string, source: DownloadSource): {
                 parsed.hash = ''; return { url: parsed.href, collection: true, source: 'youtube' };
             }
             return null;
+        }
+        if (host === 'rplay.live' || host === 'www.rplay.live') {
+            const match = parsed.pathname.match(/^\/play\/([a-fA-F0-9]{24})\/?$/);
+            return match ? {url:`https://rplay.live/play/${match[1].toLowerCase()}`,collection:false,source:'rplay'} : null;
         }
         if (host === 'popkontv.com' || host === 'www.popkontv.com') {
             const url = canonicalPopkonTVVideoUrl(text);

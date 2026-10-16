@@ -16,8 +16,8 @@ from app.engine.pandalive import normalize_pandalive_channel_id
 
 BASE=os.environ.get('PHROLOVA_TEST_URL','http://127.0.0.1:3016')
 OUT=Path(__file__).resolve().parents[4]/'work/pandalive-ui'
-PLATFORMS=['chzzk','youtube','soop','cime','kick','twitch','tiktok','bilibili','pandalive','popkontv']
-LIVE_LABELS=['치지직','유튜브','숲','씨미','Kick','트위치','틱톡','Bilibili','팬더티비','팝콘티비']
+PLATFORMS=['chzzk','youtube','soop','cime','kick','twitch','tiktok','bilibili','pandalive','popkontv','rplay']
+LIVE_LABELS=['치지직','유튜브','숲','씨미','Kick','트위치','틱톡','Bilibili','팬더티비','팝콘티비','알플레이']
 PAGE='https://www.pandalive.co.kr/play/fixture'
 
 async def main():
@@ -111,6 +111,6 @@ async def main():
             assert await page.get_by_role('option',name='팬더티비',exact=True).count()==0
             assert not errors,errors
         finally:await browser.close()
-    print('PASS: 10 live platforms, PandaTV registration/qualities/cookies/HLS preview routing, 19 URL parity cases, 17 video sources including API failure, 320/390/768/1440px layouts')
+    print('PASS: 11 live platforms, PandaTV registration/qualities/cookies/HLS preview routing, 19 URL parity cases, 18 video sources including API failure, 320/390/768/1440px layouts')
 
 if __name__=='__main__':asyncio.run(main())

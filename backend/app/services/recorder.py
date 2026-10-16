@@ -282,10 +282,10 @@ class RecorderService:
 
     # ── 인증 ─────────────────────────────────────────────
 
-    def update_cookies(self, nid_aut: str, nid_ses: str) -> dict:
+    def update_cookies(self, nid_aut: str, nid_ses: str, *, persist: bool = True) -> dict:
         """인증 쿠키를 업데이트한다."""
-        self._auth.update_cookies(nid_aut, nid_ses)
-        return {"message": "쿠키 업데이트 완료.", "authenticated": True}
+        self._auth.update_cookies(nid_aut, nid_ses, persist=persist)
+        return {"message": "쿠키 업데이트 완료.", "authenticated": self._auth.is_authenticated}
 
     def get_auth_status(self) -> dict:
         """인증 상태를 반환한다."""
