@@ -14,11 +14,12 @@ import threading
 import time
 import unittest
 from collections import Counter
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 from unittest.mock import AsyncMock
 
 from streamlink import Streamlink
@@ -788,6 +789,35 @@ class LLHLSTests(unittest.TestCase):
         groups = self.cdn.ll_playlist("primary")
         paths = [continuity.SourcePath(self.cdn.url("primary"), False, "llhls", "akamai")]
         self.assertEqual(self.read(self.stream(paths)), INITIALIZATION + b"".join(groups))
+
+    def test_short_recovery_deadline_reserves_akamai_attempt(self):
+        # Test the deadline policy with a virtual clock, independently of OS
+        # socket/thread/disk scheduling. Real HTTP fallback tests remain above.
+        now = [0.0]
+        stop = SimpleNamespace(is_set=lambda: False,
+                               wait=lambda seconds: now.__setitem__(0, now[0] + seconds))
+        pending_history, ready_akamai = Future(), Future()
+        target, alternate, delivered = object(), object(), object()
+        ready_akamai.set_result([alternate])
+        failed_primary, successful_alternate = Future(), Future()
+        failed_primary.set_exception(continuity.Unavailable("gone", 404, "http"))
+        successful_alternate.set_result(delivered)
+        writer = object.__new__(continuity.ChzzkContinuityWriter)
+        writer.start_download = None
+        writer.source = SimpleNamespace(stop=stop, ended=False, changed=False,
+                                        paths=[SimpleNamespace(cdn="akamai")],
+                                        recovery_limit=lambda deadline: 0.6,
+                                        report_failure=Mock())
+        writer.lookup_slots = threading.BoundedSemaphore(3)
+        writer.lookups = SimpleNamespace(submit=Mock(side_effect=[pending_history, ready_akamai]))
+        writer.submit_request = Mock(side_effect=[failed_primary, successful_alternate])
+        with patch.object(continuity.time, "monotonic", lambda: now[0]):
+            self.assertIs(writer._fetch(target), delivered)
+        self.assertLess(now[0], 0.6)
+        self.assertEqual(writer.lookups.submit.call_count, 2)
+        self.assertIs(writer.submit_request.call_args.args[0], alternate)
+        self.assertTrue(pending_history.cancelled())
+        writer.source.report_failure.assert_not_called()
 
     def test_standby_failure_and_delay_never_delay_primary_start(self):
         self.cdn.playlist("primary")

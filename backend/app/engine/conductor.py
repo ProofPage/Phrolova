@@ -121,7 +121,7 @@ class Conductor:
 
                 self._youtube_engine = YoutubeLiveEngine()
             return self._youtube_engine
-        elif platform in (Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI):
+        elif platform in (Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV):
             if platform not in self._extra_engines:
                 from app.engine.soop import SoopLiveEngine
                 from app.engine.cime import CimeLiveEngine
@@ -129,9 +129,11 @@ class Conductor:
                 from app.engine.twitch import TwitchLiveEngine
                 from app.engine.tiktok import TikTokLiveEngine
                 from app.engine.bilibili import BilibiliLiveEngine
+                from app.engine.pandalive import PandaliveLiveEngine
+                from app.engine.popkontv import PopkonTVLiveEngine
 
                 self._extra_engines[platform] = (
-                    {Platform.SOOP: SoopLiveEngine, Platform.CIME: CimeLiveEngine, Platform.KICK: KickLiveEngine, Platform.TWITCH: TwitchLiveEngine, Platform.TIKTOK: TikTokLiveEngine, Platform.BILIBILI: BilibiliLiveEngine}[platform]
+                    {Platform.SOOP: SoopLiveEngine, Platform.CIME: CimeLiveEngine, Platform.KICK: KickLiveEngine, Platform.TWITCH: TwitchLiveEngine, Platform.TIKTOK: TikTokLiveEngine, Platform.BILIBILI: BilibiliLiveEngine, Platform.PANDALIVE: PandaliveLiveEngine, Platform.POPKONTV: PopkonTVLiveEngine}[platform]
                 )()
             return self._extra_engines[platform]
         else:
@@ -145,7 +147,7 @@ class Conductor:
         if not task.is_live:
             raise ValueError("오프라인")
         engine = self._get_engine(task.platform)
-        if task.platform in (Platform.CHZZK, Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI):
+        if task.platform in (Platform.CHZZK, Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV):
             return await engine.get_preview_url(task.channel_id)
         page_url = engine.get_stream_url(task.channel_id)
         pipeline = YtdlpLivePipeline(task.channel_id)
@@ -1068,7 +1070,7 @@ class Conductor:
 
                 extra["source_resolver"] = resolve_youtube
                 cookie_str = None
-            elif task.platform in (Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI):
+            elif task.platform in (Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV):
                 extra["source_resolver"] = (
                     lambda selected_quality: engine.resolve_stream(
                         task.channel_id, selected_quality
@@ -1204,7 +1206,7 @@ class Conductor:
                 ),
                 "channel_url": (
                     self._get_engine(task.platform).get_stream_url(task.channel_id)
-                    if task.platform in (Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI)
+                    if task.platform in (Platform.SOOP, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV)
                     else None
                 ),
                 "is_live": task.is_live,

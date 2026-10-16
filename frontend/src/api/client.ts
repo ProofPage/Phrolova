@@ -11,8 +11,8 @@ export const client = axios.create({
 
 // ── Types ───────────────────────────────────────────────
 
-export type Platform = "chzzk" | "youtube" | "soop" | "cime" | "kick" | "twitch" | "tiktok" | "bilibili";
-export type DownloadSource = Platform | 'anilife' | 'linkani' | 'ohli24' | 'ohli365' | 'tvwiki' | 'tvchak' | 'animaru' | 'external';
+export type Platform = "chzzk" | "youtube" | "soop" | "cime" | "kick" | "twitch" | "tiktok" | "bilibili" | "pandalive" | "popkontv";
+export type DownloadSource = Exclude<Platform, "pandalive"> | 'anilife' | 'linkani' | 'ohli24' | 'ohli365' | 'tvwiki' | 'tvchak' | 'animaru' | 'external';
 export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
 export interface ChannelDownloadOptions {
     output_format?: 'mp4' | 'mkv' | null;
@@ -31,10 +31,14 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
     twitch: "platform.twitch",
     tiktok: "platform.tiktok",
     bilibili: "platform.bilibili",
+    pandalive: "platform.pandalive",
+    popkontv: "platform.popkontv",
 };
 
+// Live-only providers must also stay out of the fallback video source menu.
+const { pandalive: _liveOnlyPandalive, ...videoPlatformLabels } = PLATFORM_LABELS;
 export const DOWNLOAD_SOURCE_LABELS: Record<DownloadSource, string> = {
-    ...PLATFORM_LABELS, anilife: 'platform.anilife', linkani: 'platform.linkani', ohli24: 'platform.ohli24', ohli365: 'platform.ohli365', tvwiki: 'platform.tvwiki', tvchak: 'platform.tvchak', animaru: 'platform.animaru', external: 'download.externalVideo',
+    ...videoPlatformLabels, anilife: 'platform.anilife', linkani: 'platform.linkani', ohli24: 'platform.ohli24', ohli365: 'platform.ohli365', tvwiki: 'platform.tvwiki', tvchak: 'platform.tvchak', animaru: 'platform.animaru', external: 'download.externalVideo',
 };
 export interface VideoEpisode { id: string; title: string; url: string; number?: number | null; available: boolean; }
 export interface VideoCatalog { source: DownloadSource; id: string; title: string; url: string; episodes: VideoEpisode[]; incomplete?:boolean; }
@@ -228,9 +232,11 @@ export interface PlatformStatus {
     twitch?: { enabled: boolean; authenticated: boolean };
     tiktok?: { enabled: boolean; authenticated: boolean };
     bilibili?: { enabled: boolean; authenticated: boolean };
+    pandalive?: { enabled: boolean; authenticated: boolean };
+    popkontv?: { enabled: boolean; authenticated: boolean };
 }
 
-export type CookiePlatform = 'chzzk' | 'youtube' | 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'tvchak';
+export type CookiePlatform = 'chzzk' | 'youtube' | 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'tvchak';
 
 export interface PlatformCookieStatus {
     configured: boolean;
@@ -603,7 +609,7 @@ export const api = {
     },
     getLivePreviewFrame: async (channelKey: string, signal?: AbortSignal, force = false): Promise<Blob> =>
         (await client.get(`/stream/preview-frame/${encodeURIComponent(channelKey)}`, { responseType: 'blob', signal, params: force ? { force: true } : undefined, timeout: 60000 })).data,
-    getPlatformQualities: async (platform: 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili', channel_id: string, signal?: AbortSignal) =>
+    getPlatformQualities: async (platform: 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv', channel_id: string, signal?: AbortSignal) =>
         (await client.get<{ qualities: LiveQuality[]; live?: boolean; message?: string }>(`/platforms/${platform}/${encodeURIComponent(channel_id)}/qualities`, { signal })).data,
     getPlatformCookieStatus: async (platform: CookiePlatform): Promise<PlatformCookieStatus> =>
         (await client.get<PlatformCookieStatus>(`/platforms/${platform}/cookie`)).data,

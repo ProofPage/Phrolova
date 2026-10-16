@@ -7,6 +7,7 @@ def media_platform(url: str) -> str:
     host = (urlsplit(url).hostname or '').lower()
     numbered = numbered_site_for_host(host)
     if numbered: return numbered
+    if host in ('popkontv.com','www.popkontv.com'): return 'popkontv'
     if host == 'v2.ohli365.org': return 'ohli365'
     if host == 'linkani.tv': return 'linkani'
     if host in ('www.ohli24.net', 'ohli24.net'): return 'ohli24'
@@ -28,6 +29,9 @@ def canonical_platform_video(url: str) -> str:
         if route['collection'] and platform != 'ohli24':
             raise ValueError('작품의 회차 목록에서 내려받을 회차를 선택하세요.')
         return route['url']
+    if platform == 'popkontv':
+        from app.engine.popkontv import parse_popkontv_video_url
+        return parse_popkontv_video_url(url)['url']
     if platform == 'bilibili':
         from app.engine.bilibili import canonical_bilibili_video_url
         return canonical_bilibili_video_url(url)
@@ -78,6 +82,12 @@ def platform_ydl(url: str, options: dict):
         else:
             ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
         ydl.add_info_extractor(EpisodeSiteIE())
+        ydl.add_default_info_extractors()
+        return ydl
+    if media_platform(url) == 'popkontv':
+        from app.engine.popkontv_extractor import PopkonTVIE
+        ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(PopkonTVIE())
         ydl.add_default_info_extractors()
         return ydl
     if media_platform(url) == 'cime':

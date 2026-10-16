@@ -79,6 +79,10 @@ class PreviewProxy:
         # 다른 플랫폼의 미리보기까지 이 CDN을 허용하지 않도록 범위를 제한한다.
         if platform == "twitch":
             trusted += ("ttvnw.net",)
+        if platform == "pandalive":
+            trusted = ("pandalive.co.kr", "live-video.net")
+        if platform == "popkontv":
+            trusted = ("live-popkontv.hscdn.com", "vod2.popkontv.hscdn.com")
         if platform == "bilibili":
             trusted += ("bilivideo.com", "bilivideo.cn", "biliapi.net")
         return PreviewProxy.valid(url) and (
@@ -106,7 +110,10 @@ class PreviewProxy:
                     and 'X-TV-TWITCH-TRIGGER-URL="' in line):
                 # 영상 재생에 쓰지 않는 Twitch 전용 트리거의 서명 주소는 전달하지 않는다.
                 continue
-            if node["platform"] == "twitch" and line.startswith("#EXT-X-TWITCH-PREFETCH:"):
+            if line.startswith("#EXT-X-PREFETCH:"):
+                # AWS IVS 등의 저지연 HLS도 미리 읽을 영상 주소를 프록시로 전달한다.
+                line = "#EXT-X-PREFETCH:" + replace(line.split(":", 1)[1].strip())
+            elif node["platform"] == "twitch" and line.startswith("#EXT-X-TWITCH-PREFETCH:"):
                 # Twitch 전용 태그에도 서명된 영상 주소가 들어가므로 브라우저에 노출하지 않는다.
                 line = "#EXT-X-TWITCH-PREFETCH:" + replace(line.split(":", 1)[1].strip())
             elif line.strip().startswith("#"):
@@ -128,10 +135,16 @@ class PreviewProxy:
         headers = {"User-Agent": USER_AGENT}
         # Browser requests remain same-origin; platform headers and domain-scoped
         # cookies are sent only by the verified server-side media transport.
-        origins = {"soop": "https://play.sooplive.com", "cime": "https://ci.me", "kick": "https://kick.com", "twitch": "https://www.twitch.tv", "bilibili": "https://live.bilibili.com"}
+        origins = {"soop": "https://play.sooplive.com", "cime": "https://ci.me", "kick": "https://kick.com", "twitch": "https://www.twitch.tv", "bilibili": "https://live.bilibili.com", "pandalive": "https://www.pandalive.co.kr", "popkontv": "https://www.popkontv.com"}
         origin = origins.get(node["platform"])
         if origin:
             headers.update({"Origin": origin, "Referer": origin + "/"})
+        if node["platform"] == "popkontv":
+            from app.engine.popkontv import popkontv_live_url
+            headers["Referer"] = popkontv_live_url(node["key"].split(":",1)[1])
+        if node["platform"] == "pandalive":
+            from app.engine.pandalive import pandalive_headers
+            headers.update(pandalive_headers(node["key"].split(":",1)[1]))
         if range_header and re.fullmatch(r"bytes=\d+-\d*", range_header):
             headers["Range"] = range_header
         params = {
@@ -143,7 +156,7 @@ class PreviewProxy:
         async with self.limit:
             async with httpx.AsyncClient(
                 verify=preview_ca_bundle(), timeout=15, follow_redirects=False,
-                cookies=platform_cookie_jar(node["platform"]) if node["platform"] in ("soop", "cime", "kick", "twitch", "bilibili") else None
+                cookies=platform_cookie_jar(node["platform"]) if node["platform"] in ("soop", "cime", "kick", "twitch", "bilibili", "pandalive", "popkontv") else None
             ) as client:
                 url = node["url"]
                 for _ in range(4):
