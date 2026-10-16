@@ -237,4 +237,8 @@ class TikTokLiveEngine:
         variants = sorted(await self._streams(channel_id), key=self._rank, reverse=True)
         if not variants:
             raise ValueError('TikTok 채널이 오프라인입니다.')
-        return variants[0]['url'], tiktok_headers(channel_id), None
+        # 웹 브라우저 미리보기는 H.264(AVC) 코덱이어야 mpegts.js로 정상 디코딩됩니다.
+        # H.265(HEVC) FLV는 브라우저 MSE에서 미지원되므로 H.264 변형을 우선 공급합니다.
+        h264_variants = [v for v in variants if v.get('codec') == 'H.264' or v.get('value', '').startswith('h264_')]
+        chosen = h264_variants[0] if h264_variants else variants[0]
+        return chosen['url'], tiktok_headers(channel_id), None

@@ -153,6 +153,11 @@ async def test_best_prefers_original_at_same_resolution_and_preview_preserves_it
     monkeypatch.setattr(engine,'_streams',AsyncMock(return_value=rows))
     assert (await engine.resolve_stream('alice','best'))[0] == rows[0]['url']
     assert (await engine.resolve_preview_stream('alice'))[0] == rows[0]['url']
+    # When H.264 is available, preview resolver prefers H.264 for browser MSE compatibility
+    rows_with_h264 = [dict(value='h265_origin',url='https://cdn.example/original_h265.flv',width=1920,height=1080,weight=1000012,fps=None),
+                      dict(value='h264_hd',url='https://cdn.example/hd_h264.flv',width=1280,height=720,weight=500,fps=None)]
+    monkeypatch.setattr(engine,'_streams',AsyncMock(return_value=rows_with_h264))
+    assert (await engine.resolve_preview_stream('alice'))[0] == rows_with_h264[1]['url']
 
 
 @pytest.mark.asyncio

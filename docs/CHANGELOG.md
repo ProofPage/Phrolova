@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.11] - 2026-10-16
+
+### Fixed
+- Prioritize browser-compatible H.264 (AVC) variants over H.265 (HEVC) when resolving TikTok preview streams, ensuring seamless hardware-accelerated playback in `mpegts.js` without falling back to image mode.
+
 ## [2.0.80-preview.10] - 2026-10-16
 
 ### Fixed
