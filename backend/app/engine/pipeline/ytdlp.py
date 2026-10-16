@@ -110,6 +110,22 @@ class YtdlpLivePipeline:
         return self._output_path
 
     @property
+    def preview_source_url(self) -> Optional[str]:
+        """Reuse only a CHZZK source that this active capture has already received."""
+        if (self._state not in (RecordingState.RECORDING, RecordingState.RECONNECTING)
+                or self._start_time is None or self._closed or not self._resume_args
+                or not self._is_chzzk_live_page(self._source_page_url)):
+            return None
+        from app.engine.chzzk_stream import trusted_media_url
+        reader = self._readers[0] if self._readers else None
+        continuity = getattr(getattr(reader, 'stream', None), 'continuity', None)
+        current = getattr(getattr(continuity, 'primary', None), 'url', None)
+        for url in (current, self._resume_args[0]):
+            if trusted_media_url(url):
+                return url
+        return None
+
+    @property
     def duration_seconds(self) -> float:
         start = self._start_time
         if start is None:

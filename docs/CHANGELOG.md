@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+## [2.0.79] - 2026-10-16
+
+### Fixed
+- Reuse an already receiving CHZZK recording source when live-detail omits standard playback, following the current recovery CDN without changing the recording or exposing signed media URLs. Include CHZZK origin/referer headers in the preview proxy.
+- Send RPLAY login files as multipart uploads instead of JSON, fixing generic input-validation errors for valid files.
+- Add an explicit browser-side login export tool and inline instructions for RPLAY's IndexedDB session storage. Export only the access token, account ID and login type; ordinary cookie exports cannot authenticate this integration.
+
 ## [2.0.78] - 2026-10-16
 
 ### Added
@@ -1082,7 +1089,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.78...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.79...HEAD
+[2.0.79]: https://github.com/ProofPage/Phrolova/compare/v2.0.78...v2.0.79
 [2.0.78]: https://github.com/ProofPage/Phrolova/compare/v2.0.77...v2.0.78
 [2.0.77]: https://github.com/ProofPage/Phrolova/compare/v2.0.76...v2.0.77
 [2.0.76]: https://github.com/ProofPage/Phrolova/compare/v2.0.75...v2.0.76

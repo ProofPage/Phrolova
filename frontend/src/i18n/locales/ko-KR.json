@@ -1,8 +1,8 @@
 {
   "live.rplayChannelIDOrUrl": "알플레이 채널 ID 또는 https://rplay.live/live/...",
   "platform.rplay": "알플레이",
-  "settings.rplaySessionFile": "세션 JSON 파일",
-  "settings.rplaySessionHelp": "공개 영상은 로그인 없이 이용합니다. 인증이 필요한 영상에는 알플레이 세션 JSON 파일을 등록하세요. 브라우저 로그인은 자동으로 연동되지 않습니다.",
+  "settings.rplaySessionFile": "로그인 정보 파일",
+  "settings.rplaySessionHelp": "알플레이 로그인 정보는 일반 쿠키 파일에 포함되지 않습니다. 아래 방법으로 로그인 정보를 내보낸 뒤 파일을 등록하세요.",
   "settings.rplaySessionUpdated": "알플레이 인증 설정이 저장되었습니다.",
   "settings.rplaySessionRemove": "알플레이 세션 제거",
   "settings.rplaySessionRemoveHelp": "등록한 세션을 제거할까요? 로그인 전용 영상은 새 세션 등록 후 이용할 수 있습니다.",
@@ -896,5 +896,15 @@
   "episodes.partial": "사이트에 표시된 회차만 제공합니다. 일부 이전 회차가 목록에서 빠져 있습니다.",
   "platform.bilibili": "Bilibili",
   "live.bilibiliRoomIDOrHttpsLiveBilibiliCom": "Bilibili 방송실 ID 또는 https://live.bilibili.com/...",
-  "live.popularity": "인기도"
+  "live.popularity": "인기도",
+  "settings.rplayExportCopy": "내보내기 코드 복사",
+  "settings.rplayExportHelp": "로그인 정보 파일 만드는 방법",
+  "settings.rplayExportStepOne": "브라우저에서 알플레이에 로그인하고 페이지가 모두 열릴 때까지 기다리세요.",
+  "settings.rplayExportStepTwo": "내보내기 코드를 복사한 뒤 알플레이 페이지에서 F12 → Console(콘솔)에 붙여 넣고 실행하세요. 코드는 로그인 정보를 파일로만 저장하며 외부로 전송하지 않습니다.",
+  "settings.rplayExportStepThree": "다운로드된 rplay_session.json을 위의 파일 선택으로 등록하세요. JSON을 직접 작성할 필요가 없습니다.",
+  "settings.rplayExportCopied": "코드를 복사했습니다. 알플레이 페이지의 콘솔에서 실행하세요.",
+  "settings.rplayExportCopyManually": "자동으로 복사하지 못했습니다. 아래 선택된 코드를 직접 복사하세요.",
+  "settings.rplayExportWrongSite": "알플레이에 로그인한 페이지에서 실행하세요: https://rplay.live/",
+  "settings.rplayExportSignedOut": "로그인 정보를 찾지 못했습니다. 알플레이에 다시 로그인하고 페이지를 새로고침한 뒤 실행하세요.",
+  "settings.rplayExportFailed": "로그인 정보를 내보내지 못했습니다. 알플레이 로그인 상태와 브라우저 저장소 접근을 확인하세요."
 }

@@ -1,8 +1,8 @@
 {
   "live.rplayChannelIDOrUrl": "RPLAY-Kanal-ID oder https://rplay.live/live/...",
   "platform.rplay": "RPLAY",
-  "settings.rplaySessionFile": "Sitzungsdatei (JSON)",
-  "settings.rplaySessionHelp": "Öffentliche Videos sind ohne Anmeldung verfügbar. Importiere für geschützte Videos eine RPLAY-Sitzungsdatei im JSON-Format. Die Browser-Anmeldung wird nicht automatisch übernommen.",
+  "settings.rplaySessionFile": "Anmeldedatei",
+  "settings.rplaySessionHelp": "Normale Cookie-Dateien enthalten keine RPLAY-Anmeldedaten. Exportiere sie wie unten beschrieben und importiere die Datei.",
   "settings.rplaySessionUpdated": "RPLAY-Anmeldeeinstellungen gespeichert.",
   "settings.rplaySessionRemove": "RPLAY-Sitzung entfernen",
   "settings.rplaySessionRemoveHelp": "Registrierte Sitzung entfernen? Für Videos mit Anmeldepflicht wird eine neue Sitzung benötigt.",
@@ -896,5 +896,15 @@
   "episodes.partial": "Es werden nur auf der Website gelistete Folgen angezeigt. Einige frühere Folgen fehlen.",
   "platform.bilibili": "Bilibili",
   "live.bilibiliRoomIDOrHttpsLiveBilibiliCom": "Bilibili-Raum-ID oder https://live.bilibili.com/...",
-  "live.popularity": "Popularität"
+  "live.popularity": "Popularität",
+  "settings.rplayExportCopy": "Exportcode kopieren",
+  "settings.rplayExportHelp": "Anmeldedaten exportieren",
+  "settings.rplayExportStepOne": "Melde dich im Browser bei RPLAY an und warte, bis die Seite vollständig geladen ist.",
+  "settings.rplayExportStepTwo": "Kopiere den Code und führe ihn auf der RPLAY-Seite unter F12 → Console aus. Er speichert die Anmeldedaten nur in einer lokalen Datei und sendet sie nirgendwohin.",
+  "settings.rplayExportStepThree": "Importiere die heruntergeladene Datei rplay_session.json über die Dateiauswahl oben. JSON muss nicht manuell bearbeitet werden.",
+  "settings.rplayExportCopied": "Code kopiert. Führe ihn in der Konsole der angemeldeten RPLAY-Seite aus.",
+  "settings.rplayExportCopyManually": "Automatisches Kopieren fehlgeschlagen. Kopiere den unten ausgewählten Code manuell.",
+  "settings.rplayExportWrongSite": "Führe dies auf deiner angemeldeten RPLAY-Seite aus: https://rplay.live/",
+  "settings.rplayExportSignedOut": "Keine Anmeldedaten gefunden. Melde dich erneut bei RPLAY an, lade die Seite neu und versuche es nochmals.",
+  "settings.rplayExportFailed": "Anmeldedaten konnten nicht exportiert werden. Prüfe die RPLAY-Anmeldung und den Zugriff auf den Browserspeicher."
 }

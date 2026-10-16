@@ -1,8 +1,8 @@
 {
   "live.rplayChannelIDOrUrl": "ID канала RPLAY или https://rplay.live/live/...",
   "platform.rplay": "RPLAY",
-  "settings.rplaySessionFile": "JSON-файл сеанса",
-  "settings.rplaySessionHelp": "Общедоступные видео не требуют входа. Для видео с авторизацией импортируйте JSON-файл сеанса RPLAY. Вход в браузере не передаётся автоматически.",
+  "settings.rplaySessionFile": "Файл данных входа",
+  "settings.rplaySessionHelp": "Обычные файлы cookie не содержат данных входа RPLAY. Экспортируйте их по инструкции ниже и импортируйте файл.",
   "settings.rplaySessionUpdated": "Настройки авторизации RPLAY сохранены.",
   "settings.rplaySessionRemove": "Удалить сеанс RPLAY",
   "settings.rplaySessionRemoveHelp": "Удалить зарегистрированный сеанс? Для видео с авторизацией потребуется новый сеанс.",
@@ -896,5 +896,15 @@
   "episodes.partial": "Показаны только серии из списка сайта. Некоторые ранние серии отсутствуют.",
   "platform.bilibili": "Bilibili",
   "live.bilibiliRoomIDOrHttpsLiveBilibiliCom": "ID комнаты Bilibili или https://live.bilibili.com/...",
-  "live.popularity": "Популярность"
+  "live.popularity": "Популярность",
+  "settings.rplayExportCopy": "Скопировать код экспорта",
+  "settings.rplayExportHelp": "Как экспортировать данные входа",
+  "settings.rplayExportStepOne": "Войдите в RPLAY в браузере и дождитесь полной загрузки страницы.",
+  "settings.rplayExportStepTwo": "Скопируйте код и выполните его в F12 → Console на странице RPLAY. Он сохраняет данные входа только в локальный файл и никуда их не отправляет.",
+  "settings.rplayExportStepThree": "Выберите скачанный rplay_session.json кнопкой выше. Редактировать JSON вручную не нужно.",
+  "settings.rplayExportCopied": "Код скопирован. Выполните его в консоли страницы RPLAY, где вы вошли в аккаунт.",
+  "settings.rplayExportCopyManually": "Автоматическое копирование не удалось. Скопируйте выделенный код ниже вручную.",
+  "settings.rplayExportWrongSite": "Выполните это на странице RPLAY после входа: https://rplay.live/",
+  "settings.rplayExportSignedOut": "Данные входа не найдены. Войдите в RPLAY заново, обновите страницу и повторите попытку.",
+  "settings.rplayExportFailed": "Не удалось экспортировать данные входа. Проверьте вход в RPLAY и доступ к хранилищу браузера."
 }

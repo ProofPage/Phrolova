@@ -1,8 +1,8 @@
 {
   "live.rplayChannelIDOrUrl": "RPLAY channel ID or https://rplay.live/live/...",
   "platform.rplay": "RPLAY",
-  "settings.rplaySessionFile": "Session JSON file",
-  "settings.rplaySessionHelp": "Public videos work without signing in. Import an RPLAY session JSON file for videos that require authentication. Browser sign-in is not shared automatically.",
+  "settings.rplaySessionFile": "Login information file",
+  "settings.rplaySessionHelp": "RPLAY login information is not included in ordinary cookie files. Export your login information using the steps below, then import the file.",
   "settings.rplaySessionUpdated": "RPLAY authentication settings saved.",
   "settings.rplaySessionRemove": "Remove RPLAY session",
   "settings.rplaySessionRemoveHelp": "Remove the registered session? Sign-in-only videos will require a new session.",
@@ -896,5 +896,15 @@
   "episodes.partial": "Only episodes listed by the site are shown. Some earlier episodes are missing.",
   "platform.bilibili": "Bilibili",
   "live.bilibiliRoomIDOrHttpsLiveBilibiliCom": "Bilibili room ID or https://live.bilibili.com/...",
-  "live.popularity": "Popularity"
+  "live.popularity": "Popularity",
+  "settings.rplayExportCopy": "Copy export code",
+  "settings.rplayExportHelp": "How to export login information",
+  "settings.rplayExportStepOne": "Sign in to RPLAY in your browser and wait for the page to finish loading.",
+  "settings.rplayExportStepTwo": "Copy the export code, then run it in F12 → Console on the RPLAY page. It saves login information to a local file without sending it anywhere.",
+  "settings.rplayExportStepThree": "Choose the downloaded rplay_session.json using the file button above. No manual JSON editing is needed.",
+  "settings.rplayExportCopied": "Code copied. Run it in the console on your signed-in RPLAY page.",
+  "settings.rplayExportCopyManually": "Automatic copying failed. Copy the selected code below manually.",
+  "settings.rplayExportWrongSite": "Run this on your signed-in RPLAY page: https://rplay.live/",
+  "settings.rplayExportSignedOut": "No login information found. Sign in to RPLAY again, reload the page, then try again.",
+  "settings.rplayExportFailed": "Could not export login information. Check your RPLAY sign-in and browser storage access."
 }
