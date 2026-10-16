@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.12] - 2026-10-16
+
+### Fixed
+- Encapsulate `mpegts.js` as a pure ES module factory to ensure reliable runtime player instantiation in production Vite bundles, preventing inadvertent fallback to image preview.
+
 ## [2.0.80-preview.11] - 2026-10-16
 
 ### Fixed

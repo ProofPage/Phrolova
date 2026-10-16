@@ -38,6 +38,7 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
         let loadingTimer: ReturnType<typeof setTimeout> | undefined;
         let recovering = false;
         let failed = false;
+        let retries = 0;
 
         const detach = () => {
             if (player) {
@@ -75,10 +76,10 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
             if (stopped || failed || recovering) return;
             recovering = true;
             detach();
-            if (!refreshed) {
-                refreshed = true;
+            if (retries < 3) {
+                retries += 1;
                 setState("loading");
-                refreshTimer = setTimeout(() => { void load(); }, 4000);
+                refreshTimer = setTimeout(() => { void load(); }, 2000);
             } else {
                 setFallback(true);
             }
@@ -90,7 +91,7 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
                 if (!stopped) { abort.abort(); fail(); }
             }, 30000);
             try {
-                if (typeof mpegts === "undefined" || !mpegts.isSupported()) {
+                if (typeof mpegts === "undefined" || !mpegts || !mpegts.isSupported()) {
                     setFallback(true);
                     return;
                 }
@@ -109,7 +110,8 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
                     liveBufferLatencyMinRemain: 0.5,
                     autoCleanupSourceBuffer: true,
                 });
-                player.on(mpegts.Events.ERROR, () => {
+                player.on(mpegts.Events.ERROR, (type: any, detail: any) => {
+                    console.warn("[Phrolova] 틱톡 미리보기 스트림 재생 알림:", type, detail);
                     recover();
                 });
                 player.attachMediaElement(video);
