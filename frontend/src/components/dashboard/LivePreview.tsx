@@ -1,6 +1,7 @@
 import { translate } from "../../i18n";
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
+import mpegts from "../../vendor/mpegts.js";
 import { CircleAlert, VideoOff } from "lucide-react";
 import { api } from "../../api/client";
 import { Button } from "../ui/primitives";
@@ -10,11 +11,164 @@ import { preferredNativePreviewUrl, preferredPreviewLevel } from "../../utils/li
 import { LiveFramePreview } from "./LiveFramePreview";
 
 type PreviewProps = { channelKey: string; isLive: boolean; name: string; poster?: string; broadcastState?: string };
+
 export function LivePreview(props: PreviewProps) {
     useLanguage();
-    if (props.channelKey.startsWith("tiktok:")) return <LiveFramePreview {...props} />;
+    if (props.channelKey.startsWith("tiktok:")) return <MpegtsLivePreview {...props} />;
     return <HlsLivePreview {...props} />;
 }
+
+function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }: PreviewProps) {
+    const { t } = useLanguage();
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [attempt, setAttempt] = useState(0);
+    const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+    const [message, setMessage] = useState("");
+    const [fallback, setFallback] = useState(false);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !isLive || fallback) return;
+        const abort = new AbortController();
+        let player: any = null;
+        let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+        let refreshed = false;
+        let stopped = false;
+        let startupTimer: ReturnType<typeof setTimeout> | undefined;
+        let loadingTimer: ReturnType<typeof setTimeout> | undefined;
+        let recovering = false;
+        let failed = false;
+
+        const detach = () => {
+            if (player) {
+                try {
+                    player.pause();
+                    player.unload();
+                    player.detachMediaElement();
+                    player.destroy();
+                } catch {
+                    // Ignore disposal errors
+                }
+                player = null;
+            }
+        };
+
+        const ready = () => {
+            if (stopped || failed) return;
+            clearTimeout(loadingTimer);
+            recovering = false;
+            setState("ready");
+            setMessage("");
+        };
+
+        const fail = (reason?: string) => {
+            if (stopped) return;
+            failed = true;
+            clearTimeout(loadingTimer);
+            clearTimeout(refreshTimer);
+            detach();
+            setState("error");
+            setMessage(reason || "live.couldNotLoadThePreview");
+        };
+
+        const recover = () => {
+            if (stopped || failed || recovering) return;
+            recovering = true;
+            detach();
+            if (!refreshed) {
+                refreshed = true;
+                setState("loading");
+                refreshTimer = setTimeout(() => { void load(); }, 4000);
+            } else {
+                setFallback(true);
+            }
+        };
+
+        const load = async () => {
+            recovering = false;
+            loadingTimer = setTimeout(() => {
+                if (!stopped) { abort.abort(); fail(); }
+            }, 30000);
+            try {
+                if (typeof mpegts === "undefined" || !mpegts.isSupported()) {
+                    setFallback(true);
+                    return;
+                }
+                const { url } = await api.getLivePreview(channelKey, abort.signal);
+                if (stopped) return;
+                player = mpegts.createPlayer({
+                    type: "flv",
+                    isLive: true,
+                    url,
+                }, {
+                    isLive: true,
+                    enableWorker: true,
+                    enableStashBuffer: false,
+                    liveBufferLatencyChasing: true,
+                    liveBufferLatencyMaxLatency: 2.5,
+                    liveBufferLatencyMinRemain: 0.5,
+                    autoCleanupSourceBuffer: true,
+                });
+                player.on(mpegts.Events.ERROR, () => {
+                    recover();
+                });
+                player.attachMediaElement(video);
+                player.load();
+                video.play().catch(() => {});
+            } catch (error) {
+                if (stopped || abort.signal.aborted) return;
+                const response = (error as { response?: { status?: number; data?: { detail?: string } } }).response;
+                if (!response || response.status === 429 || (response.status || 0) >= 500) {
+                    recover();
+                    return;
+                }
+                fail(response?.status === 409 ? response?.data?.detail : undefined);
+            }
+        };
+
+        video.addEventListener("canplay", ready);
+        video.addEventListener("playing", ready);
+        video.addEventListener("error", recover);
+        setState("loading");
+        setMessage("");
+        startupTimer = setTimeout(() => { void load(); }, 0);
+        return () => {
+            stopped = true;
+            abort.abort();
+            clearTimeout(startupTimer);
+            clearTimeout(refreshTimer);
+            clearTimeout(loadingTimer);
+            video.removeEventListener("canplay", ready);
+            video.removeEventListener("playing", ready);
+            video.removeEventListener("error", recover);
+            detach();
+        };
+    }, [channelKey, isLive, attempt, fallback]);
+
+    if (fallback) {
+        return <LiveFramePreview channelKey={channelKey} isLive={isLive} name={name} />;
+    }
+
+    return (
+        <div className={`channel-live-preview${!isLive ? " is-offline" : ""}`} aria-label={`${name} ${t("live.livePreview")}`}>
+            <div className="channel-preview-stage">
+                {isLive && (
+                    <div className="channel-preview-player" hidden={state !== "ready"}>
+                        <video ref={videoRef} controls autoPlay muted playsInline poster={poster} className="size-full object-contain" aria-label={`${name} LIVE`} />
+                    </div>
+                )}
+                {(!isLive || state !== "ready") && (
+                    <div className="channel-preview-status" role="status" aria-busy={isLive && state === "loading"}>
+                        {isLive && state === "loading" ? <span className="size-5 shrink-0 animate-spin rounded-full border-2 border-line-strong border-t-info" aria-hidden="true" /> : isLive ? <CircleAlert className="size-5 text-ink-faint" aria-hidden="true" /> : <VideoOff className="size-5 text-ink-faint" aria-hidden="true" />}
+                        <span className="channel-preview-message">{t(!isLive ? broadcastState === "checking" ? translate("live.checkingLiveStatus") : broadcastState === "error" ? translate("live.couldNotCheckLiveStatus") : translate("live.thisChannelIsCurrentlyOffline") : state === "loading" ? translate("live.loadingPreview") : message)}</span>
+                        {isLive && state === "error" && <Button type="button" aria-label={t("live.tryAgain")} onClick={() => { setState("loading"); setAttempt(v => v + 1); }}>{t("live.tryAgain")}</Button>}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function HlsLivePreview({ channelKey, isLive, name, poster, broadcastState }: PreviewProps) {
     const { t } = useLanguage();
     const videoRef = useRef<HTMLVideoElement>(null);

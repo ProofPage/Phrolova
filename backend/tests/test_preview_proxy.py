@@ -304,3 +304,25 @@ async def test_platform_headers_and_cookies_stay_domain_scoped(monkeypatch, plat
     assert requests[0].headers["referer"] == origin + "/"
     assert requests[0].headers["cookie"] == "session=PRIVATE"
     assert "cookie" not in requests[1].headers
+
+
+@pytest.mark.asyncio
+async def test_tiktok_flv_stream_proxy_pipe(monkeypatch):
+    proxy = PreviewProxy()
+    token = proxy.register("tiktok:user", "tiktok", "https://pull-f5-sg01.tiktokcdn.com/game/stream.flv?token=SECRET")
+    requests = []
+
+    async def handler(request):
+        requests.append(request)
+        assert request.headers["origin"] == "https://www.tiktok.com"
+        assert "@user" in request.headers["referer"]
+        return httpx.Response(200, content=b"FLV\x01\x05\x00\x00\x00\tvideo-payload")
+
+    client = httpx.AsyncClient
+    monkeypatch.setattr("app.engine.preview_proxy.httpx.AsyncClient",
+                        lambda **kwargs: client(transport=httpx.MockTransport(handler), **kwargs))
+    chunks = []
+    async for chunk in proxy.fetch_stream(token):
+        chunks.append(chunk)
+    assert b"".join(chunks).startswith(b"FLV\x01\x05")
+    assert len(requests) == 1

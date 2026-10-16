@@ -167,6 +167,8 @@ class PreviewProxy:
             trusted = ("live-popkontv.hscdn.com", "vod2.popkontv.hscdn.com")
         if platform == "bilibili":
             trusted += ("bilivideo.com", "bilivideo.cn", "biliapi.net")
+        if platform == "tiktok":
+            trusted += ("tiktokcdn.com", "byteoversea.com", "ibytedtos.com", "tiktokv.com")
         return PreviewProxy.valid(url) and (
             host in hosts
             or any(host == domain or host.endswith("." + domain) for domain in trusted)
@@ -235,6 +237,9 @@ class PreviewProxy:
         if node["platform"] == "bilibili":
             from app.engine.bilibili import bilibili_headers
             headers.update(bilibili_headers(node["key"].split(":",1)[1]))
+        if node["platform"] == "tiktok":
+            from app.engine.tiktok import tiktok_headers
+            headers.update(tiktok_headers(node["key"].split(":",1)[1]))
         if range_header and re.fullmatch(r"bytes=\d+-\d*", range_header):
             headers["Range"] = range_header
         params = {
@@ -286,6 +291,30 @@ class PreviewProxy:
                         }
                         return bytes(data), kind, response.status_code, extra
                 raise ValueError("미리보기 CDN 이동 횟수를 초과했습니다.")
+
+    async def fetch_stream(self, token):
+        node = self.nodes.get(token)
+        if not node:
+            raise KeyError("expired")
+        node["time"] = time.monotonic()
+        headers = {"User-Agent": USER_AGENT}
+        if node["platform"] == "tiktok":
+            from app.engine.tiktok import tiktok_headers
+            headers.update(tiktok_headers(node["key"].split(":", 1)[1]))
+        elif node["platform"] == "bilibili":
+            from app.engine.bilibili import bilibili_headers
+            headers.update(bilibili_headers(node["key"].split(":", 1)[1]))
+
+        async with httpx.AsyncClient(
+            verify=preview_ca_bundle(), timeout=httpx.Timeout(connect=15.0, read=None, write=15.0, pool=15.0),
+            follow_redirects=True,
+            cookies=platform_cookie_jar(node["platform"]) if node["platform"] in ("soop", "cime", "kick", "twitch", "bilibili", "pandalive", "popkontv") else None
+        ) as client:
+            async with client.stream("GET", node["url"], headers=headers) as upstream:
+                upstream.raise_for_status()
+                async for chunk in upstream.aiter_bytes(64 * 1024):
+                    node["time"] = time.monotonic()
+                    yield chunk
 
 
 preview_proxy = PreviewProxy()

@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.9] - 2026-10-16
+
+### Added
+- Real-time video and audio player for TikTok live previews using browser `mpegts.js` and streaming FLV proxy pipe, replacing periodic static frame image polling.
+
 ## [2.0.80-preview.8] - 2026-10-16
 
 ### Fixed

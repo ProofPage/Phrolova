@@ -149,8 +149,6 @@ async def live_preview(channel_id: str):
     from fastapi.responses import JSONResponse
 
     platform, identifier = Conductor.parse_composite_key(channel_id)
-    if platform == Platform.TIKTOK:
-        raise HTTPException(400, "TikTok은 이미지 미리보기 API를 사용합니다.")
     key = Conductor.make_composite_key(platform, identifier)
     try:
         url = await get_recorder_service().get_live_preview_url(key)
@@ -177,13 +175,14 @@ async def live_preview(channel_id: str):
         token = preview_proxy.register(key, platform.value, url)
     except ValueError:
         raise HTTPException(502, "미리보기 주소가 올바르지 않습니다.") from None
-    return JSONResponse({"url": f'/api/stream/preview-media/{token}/asset.m3u8'}, headers={"Cache-Control": "no-store"})
+    ext = "flv" if platform == Platform.TIKTOK or url.split("?")[0].endswith(".flv") else "m3u8"
+    return JSONResponse({"url": f'/api/stream/preview-media/{token}/asset.{ext}'}, headers={"Cache-Control": "no-store"})
 
 @router.get('/preview-media/{token}/asset.{extension}')
 async def preview_media(token: str, extension: str, request: Request):
     from app.engine.preview_proxy import preview_proxy
     from app.engine.preview_frames import preview_error
-    from fastapi.responses import Response, JSONResponse
+    from fastapi.responses import Response, JSONResponse, StreamingResponse
     node = preview_proxy.nodes.get(token)
     if not node:
         raise HTTPException(404, '미리보기 주소가 만료되었습니다.')
@@ -191,6 +190,16 @@ async def preview_media(token: str, extension: str, request: Request):
     task = conductor._channels.get(node['key'])
     if task is None or not task.is_live:
         raise HTTPException(409, '방송이 종료되었습니다.')
+    if extension == "flv" or node.get("platform") == "tiktok":
+        try:
+            return StreamingResponse(
+                preview_proxy.fetch_stream(token),
+                media_type="video/x-flv",
+                headers={"Cache-Control": "no-store", "Content-Type": "video/x-flv"},
+            )
+        except Exception as cause:
+            error = preview_error(cause)
+            return JSONResponse({'detail': str(error)}, status_code=error.status, headers={'Cache-Control':'no-store'})
     try:
         data, kind, status, headers = await preview_proxy.fetch(token, dict(request.query_params), request.headers.get('range'))
     except KeyError:
