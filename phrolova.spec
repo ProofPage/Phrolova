@@ -28,8 +28,9 @@ APP_VERSION = re.search(
     Path("backend/app/version.py").read_text(encoding="utf-8"),
 ).group(1)
 
-# 파일 버전은 항상 4자리여야 한다 (2.0.3 -> 2, 0, 3, 0).
-_VERSION_TUPLE = (tuple(int(x) for x in APP_VERSION.split(".")) + (0, 0, 0, 0))[:4]
+# 파일 버전은 항상 4자리 숫자 튜플이어야 한다 (2.0.80-preview.1 -> 2, 0, 80, 1).
+_NUMERIC_PARTS = [int(p) for p in re.findall(r"\d+", APP_VERSION)]
+_VERSION_TUPLE = (tuple(_NUMERIC_PARTS) + (0, 0, 0, 0))[:4]
 
 # 우클릭 → 속성 → 자세히에서 보이는 정보. 이게 없으면 배포한 실행 파일에
 # 누가 만들었는지 흔적이 남지 않는다.
