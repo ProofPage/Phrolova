@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.13] - 2026-10-16
+
+### Fixed
+- Completely remove static frame image fallback from TikTok preview stage in `LivePreview.tsx`, ensuring TikTok channels always render within the interactive HTML5 `<video>` player.
+
 ## [2.0.80-preview.12] - 2026-10-16
 
 ### Fixed

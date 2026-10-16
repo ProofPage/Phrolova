@@ -8,8 +8,6 @@ import { Button } from "../ui/primitives";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { preferredNativePreviewUrl, preferredPreviewLevel } from "../../utils/livePreviewQuality";
 
-import { LiveFramePreview } from "./LiveFramePreview";
-
 type PreviewProps = { channelKey: string; isLive: boolean; name: string; poster?: string; broadcastState?: string };
 
 export function LivePreview(props: PreviewProps) {
@@ -24,21 +22,24 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
     const [attempt, setAttempt] = useState(0);
     const [state, setState] = useState<"loading" | "ready" | "error">("loading");
     const [message, setMessage] = useState("");
-    const [fallback, setFallback] = useState(false);
+
+    const getMpegts = () => {
+        if (typeof mpegts !== "undefined" && mpegts && typeof mpegts.createPlayer === "function") return mpegts;
+        if (typeof window !== "undefined" && (window as any).mpegts && typeof (window as any).mpegts.createPlayer === "function") return (window as any).mpegts;
+        return null;
+    };
 
     useEffect(() => {
         const video = videoRef.current;
-        if (!video || !isLive || fallback) return;
+        if (!video || !isLive) return;
         const abort = new AbortController();
         let player: any = null;
         let refreshTimer: ReturnType<typeof setTimeout> | undefined;
-        let refreshed = false;
         let stopped = false;
         let startupTimer: ReturnType<typeof setTimeout> | undefined;
         let loadingTimer: ReturnType<typeof setTimeout> | undefined;
         let recovering = false;
         let failed = false;
-        let retries = 0;
 
         const detach = () => {
             if (player) {
@@ -76,13 +77,8 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
             if (stopped || failed || recovering) return;
             recovering = true;
             detach();
-            if (retries < 3) {
-                retries += 1;
-                setState("loading");
-                refreshTimer = setTimeout(() => { void load(); }, 2000);
-            } else {
-                setFallback(true);
-            }
+            setState("loading");
+            refreshTimer = setTimeout(() => { void load(); }, 3000);
         };
 
         const load = async () => {
@@ -91,13 +87,14 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
                 if (!stopped) { abort.abort(); fail(); }
             }, 30000);
             try {
-                if (typeof mpegts === "undefined" || !mpegts || !mpegts.isSupported()) {
-                    setFallback(true);
+                const lib = getMpegts();
+                if (!lib || !lib.isSupported()) {
+                    fail("live.thisBrowserCannotPlayTheLivePreview");
                     return;
                 }
                 const { url } = await api.getLivePreview(channelKey, abort.signal);
                 if (stopped) return;
-                player = mpegts.createPlayer({
+                player = lib.createPlayer({
                     type: "flv",
                     isLive: true,
                     url,
@@ -110,8 +107,8 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
                     liveBufferLatencyMinRemain: 0.5,
                     autoCleanupSourceBuffer: true,
                 });
-                player.on(mpegts.Events.ERROR, (type: any, detail: any) => {
-                    console.warn("[Phrolova] 틱톡 미리보기 스트림 재생 알림:", type, detail);
+                player.on(lib.Events.ERROR, (type: any, detail: any) => {
+                    console.warn("[Phrolova] 틱톡 실시간 플레이어 이벤트:", type, detail);
                     recover();
                 });
                 player.attachMediaElement(video);
@@ -145,11 +142,7 @@ function MpegtsLivePreview({ channelKey, isLive, name, poster, broadcastState }:
             video.removeEventListener("error", recover);
             detach();
         };
-    }, [channelKey, isLive, attempt, fallback]);
-
-    if (fallback) {
-        return <LiveFramePreview channelKey={channelKey} isLive={isLive} name={name} />;
-    }
+    }, [channelKey, isLive, attempt]);
 
     return (
         <div className={`channel-live-preview${!isLive ? " is-offline" : ""}`} aria-label={`${name} ${t("live.livePreview")}`}>
