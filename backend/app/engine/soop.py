@@ -42,6 +42,7 @@ class SoopAgentReader:
         self.capture_format = 'h264'
         self._video_started = False
         self._last_buffer_report = 0.0
+        self._last_keepalive = 0.0
         self.is_finished = False
 
     def _connect(self):
@@ -121,7 +122,17 @@ class SoopAgentReader:
             sock = self._socket
             if self._closed or sock is None:
                 return b''
-            if now - self._last_buffer_report >= 1.0:
+            # Matches browser LivePlayer keepalive: SVC 1 every 15s
+            if now - self._last_keepalive >= 15.0:
+                try:
+                    sock.send(json.dumps({
+                        'SVC': 1, 'RESULT': 0, 'DATA': {},
+                    }, separators=(',', ':')))
+                    self._last_keepalive = now
+                except Exception:
+                    pass
+            # Buffer status report: SVC 52 every 2s
+            if now - self._last_buffer_report >= 2.0:
                 try:
                     sock.send(json.dumps({
                         'SVC': 52, 'RESULT': 0, 'DATA': {'BUFFER_LEFT': 5.0},
