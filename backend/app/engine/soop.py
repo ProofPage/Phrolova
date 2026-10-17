@@ -41,6 +41,7 @@ class SoopAgentReader:
         self.stream = self
         self.capture_format = 'h264'
         self._video_started = False
+        self._last_buffer_report = 0.0
 
     def _connect(self):
         import websocket
@@ -54,7 +55,7 @@ class SoopAgentReader:
             timeout=3,
             enable_multithread=True,
         )
-        ws.settimeout(3)
+        ws.settimeout(1.0)
         self._socket = ws
 
         def send(packet):
@@ -112,13 +113,22 @@ class SoopAgentReader:
             return b''
         import websocket
 
+        import time
         while True:
+            now = time.monotonic()
+            if now - self._last_buffer_report >= 1.0:
+                try:
+                    self._socket.send(json.dumps({
+                        'SVC': 52, 'RESULT': 0, 'DATA': {'BUFFER_LEFT': 5.0},
+                    }, separators=(',', ':')))
+                    self._last_buffer_report = now
+                except Exception:
+                    pass
             try:
                 message = self._socket.recv()
             except websocket.WebSocketTimeoutException:
-                self._socket.send(json.dumps({
-                    'SVC': 52, 'RESULT': 0, 'DATA': {'BUFFER_LEFT': 5.0},
-                }, separators=(',', ':')))
+                if self._closed:
+                    return b''
                 continue
             if isinstance(message, bytes):
                 # The agent multiplexes native video and AAC payloads as
@@ -326,7 +336,7 @@ class SoopLiveEngine:
                            'width': int(dimensions[1]) if dimensions else None, 'bitrate': bitrate or None})
         return sorted({v['value']: v for v in values}.values(), key=lambda v: v['height'], reverse=True)
 
-    async def resolve_stream(self, channel_id: str, quality: str = 'best') -> tuple[str, dict, str | None]:
+    async def resolve_stream(self, channel_id: str, quality: str = 'best', *, for_preview: bool = False) -> tuple[str, dict, str | None]:
         cid = normalize_soop_channel_id(channel_id)
         channel, _ = await self._metadata(cid)
         if str(channel.get('RESULT')) != '1' or not channel.get('BNO'):
@@ -335,7 +345,7 @@ class SoopLiveEngine:
         page = f'{self.get_stream_url(cid)}/{bno}'
 
         # 로컬 고화질 스트리머(SOOPStreamer)가 실행 중인 경우 로컬 1080p 원본 스트림 우선 연결
-        if await check_agent_available():
+        if not for_preview and await check_agent_available():
             agent_port = _discover_agent_port()
             if agent_port:
                 return make_agent_source({
@@ -401,4 +411,4 @@ class SoopLiveEngine:
         raise PlatformAuthenticationError('soop', expired=platform_cookie_status('soop')['expired'])
 
     async def get_preview_url(self, channel_id: str) -> str:
-        return (await self.resolve_stream(channel_id, '1080p'))[0]
+        return (await self.resolve_stream(channel_id, '1080p', for_preview=True))[0]
