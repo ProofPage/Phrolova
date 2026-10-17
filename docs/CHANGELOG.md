@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.19] - 2026-10-17
+
+### Fixed
+- Suppress Windows asyncio proactor `ConnectionResetError: [WinError 10054]` exceptions during connection resets and browser page refreshes.
+
 ## [2.0.80-preview.18] - 2026-10-17
 
 ### Fixed

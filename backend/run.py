@@ -339,6 +339,21 @@ def _run_server(settings, stop_event: threading.Event) -> None:
 
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+        try:
+            from asyncio.proactor_events import _ProactorBasePipeTransport
+            _orig = _ProactorBasePipeTransport._call_connection_lost
+            def _silent(self, exc):
+                if isinstance(exc, (ConnectionResetError, ConnectionAbortedError)) or (
+                    isinstance(exc, OSError) and getattr(exc, "winerror", None) in (10053, 10054)
+                ):
+                    exc = None
+                try:
+                    return _orig(self, exc)
+                except (ConnectionResetError, ConnectionAbortedError, OSError):
+                    pass
+            _ProactorBasePipeTransport._call_connection_lost = _silent
+        except (ImportError, AttributeError):
+            pass
 
     config = uvicorn.Config(
         app,
@@ -377,6 +392,21 @@ if __name__ == "__main__":
 
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+        try:
+            from asyncio.proactor_events import _ProactorBasePipeTransport
+            _orig = _ProactorBasePipeTransport._call_connection_lost
+            def _silent(self, exc):
+                if isinstance(exc, (ConnectionResetError, ConnectionAbortedError)) or (
+                    isinstance(exc, OSError) and getattr(exc, "winerror", None) in (10053, 10054)
+                ):
+                    exc = None
+                try:
+                    return _orig(self, exc)
+                except (ConnectionResetError, ConnectionAbortedError, OSError):
+                    pass
+            _ProactorBasePipeTransport._call_connection_lost = _silent
+        except (ImportError, AttributeError):
+            pass
 
     # PyInstaller 빌드이거나 --desktop 플래그가 있으면 데스크톱 모드
     desktop_mode = (IS_FROZEN or "--desktop" in sys.argv) and sys.platform == "win32"
