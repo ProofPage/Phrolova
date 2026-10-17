@@ -159,7 +159,7 @@ def _http_url(value: Any) -> str | None:
 def playback_url(item: dict, *, quality: str = "best") -> str | None:
     playback = item.get("playback") if isinstance(item.get("playback"), dict) else {}
     height = re.match(r'(\d+)p', quality.lower())
-    if (quality.lower() == 'best' or height and int(height[1]) > 1080) and playback.get("canWatchUhd"):
+    if quality.lower() == 'best' or (height and int(height[1]) > 1080):
         uhd = _http_url(playback.get("urlUhd"))
         if uhd:
             return uhd
@@ -345,11 +345,30 @@ class CimeLiveEngine:
         return url
 
     async def get_qualities(self, channel_id: str) -> list[dict]:
-        url, _ = await self._master(channel_id)
+        _, live, _ = await self._live_data(channel_id)
+        url, _ = await self._master(channel_id, quality="worst")
         response, _ = await self._request(url, referer=self.get_stream_url(channel_id))
         if response.status_code == 404:
             raise ValueError("씨미 스트림을 찾을 수 없습니다.")
-        return cime_quality_options(parse_cime_variants(str(response.url), response.text))
+        options = cime_quality_options(parse_cime_variants(str(response.url), response.text))
+
+        # 4K (UHD) 스트림이 존재하는 경우 4K 화질 목록 추가
+        playback = live.get("playback") if isinstance(live.get("playback"), dict) else {}
+        uhd_url = _http_url(playback.get("urlUhd"))
+        if uhd_url:
+            try:
+                uhd_resp, _ = await self._request(uhd_url, referer=self.get_stream_url(channel_id))
+                if uhd_resp.status_code == 200 and "#EXTM3U" in uhd_resp.text:
+                    uhd_variants = parse_cime_variants(str(uhd_resp.url), uhd_resp.text)
+                    uhd_options = cime_quality_options(uhd_variants)
+                    seen_values = {opt["value"] for opt in options}
+                    for opt in uhd_options:
+                        if opt["value"] not in seen_values:
+                            options.insert(0, opt)
+                            seen_values.add(opt["value"])
+            except Exception:
+                pass
+        return options
 
     async def resolve_stream_spec(self, channel_id: str, quality: str = "best") -> dict:
         from app.engine.platform_auth import get_platform_cookies

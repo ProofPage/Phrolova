@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.22] - 2026-10-17
+
+### Fixed
+- Unconditionally prioritize CIME 4K (UHD) stream URLs (`urlUhd`) when present regardless of the `canWatchUhd` device flag, preventing accidental downgrade to 1080p.
+- Probe and merge 4K UHD variants into CIME channel quality options (`get_qualities`).
+
 ## [2.0.80-preview.21] - 2026-10-17
 
 ### Fixed
