@@ -13,7 +13,7 @@ from typing import Optional
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, UploadFile, File
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
 from app.core.utils import (
