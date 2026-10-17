@@ -3,7 +3,7 @@
   "live.rplayChannelIDOrUrl": "알플레이 채널 ID 또는 https://rplay.live/live/...",
   "platform.rplay": "알플레이",
   "settings.rplaySessionFile": "로그인 정보 파일",
-  "settings.rplaySessionHelp": "알플레이 로그인 정보는 일반 쿠키 파일에 포함되지 않습니다. 아래 방법으로 로그인 정보를 내보낸 뒤 파일을 등록하세요.",
+  "settings.rplaySessionHelp": "알플레이 로그인 정보는 일반 쿠키 파일에 포함되지 않습니다. 아래에 알플레이 이메일과 비밀번호를 입력하여 직접 로그인하거나, 콘솔 코드로 추출한 세션 파일을 등록하세요.",
   "settings.rplaySessionUpdated": "알플레이 인증 설정이 저장되었습니다.",
   "settings.rplaySessionRemove": "알플레이 세션 제거",
   "settings.rplaySessionRemoveHelp": "등록한 세션을 제거할까요? 로그인 전용 영상은 새 세션 등록 후 이용할 수 있습니다.",

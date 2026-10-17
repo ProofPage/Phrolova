@@ -441,6 +441,31 @@ async def rplay_session_upload(file: UploadFile = File(...)):
     return await rplay_session_status()
 
 
+class RplayLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+@router.post('/rplay/login', summary='알플레이 계정 로그인')
+async def rplay_login(request: RplayLoginRequest):
+    import json
+    import os
+    import tempfile
+    from app.engine.rplay import login_with_credentials
+    try:
+        session = login_with_credentials(request.email, request.password)
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from None
+    destination = _COOKIE_SAVE_PATH.with_name('rplay_session.json')
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=destination.parent) as directory:
+        temporary = Path(directory) / 'session.json'
+        temporary.write_text(json.dumps(session), encoding='utf-8')
+        os.chmod(temporary, 0o600)
+        _save_credential(destination, temporary.read_bytes(), 'rplay_session_file')
+    return await rplay_session_status()
+
+
 @router.delete('/rplay/session', summary='알플레이 등록 세션 제거')
 async def rplay_session_delete():
     # An environment-configured external file belongs to the user. Only remove our own copy.

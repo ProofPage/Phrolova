@@ -3,7 +3,7 @@
   "live.rplayChannelIDOrUrl": "RPLAY channel ID or https://rplay.live/live/...",
   "platform.rplay": "RPLAY",
   "settings.rplaySessionFile": "Login information file",
-  "settings.rplaySessionHelp": "RPLAY login information is not included in ordinary cookie files. Export your login information using the steps below, then import the file.",
+  "settings.rplaySessionHelp": "RPLAY login information is not included in ordinary cookie files. Log in directly below with your RPLAY email and password, or register an exported session file.",
   "settings.rplaySessionUpdated": "RPLAY authentication settings saved.",
   "settings.rplaySessionRemove": "Remove RPLAY session",
   "settings.rplaySessionRemoveHelp": "Remove the registered session? Sign-in-only videos will require a new session.",

@@ -8,161 +8,13 @@
 
 ## [Unreleased]
 
-## [2.0.80-preview.28] - 2026-10-17
+## [2.0.80-preview.1] - 2026-10-17
+
+### Added
+- Direct email/password credentials authentication for RPLAY accounts in Settings.
 
 ### Removed
 - Remove SOOP (숲) platform support completely from backend, frontend UI, configuration, and API routes.
-
-## [2.0.80-preview.27] - 2026-10-17
-
-### Added
-- Connect SOOPStreamer 원본 H.264 WebSocket stream to the Phrolova recording pipeline and preserve 1920x1080 capture.
-
-## [2.0.80-preview.26] - 2026-10-17
-
-### Fixed
-- Expand SOOPStreamer local agent detection to inspect active Windows process state (`SOOPStreamer.exe`) and check dynamic stream ports (50801, 10023, 6935, 2935).
-
-## [2.0.80-preview.25] - 2026-10-17
-
-### Added
-- Auto-detect local SOOPStreamer agent on localhost ports (15530, 2935, 26737) and directly connect to unthrottled local 1080p HLS stream (`127.0.0.1:2935/{bno}/playlist.m3u8`) without requiring VPN or proxy.
-
-## [2.0.80-preview.24] - 2026-10-17
-
-### Fixed
-- Fix `NameError: name 'get_settings' is not defined` in `soop.py` when querying channel quality options, ensuring 1080p, 720p, 540p, 360p presets populate correctly in the channel modal.
-
-## [2.0.80-preview.23] - 2026-10-17
-
-### Fixed
-- Bypass SOOP (AfreecaTV) P2P grid restrictions and domestic 540p cap by dynamically mapping Streamlink CDN type to global unthrottled CDN (`gcp_cdn`).
-- Support optional SOOP-specific outbound proxy (`soop_proxy`) in application configuration.
-
-## [2.0.80-preview.22] - 2026-10-17
-
-### Fixed
-- Unconditionally prioritize CIME 4K (UHD) stream URLs (`urlUhd`) when present regardless of the `canWatchUhd` device flag, preventing accidental downgrade to 1080p.
-- Probe and merge 4K UHD variants into CIME channel quality options (`get_qualities`).
-
-## [2.0.80-preview.21] - 2026-10-17
-
-### Fixed
-- Request and attach CloudFront signed cookies (`CloudFront-Policy`, `CloudFront-Signature`, `CloudFront-Key-Pair-Id`) via `/api/app/streams/sign-cookie` in `CimeIE`, eliminating 403 Forbidden errors when downloading CIME VODs and clips.
-
-## [2.0.80-preview.20] - 2026-10-17
-
-### Changed
-- Switch YouTube live detection and stream resolution to use the standard `yt-dlp` executable (`resolve_ytdlp_path`) directly, matching other platforms.
-- Make JavaScript runtime CLI options optional instead of failing with a blocking error when Node/Deno are not present.
-
-## [2.0.80-preview.19] - 2026-10-17
-
-### Fixed
-- Suppress Windows asyncio proactor `ConnectionResetError: [WinError 10054]` exceptions during connection resets and browser page refreshes.
-
-## [2.0.80-preview.18] - 2026-10-17
-
-### Fixed
-- Populate `uploader`, `channel`, and `duration` metadata in `HearHeartIE` to eliminate `[Unknown Channel]` and "채널 정보 확인 중" / "영상 길이 확인 중" in VOD download cards.
-
-## [2.0.80-preview.17] - 2026-10-17
-
-### Fixed
-- Fix `ImportError: cannot import name 'USER_AGENT' from 'app.core.config'` in `hearheart.py` by importing from `app.core.http`.
-
-## [2.0.80-preview.16] - 2026-10-17
-
-### Fixed
-- Include `hearheart` in backend `/api/vod/capabilities` sources list so HearHeart appears in the VOD download platform select dropdown.
-- Add `--color-hearheart` to Tailwind theme for consistent brand styling.
-
-## [2.0.80-preview.15] - 2026-10-17
-
-### Added
-- Add native HearHeart (`hearheart.com`) VOD and audio-drama episode/playlist downloader support with custom `HearHeartIE` extractor.
-- Support individual episode download (`/playlist/{id}/play/{content_id}`) and bulk playlist extraction (`/playlist/{id}`).
-- Support HearHeart session cookie registration and management in Settings -> Authentication tab.
-- Add HearHeart platform badge styling (`#ff2777`) and automatic input URL detection.
-
-## [2.0.80-preview.14] - 2026-10-16
-
-### Fixed
-- Fix TikTok live preview video player startup stalled by non-zero FLV stream PTS by synchronizing video playback position to live buffer edge.
-- Eliminate "문구를 표시할 수 없습니다." (common.textUnavailable) on preview timeout by replacing missing translation key with `live.previewUnavailable`.
-- Remove HTML `hidden` attribute throttle on video stage container to guarantee continuous frame decoding across Chromium and WebView2.
-- Configure main-thread demuxing (`enableWorker: false`) and live-sync latency chasing for mpegts.js player.
-
-## [2.0.80-preview.13] - 2026-10-16
-
-### Fixed
-- Completely remove static frame image fallback from TikTok preview stage in `LivePreview.tsx`, ensuring TikTok channels always render within the interactive HTML5 `<video>` player.
-
-## [2.0.80-preview.12] - 2026-10-16
-
-### Fixed
-- Encapsulate `mpegts.js` as a pure ES module factory to ensure reliable runtime player instantiation in production Vite bundles, preventing inadvertent fallback to image preview.
-
-## [2.0.80-preview.11] - 2026-10-16
-
-### Fixed
-- Prioritize browser-compatible H.264 (AVC) variants over H.265 (HEVC) when resolving TikTok preview streams, ensuring seamless hardware-accelerated playback in `mpegts.js` without falling back to image mode.
-
-## [2.0.80-preview.10] - 2026-10-16
-
-### Fixed
-- Gracefully update existing recording job entries upon `source_path` collisions in `register_capture`, eliminating SQLite `IntegrityError: UNIQUE constraint failed: recording_jobs.source_path` and subsequent `read of closed file` errors when restarting recordings.
-
-## [2.0.80-preview.09] - 2026-10-16
-
-### Added
-- Real-time video and audio player for TikTok live previews using browser `mpegts.js` and streaming FLV proxy pipe, replacing periodic static frame image polling.
-
-## [2.0.80-preview.08] - 2026-10-16
-
-### Fixed
-- Optimize Bilibili CDN probe timeouts to swiftly bypass unreachable overseas endpoints and route to active HLS/fMP4 CDNs, resolving "미리보기를 불러올 수 없습니다" failures.
-- Send platform-specific room Referer headers in the preview proxy for Bilibili to prevent 403 Forbidden media errors.
-
-## [2.0.80-preview.07] - 2026-10-16
-
-### Fixed
-- Eliminate false-alarm "재연결 중" / "녹화 중" status flickering during CHZZK recording by removing premature recovery events during routine segment downloads and verifying packet reception silence before transitioning UI state.
-
-## [2.0.80-preview.06] - 2026-10-16
-
-### Fixed
-- Tolerate container duration normalization during stream-copy remuxing when TS inputs contain timestamp discontinuities, fixing false-positive "원본과 변환 파일의 길이가 다릅니다" errors on RPLAY streams.
-- Increase Streamlink queue deadline factor to prevent premature stream termination on live HLS broadcasts.
-
-## [2.0.80-preview.05] - 2026-10-16
-
-### Fixed
-- Fix missing `USER_AGENT` import in `downloader.py` time-machine preview fallback, allowing cookie-less CHZZK broadcasts to resolve instantly without transient 502 errors.
-- Add descriptive error logging for live preview resolution failures.
-
-## [2.0.80-preview.04] - 2026-10-16
-
-### Fixed
-- Query the official time-machine endpoint directly using `liveId` when standard playback media is omitted for restricted/adult CHZZK broadcasts without cookies, resolving live preview instantly without transient 502 errors.
-
-## [2.0.80-preview.03] - 2026-10-16
-
-### Fixed
-- Tolerate container timestamp normalization during stream-copy remuxing when live streams contain timestamp discontinuities or non-monotonic DTS warnings, resolving false-positive "변환 후 프레임레이트가 달라졌습니다" inspection failures on RPLAY and HLS streams.
-
-## [2.0.80-preview.02] - 2026-10-16
-
-### Fixed
-- Allow a brief startup grace period (up to 2 seconds) for a newly starting CHZZK recording pipeline to establish its media connection when serving previews without cookies, eliminating transient 502 HTTP errors.
-
-## [2.0.80-preview.01] - 2026-10-16
-
-### Added
-- Automatically renew RPLAY authentication using `refreshToken` and atomically update the saved session file before token expiration or upon 401 challenges.
-
-### Fixed
-- Eliminate live preview buffering for cookie-less CHZZK streams by trimming massive time-shift playlists down to the live edge and removing sub-second low-latency polling tags in the preview proxy.
 
 ## [2.0.79] - 2026-10-16
 
@@ -1245,9 +1097,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.80-preview.28...HEAD
-[2.0.80-preview.28]: https://github.com/ProofPage/Phrolova/compare/v2.0.80-preview.27...v2.0.80-preview.28
-[2.0.80-preview.27]: https://github.com/ProofPage/Phrolova/compare/v2.0.80-preview.26...v2.0.80-preview.27
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.80-preview.1...HEAD
+[2.0.80-preview.1]: https://github.com/ProofPage/Phrolova/compare/v2.0.79...v2.0.80-preview.1
 [2.0.79]: https://github.com/ProofPage/Phrolova/compare/v2.0.78...v2.0.79
 [2.0.78]: https://github.com/ProofPage/Phrolova/compare/v2.0.77...v2.0.78
 [2.0.77]: https://github.com/ProofPage/Phrolova/compare/v2.0.76...v2.0.77

@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import base64
+import datetime as dt
+import hashlib
+import hmac
 import json
 import logging
 import re
@@ -18,6 +21,7 @@ from app.core.config import get_settings
 
 ORIGIN = 'https://rplay.live'
 API = 'https://api.rplay.live/content'
+LOGIN_API = 'https://api.rplay.live/account/login'
 REFRESH_API = 'https://api.rplay.live/rplay/account/refresh-token'
 HOSTS = {'rplay.live', 'www.rplay.live'}
 MEDIA_HOSTS = {'api.rplay.live', 'pb.rplay.live', 'pb2.rplay.live', 'pb3.rplay.live', 'pb.sbcloudsec.net'}
@@ -62,6 +66,58 @@ def parse_session(content: bytes) -> dict[str, str]:
         return result
     except (ValueError, UnicodeError):
         raise ValueError('accessToken과 requestorOid가 포함된 알플레이 세션 JSON 파일을 선택하세요.') from None
+
+
+def login_with_credentials(email: str, password: str) -> dict[str, str]:
+    """알플레이 계정 이메일과 비밀번호로 로그인하여 세션 정보를 발급받는다."""
+    email = email.strip()
+    if not email or not password:
+        raise ValueError('이메일과 비밀번호를 모두 입력하세요.')
+
+    b64encode = lambda x: base64.urlsafe_b64encode(
+        json.dumps(x, separators=(',', ':')).encode()).strip(b'=')
+
+    payload = {
+        'eml': email,
+        'dat': dt.datetime.now(dt.timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
+        'iat': int(time.time()),
+    }
+    key = hashlib.sha256(password.encode('utf-8')).hexdigest()
+    header_b64 = b64encode({'alg': 'HS256', 'typ': 'JWT'})
+    payload_b64 = b64encode(payload)
+    sig = hmac.new(key.encode('utf-8'), header_b64 + b'.' + payload_b64, hashlib.sha256)
+    sig_b64 = base64.urlsafe_b64encode(sig.digest()).strip(b'=')
+    jwt_token = (header_b64 + b'.' + payload_b64 + b'.' + sig_b64).decode('utf-8')
+
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'null',
+        'Origin': ORIGIN,
+        'Referer': ORIGIN + '/',
+        'User-Agent': 'Mozilla/5.0',
+    }
+    body = {
+        'token': jwt_token,
+        'loginType': None,
+        'checkAdmin': None,
+    }
+    try:
+        with httpx.Client(timeout=15, follow_redirects=False) as client:
+            resp = client.post(LOGIN_API, json=body, headers=headers)
+        if resp.status_code != 200:
+            raise ValueError('로그인에 실패했습니다. 이메일과 비밀번호를 확인하세요.')
+        data = resp.json()
+        oid = data.get('oid') or data.get('_id')
+        if not oid:
+            raise ValueError('로그인 사용자 정보를 확인할 수 없습니다.')
+        session = {
+            'accessToken': jwt_token,
+            'requestorOid': str(oid).lower(),
+            'loginType': data.get('accountType', 'rplay'),
+        }
+        return session
+    except httpx.HTTPError as err:
+        raise ValueError(f'알플레이 서버 연결에 실패했습니다: {err}') from None
 
 
 def session_token_exp(session: dict) -> float | None:

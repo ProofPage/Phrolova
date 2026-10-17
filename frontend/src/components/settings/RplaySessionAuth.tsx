@@ -19,6 +19,9 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
     const [status, setStatus] = useState<PlatformCookieStatus | null>(null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+
     useEffect(() => {
         let active = true;
         const current = revision.current;
@@ -26,22 +29,36 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
             .catch(cause => { if (active && current === revision.current) setError(getErrorMessage(cause, 'settings.rplaySessionInvalid')); });
         return () => { active = false; };
     }, []);
-    const change = async (action: 'upload' | 'delete' | 'refresh', file?: File) => {
+
+    const change = async (action: 'upload' | 'delete' | 'refresh' | 'login', file?: File) => {
         if (pending.current) return;
         revision.current += 1;
         pending.current = true; setBusy(true); setError('');
         try {
             const data = action === 'upload' && file ? await api.uploadRplaySession(file)
+                : action === 'login' ? await api.loginRplay(email, password)
                 : action === 'delete' ? await api.deleteRplaySession() : await api.getRplaySessionStatus();
             setStatus(data);
-            if (action !== 'refresh') { onSaved(); toast.success(t('settings.rplaySessionUpdated')); }
+            if (action !== 'refresh') {
+                onSaved();
+                toast.success(t('settings.rplaySessionUpdated'));
+                if (action === 'login') { setPassword(''); }
+            }
         } catch (cause) { setError(getErrorMessage(cause, 'settings.rplaySessionInvalid')); }
         finally { pending.current = false; setBusy(false); if (fileInput.current) fileInput.current.value = ''; }
     };
+
     const remove = async () => {
         if (pending.current) return;
         if (await confirm({ title: t('settings.rplaySessionRemove'), message: t('settings.rplaySessionRemoveHelp'), confirmText: t('common.delete'), variant: 'danger' })) void change('delete');
     };
+
+    const handleLoginSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email.trim() || !password) return;
+        void change('login');
+    };
+
     const label = !status ? t('live.checkingStatus') : status.expired ? t('settings.rplaySessionExpired')
         : status.configured ? t(status.valid ? 'settings.rplaySessionRegistered' : 'settings.rplaySessionInvalid') : t('settings.rplaySessionEmpty');
     const script = makeRplaySessionExportScript({ wrongSite: t('settings.rplayExportWrongSite'),
@@ -57,8 +74,39 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
             toast.error(t('settings.rplayExportCopyManually'));
         }
     };
+
     return <Card className="space-y-4" data-auth-platform="rplay" aria-busy={busy}>
         <CardHeader title={t('platform.rplay')} action={<Badge tone={status?.expired || (status?.configured && !status.valid) ? 'warn' : status?.configured ? 'ok' : undefined}>{label}</Badge>} />
+
+        <form onSubmit={handleLoginSubmit} className="space-y-3 rounded border border-line bg-surface-muted p-3">
+            <div className="text-xs font-medium text-ink">알플레이 계정 로그인</div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="이메일 주소"
+                    disabled={busy}
+                    className="ui-input input-focus text-xs"
+                    autoComplete="username"
+                />
+                <input
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="비밀번호"
+                    disabled={busy}
+                    className="ui-input input-focus text-xs"
+                    autoComplete="current-password"
+                />
+            </div>
+            <div className="flex justify-end">
+                <Button type="submit" disabled={busy || !email.trim() || !password} loading={busy}>
+                    로그인 및 세션 발급
+                </Button>
+            </div>
+        </form>
+
         <div className="flex flex-wrap items-center gap-2">
             <input ref={fileInput} type="file" accept=".json,application/json" className="hidden" disabled={busy}
                 aria-label={`${t('platform.rplay')} ${t('settings.rplaySessionFile')}`}
