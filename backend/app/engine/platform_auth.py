@@ -15,7 +15,7 @@ from app.core.episode_domains import numbered_site_for_host
 
 DOMAINS = {'cime': ('ci.me',), 'kick': ('kick.com',), 'twitch': ('twitch.tv',), 'tiktok': ('tiktok.com',), 'bilibili': ('bilibili.com',), 'pandalive': ('pandalive.co.kr',), 'popkontv': ('popkontv.com',), 'tvchak': (),
            'chzzk': ('naver.com',), 'youtube': ('youtube.com', 'google.com'), 'hearheart': ('hearheart.com',)}
-NAMES = {'cime': '씨미', 'kick': 'Kick', 'twitch': 'Twitch', 'tiktok': 'TikTok', 'bilibili': 'Bilibili', 'pandalive': '팬더티비', 'popkontv': '팝콘티비', 'tvchak': '티비착', 'hearheart': '히어하트'}
+NAMES = {'cime': '씨미', 'kick': '킥', 'twitch': '트위치', 'tiktok': '틱톡', 'bilibili': '빌리빌리', 'pandalive': '팬더티비', 'popkontv': '팝콘티비', 'tvchak': '티비착', 'hearheart': '히어하트'}
 T = TypeVar('T')
 
 
