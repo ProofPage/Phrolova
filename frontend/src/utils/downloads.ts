@@ -18,6 +18,7 @@ export function detectDownloadPlatform(value: string): DownloadSource {
         if (TIKTOK_HOSTS.has(host)) return 'tiktok';
         if (host === 'rplay.live' || host === 'www.rplay.live') return 'rplay';
         if (host === 'popkontv.com' || host === 'www.popkontv.com') return 'popkontv';
+        if (host === 'hearheart.com' || host === 'www.hearheart.com') return 'hearheart';
         if (BILIBILI_HOSTS.has(host)) return 'bilibili';
         if (TWITCH_HOSTS.has(host)) return 'twitch';
         if (host === 'kick.com' || host === 'www.kick.com') return 'kick';
@@ -62,6 +63,12 @@ export function normalizeDownloadInput(value: string, source: DownloadSource): {
         if (host === 'popkontv.com' || host === 'www.popkontv.com') {
             const url = canonicalPopkonTVVideoUrl(text);
             return url ? {url,collection:false,source:'popkontv'} : null;
+        }
+        if (host === 'hearheart.com' || host === 'www.hearheart.com') {
+            const match = parsed.pathname.match(/^\/playlist\/(\d+)(?:\/play\/(\d+))?\/?$/);
+            if (!match) return null;
+            const cleanUrl = match[2] ? `https://hearheart.com/playlist/${match[1]}/play/${match[2]}` : `https://hearheart.com/playlist/${match[1]}`;
+            return { url: cleanUrl, collection: !match[2], source: 'hearheart' };
         }
         if (BILIBILI_HOSTS.has(host)) {
             const url = canonicalBilibiliVideoUrl(text);

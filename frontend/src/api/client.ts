@@ -12,7 +12,7 @@ export const client = axios.create({
 // ── Types ───────────────────────────────────────────────
 
 export type Platform = "chzzk" | "youtube" | "soop" | "cime" | "kick" | "twitch" | "tiktok" | "bilibili" | "pandalive" | "popkontv" | "rplay";
-export type DownloadSource = Exclude<Platform, "pandalive"> | 'anilife' | 'linkani' | 'ohli24' | 'ohli365' | 'tvwiki' | 'tvchak' | 'animaru' | 'external';
+export type DownloadSource = Exclude<Platform, "pandalive"> | 'hearheart' | 'anilife' | 'linkani' | 'ohli24' | 'ohli365' | 'tvwiki' | 'tvchak' | 'animaru' | 'external';
 export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
 export interface ChannelDownloadOptions {
     output_format?: 'mp4' | 'mkv' | null;
@@ -39,7 +39,7 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
 // Live-only providers must also stay out of the fallback video source menu.
 const { pandalive: _liveOnlyPandalive, ...videoPlatformLabels } = PLATFORM_LABELS;
 export const DOWNLOAD_SOURCE_LABELS: Record<DownloadSource, string> = {
-    ...videoPlatformLabels, anilife: 'platform.anilife', linkani: 'platform.linkani', ohli24: 'platform.ohli24', ohli365: 'platform.ohli365', tvwiki: 'platform.tvwiki', tvchak: 'platform.tvchak', animaru: 'platform.animaru', external: 'download.externalVideo',
+    ...videoPlatformLabels, hearheart: 'platform.hearheart', anilife: 'platform.anilife', linkani: 'platform.linkani', ohli24: 'platform.ohli24', ohli365: 'platform.ohli365', tvwiki: 'platform.tvwiki', tvchak: 'platform.tvchak', animaru: 'platform.animaru', external: 'download.externalVideo',
 };
 export interface VideoEpisode { id: string; title: string; url: string; number?: number | null; available: boolean; }
 export interface VideoCatalog { source: DownloadSource; id: string; title: string; url: string; episodes: VideoEpisode[]; incomplete?:boolean; }
@@ -235,10 +235,11 @@ export interface PlatformStatus {
     bilibili?: { enabled: boolean; authenticated: boolean };
     pandalive?: { enabled: boolean; authenticated: boolean };
     popkontv?: { enabled: boolean; authenticated: boolean };
+    hearheart?: { enabled: boolean; authenticated: boolean };
     rplay?: { enabled: boolean; authenticated: boolean };
 }
 
-export type CookiePlatform = 'chzzk' | 'youtube' | 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'tvchak';
+export type CookiePlatform = 'chzzk' | 'youtube' | 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'tvchak' | 'hearheart';
 
 export interface PlatformCookieStatus {
     configured: boolean;

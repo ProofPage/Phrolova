@@ -13,7 +13,7 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
     const { t } = useLanguage();
     const toast = useToast();
     const confirm = useConfirm();
-    const name = t(platform === 'tvchak' ? DOWNLOAD_SOURCE_LABELS[platform] : PLATFORM_LABELS[platform]);
+    const name = t(platform === 'tvchak' || platform === 'hearheart' ? DOWNLOAD_SOURCE_LABELS[platform] : PLATFORM_LABELS[platform]);
     const fileInput = useRef<HTMLInputElement>(null);
     const pending = useRef(false);
     const [status, setStatus] = useState<PlatformCookieStatus | null>(null);

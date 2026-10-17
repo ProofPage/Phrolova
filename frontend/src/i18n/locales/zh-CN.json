@@ -1,4 +1,5 @@
 {
+  "platform.hearheart": "HearHeart",
   "live.rplayChannelIDOrUrl": "RPLAY频道ID或 https://rplay.live/live/...",
   "platform.rplay": "RPLAY",
   "settings.rplaySessionFile": "登录信息文件",

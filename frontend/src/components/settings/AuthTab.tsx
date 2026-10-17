@@ -17,7 +17,7 @@ export function AuthTab({ onSaved, onDirtyChange }: Props) {
     useEffect(() => onDirtyChange?.(false), [onDirtyChange]);
     return (
         <div className="auth-settings">
-            {(["chzzk", "youtube", "soop", "cime", "kick", "twitch", "tiktok", "bilibili", "pandalive", "popkontv", "tvchak"] as const).map(platform => (
+            {(["chzzk", "youtube", "soop", "cime", "kick", "twitch", "tiktok", "bilibili", "pandalive", "popkontv", "tvchak", "hearheart"] as const).map(platform => (
                 <PlatformCookieAuth key={platform} platform={platform} onSaved={onSaved} />
             ))}
             <RplaySessionAuth onSaved={onSaved} />

@@ -19,6 +19,7 @@ def media_platform(url: str) -> str:
     if host in ('ci.me', 'www.ci.me'): return 'cime'
     if host in ('vod.sooplive.com', 'vod.sooplive.co.kr', 'vod.afreecatv.com'): return 'soop'
     if host == 'chzzk.naver.com': return 'chzzk'
+    if host in ('hearheart.com', 'www.hearheart.com'): return 'hearheart'
     if host in ('youtu.be', 'youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com'): return 'youtube'
     return 'external'
 
@@ -56,6 +57,9 @@ def canonical_platform_video(url: str) -> str:
         route = parse_cime_video_url(url)
         if not route: raise ValueError('올바른 씨미 다시보기 또는 클립 링크를 입력하세요.')
         return route['url']
+    if platform == 'hearheart':
+        from app.engine.hearheart import canonical_hearheart_video_url
+        return canonical_hearheart_video_url(url)
     return url
 
 class SafeMediaLogger:
@@ -104,6 +108,12 @@ def platform_ydl(url: str, options: dict):
         from app.engine.cime_extractor import CimeIE
         ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
         ydl.add_info_extractor(CimeIE())
+        ydl.add_default_info_extractors()
+        return ydl
+    if media_platform(url) == 'hearheart':
+        from app.engine.hearheart_extractor import HearHeartIE
+        ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(HearHeartIE())
         ydl.add_default_info_extractors()
         return ydl
     return yt_dlp.YoutubeDL(opts)

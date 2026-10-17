@@ -1,4 +1,5 @@
 {
+  "platform.hearheart": "HearHeart",
   "live.rplayChannelIDOrUrl": "RPLAYチャンネルID または https://rplay.live/live/...",
   "platform.rplay": "RPLAY",
   "settings.rplaySessionFile": "ログイン情報ファイル",

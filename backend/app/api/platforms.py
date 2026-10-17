@@ -215,6 +215,7 @@ async def get_platform_status():
         "bilibili": {"enabled": True, "authenticated": bool(settings.bilibili_cookie_file)},
         "pandalive": {"enabled": True, "authenticated": bool(settings.pandalive_cookie_file)},
         "popkontv": {"enabled": True, "authenticated": bool(settings.popkontv_cookie_file)},
+        "hearheart": {"enabled": True, "authenticated": bool(settings.hearheart_cookie_file)},
         "rplay": {"enabled": True, "authenticated": session_status()["valid"]},
     }
 
@@ -412,7 +413,7 @@ async def platform_qualities(platform: str, channel_id: str):
 @router.get('/{platform}/cookie', summary='플랫폼 쿠키 파일 상태')
 async def platform_cookie_status_api(platform: str):
     from app.engine.platform_auth import platform_cookie_status
-    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'tvchak'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'tvchak', 'hearheart'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     return platform_cookie_status(platform)
 
 
@@ -453,7 +454,7 @@ async def platform_cookie_upload(platform: str, file: UploadFile = File(...)):
     import tempfile
     import os
     from app.engine.platform_auth import read_cookie_jar
-    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'tvchak'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'tvchak', 'hearheart'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     content = await file.read(1024 * 1024 + 1)
     if len(content) > 1024 * 1024: raise HTTPException(400, '쿠키 파일은 1MB 이하여야 합니다.')
     destination = _COOKIE_SAVE_PATH.with_name(f'{platform}_cookies.txt')
@@ -473,6 +474,6 @@ async def platform_cookie_upload(platform: str, file: UploadFile = File(...)):
 
 @router.delete('/{platform}/cookie', summary='플랫폼 쿠키 파일 제거')
 async def platform_cookie_delete(platform: str):
-    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'tvchak'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    if platform not in ('soop', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'tvchak', 'hearheart'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     _save_credential(_COOKIE_SAVE_PATH.with_name(f'{platform}_cookies.txt'), None, f'{platform}_cookie_file')
     return {'configured': False, 'valid': False, 'expired': False, 'message': '쿠키 파일을 제거했습니다.'}

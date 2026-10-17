@@ -1,4 +1,5 @@
 {
+  "platform.hearheart": "HearHeart",
   "live.rplayChannelIDOrUrl": "ID канала RPLAY или https://rplay.live/live/...",
   "platform.rplay": "RPLAY",
   "settings.rplaySessionFile": "Файл данных входа",

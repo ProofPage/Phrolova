@@ -222,6 +222,7 @@ class Settings(BaseSettings):
     popkontv_cookie_file: Optional[str] = None
     rplay_session_file: Optional[str] = None
     tvchak_cookie_file: Optional[str] = None
+    hearheart_cookie_file: Optional[str] = None
 
 
     def resolve_ytdlp_path(self, auto_download: bool = False) -> str:

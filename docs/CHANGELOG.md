@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.15] - 2026-10-17
+
+### Added
+- Add native HearHeart (`hearheart.com`) VOD and audio-drama episode/playlist downloader support with custom `HearHeartIE` extractor.
+- Support individual episode download (`/playlist/{id}/play/{content_id}`) and bulk playlist extraction (`/playlist/{id}`).
+- Support HearHeart session cookie registration and management in Settings -> Authentication tab.
+- Add HearHeart platform badge styling (`#ff2777`) and automatic input URL detection.
+
 ## [2.0.80-preview.14] - 2026-10-16
 
 ### Fixed
