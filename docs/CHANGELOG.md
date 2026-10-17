@@ -8,6 +8,16 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.25] - 2026-10-17
+
+### Added
+- Auto-detect local SOOPStreamer agent on localhost ports (15530, 2935, 26737) and directly connect to unthrottled local 1080p HLS stream (`127.0.0.1:2935/{bno}/playlist.m3u8`) without requiring VPN or proxy.
+
+## [2.0.80-preview.24] - 2026-10-17
+
+### Fixed
+- Fix `NameError: name 'get_settings' is not defined` in `soop.py` when querying channel quality options, ensuring 1080p, 720p, 540p, 360p presets populate correctly in the channel modal.
+
 ## [2.0.80-preview.23] - 2026-10-17
 
 ### Fixed
