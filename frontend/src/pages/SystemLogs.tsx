@@ -158,7 +158,7 @@ export default function SystemLogs() {
                         </div>
                     </div>
 
-                    <div className="mt-4 pt-4 border-t border-line/60 space-y-2.5 text-xs text-ink-muted bg-surface-muted/40 -mx-4 -mb-4.5 p-4 rounded-b">
+                    <div className="mt-4 pt-4 border-t border-line/60 space-y-2.5 text-xs text-ink-muted bg-surface-muted/40 -mx-4 p-4 rounded-b">
                         <div className="text-[11px] font-semibold text-ink uppercase tracking-wider">시스템 로깅 규격</div>
                         <div className="flex justify-between">
                             <span>보관 디렉터리</span>
@@ -179,6 +179,14 @@ export default function SystemLogs() {
                         <div className="flex justify-between">
                             <span>스트림 분할 정책</span>
                             <span className="text-ok">채널·서비스별 분리</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span>자동 보관 백업</span>
+                            <span className="text-ink font-medium">영구 보존</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span>민감 정보 보호</span>
+                            <span className="text-ok">토큰·비밀번호 자동 마스킹</span>
                         </div>
                     </div>
                 </div>
