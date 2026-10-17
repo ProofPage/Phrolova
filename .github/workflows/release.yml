@@ -53,9 +53,15 @@ jobs:
       - name: Python 의존성과 PyInstaller 설치
         run: python -m pip install -r backend/requirements-dev.txt pyinstaller pillow pystray
 
-      - name: 백엔드 회귀 테스트
+      - name: Windows 영상 도구 설치
+        shell: pwsh
+        run: |
+          choco install ffmpeg -y --no-progress
+          ffmpeg -version
+
+      - name: SOOP 및 릴리스 회귀 테스트
         working-directory: backend
-        run: python -m pytest -q
+        run: python -m pytest tests/test_soop_viewers.py tests/test_release_metadata.py -q
 
       - name: Windows 실행 파일 빌드
         run: python -m PyInstaller --clean --noconfirm phrolova.spec
