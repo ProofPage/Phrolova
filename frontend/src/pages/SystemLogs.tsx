@@ -121,11 +121,11 @@ export default function SystemLogs() {
                             </span>
                         </div>
                         <div className="logs-file-meta">
-                            <span>{formatBytes(file.size_bytes)}{file.line_count !== undefined ? ` · ${formatNumber(file.line_count)}줄` : ''}</span>
+                            <span>{formatBytes(file.size_bytes)}{file.line_count !== undefined ? ` · ${t('logs.linesCount', { count: formatNumber(file.line_count) })}` : ''}</span>
                             {(file.error_count || file.warning_count) ? (
                                 <span className="flex items-center gap-1.5 text-[10px]">
-                                    {Boolean(file.error_count) && <span className="text-danger font-semibold">오류 {file.error_count}</span>}
-                                    {Boolean(file.warning_count) && <span className="text-warn font-semibold">경고 {file.warning_count}</span>}
+                                    {Boolean(file.error_count) && <span className="text-danger font-semibold">{t('logs.errorCountBadge', { count: file.error_count })}</span>}
+                                    {Boolean(file.warning_count) && <span className="text-warn font-semibold">{t('logs.warningCountBadge', { count: file.warning_count })}</span>}
                                 </span>
                             ) : null}
                         </div>
@@ -140,11 +140,11 @@ export default function SystemLogs() {
                         </dl>
                         <div className="mt-4 pt-3 border-t border-line/60 space-y-2 text-xs">
                             <div className="flex justify-between text-ink-muted">
-                                <span>전체 로그 줄 수</span>
-                                <strong className="text-ink font-medium">{formatNumber(files.reduce((acc, f) => acc + (f.line_count || 0), 0))}줄</strong>
+                                <span>{t('logs.totalLogLines')}</span>
+                                <strong className="text-ink font-medium">{t('logs.linesCount', { count: formatNumber(files.reduce((acc, f) => acc + (f.line_count || 0), 0)) })}</strong>
                             </div>
                             <div className="flex justify-between text-ink-muted">
-                                <span>누적 오류 / 경고</span>
+                                <span>{t('logs.cumulativeErrorsAndWarnings')}</span>
                                 <span className="font-medium">
                                     <span className="text-danger">{files.reduce((acc, f) => acc + (f.error_count || 0), 0)}</span>
                                     <span className="text-ink-faint mx-1">/</span>
@@ -152,41 +152,41 @@ export default function SystemLogs() {
                                 </span>
                             </div>
                             <div className="flex justify-between text-ink-muted">
-                                <span>실시간 감시 대상</span>
+                                <span>{t('logs.realtimeTarget')}</span>
                                 <span className="text-ok font-medium">service.log</span>
                             </div>
                         </div>
                     </div>
 
                     <div className="mt-4 pt-4 border-t border-line/60 space-y-2.5 text-xs text-ink-muted bg-surface-muted/40 -mx-4 p-4 rounded-b">
-                        <div className="text-[11px] font-semibold text-ink uppercase tracking-wider">시스템 로깅 규격</div>
+                        <div className="text-[11px] font-semibold text-ink uppercase tracking-wider">{t('logs.specTitle')}</div>
                         <div className="flex justify-between">
-                            <span>보관 디렉터리</span>
+                            <span>{t('logs.specStorageDir')}</span>
                             <span className="font-mono text-ink text-[11px]">/logs</span>
                         </div>
                         <div className="flex justify-between">
-                            <span>로그 순환 주기</span>
-                            <span className="text-ink">일 단위 (자정 기준)</span>
+                            <span>{t('logs.specRotation')}</span>
+                            <span className="text-ink">{t('logs.specRotationDaily')}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span>인코딩 및 개행</span>
+                            <span>{t('logs.specEncoding')}</span>
                             <span className="text-ink">UTF-8 / LF</span>
                         </div>
                         <div className="flex justify-between">
-                            <span>타임스탬프 형식</span>
+                            <span>{t('logs.specTimestamp')}</span>
                             <span className="font-mono text-ink text-[11px]">YYYY-MM-DD HH:mm:ss</span>
                         </div>
                         <div className="flex justify-between">
-                            <span>스트림 분할 정책</span>
-                            <span className="text-ok">채널·서비스별 분리</span>
+                            <span>{t('logs.specStreamSplit')}</span>
+                            <span className="text-ok">{t('logs.specStreamSplitDetail')}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span>자동 보관 백업</span>
-                            <span className="text-ink font-medium">영구 보존</span>
+                            <span>{t('logs.specBackup')}</span>
+                            <span className="text-ink font-medium">{t('logs.specBackupPermanent')}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span>민감 정보 보호</span>
-                            <span className="text-ok">토큰·비밀번호 자동 마스킹</span>
+                            <span>{t('logs.specPrivacy')}</span>
+                            <span className="text-ok">{t('logs.specPrivacyDetail')}</span>
                         </div>
                     </div>
                 </div>

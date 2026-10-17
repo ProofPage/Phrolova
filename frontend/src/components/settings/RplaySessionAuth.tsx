@@ -79,13 +79,13 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
         <CardHeader title={t('platform.rplay')} action={<Badge tone={status?.expired || (status?.configured && !status.valid) ? 'warn' : status?.configured ? 'ok' : undefined}>{label}</Badge>} />
 
         <form onSubmit={handleLoginSubmit} className="space-y-3 rounded border border-line bg-surface-muted p-3">
-            <div className="text-xs font-medium text-ink">알플레이 계정 로그인</div>
+            <div className="text-xs font-medium text-ink">{t('settings.rplayAccountLogin')}</div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <input
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    placeholder="이메일 주소"
+                    placeholder={t('settings.rplayEmailPlaceholder')}
                     disabled={busy}
                     className="ui-input input-focus text-xs"
                     autoComplete="username"
@@ -94,7 +94,7 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
                     type="password"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    placeholder="비밀번호"
+                    placeholder={t('settings.rplayPasswordPlaceholder')}
                     disabled={busy}
                     className="ui-input input-focus text-xs"
                     autoComplete="current-password"
@@ -102,7 +102,7 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
             </div>
             <div className="flex justify-end">
                 <Button type="submit" disabled={busy || !email.trim() || !password} loading={busy}>
-                    로그인 및 세션 발급
+                    {t('settings.rplayLoginButton')}
                 </Button>
             </div>
         </form>
