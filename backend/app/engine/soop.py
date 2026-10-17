@@ -42,6 +42,7 @@ class SoopAgentReader:
         self.capture_format = 'h264'
         self._video_started = False
         self._last_buffer_report = 0.0
+        self.is_finished = False
 
     def _connect(self):
         import websocket
@@ -135,6 +136,10 @@ class SoopAgentReader:
                     return b''
                 continue
             except (websocket.WebSocketConnectionClosedException, ConnectionError, OSError):
+                if self._closed:
+                    return b''
+                # The upstream closed connection; mark closed and return EOF so pipeline can reconnect
+                self._closed = True
                 return b''
             except Exception:
                 if self._closed or self._socket is None:

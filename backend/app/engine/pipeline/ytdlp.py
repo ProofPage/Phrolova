@@ -667,7 +667,8 @@ class YtdlpLivePipeline:
                                 raise RecordingError('continuity_gap', '필요한 녹화 구간을 복구하지 못했습니다. 저장된 원본을 확인하고 다시 시작하세요.')
                             if continuity is not None and (continuity.ended or getattr(continuity.primary.playlist, 'is_endlist', False)):
                                 return True
-                            if self._stall_detected or not self._hls_finished(reader):
+                            finished = getattr(reader, 'is_finished', False) or self._hls_finished(reader)
+                            if self._stall_detected or not finished:
                                 raise RuntimeError(
                                     "라이브 연결이 중단되었습니다. 재연결을 시도합니다."
                                 )
@@ -872,6 +873,7 @@ class YtdlpLivePipeline:
         if not self._closed or self._state != RecordingState.ERROR:
             return
         self._intentional_stop = False
+        self._force_stop.clear()
         if not self.retryable:
             raise RecordingError(
                 self.error_code or "blocked",
@@ -896,6 +898,7 @@ class YtdlpLivePipeline:
                 self._source_page_url, self._quality, self._cookie_str
             )
         self._resume_args = (url, headers, cookies, 0, False, self._quality)
+        self._closed = False
         await self._begin_receiver()
 
     async def stop_recording(self):
