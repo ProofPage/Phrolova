@@ -109,27 +109,37 @@ class SoopAgentReader:
         return self
 
     def read(self, size=131072):
-        if self._closed:
+        sock = self._socket
+        if self._closed or sock is None:
             return b''
         import websocket
-
         import time
+
         while True:
             now = time.monotonic()
+            sock = self._socket
+            if self._closed or sock is None:
+                return b''
             if now - self._last_buffer_report >= 1.0:
                 try:
-                    self._socket.send(json.dumps({
+                    sock.send(json.dumps({
                         'SVC': 52, 'RESULT': 0, 'DATA': {'BUFFER_LEFT': 5.0},
                     }, separators=(',', ':')))
                     self._last_buffer_report = now
                 except Exception:
                     pass
             try:
-                message = self._socket.recv()
+                message = sock.recv()
             except websocket.WebSocketTimeoutException:
-                if self._closed:
+                if self._closed or self._socket is None:
                     return b''
                 continue
+            except (websocket.WebSocketConnectionClosedException, ConnectionError, OSError):
+                return b''
+            except Exception:
+                if self._closed or self._socket is None:
+                    return b''
+                raise
             if isinstance(message, bytes):
                 # The agent multiplexes native video and AAC payloads as
                 # independent binary messages. The recording pipeline expects
