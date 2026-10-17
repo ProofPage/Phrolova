@@ -638,6 +638,7 @@ class YtdlpLivePipeline:
                 checked = False
                 prefix = bytearray()
                 file = open(self._source_files[index], "ab")
+                last_flush = time.monotonic()
                 try:
                     # Stop the producer first, then read through EOF. Accepted
                     # RingBuffer bytes belong to the completed media segment.
@@ -735,6 +736,10 @@ class YtdlpLivePipeline:
                                 data = bytes(prefix[offset:])
                                 checked = True
                         file.write(data)
+                        now_mono = time.monotonic()
+                        if now_mono - last_flush >= 1.0:
+                            file.flush()
+                            last_flush = now_mono
                         if index == 0:
                             if self.capture_format == "ts":
                                 self._measure_ts(data)
@@ -874,6 +879,7 @@ class YtdlpLivePipeline:
             return
         self._intentional_stop = False
         self._force_stop.clear()
+        self._stall_detected = False
         if not self.retryable:
             raise RecordingError(
                 self.error_code or "blocked",
