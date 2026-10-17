@@ -114,12 +114,48 @@ export default function SystemLogs() {
                 {listError && files.length > 0 && <div role="status" className="logs-list-error">{t("logs.couldNotLoadTheLogList")}</div>}
                 {loading && !files.length ? <p className="logs-empty" role="status">{t("logs.loadingLogFiles")}</p> : !files.length ? <EmptyState title={t(listError ? "logs.couldNotLoadTheLogList" : "logs.noLogFiles")} description={listError ? t("settings.checkTheServerConnectionAndTryAgain") : undefined} compact /> : <div className="logs-file-list">
                     {files.map(file => <button type="button" key={file.filename} onClick={() => setSelectedName(file.filename)} aria-pressed={file.filename === selectedName} className={clsx("logs-file-option", file.filename === selectedName && "logs-file-selected")}>
-                        <span className="logs-file-name">{file.filename}</span>
-                        <span className="logs-file-meta"><span>{formatBytes(file.size_bytes)}</span><span className={file.filename === "service.log" ? "logs-file-kind" : undefined}>{file.filename === "service.log" ? t("logs.live") : t("logs.backup")}</span></span>
+                        <div className="flex items-center justify-between gap-2">
+                            <span className="logs-file-name">{file.filename}</span>
+                            <span className={clsx("text-[10px] font-medium px-1.5 py-0.5 rounded", file.filename === "service.log" ? "bg-ok/10 text-ok" : "bg-surface-3 text-ink-muted")}>
+                                {file.filename === "service.log" ? t("logs.live") : t("logs.backup")}
+                            </span>
+                        </div>
+                        <div className="logs-file-meta">
+                            <span>{formatBytes(file.size_bytes)}{file.line_count !== undefined ? ` · ${formatNumber(file.line_count)}줄` : ''}</span>
+                            {(file.error_count || file.warning_count) ? (
+                                <span className="flex items-center gap-1.5 text-[10px]">
+                                    {Boolean(file.error_count) && <span className="text-danger font-semibold">오류 {file.error_count}</span>}
+                                    {Boolean(file.warning_count) && <span className="text-warn font-semibold">경고 {file.warning_count}</span>}
+                                </span>
+                            ) : null}
+                        </div>
                         <span className="logs-file-date">{t("logs.modified")} {formatDate(file.modified_at, true)}</span>
                     </button>)}
                 </div>}
-                <div className="logs-file-breakdown"><h3>{t("logs.fileBreakdown")}</h3><dl>{fileGroups.map(group => <div key={group.key}><dt>{t(group.key)} <strong>{formatNumber(group.values.length)}</strong></dt><dd>{formatBytes(group.values.reduce((total,file) => total + file.size_bytes,0))}</dd></div>)}</dl></div>
+                <div className="logs-file-breakdown">
+                    <h3>{t("logs.fileBreakdown")}</h3>
+                    <dl>
+                        {fileGroups.map(group => <div key={group.key}><dt>{t(group.key)} <strong>{formatNumber(group.values.length)}</strong></dt><dd>{formatBytes(group.values.reduce((total,file) => total + file.size_bytes,0))}</dd></div>)}
+                    </dl>
+                    <div className="mt-4 pt-3 border-t border-line/60 space-y-2 text-xs">
+                        <div className="flex justify-between text-ink-muted">
+                            <span>전체 로그 줄 수</span>
+                            <strong className="text-ink font-medium">{formatNumber(files.reduce((acc, f) => acc + (f.line_count || 0), 0))}줄</strong>
+                        </div>
+                        <div className="flex justify-between text-ink-muted">
+                            <span>누적 오류 / 경고</span>
+                            <span className="font-medium">
+                                <span className="text-danger">{files.reduce((acc, f) => acc + (f.error_count || 0), 0)}</span>
+                                <span className="text-ink-faint mx-1">/</span>
+                                <span className="text-warn">{files.reduce((acc, f) => acc + (f.warning_count || 0), 0)}</span>
+                            </span>
+                        </div>
+                        <div className="flex justify-between text-ink-muted">
+                            <span>실시간 감시 대상</span>
+                            <span className="text-ok font-medium">service.log</span>
+                        </div>
+                    </div>
+                </div>
             </section>
             <section className={clsx("logs-content-panel", !selectedFile && "logs-panel-mobile-hidden")} aria-label={t("logs.title")}>
                 {selectedFile ? <>

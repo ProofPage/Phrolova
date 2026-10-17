@@ -82,7 +82,7 @@ class RplayLiveEngine:
         params = {**params, 'platformType': 'rplay'}
         if session:
             headers['Authorization'] = session['accessToken']
-            params.update(requestorOid=session['requestorOid'], loginType=session['loginType'])
+            params.update(requestorOid=session['requestorOid'], loginType=session.get('loginType') or 'plax')
         try:
             async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
                 response = await client.get(API + path, params=params, headers=headers)
@@ -145,9 +145,12 @@ class RplayLiveEngine:
 
     async def check_live_status(self, channel_id) -> LiveStatus:
         cid = normalize_rplay_channel_id(channel_id)
-        item = await self._metadata(cid, account_session())
+        session = account_session()
+        item = await self._metadata(cid, session)
         creator = item['creatorMetadata']
-        live = item['streamState'] == 'live'
+        live = item.get('streamState') == 'live'
+        if live and item.get('accessible') is not True:
+            live = False
         return LiveStatus(channel_id=cid, is_live=live, channel_name=creator.get('nickname') or cid,
             title=item.get('title') or '', category='', viewer_count=0,
             thumbnail_url='', profile_image_url=creator.get('channelImage') or '',

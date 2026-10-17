@@ -74,21 +74,41 @@ def _get_log_dir() -> Path:
 async def list_system_logs():
     """logs 디렉토리 내의 모든 service.log 및 service.log.YYYY-MM-DD 파일 목록을 반환한다."""
     log_dir = _get_log_dir()
-    
+
     if not log_dir.exists():
         return []
-    
+
     log_files = []
     # service.log* 패턴으로 매칭
     for p in log_dir.glob("service.log*"):
         if p.is_file():
             stat = p.stat()
+            line_count = 0
+            level_counts = {"error": 0, "warning": 0, "info": 0}
+            try:
+                with open(p, "r", encoding="utf-8", errors="replace") as f:
+                    for line in f:
+                        line_count += 1
+                        upper = line.upper()
+                        if " | ERROR " in upper or " | CRITICAL " in upper:
+                            level_counts["error"] += 1
+                        elif " | WARN " in upper or " | WARNING " in upper:
+                            level_counts["warning"] += 1
+                        elif " | INFO " in upper:
+                            level_counts["info"] += 1
+            except Exception:
+                pass
+
             log_files.append({
                 "filename": p.name,
                 "size_bytes": stat.st_size,
-                "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat()
+                "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "line_count": line_count,
+                "error_count": level_counts["error"],
+                "warning_count": level_counts["warning"],
+                "info_count": level_counts["info"],
             })
-            
+
     # 수정 시간 내림차순 정렬 (최신 파일이 위로)
     log_files.sort(key=lambda x: x["modified_at"], reverse=True)
     return log_files

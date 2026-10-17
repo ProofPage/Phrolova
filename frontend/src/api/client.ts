@@ -407,6 +407,10 @@ export interface SystemLogFile {
     filename: string;
     size_bytes: number;
     modified_at: string;
+    line_count?: number;
+    error_count?: number;
+    warning_count?: number;
+    info_count?: number;
 }
 
 export interface SystemLogResponse {

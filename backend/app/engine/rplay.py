@@ -50,9 +50,9 @@ def parse_session(content: bytes) -> dict[str, str]:
         data = json.loads(content.decode('utf-8-sig'))
         if not isinstance(data, dict):
             raise ValueError
-        token = data.get('accessToken')
-        oid = data.get('requestorOid')
-        login_type = data.get('loginType', 'rplay')
+        token = data.get('accessToken') or data.get('token')
+        oid = data.get('requestorOid') or data.get('oid') or data.get('_id')
+        login_type = data.get('loginType') or data.get('accountType') or 'plax'
         refresh_token = data.get('refreshToken')
         if (not isinstance(token, str) or not re.fullmatch(r'[A-Za-z0-9._~+/=-]{16,8192}', token)
                 or not isinstance(oid, str) or not re.fullmatch(r'[a-fA-F0-9]{24}', oid)
@@ -104,13 +104,12 @@ def login_with_credentials(email: str, password: str) -> dict[str, str]:
         session = {
             'accessToken': str(token),
             'requestorOid': str(oid).lower(),
-            'loginType': data.get('accountType', 'plax'),
+            'loginType': data.get('accountType') or data.get('loginType') or 'plax',
         }
         if refresh_token:
             session['refreshToken'] = str(refresh_token)
         return session
     except httpx.HTTPError as err:
-        raise ValueError(f'알플레이 서버 연결에 실패했습니다: {err}') from None
         raise ValueError(f'알플레이 서버 연결에 실패했습니다: {err}') from None
 
 
