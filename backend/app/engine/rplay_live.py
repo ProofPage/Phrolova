@@ -172,7 +172,7 @@ class RplayLiveEngine:
                 '알플레이 로그인이 필요합니다. 설정 → 인증에 세션 파일을 등록하세요.' if not session else
                 '알플레이 방송 시청 권한이 없습니다. 구독·성인 인증·입장권 상태를 확인하세요.')
         byteplus = item.get('useBytePlusStream') is True
-        media = item.get('bytePlusPlaybackUrl') if byteplus else item.get('playUrl')
+        media = item.get('bytePlusPlaybackUrl') if byteplus else (item.get('livestreamUrl') or item.get('playUrl'))
         if not media_allowed(media) or not urlsplit(media).path.endswith('.m3u8'):
             raise RecordingError('rplay_stream', '알플레이에서 지원되는 HLS 재생 주소를 제공하지 않았습니다.')
         uhd = True
