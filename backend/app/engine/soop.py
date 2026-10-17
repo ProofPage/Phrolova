@@ -60,7 +60,8 @@ class SoopLiveEngine:
             return cached[1], cached[2]
         headers = {'User-Agent': USER_AGENT, 'Referer': self.get_stream_url(cid), 'Origin': ORIGIN}
         requires_cookie = False
-        async with httpx.AsyncClient(timeout=12, headers=headers) as client:
+        soop_proxy = get_settings().soop_proxy
+        async with httpx.AsyncClient(timeout=12, headers=headers, proxy=soop_proxy) as client:
             response = await client.post(CHANNEL_API, data={'bid': cid, 'type': 'live', 'player_type': 'html5', 'stream_type': 'common', 'mode': 'landing'})
             data = response.json() if response.status_code == 200 else {}
             channel = data.get('CHANNEL') if isinstance(data, dict) else None
@@ -139,9 +140,22 @@ class SoopLiveEngine:
         page = f'{self.get_stream_url(cid)}/{channel["BNO"]}'
         def resolve(authenticated: bool):
             from streamlink import Streamlink
+            from streamlink.plugins.soop import Soop
+            # 그리드(P2P) 및 국내 540p 강제 제한을 우회하기 위해 글로벌 무그리드 CDN(gcp_cdn) 매핑 적용
+            try:
+                Soop.CDN_TYPE_MAPPING = {
+                    "gs_cdn": "gcp_cdn",
+                    "lg_cdn": "gcp_cdn",
+                }
+            except Exception:
+                pass
             session = Streamlink()
             session.set_option('http-timeout', 15)
             session.set_option('ffmpeg-ffmpeg', __import__('app.core.config', fromlist=['get_settings']).get_settings().resolve_ffmpeg_path())
+            soop_proxy = __import__('app.core.config', fromlist=['get_settings']).get_settings().soop_proxy
+            if soop_proxy:
+                session.set_option('http-proxy', soop_proxy)
+                session.set_option('https-proxy', soop_proxy)
             if authenticated: session.http.cookies.update(platform_cookie_jar('soop'))
             try:
                 streams = session.streams(page)

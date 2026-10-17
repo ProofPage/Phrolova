@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.23] - 2026-10-17
+
+### Fixed
+- Bypass SOOP (AfreecaTV) P2P grid restrictions and domestic 540p cap by dynamically mapping Streamlink CDN type to global unthrottled CDN (`gcp_cdn`).
+- Support optional SOOP-specific outbound proxy (`soop_proxy`) in application configuration.
+
 ## [2.0.80-preview.22] - 2026-10-17
 
 ### Fixed
