@@ -1017,10 +1017,11 @@ class YtdlpLivePipeline:
         session.set_option("http-timeout", 30.0)
         session.set_option("stream-segment-timeout", 30.0)
         session.set_option("stream-segment-attempts", 10)
+        session.set_option("stream-segment-threads", 3)
         session.set_option("hls-playlist-reload-attempts", 10)
         session.set_option("dash-manifest-reload-attempts", 10)
-        session.set_option("stream-segmented-queue-deadline", 10.0)
-        session.set_option("hls-live-edge", 3)
+        session.set_option("stream-segmented-queue-deadline", 30.0)
+        session.set_option("hls-live-edge", 4)
 
         request_headers = {
             key: value for key, value in headers.items() if key.lower() != "cookie"
