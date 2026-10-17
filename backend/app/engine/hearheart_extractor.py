@@ -66,6 +66,16 @@ class HearHeartIE(InfoExtractor):
         )
         title = re.sub(r"^히어하트\s*-\s*", "", title).strip()
 
+        uploader = None
+        m_creator = re.search(r'''<a[^>]+href=['"](?:https?://hearheart\.com)?/channel/(\d+)['"][^>]*>([^<]+)</a>''', webpage)
+        if m_creator:
+            uploader = clean_html(m_creator.group(2)).strip()
+        elif " - " in title:
+            parts = title.rsplit(" - ", 1)
+            if len(parts) == 2 and len(parts[1].strip()) <= 30:
+                uploader = parts[1].strip()
+                title = parts[0].strip()
+
         entries = [
             self.url_result(
                 f"https://hearheart.com/playlist/{playlist_id}/play/{ep_id}",
@@ -75,7 +85,7 @@ class HearHeartIE(InfoExtractor):
             for ep_id in episode_ids
         ]
 
-        return self.playlist_result(entries, playlist_id=playlist_id, playlist_title=title)
+        return self.playlist_result(entries, playlist_id=playlist_id, playlist_title=title, playlist_uploader=uploader)
 
     def _extract_episode(self, url: str, playlist_id: str, content_id: str, headers: dict[str, str]):
         webpage = self._download_webpage(url, content_id, headers=headers)
@@ -142,6 +152,34 @@ class HearHeartIE(InfoExtractor):
         )
         title = re.sub(r"^히어하트\s*-\s*", "", title).strip()
 
+        # 크리에이터 (uploader / channel) 추출
+        uploader = None
+        channel_id = None
+        m_creator = re.search(r'''<a[^>]+href=['"](?:https?://hearheart\.com)?/channel/(\d+)['"][^>]*>([^<]+)</a>''', webpage)
+        if m_creator:
+            channel_id = m_creator.group(1)
+            uploader = clean_html(m_creator.group(2)).strip()
+
+        if not uploader and " - " in title:
+            parts = title.rsplit(" - ", 1)
+            if len(parts) == 2 and len(parts[1].strip()) <= 30:
+                uploader = parts[1].strip()
+                title = parts[0].strip()
+
+        # 재생 시간 (duration) 추출
+        duration = None
+        m_dur = re.search(rf'''/playlist/{playlist_id}/play/{content_id}['"][^>]*>[\s\S]*?(\d+):(\d{{2}})(?::(\d{{2}}))?''', webpage)
+        if not m_dur:
+            m_dur = re.search(r'''(?:current-episode|desktop-current-episode)['"][^>]*>[\s\S]*?(\d+):(\d{{2}})(?::(\d{{2}}))?''', webpage)
+        if not m_dur:
+            m_dur = re.search(r'''/\s*(\d+):(\d{{2}})(?::(\d{{2}}))?''', webpage)
+
+        if m_dur:
+            if m_dur.group(3):
+                duration = int(m_dur.group(1)) * 3600 + int(m_dur.group(2)) * 60 + int(m_dur.group(3))
+            else:
+                duration = int(m_dur.group(1)) * 60 + int(m_dur.group(2))
+
         thumbnail = self._og_search_thumbnail(webpage, default=None)
         if not thumbnail:
             m_thumb = re.search(r"""https?://images\.hearheart\.com/[^\s"'<>]+\.(?:png|jpg|webp)""", webpage)
@@ -153,6 +191,12 @@ class HearHeartIE(InfoExtractor):
         return {
             "id": content_id,
             "title": title,
+            "uploader": uploader,
+            "uploader_id": channel_id,
+            "channel": uploader,
+            "channel_id": channel_id,
+            "channel_url": f"https://hearheart.com/channel/{channel_id}" if channel_id else None,
+            "duration": duration,
             "formats": formats,
             "thumbnail": thumbnail,
             "description": description,

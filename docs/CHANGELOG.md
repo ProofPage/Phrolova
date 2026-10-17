@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.18] - 2026-10-17
+
+### Fixed
+- Populate `uploader`, `channel`, and `duration` metadata in `HearHeartIE` to eliminate `[Unknown Channel]` and "채널 정보 확인 중" / "영상 길이 확인 중" in VOD download cards.
+
 ## [2.0.80-preview.17] - 2026-10-17
 
 ### Fixed
