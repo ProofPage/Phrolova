@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.16] - 2026-10-17
+
+### Fixed
+- Include `hearheart` in backend `/api/vod/capabilities` sources list so HearHeart appears in the VOD download platform select dropdown.
+- Add `--color-hearheart` to Tailwind theme for consistent brand styling.
+
 ## [2.0.80-preview.15] - 2026-10-17
 
 ### Added

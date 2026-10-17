@@ -12,4 +12,4 @@
 .platform-badge.platform-anilife,.platform-badge.platform-linkani,.platform-badge.platform-ohli24,.platform-badge.platform-ohli365,.platform-badge.platform-tvwiki,.platform-badge.platform-tvchak,.platform-badge.platform-animaru { color: var(--color-info); }
 
 .platform-badge.platform-rplay { color: var(--color-rplay); }
-.platform-badge.platform-hearheart { color: #ff2777; }
+.platform-badge.platform-hearheart { color: var(--color-hearheart); }

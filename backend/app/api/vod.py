@@ -22,6 +22,7 @@ async def vod_capabilities():
         {'id': 'chzzk', 'label': '치지직'}, {'id': 'youtube', 'label': '유튜브'},
         {'id': 'soop', 'label': '숲'}, {'id': 'cime', 'label': '씨미'},
         {'id': 'kick', 'label': 'Kick'}, {'id': 'twitch', 'label': 'Twitch'}, {'id': 'tiktok', 'label': 'TikTok'}, {'id': 'bilibili', 'label': 'Bilibili'}, {'id': 'popkontv', 'label': 'PopkonTV'}, {'id': 'rplay', 'label': 'platform.rplay'},
+        {'id': 'hearheart', 'label': 'platform.hearheart'},
         {'id': 'anilife', 'label': 'platform.anilife'}, {'id': 'linkani', 'label': 'platform.linkani'},
         {'id': 'ohli24', 'label': 'platform.ohli24'},
         {'id': 'ohli365', 'label': 'platform.ohli365'},
