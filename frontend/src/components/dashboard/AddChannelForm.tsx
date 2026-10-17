@@ -15,7 +15,6 @@ import { parsePlatformChannelInput } from "../../utils/platformChannels";
 const PLATFORM_DOT_STYLES: Record<Platform, string> = {
     chzzk: "bg-chzzk",
     youtube: "bg-youtube",
-    soop: "bg-soop",
     cime: "bg-cime",
     kick: "bg-kick",
     twitch: "bg-twitch",
@@ -100,7 +99,6 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
 
     const placeholder = selectedPlatform === "chzzk" ? "live.chzzkChannelIDOrHttpsChzzkNaverCom"
         : selectedPlatform === "youtube" ? "live.handleUsernameOrChannelID"
-        : selectedPlatform === "soop" ? "live.soopChannelIDOrHttpsPlaySoopliveCom"
         : selectedPlatform === "cime" ? "live.cimeChannelIDOrHttpsCiMe"
         : selectedPlatform === "kick" ? "live.kickChannelIDOrHttpsKickCom"
         : selectedPlatform === "twitch" ? "live.twitchChannelIDOrHttpsTwitchTv"
@@ -155,7 +153,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
             </div>
 
             <div className="flex min-w-0 gap-2 sm:flex-1">
-            <Input id={inputId} value={channelId} onChange={(event) => { setChannelId(event.target.value); setInputError(null); }} disabled={loading || settingsOpen} aria-label={['chzzk', 'soop', 'cime'].includes(selectedPlatform) ? t("live.channelInput",{platform:t(PLATFORM_LABELS[selectedPlatform])}) : t("live.channelInput",{platform:t(PLATFORM_LABELS[selectedPlatform])})} aria-invalid={!!inputError} aria-describedby={inputError ? `${inputId}-error` : undefined} placeholder={placeholder} className="min-w-0 flex-1" />
+            <Input id={inputId} value={channelId} onChange={(event) => { setChannelId(event.target.value); setInputError(null); }} disabled={loading || settingsOpen} aria-label={['chzzk', 'cime'].includes(selectedPlatform) ? t("live.channelInput",{platform:t(PLATFORM_LABELS[selectedPlatform])}) : t("live.channelInput",{platform:t(PLATFORM_LABELS[selectedPlatform])})} aria-invalid={!!inputError} aria-describedby={inputError ? `${inputId}-error` : undefined} placeholder={placeholder} className="min-w-0 flex-1" />
                     <Button type="submit" variant="primary" icon={Plus} loading={loading} disabled={!channelId.trim()} aria-label={translate("live.openChannelSetup")} title={translate("live.openChannelSetup")} className="shrink-0 px-3 sm:px-4">
                 {translate("live.addChannel")}</Button>
             </div>

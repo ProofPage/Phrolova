@@ -14,11 +14,11 @@ def test_offline_status_has_platform_scoped_key(platform):
 @pytest.mark.asyncio
 async def test_monitor_transitions_and_restart_keep_distinct_platforms():
     conductor = Conductor()
-    for platform in (Platform.CHZZK, Platform.SOOP, Platform.CIME):
+    for platform in (Platform.CHZZK, Platform.KICK, Platform.CIME):
         conductor.add_channel("sameid", platform=platform, auto_record=False)
     restored = Conductor()
-    assert set(restored._channels) == {f"{p.value}:sameid" for p in (Platform.CHZZK,Platform.SOOP,Platform.CIME)}
-    key = "soop:sameid"
+    assert set(restored._channels) == {f"{p.value}:sameid" for p in (Platform.CHZZK,Platform.KICK,Platform.CIME)}
+    key = "kick:sameid"
     engine = type("Engine", (), {})()
     engine.get_stream_url = lambda cid: "https://example.com/" + cid
     engine.check_live_status = AsyncMock(side_effect=[{"is_live": False}, {"is_live": True}, {"is_live": False}])

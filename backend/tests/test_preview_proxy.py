@@ -278,7 +278,7 @@ async def test_media_endpoint_stops_when_channel_removed_or_offline(monkeypatch)
         assert response.status_code == 404
 
 
-@pytest.mark.parametrize("platform,origin", [("soop", "https://play.sooplive.com"), ("cime", "https://ci.me")])
+@pytest.mark.parametrize("platform,origin", [("cime", "https://ci.me")])
 @pytest.mark.asyncio
 async def test_platform_headers_and_cookies_stay_domain_scoped(monkeypatch, platform, origin):
     from http.cookiejar import Cookie, CookieJar

@@ -56,7 +56,7 @@ async def stopped_job(manager, path, fmt="mp4", keep=True):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("platform", ["chzzk", "youtube", "soop", "cime"])
+@pytest.mark.parametrize("platform", ["chzzk", "youtube", "cime"])
 @pytest.mark.parametrize("fmt", ["mp4", "mkv"])
 async def test_four_platforms_streamlink_ts_then_real_remux(
     local_hls, monkeypatch, platform, fmt

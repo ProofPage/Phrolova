@@ -11,7 +11,7 @@ export const client = axios.create({
 
 // ── Types ───────────────────────────────────────────────
 
-export type Platform = "chzzk" | "youtube" | "soop" | "cime" | "kick" | "twitch" | "tiktok" | "bilibili" | "pandalive" | "popkontv" | "rplay";
+export type Platform = "chzzk" | "youtube" | "cime" | "kick" | "twitch" | "tiktok" | "bilibili" | "pandalive" | "popkontv" | "rplay";
 export type DownloadSource = Exclude<Platform, "pandalive"> | 'hearheart' | 'anilife' | 'linkani' | 'ohli24' | 'ohli365' | 'tvwiki' | 'tvchak' | 'animaru' | 'external';
 export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
 export interface ChannelDownloadOptions {
@@ -25,7 +25,6 @@ export interface ChannelDownloadOptions {
 export const PLATFORM_LABELS: Record<Platform, string> = {
     chzzk: "platform.chzzk",
     youtube: "platform.youtube",
-    soop: "platform.soop",
     cime: "platform.cime",
     kick: "platform.kick",
     twitch: "platform.twitch",
@@ -221,14 +220,12 @@ export interface Settings {
     vod_chzzk_dir: string;
     vod_external_dir: string;
 
-    soop_proxy?: string;
     x_cookie_file?: string;
 }
 
 export interface PlatformStatus {
     chzzk: { enabled: boolean; authenticated: boolean };
     youtube: { enabled: boolean; authenticated: boolean };
-    soop?: { enabled: boolean; authenticated: boolean };
     cime?: { enabled: boolean; authenticated: boolean };
     kick?: { enabled: boolean; authenticated: boolean };
     twitch?: { enabled: boolean; authenticated: boolean };
@@ -240,7 +237,7 @@ export interface PlatformStatus {
     rplay?: { enabled: boolean; authenticated: boolean };
 }
 
-export type CookiePlatform = 'chzzk' | 'youtube' | 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'tvchak' | 'hearheart';
+export type CookiePlatform = 'chzzk' | 'youtube' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'tvchak' | 'hearheart';
 
 export interface PlatformCookieStatus {
     configured: boolean;
@@ -545,7 +542,6 @@ export const api = {
         recording_quality: string,
         chzzk_live_cdn: ChzzkVodCdn = "akamai",
         location?: { live_download_dir: string; monitor_interval: number },
-        soop_proxy?: string,
     ) => {
         const res = await client.put("/settings/live", {
             ...location,
@@ -556,7 +552,6 @@ export const api = {
             save_live_preview,
             live_filename_template,
             recording_quality,
-            soop_proxy: soop_proxy ?? "",
         });
         return res.data;
     },
@@ -615,7 +610,7 @@ export const api = {
     },
     getLivePreviewFrame: async (channelKey: string, signal?: AbortSignal, force = false): Promise<Blob> =>
         (await client.get(`/stream/preview-frame/${encodeURIComponent(channelKey)}`, { responseType: 'blob', signal, params: force ? { force: true } : undefined, timeout: 60000 })).data,
-    getPlatformQualities: async (platform: 'soop' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'rplay', channel_id: string, signal?: AbortSignal) =>
+    getPlatformQualities: async (platform: 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'rplay', channel_id: string, signal?: AbortSignal) =>
         (await client.get<{ qualities: LiveQuality[]; live?: boolean; message?: string }>(`/platforms/${platform}/${encodeURIComponent(channel_id)}/qualities`, { signal })).data,
     getRplaySessionStatus: async (): Promise<PlatformCookieStatus> => (await client.get('/platforms/rplay/session')).data,
     uploadRplaySession: async (file: File): Promise<PlatformCookieStatus> => {

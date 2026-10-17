@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.28] - 2026-10-17
+
+### Removed
+- Remove SOOP (숲) platform support completely from backend, frontend UI, configuration, and API routes.
+
 ## [2.0.80-preview.27] - 2026-10-17
 
 ### Added
@@ -1240,7 +1245,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.80-preview.27...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.80-preview.28...HEAD
+[2.0.80-preview.28]: https://github.com/ProofPage/Phrolova/compare/v2.0.80-preview.27...v2.0.80-preview.28
 [2.0.80-preview.27]: https://github.com/ProofPage/Phrolova/compare/v2.0.80-preview.26...v2.0.80-preview.27
 [2.0.79]: https://github.com/ProofPage/Phrolova/compare/v2.0.78...v2.0.79
 [2.0.78]: https://github.com/ProofPage/Phrolova/compare/v2.0.77...v2.0.78

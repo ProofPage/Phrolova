@@ -17,7 +17,6 @@ def media_platform(url: str) -> str:
     if host in ('twitch.tv', 'www.twitch.tv', 'm.twitch.tv', 'go.twitch.tv', 'clips.twitch.tv', 'player.twitch.tv'): return 'twitch'
     if host in ('kick.com', 'www.kick.com'): return 'kick'
     if host in ('ci.me', 'www.ci.me'): return 'cime'
-    if host in ('vod.sooplive.com', 'vod.sooplive.co.kr', 'vod.afreecatv.com'): return 'soop'
     if host == 'chzzk.naver.com': return 'chzzk'
     if host in ('hearheart.com', 'www.hearheart.com'): return 'hearheart'
     if host in ('youtu.be', 'youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com'): return 'youtube'
@@ -49,9 +48,6 @@ def canonical_platform_video(url: str) -> str:
     if platform == 'kick':
         from app.engine.kick import canonical_kick_video_url
         return canonical_kick_video_url(url)
-    if platform == 'soop':
-        from app.engine.soop import normalize_soop_vod_url
-        return normalize_soop_vod_url(url)
     if platform == 'cime':
         from app.engine.cime import parse_cime_video_url
         route = parse_cime_video_url(url)

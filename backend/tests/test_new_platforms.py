@@ -1,4 +1,4 @@
-"""SOOP/CIME integration with isolated API fixtures and real local media."""
+"""CIME integration with isolated API fixtures and real local media."""
 import asyncio
 import functools
 import http.server
@@ -19,7 +19,6 @@ from app.core.config import get_settings
 from app.engine.base import Platform
 from app.engine.cime import (CimeLiveEngine, normalize_cime_channel_id, parse_cime_video_url,
                              parse_cime_variants, select_cime_variant, cime_quality_options)
-from app.engine.soop import SoopLiveEngine, normalize_soop_channel_id, normalize_soop_vod_url
 from app.engine.platform_auth import (get_platform_cookies, platform_cookie_file,
                                       platform_cookie_status, with_platform_cookie_fallback, PlatformAuthenticationError)
 
@@ -47,18 +46,6 @@ def test_invalid_cime_inputs(text):
 def test_cime_vod_clip_routes(url):
     assert parse_cime_video_url(url)['url'] == url
     assert parse_cime_video_url(url.replace('ci.me','ci.me.evil')) is None
-
-@pytest.mark.parametrize('url', ['alice','https://play.sooplive.com/alice/123','https://play.sooplive.co.kr/alice','https://play.afreecatv.com/alice','https://www.sooplive.com/station/alice','https://bj.afreecatv.com/alice'])
-def test_soop_channel_inputs(url):
-    assert normalize_soop_channel_id(url) == 'alice'
-
-@pytest.mark.parametrize('url', ['https://vod.sooplive.com/player/123','https://vod.sooplive.co.kr/player/123','https://vod.afreecatv.com/player/123'])
-def test_soop_vod_aliases(url):
-    assert normalize_soop_vod_url(url) == 'https://vod.sooplive.com/player/123'
-
-@pytest.mark.parametrize('url', ['https://play.sooplive.com.evil/alice','https://ci.me/@alice','https://www.sooplive.com/video/123','file:///alice'])
-def test_soop_invalid_channels(url):
-    with pytest.raises(ValueError): normalize_soop_channel_id(url)
 
 def test_actual_manifest_dimensions_fps_and_audio():
     variants = parse_cime_variants('https://cdn.example/master.m3u8', MASTER)
@@ -116,20 +103,6 @@ async def test_cime_manifest_auth_is_response_based(monkeypatch,tmp_path):
     url,headers,cookies=await engine.resolve_stream('alice','1080p60')
     assert url=='https://ci.me/stream/master.m3u8' and cookies and 'cookie' not in {k.lower() for k in headers}
 
-@pytest.mark.asyncio
-async def test_soop_metadata_and_dynamic_actual_qualities(monkeypatch):
-    calls=[]
-    def respond(request):
-        calls.append(request)
-        return httpx.Response(200,json={'CHANNEL':{'RESULT':1,'BNO':'123','BJNICK':'숲 채널','TITLE':'방송','VIEWPRESET':[{'name':'hd','label':'720p','label_resolution':'1280x720','bps':2000},{'name':'original','label':'1080p','label_resolution':'1920x1080','bps':6000}]}} if request.method=='POST' else {'DATA':{'station_name':'숲 채널','broad_start':'2026-10-11 09:00:00'}})
-    mock_http(monkeypatch,respond)
-    engine=SoopLiveEngine()
-    status=await engine.check_live_status('alice')
-    assert status['is_live'] and status['channel_name']=='숲 채널'
-    qualities=await engine.get_qualities('alice')
-    assert [q['height'] for q in qualities]==[1080,720]
-    assert len(calls)==2 and all('cookie' not in r.headers for r in calls)
-
 def test_cookie_domain_expiry_and_borrowed_copy(tmp_path):
     cookie=tmp_path/'cime.txt';cookie.write_text('# Netscape HTTP Cookie File\n.ci.me\tTRUE\t/\tTRUE\t0\tsession-id\tfixture\n.evil.example\tTRUE\t/\tTRUE\t0\tauth\twrong\n')
     get_settings().cime_cookie_file=str(cookie)
@@ -145,16 +118,16 @@ def test_cookie_domain_expiry_and_borrowed_copy(tmp_path):
 
 @pytest.mark.asyncio
 async def test_public_first_fallback_and_not_for_network_error(tmp_path):
-    cookie=tmp_path/'soop.txt';cookie.write_text('# Netscape HTTP Cookie File\n.sooplive.com\tTRUE\t/\tTRUE\t0\tPdboxUser\tfixture\n');get_settings().soop_cookie_file=str(cookie)
+    cookie=tmp_path/'cime.txt';cookie.write_text('# Netscape HTTP Cookie File\n.ci.me\tTRUE\t/\tTRUE\t0\tsession-id\tfixture\n');get_settings().cime_cookie_file=str(cookie)
     calls=[]
     async def operation(path):
         calls.append(path)
         if path is None:raise RuntimeError('HTTP Error 403')
         return 'authorized'
-    assert await with_platform_cookie_fallback('soop',operation)=='authorized' and calls[0] is None and len(calls)==2
+    assert await with_platform_cookie_fallback('cime',operation)=='authorized' and calls[0] is None and len(calls)==2
     calls.clear()
     async def unavailable(path):calls.append(path);raise RuntimeError('network unavailable')
-    with pytest.raises(RuntimeError,match='network'):await with_platform_cookie_fallback('soop',unavailable)
+    with pytest.raises(RuntimeError,match='network'):await with_platform_cookie_fallback('cime',unavailable)
     assert calls==[None]
 
 def test_api_registration_quality_persistence_and_cookie_routes(monkeypatch,tmp_path):
@@ -167,7 +140,7 @@ def test_api_registration_quality_persistence_and_cookie_routes(monkeypatch,tmp_
     monkeypatch.setattr(app.main,'get_recorder_service',lambda:service)
     monkeypatch.setattr(routes,'_COOKIE_SAVE_PATH',tmp_path/'x_cookies.txt')
     app=FastAPI();app.include_router(router);client=TestClient(app)
-    for platform,url,cid in [('cime','https://ci.me/@alice/live','alice'),('soop','https://play.sooplive.co.kr/alice','alice'),('youtube','UCabcdefghijklmnopqrstuv','UCabcdefghijklmnopqrstuv')]:
+    for platform,url,cid in [('cime','https://ci.me/@alice/live','alice'),('youtube','UCabcdefghijklmnopqrstuv','UCabcdefghijklmnopqrstuv')]:
         response=client.post('/api/platforms/channels',json={'platform':platform,'channel_id':url,'auto_record':False,'recording_quality':'1080p60' if platform=='cime' else 'best'})
         assert response.status_code==200,response.text
         assert response.json()['platform']==platform
@@ -203,9 +176,9 @@ async def test_real_ffmpeg_frame_no_upscale_and_cache(local_hls,monkeypatch,heig
     engine=type('Engine',(),{})()
     engine.get_qualities=AsyncMock(return_value=[{'value':height+'p','height':int(height)}])
     engine.resolve_stream=AsyncMock(return_value=(base+'/'+height+'/index.m3u8',{},None))
-    get_settings().soop_cookie_file=None
+    get_settings().cime_cookie_file=None
     preview=FramePreviewService()
-    one,two=await asyncio.gather(*(preview.get_frame('soop:fixture','soop','fixture',engine) for _ in range(2)))
+    one,two=await asyncio.gather(*(preview.get_frame('cime:fixture','cime','fixture',engine) for _ in range(2)))
     assert one==two and one[1:]==(width,int(height))
     engine.resolve_stream.assert_awaited_once()
 
@@ -232,7 +205,7 @@ async def test_actual_cime_vod_engine_download_merge_and_probe(local_hls,monkeyp
     await engine.shutdown();await restored.shutdown()
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('platform',['cime','soop'])
+@pytest.mark.parametrize('platform',['cime'])
 @pytest.mark.parametrize('container',['ts','mkv','mp4'])
 async def test_actual_new_platform_recording_pipeline_containers(local_hls,platform,container):
     from app.engine.pipeline import YtdlpLivePipeline
@@ -243,7 +216,7 @@ async def test_actual_new_platform_recording_pipeline_containers(local_hls,platf
     async def resolve(quality):
         assert quality=='720p'
         return base+'/720/index.m3u8',{},None
-    output=await pipeline.start_recording(stream_obj='https://ci.me/@fixture/live' if platform=='cime' else 'https://play.sooplive.com/fixture',output_dir=str(directory/'녹화 폴더'),quality='720p',source_resolver=resolve)
+    output=await pipeline.start_recording(stream_obj='https://ci.me/@fixture/live',output_dir=str(directory/'녹화 폴더'),quality='720p',source_resolver=resolve)
     for _ in range(100):
         if pipeline._feeder_task.done():break
         await asyncio.sleep(.1)
@@ -255,29 +228,7 @@ async def test_actual_new_platform_recording_pipeline_containers(local_hls,platf
     assert next(track for track in media['tracks'] if track['codec_type']=='video')['height']==720
 
 @pytest.mark.asyncio
-async def test_soop_multi_part_actual_download_concat(local_hls,monkeypatch,tmp_path):
-    from yt_dlp.extractor.afreecatv import AfreecaTVIE
-    from app.engine.vod import VodEngine,VodDownloadTask,VodDownloadState
-    base,_=local_hls
-    def extract(self,url):
-        return {'_type':'multi_video','id':'123','title':'여러 부분 영상','uploader':'Alice','entries':[
-            {'id':str(i),'title':f'부분 {i}','duration':3,'formats':[{'format_id':'hls','url':base+'/720/index.m3u8','protocol':'m3u8_native','ext':'mp4','height':720,'vcodec':'h264','acodec':'aac'}]}
-            for i in range(2)]}
-    monkeypatch.setattr(AfreecaTVIE,'_real_extract',extract)
-    get_settings().soop_cookie_file=None
-    get_settings().vod_format='mp4'
-    engine=VodEngine()
-    info=await engine.get_video_info('https://vod.sooplive.co.kr/player/123')
-    assert info['duration']==6 and info['formats'][0]['height']==720
-    task=VodDownloadTask(url='https://vod.sooplive.com/player/123',output_dir=str(tmp_path/'숲 다운로드'),quality='best')
-    Path(task.output_dir).mkdir();engine._tasks[task.task_id]=task
-    await engine._download_external(task.task_id,task)
-    assert task.state==VodDownloadState.COMPLETED and task.inspection_state=='passed'
-    assert engine._probe_media_info(task.output_path)['duration']>5
-    await engine.shutdown()
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize('platform',[Platform.SOOP,Platform.CIME])
+@pytest.mark.parametrize('platform',[Platform.KICK,Platform.CIME])
 async def test_conductor_shared_automatic_pipeline_and_no_duplicates(monkeypatch,platform):
     from app.engine.conductor import Conductor
     from app.engine.pipeline import YtdlpLivePipeline,RecordingState
@@ -401,7 +352,7 @@ async def test_preview_timeout_kills_and_reaps_process(monkeypatch):
     proc=Process();started=asyncio.Event()
     async def start(*args, **kwargs): started.set(); return proc
     monkeypatch.setattr(asyncio,'create_subprocess_exec',start)
-    running=asyncio.create_task(decode_preview(['ffmpeg'],'https://cdn.example/live.m3u8',{},'soop',False))
+    running=asyncio.create_task(decode_preview(['ffmpeg'],'https://cdn.example/live.m3u8',{},'cime',False))
     await started.wait()
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(running,.01)
@@ -411,12 +362,10 @@ async def test_preview_timeout_kills_and_reaps_process(monkeypatch):
 @pytest.mark.asyncio
 async def test_actual_mixed_platform_download_queue_concurrency_and_restore(local_hls,monkeypatch,tmp_path):
     from app.engine.cime_extractor import CimeIE
-    from yt_dlp.extractor.afreecatv import AfreecaTVIE
     from app.engine.vod import VodEngine,VodDownloadState
     base,_=local_hls
     monkeypatch.setattr(CimeIE,'_router',lambda self,route:{'id':'1','title':'씨미 큐','duration':3000,'playback':{'url':base+'/720/index.m3u8'}})
-    monkeypatch.setattr(AfreecaTVIE,'_real_extract',lambda self,url:{'id':'123','title':'숲 큐','duration':3,'formats':[{'url':base+'/720/index.m3u8','format_id':'hls','ext':'mp4','protocol':'m3u8_native','vcodec':'h264','acodec':'aac'}]})
-    get_settings().vod_max_concurrent=1;get_settings().cime_cookie_file=None;get_settings().soop_cookie_file=None
+    get_settings().vod_max_concurrent=1;get_settings().cime_cookie_file=None
     engine=VodEngine();loop=asyncio.get_running_loop();paused=asyncio.Event();original=engine._make_progress_callback
     def wrap(task):
         callback=original(task);first=True
@@ -428,16 +377,15 @@ async def test_actual_mixed_platform_download_queue_concurrency_and_restore(loca
         return progress
     monkeypatch.setattr(engine,'_make_progress_callback',wrap)
     first=await engine.download('https://ci.me/@alice/vods/1',output_dir=str(tmp_path/'mixed'))
-    second=await engine.download('https://vod.sooplive.co.kr/player/123',output_dir=str(tmp_path/'mixed'))
+    second=await engine.download('https://ci.me/@alice/vods/2',output_dir=str(tmp_path/'mixed'))
     try:
         await asyncio.wait_for(paused.wait(),15)
         assert engine._tasks[second].state==VodDownloadState.IDLE
-        assert engine._tasks[second].url=='https://vod.sooplive.com/player/123'
         engine.resume_download(first)
         await asyncio.wait_for(asyncio.gather(engine._tasks[first].download_task,engine._tasks[second].download_task),30)
         assert all(engine._tasks[key].state==VodDownloadState.COMPLETED for key in (first,second))
         restored=VodEngine()
-        assert restored.get_task_status(first)['platform']=='cime' and restored.get_task_status(second)['platform']=='soop'
+        assert restored.get_task_status(first)['platform']=='cime' and restored.get_task_status(second)['platform']=='cime'
         await restored.shutdown()
     finally:
         engine._tasks[first].pause_event.set();await engine.shutdown()

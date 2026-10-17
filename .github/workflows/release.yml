@@ -59,9 +59,9 @@ jobs:
           choco install ffmpeg -y --no-progress
           ffmpeg -version
 
-      - name: SOOP 및 릴리스 회귀 테스트
+      - name: 릴리스 회귀 테스트
         working-directory: backend
-        run: python -m pytest tests/test_soop_viewers.py tests/test_release_metadata.py -q
+        run: python -m pytest tests/test_release_metadata.py -q
 
       - name: Windows 실행 파일 빌드
         run: python -m PyInstaller --clean --noconfirm phrolova.spec

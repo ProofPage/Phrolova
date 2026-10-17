@@ -333,7 +333,7 @@ def get_platform_logger(platform: str | None, component: str | None = None) -> l
     if platform is None:
         return logger.getChild(component) if component else logger
     value = str(getattr(platform, "value", platform)).split(":", 1)[0].lower()
-    if value not in {"chzzk", "youtube", "soop", "cime", "kick", "twitch", "tiktok", "bilibili", "pandalive", "popkontv", "rplay", "anilife", "linkani", "ohli24", "tvwiki", "tvchak", "animaru", "ohli365", "x_spaces", "external"}:
+    if value not in {"chzzk", "youtube", "cime", "kick", "twitch", "tiktok", "bilibili", "pandalive", "popkontv", "rplay", "anilife", "linkani", "ohli24", "tvwiki", "tvchak", "animaru", "ohli365", "x_spaces", "external"}:
         value = "external"
     child = logger.getChild(value)
     return child.getChild(component) if component else child
@@ -352,8 +352,6 @@ def get_media_logger(url: str) -> logging.Logger:
         platform = "youtube"
     elif host == "chzzk.naver.com" or host.endswith(".chzzk.naver.com"):
         platform = "chzzk"
-    elif any(host == domain or host.endswith("." + domain) for domain in ("sooplive.com", "sooplive.co.kr", "afreecatv.com")):
-        platform = "soop"
     elif numbered := numbered_site_for_host(host):
         platform = numbered
     elif host == "linkani.tv":

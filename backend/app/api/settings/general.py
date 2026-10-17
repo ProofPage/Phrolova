@@ -144,7 +144,6 @@ async def get_current_settings():
         "split_download_dirs": settings.split_download_dirs,
         "vod_chzzk_dir": settings.vod_chzzk_dir,
         "vod_external_dir": settings.vod_external_dir,
-        "soop_proxy": settings.soop_proxy,
     }
 
 

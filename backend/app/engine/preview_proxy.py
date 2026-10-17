@@ -151,8 +151,6 @@ class PreviewProxy:
             "youtube.com",
             "live-video.net",
             "ci.me",
-            "sooplive.com",
-            "sooplive.co.kr",
         )
         # Twitch 재생 목록과 영상 조각은 서로 다른 ttvnw.net 호스트를 쓴다.
         # 다른 플랫폼의 미리보기까지 이 CDN을 허용하지 않도록 범위를 제한한다.
@@ -221,7 +219,7 @@ class PreviewProxy:
         headers = {"User-Agent": USER_AGENT}
         # Browser requests remain same-origin; platform headers and domain-scoped
         # cookies are sent only by the verified server-side media transport.
-        origins = {"chzzk": "https://chzzk.naver.com", "soop": "https://play.sooplive.com", "cime": "https://ci.me", "kick": "https://kick.com", "twitch": "https://www.twitch.tv", "bilibili": "https://live.bilibili.com", "pandalive": "https://www.pandalive.co.kr", "popkontv": "https://www.popkontv.com", "rplay": "https://rplay.live"}
+        origins = {"chzzk": "https://chzzk.naver.com", "cime": "https://ci.me", "kick": "https://kick.com", "twitch": "https://www.twitch.tv", "bilibili": "https://live.bilibili.com", "pandalive": "https://www.pandalive.co.kr", "popkontv": "https://www.popkontv.com", "rplay": "https://rplay.live"}
         origin = origins.get(node["platform"])
         if origin:
             headers.update({"Origin": origin, "Referer": origin + "/"})
@@ -251,7 +249,7 @@ class PreviewProxy:
         async with self.limit:
             async with httpx.AsyncClient(
                 verify=preview_ca_bundle(), timeout=15, follow_redirects=False,
-                cookies=platform_cookie_jar(node["platform"]) if node["platform"] in ("soop", "cime", "kick", "twitch", "bilibili", "pandalive", "popkontv") else None
+                cookies=platform_cookie_jar(node["platform"]) if node["platform"] in ("cime", "kick", "twitch", "bilibili", "pandalive", "popkontv") else None
             ) as client:
                 url = node["url"]
                 for _ in range(4):
@@ -308,7 +306,7 @@ class PreviewProxy:
         async with httpx.AsyncClient(
             verify=preview_ca_bundle(), timeout=httpx.Timeout(connect=15.0, read=None, write=15.0, pool=15.0),
             follow_redirects=True,
-            cookies=platform_cookie_jar(node["platform"]) if node["platform"] in ("soop", "cime", "kick", "twitch", "bilibili", "pandalive", "popkontv") else None
+            cookies=platform_cookie_jar(node["platform"]) if node["platform"] in ("cime", "kick", "twitch", "bilibili", "pandalive", "popkontv") else None
         ) as client:
             async with client.stream("GET", node["url"], headers=headers) as upstream:
                 upstream.raise_for_status()

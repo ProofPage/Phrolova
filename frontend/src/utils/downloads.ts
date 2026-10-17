@@ -23,8 +23,6 @@ export function detectDownloadPlatform(value: string): DownloadSource {
         if (TWITCH_HOSTS.has(host)) return 'twitch';
         if (host === 'kick.com' || host === 'www.kick.com') return 'kick';
         if (host === 'ci.me' || host === 'www.ci.me') return 'cime';
-        if (['vod.sooplive.com', 'vod.sooplive.co.kr', 'vod.afreecatv.com'].includes(host)) return 'soop';
-
     } catch { /* Input may be a supported platform ID. */ }
     return 'external';
 }
@@ -91,10 +89,6 @@ export function normalizeDownloadInput(value: string, source: DownloadSource): {
             const match = parsed.pathname.match(/^\/(?:@([A-Za-z0-9_][A-Za-z0-9_.-]{0,99})\/vods\/(\d+)|clips\/(\d+))\/?$/);
             if (!match) return null;
             return { url: match[3] ? `https://ci.me/clips/${match[3]}` : `https://ci.me/@${match[1]}/vods/${match[2]}`, collection: false, source: 'cime' };
-        }
-        if (['vod.sooplive.com', 'vod.sooplive.co.kr', 'vod.afreecatv.com'].includes(host)) {
-            const match = parsed.pathname.match(/^\/player\/(\d+)(?:\/(catch|catchstory))?\/?$/);
-            return match ? { url: `https://vod.sooplive.com/player/${match[1]}${match[2] ? '/' + match[2] : ''}`, collection: false, source: 'soop' } : null;
         }
         if (source !== 'external') return null;
         parsed.hash = '';

@@ -68,7 +68,7 @@ def test_normal_server_start_is_not_named_error():
 
 
 def test_third_party_lowercase_level_names_do_not_break_log_viewer():
-    record = logging.LogRecord('phrolova.soop', logging.ERROR, '', 1, 'failed', (), None)
+    record = logging.LogRecord('phrolova.cime', logging.ERROR, '', 1, 'failed', (), None)
     record.levelname = 'error'
     assert '| ERROR ' in _make_formatter().format(record)
     assert record.levelname == 'error'
@@ -127,7 +127,7 @@ def test_pipeline_loggers_are_per_channel_and_platform():
     from app.engine.pipeline import YtdlpLivePipeline
     a,b = YtdlpLivePipeline('same'),YtdlpLivePipeline('same')
     a._logger = get_platform_logger('chzzk','recording')
-    b._logger = get_platform_logger('soop','recording')
+    b._logger = get_platform_logger('cime','recording')
     output = io.StringIO()
     handler = logging.StreamHandler(output)
     handler.setFormatter(_make_formatter())
@@ -138,7 +138,7 @@ def test_pipeline_loggers_are_per_channel_and_platform():
     finally:
         logger.removeHandler(handler)
     lines = output.getvalue().splitlines()
-    assert 'CHZZK/RECORDING' in lines[0] and 'SOOP/RECORDING' in lines[1]
+    assert 'CHZZK/RECORDING' in lines[0] and 'CIME/RECORDING' in lines[1]
 
 
 @pytest.fixture

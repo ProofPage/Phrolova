@@ -1,7 +1,6 @@
 {
   "치지직": "platform.chzzk",
   "유튜브": "platform.youtube",
-  "숲": "platform.soop",
   "씨미": "platform.cime",
   "워크스페이스를 준비하고 있습니다": "common.preparingYourWorkspace",
   "화면을 표시하지 못했습니다.": "common.unableToDisplayThisPage",
@@ -11,7 +10,6 @@
   "채널이 추가되었습니다.": "live.channelAdded",
   "치지직 채널 ID 또는 https://chzzk.naver.com/...": "live.chzzkChannelIDOrHttpsChzzkNaverCom",
   "핸들(@username) 또는 채널 ID": "live.handleUsernameOrChannelID",
-  "숲 채널 ID 또는 https://play.sooplive.com/...": "live.soopChannelIDOrHttpsPlaySoopliveCom",
   "씨미 채널 ID 또는 https://ci.me/@...": "live.cimeChannelIDOrHttpsCiMe",
   "채널 ID": "live.channelID",
   "감시 채널 추가": "live.addMonitoredChannel",

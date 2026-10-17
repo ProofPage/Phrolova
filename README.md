@@ -2,7 +2,7 @@
 
 **Record live streams. Download videos. Manage your archive.**
 
-Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, SOOP, CIME, Kick, Twitch, TikTok, Bilibili, PandaTV, PopkonTV and RPLAY**. Monitor channels, preview broadcasts, manage downloads and verify saved media in one web dashboard. Run the packaged app on Windows, or install from source on Linux, macOS or Android with Termux.
+Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, CIME, Kick, Twitch, TikTok, Bilibili, PandaTV, PopkonTV and RPLAY**. Monitor channels, preview broadcasts, manage downloads and verify saved media in one web dashboard. Run the packaged app on Windows, or install from source on Linux, macOS or Android with Termux.
 
 [Download](https://github.com/ProofPage/Phrolova/releases/latest) · [Release notes](docs/release-notes/README.md) · [Changelog](docs/CHANGELOG.md)
 
@@ -23,13 +23,12 @@ The interface supports **Korean, English, Japanese, Spanish, German, Simplified 
 
 ### Supported sources
 
-The dashboard provides **11 live platforms** and **18 video source choices**, including supported external links. PandaTV is live-only; PopkonTV supports live broadcasts, VODs and clips.
+The dashboard provides **10 live platforms** and **17 video source choices**, including supported external links. PandaTV is live-only; PopkonTV supports live broadcasts, VODs and clips.
 
 | Source | Live | Videos | Authentication when required |
 | --- | --- | --- | --- |
 | CHZZK | Monitoring, preview, manual/automatic recording and Time Machine | VODs and clips | Naver account cookies |
 | YouTube | Monitoring, preview and manual/automatic recording | Videos and channel imports | Uploaded cookies for authenticated video access |
-| SOOP | Monitoring, preview and manual/automatic recording | VODs and multi-part videos | Platform cookies |
 | CIME | Monitoring, preview and manual/automatic recording | VODs and clips | Platform cookies |
 | Kick | Streamlink monitoring integration, preview and manual/automatic recording | VODs and clips via yt-dlp | Optional Kick cookies; required for sign-in-only qualities |
 | Twitch | Monitoring, preview and manual/automatic recording via Streamlink | VODs and individual clips via yt-dlp | Optional Twitch Netscape cookies |
@@ -177,7 +176,7 @@ Source installations read root `.env`, with `backend/.env` as a legacy fallback.
 | `VOD_FORMAT`, `VOD_MAX_SPEED` | `mp4`, `0` for unlimited speed in MB/s |
 | `KEEP_DOWNLOAD_PARTS` | `false` |
 | `FILE_INSPECTION_TIMEOUT` | `120` seconds; allowed range 1–600 |
-| `YOUTUBE_COOKIE_FILE`, `SOOP_COOKIE_FILE`, `CIME_COOKIE_FILE`, `KICK_COOKIE_FILE`, `TWITCH_COOKIE_FILE`, `TIKTOK_COOKIE_FILE`, `BILIBILI_COOKIE_FILE`, `PANDALIVE_COOKIE_FILE`, `POPKONTV_COOKIE_FILE`, `TVCHAK_COOKIE_FILE` | Optional Netscape cookie files; upload through Settings → Authentication |
+| `YOUTUBE_COOKIE_FILE`, `CIME_COOKIE_FILE`, `KICK_COOKIE_FILE`, `TWITCH_COOKIE_FILE`, `TIKTOK_COOKIE_FILE`, `BILIBILI_COOKIE_FILE`, `PANDALIVE_COOKIE_FILE`, `POPKONTV_COOKIE_FILE`, `TVCHAK_COOKIE_FILE` | Optional Netscape cookie files; upload through Settings → Authentication |
 
 Use absolute media paths. Relative paths follow the working directory; the source manager starts from `backend/`. Enter actual paths in `.env` rather than relying on shell-variable expansion. Saved preferences are preserved when defaults change in a later release.
 
@@ -185,7 +184,7 @@ TVChak accepts work and episode links under `tvchak208.com/index.php/vod/`. Site
 
 Animaru, TVChak, TVWiki and Anilife also accept changing numeric domain suffixes (`animaru[0-9]+.com`, `tvchak[0-9]+.com`, `tvwiki[0-9]+.net`, `anilife[0-9]+.tv`). Paste the current work/episode address; its hostname is preserved throughout selection and downloading. Website redirects stay within the same domain family, and cookies remain scoped to each original domain.
 
-CHZZK account cookies use `NID_AUT` and `NID_SES`. YouTube, SOOP, CIME, Kick, Twitch, TikTok and Bilibili use their corresponding `*_COOKIE_FILE` settings. Kick uses registered cookies for both live quality resolution and VOD extraction so sign-in-only qualities can appear. Register a Netscape cookie file under Settings → Authentication → Kick, then refresh the quality list or retry video metadata. Only advertised qualities are offered; explicitly requested 1080p is never silently replaced with 720p. Kick cookies and API authorization stay scoped to Kick and are not forwarded to unrelated media CDNs.
+CHZZK account cookies use `NID_AUT` and `NID_SES`. YouTube, CIME, Kick, Twitch, TikTok and Bilibili use their corresponding `*_COOKIE_FILE` settings. Kick uses registered cookies for both live quality resolution and VOD extraction so sign-in-only qualities can appear. Register a Netscape cookie file under Settings → Authentication → Kick, then refresh the quality list or retry video metadata. Only advertised qualities are offered; explicitly requested 1080p is never silently replaced with 720p. Kick cookies and API authorization stay scoped to Kick and are not forwarded to unrelated media CDNs.
 
 Twitch accepts channel IDs and channel URLs for live monitoring, `/videos/<id>` URLs for VODs, and `clips.twitch.tv/<slug>` or channel clip URLs for clips. Register an optional cookie file under Settings → Authentication → Twitch when account access is needed. The `auth-token` cookie is passed through Streamlink's Twitch API option; OAuth headers are not forwarded to media CDNs. The recorder uses the Twitch-specific HLS reader for stream transitions. Deleted, unavailable or restricted videos remain errors. See the [Streamlink Twitch documentation](https://streamlink.github.io/cli/plugins/twitch.html) for authentication and client-integrity requirements.
 

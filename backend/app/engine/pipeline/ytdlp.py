@@ -1087,10 +1087,6 @@ class YtdlpLivePipeline:
         from types import SimpleNamespace
 
         stream_type = HLSStream
-        if (urlsplit(source_page_url).hostname or "").startswith("play.sooplive."):
-            from streamlink.plugins.soop import SoopHLSStream
-
-            stream_type = SoopHLSStream
         if (urlsplit(source_page_url).hostname or "").lower() in ("kick.com", "www.kick.com"):
             from streamlink.plugins.kick import KickHLSStream
 

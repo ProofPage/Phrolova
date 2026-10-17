@@ -303,7 +303,7 @@ class VodEngine(VodPreparation):
                 else None
             )
         ]
-        if media_platform(task.source_url) in ("soop", "cime", "popkontv", "rplay", "kick", "twitch", "tiktok", "bilibili", "anilife", "linkani", "ohli24", "tvwiki", "tvchak", "animaru", "ohli365"):
+        if media_platform(task.source_url) in ("cime", "popkontv", "rplay", "kick", "twitch", "tiktok", "bilibili", "anilife", "linkani", "ohli24", "tvwiki", "tvchak", "animaru", "ohli365"):
             opts["hls_prefer_native"] = True
             opts["skip_unavailable_fragments"] = False
             opts["postprocessors"] = [
@@ -530,7 +530,7 @@ class VodEngine(VodPreparation):
                     info = await extract(cookie_file)
                 except Exception as error:
                     raise kick_access_error(error) or ValueError(redact_media_error(error)) from None
-        elif media_platform(url) in ("soop", "cime", "popkontv"):
+        elif media_platform(url) in ("cime", "popkontv"):
             try:
                 info = await with_platform_cookie_fallback(media_platform(url), extract)
             except Exception as error:
@@ -1052,7 +1052,7 @@ class VodEngine(VodPreparation):
                         raise NonRetryableDownloadError(str(access)) from None
                     raise
             return
-        if media_platform(task.url) in ("soop", "cime", "popkontv"):
+        if media_platform(task.url) in ("cime", "popkontv"):
             try:
                 await with_platform_cookie_fallback(
                     media_platform(task.url),
