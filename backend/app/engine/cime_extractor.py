@@ -9,8 +9,8 @@ from yt_dlp.extractor.common import InfoExtractor
 from yt_dlp.utils import ExtractorError, float_or_none, parse_iso8601
 
 from app.engine.cime import (CIME_ORIGIN, _http_url, cime_headers,
-                             extract_cime_body_data, parse_cime_video_url,
-                             permission_required, playback_url)
+                             extract_cime_body_data, get_cime_sign_cookie_header,
+                             parse_cime_video_url, permission_required, playback_url)
 
 CIME_AUTH_MESSAGE = "씨미 로그인이 필요하거나 이 콘텐츠의 시청 권한이 없습니다."
 
@@ -62,6 +62,9 @@ class CimeIE(InfoExtractor):
                 raise ExtractorError(CIME_AUTH_MESSAGE, expected=True)
             raise ExtractorError("씨미 영상의 재생 정보를 찾을 수 없습니다.", expected=True)
         headers = cime_headers(route["url"])
+        sign_cookies = get_cime_sign_cookie_header(route["id"], referer=route["url"])
+        if sign_cookies:
+            headers["Cookie"] = sign_cookies
         if ".m3u8" in media.split("?", 1)[0].lower():
             try:
                 formats = self._extract_m3u8_formats(media, route["id"], "mp4", entry_protocol="m3u8_native",

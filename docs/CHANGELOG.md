@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.21] - 2026-10-17
+
+### Fixed
+- Request and attach CloudFront signed cookies (`CloudFront-Policy`, `CloudFront-Signature`, `CloudFront-Key-Pair-Id`) via `/api/app/streams/sign-cookie` in `CimeIE`, eliminating 403 Forbidden errors when downloading CIME VODs and clips.
+
 ## [2.0.80-preview.20] - 2026-10-17
 
 ### Changed

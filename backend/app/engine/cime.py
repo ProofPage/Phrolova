@@ -124,6 +124,26 @@ def cime_headers(referer: str = CIME_ORIGIN + "/") -> dict[str, str]:
             "Accept": "application/json, application/vnd.apple.mpegurl, */*"}
 
 
+def get_cime_sign_cookie_header(video_id: str, *, kind: str = "VIDEO", referer: str = CIME_ORIGIN + "/") -> str | None:
+    """Request CloudFront signed cookies required for CIME VOD and clip playback."""
+    from app.engine.platform_auth import platform_cookie_jar
+    headers = cime_headers(referer)
+    payload = {"type": kind.upper(), "videoId": str(video_id)}
+    try:
+        with httpx.Client(timeout=10.0, headers=headers, cookies=platform_cookie_jar("cime"), follow_redirects=True) as client:
+            resp = client.post(f"{CIME_ORIGIN}/api/app/streams/sign-cookie", json=payload)
+            if resp.status_code == 200:
+                cookies = []
+                for name, value in resp.cookies.items():
+                    if name.startswith("CloudFront-"):
+                        cookies.append(f"{name}={value}")
+                if cookies:
+                    return "; ".join(cookies)
+    except Exception as e:
+        logger.debug(f"[CIME] sign-cookie 발급 실패 (videoId={video_id}): {e}")
+    return None
+
+
 def _http_url(value: Any) -> str | None:
     if not isinstance(value, str) or not value or any(c in value for c in "\r\n"):
         return None
