@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.17] - 2026-10-17
+
+### Fixed
+- Fix `ImportError: cannot import name 'USER_AGENT' from 'app.core.config'` in `hearheart.py` by importing from `app.core.http`.
+
 ## [2.0.80-preview.16] - 2026-10-17
 
 ### Fixed

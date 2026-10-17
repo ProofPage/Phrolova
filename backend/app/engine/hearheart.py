@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from urllib.parse import urlsplit, urlunsplit
 
-from app.core.config import USER_AGENT
+from app.core.http import USER_AGENT
 
 HEARHEART_ORIGIN = "https://hearheart.com"
 HEARHEART_DOMAINS = ("hearheart.com", "www.hearheart.com")
