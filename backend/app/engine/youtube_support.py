@@ -46,10 +46,12 @@ def runtime_cli_options():
 
 
 def youtube_extractor_command():
-    # 배포 파일 옆의 오래된 yt-dlp.exe 대신 앱과 같은 추출기를 별도 프로세스에서 사용한다.
-    if getattr(sys, 'frozen', False):
-        return [sys.executable, '--youtube-worker']
-    return [sys.executable, str(Path(__file__).with_name('youtube_worker.py'))]
+    try:
+        return [get_settings().resolve_ytdlp_path()]
+    except Exception:
+        if getattr(sys, 'frozen', False):
+            return [sys.executable, '--youtube-worker']
+        return [sys.executable, str(Path(__file__).with_name('youtube_worker.py'))]
 
 
 def youtube_options():
@@ -58,15 +60,7 @@ def youtube_options():
 
 
 def require_runtime_cli_options():
-    args = runtime_cli_options()
-    if not args:
-        from app.engine.recording_errors import RecordingError
-
-        raise RecordingError(
-            "youtube_runtime",
-            "유튜브 추출에 필요한 JavaScript 실행 도구를 찾을 수 없습니다. Deno 또는 Node.js 22 이상을 설치한 뒤 다시 시작하세요.",
-        )
-    return args
+    return runtime_cli_options()
 
 
 @contextmanager

@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.20] - 2026-10-17
+
+### Changed
+- Switch YouTube live detection and stream resolution to use the standard `yt-dlp` executable (`resolve_ytdlp_path`) directly, matching other platforms.
+- Make JavaScript runtime CLI options optional instead of failing with a blocking error when Node/Deno are not present.
+
 ## [2.0.80-preview.19] - 2026-10-17
 
 ### Fixed
