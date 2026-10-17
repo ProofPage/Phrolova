@@ -47,9 +47,28 @@ def normalize_soop_vod_url(value: str) -> str:
     except ValueError:
         raise ValueError('올바른 숲 다시보기 또는 클립 링크를 입력하세요.') from None
 
+def is_soop_streamer_running() -> bool:
+    """Check if SOOPStreamer.exe or AfreecaStreamer.exe process is running."""
+    import sys, subprocess
+    if sys.platform != "win32":
+        return False
+    try:
+        output = subprocess.check_output(
+            ["tasklist", "/fi", "IMAGENAME eq SOOPStreamer.exe", "/nh"],
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            text=True,
+            timeout=2.0
+        )
+        return "SOOPStreamer.exe" in output or "AfreecaStreamer.exe" in output
+    except Exception:
+        return False
+
+
 async def check_agent_available() -> bool:
     """Check if the local SOOPStreamer agent is running on 127.0.0.1."""
-    for port in (15530, 2935, 26737):
+    if is_soop_streamer_running():
+        return True
+    for port in (15530, 2935, 26737, 21201, 50801, 10023):
         try:
             _, writer = await asyncio.wait_for(asyncio.open_connection("127.0.0.1", port), timeout=0.5)
             writer.close()
@@ -156,14 +175,15 @@ class SoopLiveEngine:
 
         # 로컬 고화질 스트리머(SOOPStreamer)가 실행 중인 경우 로컬 1080p 원본 스트림 우선 연결
         if await check_agent_available():
-            for agent_url in (f"http://127.0.0.1:2935/{bno}/playlist.m3u8", f"http://localhost:2935/{bno}/playlist.m3u8"):
-                try:
-                    async with httpx.AsyncClient(timeout=1.0) as client:
-                        resp = await client.get(agent_url)
-                        if resp.status_code == 200 and "#EXTM3U" in resp.text:
-                            return agent_url, {'User-Agent': USER_AGENT, 'Referer': page, 'Origin': ORIGIN}, None
-                except Exception:
-                    pass
+            for port in (2935, 6935, 50801, 10023):
+                for agent_url in (f"http://127.0.0.1:{port}/{bno}/playlist.m3u8", f"http://localhost:{port}/{bno}/playlist.m3u8", f"http://127.0.0.1:{port}/{cid}/playlist.m3u8"):
+                    try:
+                        async with httpx.AsyncClient(timeout=1.0) as client:
+                            resp = await client.get(agent_url)
+                            if resp.status_code == 200 and "#EXTM3U" in resp.text:
+                                return agent_url, {'User-Agent': USER_AGENT, 'Referer': page, 'Origin': ORIGIN}, None
+                    except Exception:
+                        pass
 
         def resolve(authenticated: bool):
             from streamlink import Streamlink

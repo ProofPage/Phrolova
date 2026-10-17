@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.26] - 2026-10-17
+
+### Fixed
+- Expand SOOPStreamer local agent detection to inspect active Windows process state (`SOOPStreamer.exe`) and check dynamic stream ports (50801, 10023, 6935, 2935).
+
 ## [2.0.80-preview.25] - 2026-10-17
 
 ### Added
