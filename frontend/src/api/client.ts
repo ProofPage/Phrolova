@@ -196,6 +196,13 @@ export interface Settings {
     chzzk_vod_cdn?: ChzzkVodCdn;
     recording_quality: string;
 
+    // 유튜브 스트리밍 및 SABR 설정
+    youtube_sabr_priority?: "auto" | "sabr_fallback" | "sabr_first";
+    youtube_codec_priority?: "av1" | "vp9" | "h264";
+    youtube_time_machine_enabled?: boolean;
+    youtube_prefer_resolution_over_timemachine?: boolean;
+    youtube_po_token_provider_url?: string;
+
     // VOD 설정
     vod_max_concurrent: number;
     vod_default_quality: string;
@@ -546,9 +553,17 @@ export const api = {
         recording_quality: string,
         chzzk_live_cdn: ChzzkVodCdn = "akamai",
         location?: { live_download_dir: string; monitor_interval: number },
+        youtube_options?: {
+            youtube_sabr_priority?: "auto" | "sabr_fallback" | "sabr_first";
+            youtube_codec_priority?: "av1" | "vp9" | "h264";
+            youtube_time_machine_enabled?: boolean;
+            youtube_prefer_resolution_over_timemachine?: boolean;
+            youtube_po_token_provider_url?: string;
+        },
     ) => {
         const res = await client.put("/settings/live", {
             ...location,
+            ...youtube_options,
             max_record_retries,
             chzzk_live_cdn,
             chzzk_stream_mode,

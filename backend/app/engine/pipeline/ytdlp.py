@@ -1396,16 +1396,53 @@ class YtdlpLivePipeline:
         )
         youtube = is_youtube_url(page_url)
         if youtube:
-            # YouTube live HLS can expose only separate video/audio renditions.
-            # Resolve a video format, then let Streamlink select both tracks
-            # from its master playlist using the requested recording quality.
+            settings = get_settings()
+            sabr_priority = getattr(settings, "youtube_sabr_priority", "auto")
+            codec_priority = getattr(settings, "youtube_codec_priority", "av1")
+            time_machine = getattr(settings, "youtube_time_machine_enabled", False)
+            prefer_res = getattr(settings, "youtube_prefer_resolution_over_timemachine", True)
+
             preference = "worst" if quality == "worst" else "best"
             limit = f"[height<={height[1]}]" if height else ""
-            selectors = [f"{preference}[protocol^=m3u8]{limit}",
-                         f"{preference}video[protocol^=m3u8]{limit}"]
+            codec_filter = ""
+            if codec_priority == "av1":
+                codec_filter = "[vcodec^=av01]"
+            elif codec_priority == "vp9":
+                codec_filter = "[vcodec^=vp9]"
+            elif codec_priority == "h264":
+                codec_filter = "[vcodec^=avc1]"
+
+            selectors = []
+            if sabr_priority == "sabr_first":
+                if codec_filter:
+                    selectors.append(f"{preference}[protocol^=sabr]{limit}{codec_filter}")
+                selectors.append(f"{preference}[protocol^=sabr]{limit}")
+                selectors.append(f"{preference}[protocol^=m3u8]{limit}")
+                selectors.append(f"{preference}video[protocol^=m3u8]{limit}")
+            elif sabr_priority == "sabr_fallback":
+                selectors.append(f"{preference}[protocol^=m3u8]{limit}")
+                selectors.append(f"{preference}video[protocol^=m3u8]{limit}")
+                if codec_filter:
+                    selectors.append(f"{preference}[protocol^=sabr]{limit}{codec_filter}")
+                selectors.append(f"{preference}[protocol^=sabr]{limit}")
+            else: # auto
+                # 2k+ or high resolution: prefer SABR for quality if prefer_res is true
+                if height and int(height[1]) >= 1440 and prefer_res:
+                    if codec_filter:
+                        selectors.append(f"{preference}[protocol^=sabr]{limit}{codec_filter}")
+                    selectors.append(f"{preference}[protocol^=sabr]{limit}")
+                elif time_machine:
+                    selectors.append(f"{preference}[protocol^=mpd]{limit}")
+                selectors.append(f"{preference}[protocol^=m3u8]{limit}")
+                selectors.append(f"{preference}video[protocol^=m3u8]{limit}")
+                if codec_filter:
+                    selectors.append(f"{preference}[protocol^=sabr]{limit}{codec_filter}")
+                selectors.append(f"{preference}[protocol^=sabr]{limit}")
+
             if limit:
-                selectors += [f"{preference}[protocol^=m3u8]",
-                              f"{preference}video[protocol^=m3u8]"]
+                selectors.append(f"{preference}[protocol^=m3u8]")
+                selectors.append(f"{preference}video[protocol^=m3u8]")
+                selectors.append(f"{preference}[protocol^=sabr]")
             fmt = "/".join(selectors)
 
         cmd = [

@@ -126,6 +126,12 @@ async def get_current_settings():
         "vod_max_concurrent": settings.vod_max_concurrent,
         "vod_default_quality": settings.vod_default_quality,
         "vod_max_speed": settings.vod_max_speed,
+        # 유튜브 고급 스트리밍 및 SABR 설정
+        "youtube_sabr_priority": settings.youtube_sabr_priority,
+        "youtube_codec_priority": settings.youtube_codec_priority,
+        "youtube_time_machine_enabled": settings.youtube_time_machine_enabled,
+        "youtube_prefer_resolution_over_timemachine": settings.youtube_prefer_resolution_over_timemachine,
+        "youtube_po_token_provider_url": settings.youtube_po_token_provider_url,
         # Discord 설정
         "discord_notification_channel_id": settings.discord_notification_channel_id,
         "discord_command_user_ids": settings.discord_command_user_ids,

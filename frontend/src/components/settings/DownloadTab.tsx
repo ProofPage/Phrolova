@@ -1,7 +1,7 @@
 import { translate } from "../../i18n";
 import { RecordingOutputSettingsCard } from './RecordingOutputSettingsCard';
 import { useEffect, useRef, useState } from "react";
-import { Film, Radio, Save } from "lucide-react";
+import { Film, Radio, Save, Video } from "lucide-react";
 import { api, type RecordingOutputSettings, type Settings as SettingsType } from "../../api/client";
 import { getErrorMessage } from "../../utils/error";
 import { useToast } from "../ui/Toast";
@@ -42,6 +42,11 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [vodFormat, setVodFormat] = useState("mp4");
     const [liveCdn, setLiveCdn] = useState<"default" | "akamai">("akamai");
     const [cdn, setCdn] = useState<"default" | "akamai">("akamai");
+    const [youtubeSabrPriority, setYoutubeSabrPriority] = useState<"auto" | "sabr_fallback" | "sabr_first">("auto");
+    const [youtubeCodecPriority, setYoutubeCodecPriority] = useState<"av1" | "vp9" | "h264">("av1");
+    const [youtubeTimeMachine, setYoutubeTimeMachine] = useState(false);
+    const [youtubePreferResolution, setYoutubePreferResolution] = useState(true);
+    const [youtubePoTokenUrl, setYoutubePoTokenUrl] = useState("");
     const initialized = useRef(false);
     useEffect(() => {
         let active = true;
@@ -72,6 +77,11 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         setVodFormat(settings.vod_format || "mp4");
         setLiveCdn(settings.chzzk_live_cdn ?? "akamai");
         setCdn(settings.chzzk_vod_cdn ?? "akamai");
+        setYoutubeSabrPriority(settings.youtube_sabr_priority || "auto");
+        setYoutubeCodecPriority(settings.youtube_codec_priority || "av1");
+        setYoutubeTimeMachine(settings.youtube_time_machine_enabled ?? false);
+        setYoutubePreferResolution(settings.youtube_prefer_resolution_over_timemachine ?? true);
+        setYoutubePoTokenUrl(settings.youtube_po_token_provider_url || "");
         setVodFilenameTemplate(settings.vod_filename_template || "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}");
     }, [settings]);
     const liveDirty = !!settings && (
@@ -83,6 +93,11 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         streamMode !== (settings.chzzk_stream_mode ?? (settings.chzzk_time_machine_enabled === false ? "standard" : "force-timemachine")) ||
         timeMachineOffset !== (settings.chzzk_time_machine_offset ?? settings.chzzk_time_machine_shift ?? 0) ||
         saveLivePreview !== (settings.save_live_preview ?? false) ||
+        youtubeSabrPriority !== (settings.youtube_sabr_priority || "auto") ||
+        youtubeCodecPriority !== (settings.youtube_codec_priority || "av1") ||
+        youtubeTimeMachine !== (settings.youtube_time_machine_enabled ?? false) ||
+        youtubePreferResolution !== (settings.youtube_prefer_resolution_over_timemachine ?? true) ||
+        youtubePoTokenUrl !== (settings.youtube_po_token_provider_url || "") ||
         liveFilenameTemplate !== (settings.live_filename_template || "[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}")
     );
     const vodDirty = !!settings && (
@@ -136,6 +151,13 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                 maxRetries, streamMode, timeMachineOffset,
                 saveLivePreview, liveFilenameTemplate, recordingQuality, liveCdn,
                 { live_download_dir: liveDownloadDir.trim(), monitor_interval: monitorInterval },
+                {
+                    youtube_sabr_priority: youtubeSabrPriority,
+                    youtube_codec_priority: youtubeCodecPriority,
+                    youtube_time_machine_enabled: youtubeTimeMachine,
+                    youtube_prefer_resolution_over_timemachine: youtubePreferResolution,
+                    youtube_po_token_provider_url: youtubePoTokenUrl.trim() || undefined,
+                }
             );
             setLiveDownloadDir(liveDownloadDir.trim());
         }});
@@ -272,6 +294,75 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                     </details>
                 </Field>
                 {saveErrors.live != null && <p role="alert" className="text-xs text-danger break-words">{getErrorMessage(saveErrors.live, 'settings.couldNotSaveLiveSettings')}</p>}
+            </Card>
+
+            <Card className="settings-section space-y-3" data-settings-section="youtube" aria-busy={saving}>
+                <CardHeader icon={Video} title={translate("settings.youtubeStreamingSettings")} />
+
+                <div className="text-xs text-ink-muted bg-surface-muted/40 p-3.5 rounded space-y-2 border border-line/60">
+                    <p className="font-medium text-ink">{t('settings.youtubeRuntimeNotice')}</p>
+                    <p className="flex items-center gap-2">
+                        <span>• {t('settings.youtubeJsRuntime')}:</span>
+                        <a href="https://deno.com" target="_blank" rel="noreferrer" className="text-primary hover:underline font-mono">Deno ({t('settings.youtubeLink')})</a>
+                    </p>
+                    <p className="flex items-center gap-2">
+                        <span>• {t('settings.youtubePoProvider')}:</span>
+                        <a href="https://github.com/Brainicism/bgutil-ytdlp-pot-provider" target="_blank" rel="noreferrer" className="text-primary hover:underline font-mono">bgutil-ytdlp-pot-provider ({t('settings.youtubeLink')})</a>
+                    </p>
+                </div>
+
+                <Field label={translate("settings.youtubeSabrPriority")} hint={translate("settings.youtubeSabrPriorityHint")}>
+                    <Select
+                        value={youtubeSabrPriority}
+                        onChange={(event) => setYoutubeSabrPriority(event.target.value as typeof youtubeSabrPriority)}
+                        options={[
+                            { value: "auto", label: translate("settings.youtubeSabrAuto") },
+                            { value: "sabr_fallback", label: translate("settings.youtubeSabrFallback") },
+                            { value: "sabr_first", label: translate("settings.youtubeSabrFirst") },
+                        ]}
+                    />
+                </Field>
+
+                <Field label={translate("settings.youtubeCodecPriority")} hint={translate("settings.youtubeCodecPriorityHint")}>
+                    <Select
+                        value={youtubeCodecPriority}
+                        onChange={(event) => setYoutubeCodecPriority(event.target.value as typeof youtubeCodecPriority)}
+                        options={[
+                            { value: "av1", label: "AV1 > VP9 > H.264" },
+                            { value: "vp9", label: "VP9 > AV1 > H.264" },
+                            { value: "h264", label: "H.264 (AVC) 우선" },
+                        ]}
+                    />
+                </Field>
+
+                <SettingRow
+                    label={translate("settings.youtubeTimeMachine")}
+                    hint={translate("settings.youtubeTimeMachineHint")}
+                    control={<Switch checked={youtubeTimeMachine} onChange={setYoutubeTimeMachine} label={translate("settings.youtubeTimeMachine")} />}
+                />
+
+                <SettingRow
+                    label={translate("settings.youtubePreferResolution")}
+                    hint={translate("settings.youtubePreferResolutionHint")}
+                    control={<Switch checked={youtubePreferResolution} onChange={setYoutubePreferResolution} label={translate("settings.youtubePreferResolution")} />}
+                />
+
+                <Field label={translate("settings.youtubePoTokenUrl")} hint={translate("settings.youtubePoTokenUrlHint")}>
+                    <Input
+                        value={youtubePoTokenUrl}
+                        onChange={(event) => setYoutubePoTokenUrl(event.target.value)}
+                        placeholder="http://127.0.0.1:4416"
+                    />
+                </Field>
+
+                <details className="settings-field-help text-xs text-ink-muted">
+                    <summary className="cursor-pointer text-ink font-medium">{t('settings.youtubeProtocolComparison')}</summary>
+                    <div className="mt-2 space-y-1.5 leading-relaxed bg-surface-2 p-3 rounded">
+                        <div>{t('settings.youtubeHlsSummary')}</div>
+                        <div>{t('settings.youtubeDashSummary')}</div>
+                        <div>{t('settings.youtubeSabrSummary')}</div>
+                    </div>
+                </details>
             </Card>
             </fieldset>
             <div className="settings-save download-settings-save">

@@ -60,6 +60,20 @@ class DownloadSettingsUpdateRequest(BaseModel):
         description="라이브 녹화 파일명 형식",
     )
     recording_quality: Optional[str] = Field(None, description="라이브 녹화 품질 (best, 1080p, 720p, 480p)")
+    # 유튜브 전용 스트리밍 설정
+    youtube_sabr_priority: Optional[Literal["auto", "sabr_fallback", "sabr_first"]] = Field(
+        None, description="유튜브 SABR 프로토콜 우선순위"
+    )
+    youtube_codec_priority: Optional[Literal["av1", "vp9", "h264"]] = Field(
+        None, description="유튜브 코덱 우선순위"
+    )
+    youtube_time_machine_enabled: Optional[bool] = Field(None, description="유튜브 타임머신 활성화 여부")
+    youtube_prefer_resolution_over_timemachine: Optional[bool] = Field(
+        None, description="2K+ 해상도 우선 vs 타임머신 우선 여부"
+    )
+    youtube_po_token_provider_url: Optional[str] = Field(
+        None, max_length=1024, description="유튜브 PO 토큰 제공자 URL"
+    )
 
 
 class VodSettingsUpdateRequest(BaseModel):

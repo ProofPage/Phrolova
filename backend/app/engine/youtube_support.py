@@ -60,7 +60,13 @@ def youtube_options():
 
 
 def require_runtime_cli_options():
-    return runtime_cli_options()
+    args = runtime_cli_options()
+    settings = get_settings()
+    if settings.youtube_po_token_provider_url:
+        provider = settings.youtube_po_token_provider_url.strip()
+        if provider:
+            args.extend(["--extractor-args", f"youtubepot:provider={provider}"])
+    return args
 
 
 @contextmanager

@@ -210,6 +210,12 @@ class Settings(BaseSettings):
     vod_default_quality: str = "best"  # 기본 화질: best, 1080p, 720p, 480p
     vod_max_speed: int = 0             # 최대 다운로드 속도 (MB/s, 0 = 무제한)
 
+    # ── 유튜브 스트림 및 SABR/DASH 프로토콜 설정 ───────────
+    youtube_sabr_priority: Literal["auto", "sabr_fallback", "sabr_first"] = "auto"
+    youtube_codec_priority: Literal["av1", "vp9", "h264"] = "av1"
+    youtube_time_machine_enabled: bool = False
+    youtube_prefer_resolution_over_timemachine: bool = True
+    youtube_po_token_provider_url: Optional[str] = None
 
     youtube_cookie_file: Optional[str] = None
     cime_cookie_file: Optional[str] = None

@@ -502,6 +502,7 @@ class RecordingFinalizer:
             "warning",
             "-nostdin",
             "-n",
+            "-ignore_unknown",
         ]
         for source in sources:
             cmd += ["-i", str(source)]
@@ -670,6 +671,7 @@ class RecordingFinalizer:
                     "warning",
                     "-nostdin",
                     "-n",
+                    "-ignore_unknown",
                 ]
                 for source in sources:
                     cmd += ["-i", str(source)]
