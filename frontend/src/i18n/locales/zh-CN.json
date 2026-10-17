@@ -358,6 +358,8 @@
   "settings.saveTheLiveThumbnailNextToTheRecording": "将 CHZZK 直播缩略图保存在录制文件旁。",
   "settings.doNotSavePreviewImagesAsSeparateFiles": "不单独保存预览图片。",
   "settings.liveRecordingFilenameFormat": "直播文件名格式",
+  "settings.soopProxyAddress": "SOOP 代理地址（可选）",
+  "settings.soopProxyHint": "用于 SOOP API 认证和元数据绕过的 HTTP 或 SOCKS5 代理。视频流将通过本地网络直接下载。",
   "settings.availableFieldsNameChannelNameTitleLiveTitleChannelUidCategoryDateYearLiveDateYearDownloadDateYearLiveDateMonthLiveDateDayLiveDateHourLiveDateMinuteLiveDateSecondQualityAndExtensionTheExtensionIsAddedAutomatically": "可用字段：{name}/{channel_name}、{title}/{live_title}、{channel_uid}、{category}、{date_year}、{live_date_year}、{download_date_year}、{live_date_month}、{live_date_day}、{live_date_hour}、{live_date_minute}、{live_date_second}、{quality}、{extension}。扩展名自动添加。",
   "settings.saveLiveSettings": "保存直播设置",
   "settings.systemInformation": "基本信息",

@@ -358,6 +358,8 @@
   "settings.saveTheLiveThumbnailNextToTheRecording": "Save the CHZZK live thumbnail next to the recording.",
   "settings.doNotSavePreviewImagesAsSeparateFiles": "Do not save preview images as separate files.",
   "settings.liveRecordingFilenameFormat": "Live recording filename format",
+  "settings.soopProxyAddress": "SOOP Proxy Address (Optional)",
+  "settings.soopProxyHint": "HTTP or SOCKS5 proxy for SOOP API authentication bypass. Video streams are downloaded directly over your local network.",
   "settings.availableFieldsNameChannelNameTitleLiveTitleChannelUidCategoryDateYearLiveDateYearDownloadDateYearLiveDateMonthLiveDateDayLiveDateHourLiveDateMinuteLiveDateSecondQualityAndExtensionTheExtensionIsAddedAutomatically": "Available fields: {name}/{channel_name}, {title}/{live_title}, {channel_uid}, {category}, {date_year}, {live_date_year}, {download_date_year}, {live_date_month}, {live_date_day}, {live_date_hour}, {live_date_minute}, {live_date_second}, {quality}, and {extension}. The extension is added automatically.",
   "settings.saveLiveSettings": "Save live settings",
   "settings.systemInformation": "General information",

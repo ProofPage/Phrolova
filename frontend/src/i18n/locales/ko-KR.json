@@ -358,6 +358,8 @@
   "settings.saveTheLiveThumbnailNextToTheRecording": "치지직 라이브 썸네일을 녹화 파일 옆에 저장합니다.",
   "settings.doNotSavePreviewImagesAsSeparateFiles": "미리보기 이미지를 별도 파일로 저장하지 않습니다.",
   "settings.liveRecordingFilenameFormat": "라이브 파일명 형식",
+  "settings.soopProxyAddress": "SOOP 프록시 주소 (선택)",
+  "settings.soopProxyHint": "SOOP API 인증/메타데이터 우회용 HTTP 또는 SOCKS5 프록시입니다. 실제 영상은 로컬 네트워크로 직접 수신합니다.",
   "settings.availableFieldsNameChannelNameTitleLiveTitleChannelUidCategoryDateYearLiveDateYearDownloadDateYearLiveDateMonthLiveDateDayLiveDateHourLiveDateMinuteLiveDateSecondQualityAndExtensionTheExtensionIsAddedAutomatically": "{name}/{channel_name}, {title}/{live_title}, {channel_uid}, {category}, {date_year}, {live_date_year}, {download_date_year}, {live_date_month}, {live_date_day}, {live_date_hour}, {live_date_minute}, {live_date_second}, {quality}, {extension} 사용 가능. 확장자는 자동 추가됩니다.",
   "settings.saveLiveSettings": "라이브 설정 저장",
   "settings.systemInformation": "기본 정보",

@@ -42,6 +42,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [vodFormat, setVodFormat] = useState("mp4");
     const [liveCdn, setLiveCdn] = useState<"default" | "akamai">("akamai");
     const [cdn, setCdn] = useState<"default" | "akamai">("akamai");
+    const [soopProxy, setSoopProxy] = useState("");
     const initialized = useRef(false);
     useEffect(() => {
         let active = true;
@@ -73,6 +74,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         setLiveCdn(settings.chzzk_live_cdn ?? "akamai");
         setCdn(settings.chzzk_vod_cdn ?? "akamai");
         setVodFilenameTemplate(settings.vod_filename_template || "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}");
+        setSoopProxy(settings.soop_proxy || "");
     }, [settings]);
     const liveDirty = !!settings && (
         liveDownloadDir !== (settings.live_download_dir || settings.download_dir) ||
@@ -83,7 +85,8 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         streamMode !== (settings.chzzk_stream_mode ?? (settings.chzzk_time_machine_enabled === false ? "standard" : "force-timemachine")) ||
         timeMachineOffset !== (settings.chzzk_time_machine_offset ?? settings.chzzk_time_machine_shift ?? 0) ||
         saveLivePreview !== (settings.save_live_preview ?? false) ||
-        liveFilenameTemplate !== (settings.live_filename_template || "[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}")
+        liveFilenameTemplate !== (settings.live_filename_template || "[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}") ||
+        soopProxy !== (settings.soop_proxy || "")
     );
     const vodDirty = !!settings && (
         vodDownloadDir !== (settings.vod_download_dir || settings.download_dir) ||
@@ -136,6 +139,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                 maxRetries, streamMode, timeMachineOffset,
                 saveLivePreview, liveFilenameTemplate, recordingQuality, liveCdn,
                 { live_download_dir: liveDownloadDir.trim(), monitor_interval: monitorInterval },
+                soopProxy.trim(),
             );
             setLiveDownloadDir(liveDownloadDir.trim());
         }});
@@ -270,6 +274,9 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                         <summary>{t('settings.filenameVariables')}</summary>
                         <p>{t("settings.availableFieldsNameChannelNameTitleLiveTitleChannelUidCategoryDateYearLiveDateYearDownloadDateYearLiveDateMonthLiveDateDayLiveDateHourLiveDateMinuteLiveDateSecondQualityAndExtensionTheExtensionIsAddedAutomatically")}</p>
                     </details>
+                </Field>
+                <Field label={t("settings.soopProxyAddress")} hint={t("settings.soopProxyHint")}>
+                    <Input value={soopProxy} onChange={(event) => setSoopProxy(event.target.value)} placeholder="http://127.0.0.1:1080 또는 socks5://127.0.0.1:1080" maxLength={1024} />
                 </Field>
                 {saveErrors.live != null && <p role="alert" className="text-xs text-danger break-words">{getErrorMessage(saveErrors.live, 'settings.couldNotSaveLiveSettings')}</p>}
             </Card>

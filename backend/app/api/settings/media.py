@@ -60,6 +60,7 @@ class DownloadSettingsUpdateRequest(BaseModel):
         description="라이브 녹화 파일명 형식",
     )
     recording_quality: Optional[str] = Field(None, description="라이브 녹화 품질 (best, 1080p, 720p, 480p)")
+    soop_proxy: Optional[str] = Field(None, max_length=1024, description="SOOP API 우회 프록시 URL")
 
 
 class VodSettingsUpdateRequest(BaseModel):
@@ -148,6 +149,7 @@ async def update_download_settings(req: DownloadSettingsUpdateRequest):
             "recording_quality": settings.recording_quality,
             "live_download_dir": settings.effective_live_download_dir,
             "monitor_interval": settings.monitor_interval,
+            "soop_proxy": settings.soop_proxy,
         },
     }
 

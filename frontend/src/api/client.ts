@@ -221,6 +221,7 @@ export interface Settings {
     vod_chzzk_dir: string;
     vod_external_dir: string;
 
+    soop_proxy?: string;
     x_cookie_file?: string;
 }
 
@@ -544,6 +545,7 @@ export const api = {
         recording_quality: string,
         chzzk_live_cdn: ChzzkVodCdn = "akamai",
         location?: { live_download_dir: string; monitor_interval: number },
+        soop_proxy?: string,
     ) => {
         const res = await client.put("/settings/live", {
             ...location,
@@ -554,6 +556,7 @@ export const api = {
             save_live_preview,
             live_filename_template,
             recording_quality,
+            soop_proxy: soop_proxy ?? "",
         });
         return res.data;
     },
