@@ -133,26 +133,52 @@ export default function SystemLogs() {
                     </button>)}
                 </div>}
                 <div className="logs-file-breakdown">
-                    <h3>{t("logs.fileBreakdown")}</h3>
-                    <dl>
-                        {fileGroups.map(group => <div key={group.key}><dt>{t(group.key)} <strong>{formatNumber(group.values.length)}</strong></dt><dd>{formatBytes(group.values.reduce((total,file) => total + file.size_bytes,0))}</dd></div>)}
-                    </dl>
-                    <div className="mt-4 pt-3 border-t border-line/60 space-y-2 text-xs">
-                        <div className="flex justify-between text-ink-muted">
-                            <span>전체 로그 줄 수</span>
-                            <strong className="text-ink font-medium">{formatNumber(files.reduce((acc, f) => acc + (f.line_count || 0), 0))}줄</strong>
+                    <div className="space-y-3">
+                        <h3>{t("logs.fileBreakdown")}</h3>
+                        <dl>
+                            {fileGroups.map(group => <div key={group.key}><dt>{t(group.key)} <strong>{formatNumber(group.values.length)}</strong></dt><dd>{formatBytes(group.values.reduce((total,file) => total + file.size_bytes,0))}</dd></div>)}
+                        </dl>
+                        <div className="mt-4 pt-3 border-t border-line/60 space-y-2 text-xs">
+                            <div className="flex justify-between text-ink-muted">
+                                <span>전체 로그 줄 수</span>
+                                <strong className="text-ink font-medium">{formatNumber(files.reduce((acc, f) => acc + (f.line_count || 0), 0))}줄</strong>
+                            </div>
+                            <div className="flex justify-between text-ink-muted">
+                                <span>누적 오류 / 경고</span>
+                                <span className="font-medium">
+                                    <span className="text-danger">{files.reduce((acc, f) => acc + (f.error_count || 0), 0)}</span>
+                                    <span className="text-ink-faint mx-1">/</span>
+                                    <span className="text-warn">{files.reduce((acc, f) => acc + (f.warning_count || 0), 0)}</span>
+                                </span>
+                            </div>
+                            <div className="flex justify-between text-ink-muted">
+                                <span>실시간 감시 대상</span>
+                                <span className="text-ok font-medium">service.log</span>
+                            </div>
                         </div>
-                        <div className="flex justify-between text-ink-muted">
-                            <span>누적 오류 / 경고</span>
-                            <span className="font-medium">
-                                <span className="text-danger">{files.reduce((acc, f) => acc + (f.error_count || 0), 0)}</span>
-                                <span className="text-ink-faint mx-1">/</span>
-                                <span className="text-warn">{files.reduce((acc, f) => acc + (f.warning_count || 0), 0)}</span>
-                            </span>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-line/60 space-y-2.5 text-xs text-ink-muted bg-surface-muted/40 -mx-4 -mb-4.5 p-4 rounded-b">
+                        <div className="text-[11px] font-semibold text-ink uppercase tracking-wider">시스템 로깅 규격</div>
+                        <div className="flex justify-between">
+                            <span>보관 디렉터리</span>
+                            <span className="font-mono text-ink text-[11px]">/logs</span>
                         </div>
-                        <div className="flex justify-between text-ink-muted">
-                            <span>실시간 감시 대상</span>
-                            <span className="text-ok font-medium">service.log</span>
+                        <div className="flex justify-between">
+                            <span>로그 순환 주기</span>
+                            <span className="text-ink">일 단위 (자정 기준)</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span>인코딩 및 개행</span>
+                            <span className="text-ink">UTF-8 / LF</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span>타임스탬프 형식</span>
+                            <span className="font-mono text-ink text-[11px]">YYYY-MM-DD HH:mm:ss</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span>스트림 분할 정책</span>
+                            <span className="text-ok">채널·서비스별 분리</span>
                         </div>
                     </div>
                 </div>
