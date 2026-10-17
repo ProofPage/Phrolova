@@ -124,8 +124,8 @@ export default function SystemLogs() {
                             <span>{formatBytes(file.size_bytes)}{file.line_count !== undefined ? ` · ${t('logs.linesCount', { count: formatNumber(file.line_count) })}` : ''}</span>
                             {(file.error_count || file.warning_count) ? (
                                 <span className="flex items-center gap-1.5 text-[10px]">
-                                    {Boolean(file.error_count) && <span className="text-danger font-semibold">{t('logs.errorCountBadge', { count: file.error_count })}</span>}
-                                    {Boolean(file.warning_count) && <span className="text-warn font-semibold">{t('logs.warningCountBadge', { count: file.warning_count })}</span>}
+                                    {Boolean(file.error_count) && <span className="text-danger font-semibold">{t('logs.errorCountBadge', { count: file.error_count ?? 0 })}</span>}
+                                    {Boolean(file.warning_count) && <span className="text-warn font-semibold">{t('logs.warningCountBadge', { count: file.warning_count ?? 0 })}</span>}
                                 </span>
                             ) : null}
                         </div>
