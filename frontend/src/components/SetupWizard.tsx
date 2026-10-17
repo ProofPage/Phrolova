@@ -91,11 +91,13 @@ function Step1({ data, onChange }: { data: FormData; onChange: (key: keyof FormD
 
 function Step2({ data }: { data: FormData }) {
     useLanguage();
+    const qualityLabel = qualities.find((option) => option.value === data.recording_quality)?.label;
+    const formatLabel = RECORDING_OUTPUT_FORMATS.find((option) => option.value === data.output_format)?.label;
     const rows = [
         { label: "settings.liveRecordingLocation", value: data.live_download_dir.trim(), path: true },
         { label: "setup.videoSaveLocation", value: data.vod_download_dir.trim(), path: true },
-        { label: "settings.liveRecordingResolution", value: qualities.find((option) => option.value === data.recording_quality)?.label, path: false },
-        { label: "live.outputFormatAfterRecording", value: RECORDING_OUTPUT_FORMATS.find((option) => option.value === data.output_format)?.label, path: false },
+        { label: "settings.liveRecordingResolution", value: qualityLabel ? translate(qualityLabel) : data.recording_quality, path: false },
+        { label: "live.outputFormatAfterRecording", value: formatLabel ? translate(formatLabel) : data.output_format, path: false },
     ];
     return <div className="setup-review">
         <dl className="setup-summary">

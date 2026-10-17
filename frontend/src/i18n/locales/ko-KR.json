@@ -905,5 +905,16 @@
   "settings.rplayExportCopyManually": "자동으로 복사하지 못했습니다. 아래 선택된 코드를 직접 복사하세요.",
   "settings.rplayExportWrongSite": "알플레이에 로그인한 페이지에서 실행하세요: https://rplay.live/",
   "settings.rplayExportSignedOut": "로그인 정보를 찾지 못했습니다. 알플레이에 다시 로그인하고 페이지를 새로고침한 뒤 실행하세요.",
-  "settings.rplayExportFailed": "로그인 정보를 내보내지 못했습니다. 알플레이 로그인 상태와 브라우저 저장소 접근을 확인하세요."
+  "settings.rplayExportFailed": "로그인 정보를 내보내지 못했습니다. 알플레이 로그인 상태와 브라우저 저장소 접근을 확인하세요.",
+  "settings.cookieHelp.chzzk": "치지직 성인 방송 녹화 및 고화질(1080p) 스트림 수신, 네이버 로그인 전용 VOD 다운로드 시 필요합니다. (NID_AUT, NID_SES)",
+  "settings.cookieHelp.youtube": "연령 제한 영상, 비공개/회원 전용 영상 및 YouTube 다운로드 차단(Bot 감지) 우회 시 필요합니다.",
+  "settings.cookieHelp.cime": "씨미(CIME) 비공개 방송, 성인 방송 및 회원 전용 VOD/클립 다운로드 시 필요합니다.",
+  "settings.cookieHelp.kick": "Kick 로그인 전용 화질(1080p 등) 및 구독자 전용 라이브/VOD 시청 시 필요합니다.",
+  "settings.cookieHelp.twitch": "트위치 구독자 전용 방송 및 회원 전용 VOD/클립 다운로드 시 필요합니다.",
+  "settings.cookieHelp.tiktok": "틱톡 연령 제한 라이브 방송 및 로그인 전용 동영상 다운로드 시 필요합니다.",
+  "settings.cookieHelp.bilibili": "Bilibili 고화질(1080p, 4K) 스트림 수신 및 회원 전용 영상 다운로드 시 필요합니다.",
+  "settings.cookieHelp.pandalive": "팬더티비 본인 인증 계정 및 연령 제한/로그인 전용 방송 수신 시 필요합니다.",
+  "settings.cookieHelp.popkontv": "팝콘티비 성인 인증 계정 및 로그인 전용 라이브 방송/VOD 시청 시 필요합니다.",
+  "settings.cookieHelp.tvchak": "티비착 Cloudflare/사이트 접속 확인 통과 및 원본 영상 다운로드 시 필요합니다.",
+  "settings.cookieHelp.hearheart": "히어하트 회원 전용 및 구매한 오디오 트랙 다운로드 시 필요합니다."
 }

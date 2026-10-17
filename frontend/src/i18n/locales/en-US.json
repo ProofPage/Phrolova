@@ -905,5 +905,16 @@
   "settings.rplayExportCopyManually": "Automatic copying failed. Copy the selected code below manually.",
   "settings.rplayExportWrongSite": "Run this on your signed-in RPLAY page: https://rplay.live/",
   "settings.rplayExportSignedOut": "No login information found. Sign in to RPLAY again, reload the page, then try again.",
-  "settings.rplayExportFailed": "Could not export login information. Check your RPLAY sign-in and browser storage access."
+  "settings.rplayExportFailed": "Could not export login information. Check your RPLAY sign-in and browser storage access.",
+  "settings.cookieHelp.chzzk": "Required for age-restricted live streams, 1080p source streams, and members-only VODs. (NID_AUT, NID_SES)",
+  "settings.cookieHelp.youtube": "Required for age-restricted videos, private/members-only content, and bypassing bot verification challenges.",
+  "settings.cookieHelp.cime": "Required for private/age-restricted broadcasts and member-only VODs and clips.",
+  "settings.cookieHelp.kick": "Required for sign-in-only qualities (e.g. 1080p) and subscriber-only streams and VODs.",
+  "settings.cookieHelp.twitch": "Required for subscriber-only streams and member-only VODs and clips.",
+  "settings.cookieHelp.tiktok": "Required for age-restricted livestreams and sign-in-only video downloads.",
+  "settings.cookieHelp.bilibili": "Required for high-resolution streams (1080p, 4K) and member-only videos.",
+  "settings.cookieHelp.pandalive": "Required for identity-verified accounts and age-restricted/sign-in-only broadcasts.",
+  "settings.cookieHelp.popkontv": "Required for adult-verified accounts and sign-in-only live broadcasts and VODs.",
+  "settings.cookieHelp.tvchak": "Required for site access checks and original episode video downloads.",
+  "settings.cookieHelp.hearheart": "Required for member-only and purchased audio track downloads."
 }

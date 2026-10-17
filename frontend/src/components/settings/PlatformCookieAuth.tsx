@@ -64,8 +64,13 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
             {status?.configured && <Button variant="danger" icon={Trash2} disabled={busy} onClick={() => void remove()} aria-label={`${name} ${t("settings.removeCookieFile")}`}>{t("common.delete")}</Button>}
         </div>
         {status?.message && <p className="text-xs text-ink-muted [overflow-wrap:anywhere]" role="status">{localizedStatus(status.message, label)}</p>}
-        {platform === 'tvchak' && <p className="text-xs text-ink-muted">{t('settings.tvchakCookieHelp')}</p>}
-        {platform === 'kick' && <p className="text-xs text-ink-muted">{t('live.kickQualityAuthentication')}</p>}
+        {t(`settings.cookieHelp.${platform}`) !== `settings.cookieHelp.${platform}` ? (
+            <p className="text-xs text-ink-muted">{t(`settings.cookieHelp.${platform}`)}</p>
+        ) : platform === 'tvchak' ? (
+            <p className="text-xs text-ink-muted">{t('settings.tvchakCookieHelp')}</p>
+        ) : platform === 'kick' ? (
+            <p className="text-xs text-ink-muted">{t('live.kickQualityAuthentication')}</p>
+        ) : null}
         {status?.expired && <p className="text-xs text-warn">{t("settings.exportCookiesAgainFromASignedInBrowserAndRegisterTheFile")}</p>}
         {error && <p role="alert" className="text-xs text-danger [overflow-wrap:anywhere]">{t(error)}</p>}
     </Card>;

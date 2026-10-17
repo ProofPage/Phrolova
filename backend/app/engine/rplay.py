@@ -21,7 +21,7 @@ from app.core.config import get_settings
 
 ORIGIN = 'https://rplay.live'
 API = 'https://api.rplay.live/content'
-LOGIN_API = 'https://api.rplay.live/account/login'
+LOGIN_API = 'https://api.rplay.live/rplay/account/login'
 REFRESH_API = 'https://api.rplay.live/rplay/account/refresh-token'
 HOSTS = {'rplay.live', 'www.rplay.live'}
 MEDIA_HOSTS = {'api.rplay.live', 'pb.rplay.live', 'pb2.rplay.live', 'pb3.rplay.live', 'pb.sbcloudsec.net'}
@@ -74,49 +74,43 @@ def login_with_credentials(email: str, password: str) -> dict[str, str]:
     if not email or not password:
         raise ValueError('이메일과 비밀번호를 모두 입력하세요.')
 
-    b64encode = lambda x: base64.urlsafe_b64encode(
-        json.dumps(x, separators=(',', ':')).encode()).strip(b'=')
-
-    payload = {
-        'eml': email,
-        'dat': dt.datetime.now(dt.timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
-        'iat': int(time.time()),
-    }
-    key = hashlib.sha256(password.encode('utf-8')).hexdigest()
-    header_b64 = b64encode({'alg': 'HS256', 'typ': 'JWT'})
-    payload_b64 = b64encode(payload)
-    sig = hmac.new(key.encode('utf-8'), header_b64 + b'.' + payload_b64, hashlib.sha256)
-    sig_b64 = base64.urlsafe_b64encode(sig.digest()).strip(b'=')
-    jwt_token = (header_b64 + b'.' + payload_b64 + b'.' + sig_b64).decode('utf-8')
-
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': 'null',
         'Origin': ORIGIN,
         'Referer': ORIGIN + '/',
-        'User-Agent': 'Mozilla/5.0',
+        'platform-type': 'rplay',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
     }
     body = {
-        'token': jwt_token,
-        'loginType': None,
-        'checkAdmin': None,
+        'accountType': 'plax',
+        'email': email,
+        'password': password,
+        'platformType': 'rplay',
     }
     try:
         with httpx.Client(timeout=15, follow_redirects=False) as client:
             resp = client.post(LOGIN_API, json=body, headers=headers)
-        if resp.status_code != 200:
-            raise ValueError('로그인에 실패했습니다. 이메일과 비밀번호를 확인하세요.')
+        if resp.status_code == 403:
+            raise ValueError('가입되지 않은 이메일 주소입니다.')
+        if resp.status_code == 401 or resp.status_code != 200:
+            raise ValueError('이메일 또는 비밀번호가 올바르지 않습니다.')
         data = resp.json()
-        oid = data.get('oid') or data.get('_id')
-        if not oid:
-            raise ValueError('로그인 사용자 정보를 확인할 수 없습니다.')
+        token = data.get('token') or data.get('accessToken')
+        user = data.get('user') or {}
+        oid = data.get('oid') or user.get('oid') or user.get('_id') or data.get('_id')
+        refresh_token = data.get('refreshToken')
+        if not token or not oid:
+            raise ValueError('로그인 사용자 세션 정보를 확인할 수 없습니다.')
         session = {
-            'accessToken': jwt_token,
+            'accessToken': str(token),
             'requestorOid': str(oid).lower(),
-            'loginType': data.get('accountType', 'rplay'),
+            'loginType': data.get('accountType', 'plax'),
         }
+        if refresh_token:
+            session['refreshToken'] = str(refresh_token)
         return session
     except httpx.HTTPError as err:
+        raise ValueError(f'알플레이 서버 연결에 실패했습니다: {err}') from None
         raise ValueError(f'알플레이 서버 연결에 실패했습니다: {err}') from None
 
 
