@@ -593,10 +593,6 @@ class YtdlpLivePipeline:
     async def _open_raw_readers(self, *args):
         loop = asyncio.get_running_loop()
         def open_sources():
-            if str(args[0]).startswith('soop-agent://'):
-                from app.engine.soop import SoopAgentReader, SoopAgentSession, load_agent_source
-                reader = SoopAgentReader(load_agent_source(args[0])).open()
-                return SoopAgentSession(), [reader]
             session, stream = self._create_streamlink_stream(
                 *args, source_page_url=self._source_page_url,
                 continuity_resume=self.continuity_resume,

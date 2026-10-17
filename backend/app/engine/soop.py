@@ -1,8 +1,6 @@
 """SOOP live metadata and the official Streamlink SOOP stream resolver."""
 from __future__ import annotations
 import asyncio
-import base64
-import json
 import re
 import time
 from urllib.parse import urlsplit, unquote
@@ -19,200 +17,6 @@ CHANNEL_HOSTS = {'play.sooplive.com', 'play.sooplive.co.kr', 'play.afreecatv.com
                  'www.sooplive.com', 'www.sooplive.co.kr', 'bj.afreecatv.com', 'station.sooplive.com'}
 VOD_HOSTS = {'vod.sooplive.com', 'vod.sooplive.co.kr', 'vod.afreecatv.com'}
 
-
-class _AgentHttp:
-    def close(self):
-        return None
-
-
-class SoopAgentSession:
-    """Small Streamlink-compatible session wrapper for SOOP's local agent."""
-
-    http = _AgentHttp()
-
-
-class SoopAgentReader:
-    """Read the native TS byte stream emitted by SOOPStreamer over WebSocket."""
-
-    def __init__(self, metadata: dict):
-        self._metadata = metadata
-        self._socket = None
-        self._closed = False
-        self.stream = self
-        self.capture_format = 'h264'
-        self._video_started = False
-        self._last_buffer_report = 0.0
-        self._last_keepalive = 0.0
-        self.is_finished = False
-
-    def _connect(self):
-        import websocket
-
-        port = int(self._metadata['agent_port'])
-        channel_id = self._metadata['channel_id']
-        ws = websocket.create_connection(
-            f'ws://127.0.0.1:{port}/Websocket/{channel_id}',
-            subprotocols=['agent'],
-            origin=ORIGIN,
-            timeout=3,
-            enable_multithread=True,
-        )
-        ws.settimeout(1.0)
-        self._socket = ws
-
-        def send(packet):
-            ws.send(json.dumps(packet, separators=(',', ':')))
-
-        channel = self._metadata
-        send({
-            'SVC': 40, 'RESULT': 0, 'DATA': {
-                'gate_ip': channel['gate_ip'], 'gate_port': channel['gate_port'],
-                'center_ip': channel['center_ip'], 'center_port': channel['center_port'],
-                'broadno': channel['bno'], 'cookie': '',
-                'guid': channel['guid'], 'cli_type': 42, 'passwd': '',
-                'category': channel['category'],
-                'JOINLOG': 'log\x11\x06&uuid\x06=\x06test\x12',
-                'BJID': channel['channel_id'], 'fanticket': channel['fan_ticket'],
-                'addinfo': 'ad_lang\x11ko\x12is_auto\x110\x12', 'update_info': 0,
-            },
-        })
-        ticket = None
-        while ticket is None:
-            message = ws.recv()
-            if isinstance(message, str):
-                packet = json.loads(message)
-                if packet.get('SVC') == 39:
-                    ticket = packet['DATA']
-        send({
-            'SVC': 4, 'RESULT': 0, 'DATA': {
-                'CIP': channel['center_ip'], 'CPORT': channel['center_port'],
-                'BNO': channel['bno'], 'PARENTBNO': 0, 'SCRAPBJ': False,
-                'PASSWORD': '', 'GUID': channel['guid'],
-                'TICKETLEN': len(ticket['pcTicket']), 'TICKET': ticket['pcTicket'],
-                'QUALITY': 2, 'APPDATA': ticket.get('pcAppendDat', ''),
-                'JOINLOG': 'log\x11\x06&uuid\x06=\x06test\x12',
-                'SIP': ticket.get('uiIpAddr', 0), 'SPORT': ticket.get('iPort', 0),
-                'SPROTOCOL': 2, 'BJID': channel['channel_id'],
-                'SETBPS': channel['bps'] or None, 'SSBUF': channel['buffer_seconds'],
-                'BROWSER': 'Chrome', 'BROWSERVERSION': '146.0.7680.216',
-                'PLAYERVERSION': '2.5.4',
-            },
-        })
-        while True:
-            message = ws.recv()
-            if isinstance(message, str):
-                packet = json.loads(message)
-                if packet.get('SVC') == 18:
-                    send({'SVC': 5, 'RESULT': 0, 'DATA': {}})
-                    return
-
-    def open(self):
-        self._connect()
-        return self
-
-    def read(self, size=131072):
-        sock = self._socket
-        if self._closed or sock is None:
-            return b''
-        import websocket
-        import time
-
-        while True:
-            now = time.monotonic()
-            sock = self._socket
-            if self._closed or sock is None:
-                return b''
-            # Matches browser LivePlayer keepalive: SVC 1 every 15s
-            if now - self._last_keepalive >= 15.0:
-                try:
-                    sock.send(json.dumps({
-                        'SVC': 1, 'RESULT': 0, 'DATA': {},
-                    }, separators=(',', ':')))
-                    self._last_keepalive = now
-                except Exception:
-                    pass
-            # Buffer status report: SVC 52 every 2s
-            if now - self._last_buffer_report >= 2.0:
-                try:
-                    sock.send(json.dumps({
-                        'SVC': 52, 'RESULT': 0, 'DATA': {'BUFFER_LEFT': 5.0},
-                    }, separators=(',', ':')))
-                    self._last_buffer_report = now
-                except Exception:
-                    pass
-            try:
-                message = sock.recv()
-            except websocket.WebSocketTimeoutException:
-                if self._closed or self._socket is None:
-                    return b''
-                continue
-            except (websocket.WebSocketConnectionClosedException, ConnectionError, OSError):
-                if self._closed:
-                    return b''
-                # The upstream closed connection; mark closed and return EOF so pipeline can reconnect
-                self._closed = True
-                return b''
-            except Exception:
-                if self._closed or self._socket is None:
-                    return b''
-                raise
-            if isinstance(message, bytes):
-                # The agent multiplexes native video and AAC payloads as
-                # independent binary messages. The recording pipeline expects
-                # one elementary stream. Strip the agent block header and keep
-                # the H.264 stream only.
-                starts = [
-                    position for marker in (b'\x00\x00\x00\x01', b'\x00\x00\x01')
-                    if (position := message.find(marker)) >= 0
-                ]
-                if starts:
-                    self._video_started = True
-                    return message[min(starts):]
-                if self._video_started:
-                    continue
-                continue
-            if message is None:
-                return b''
-
-    def close(self):
-        self._closed = True
-        if self._socket is not None:
-            try:
-                self._socket.close()
-            finally:
-                self._socket = None
-
-
-def make_agent_source(metadata: dict) -> str:
-    payload = json.dumps(metadata, separators=(',', ':')).encode()
-    return 'soop-agent://' + base64.urlsafe_b64encode(payload).decode().rstrip('=')
-
-
-def load_agent_source(source: str) -> dict:
-    encoded = source.removeprefix('soop-agent://')
-    encoded += '=' * (-len(encoded) % 4)
-    return json.loads(base64.urlsafe_b64decode(encoded).decode())
-
-
-def _discover_agent_port() -> int | None:
-    import websocket
-
-    try:
-        ws = websocket.create_connection(
-            'ws://127.0.0.1:26737/Websocket',
-            subprotocols=['package'], origin=ORIGIN, timeout=2,
-        )
-        ws.send(json.dumps({'SVC': 'CAPTION', 'RESULT': 1, 'DATA': {'nCaption': 5}}))
-        while True:
-            message = ws.recv()
-            if isinstance(message, str):
-                data = json.loads(message).get('DATA', {})
-                if data.get('HTMLPLAYER_PORT'):
-                    ws.close()
-                    return int(data['HTMLPLAYER_PORT'])
-    except Exception:
-        return None
-    return None
 
 def normalize_soop_channel_id(value: str) -> str:
     raw = str(value or '').strip()
@@ -243,37 +47,6 @@ def normalize_soop_vod_url(value: str) -> str:
         return f'https://vod.sooplive.com/player/{m[1]}' + (f'/{m[2]}' if m[2] else '')
     except ValueError:
         raise ValueError('올바른 숲 다시보기 또는 클립 링크를 입력하세요.') from None
-
-def is_soop_streamer_running() -> bool:
-    """Check if SOOPStreamer.exe or AfreecaStreamer.exe process is running."""
-    import sys, subprocess
-    if sys.platform != "win32":
-        return False
-    try:
-        output = subprocess.check_output(
-            ["tasklist", "/fi", "IMAGENAME eq SOOPStreamer.exe", "/nh"],
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-            text=True,
-            timeout=2.0
-        )
-        return "SOOPStreamer.exe" in output or "AfreecaStreamer.exe" in output
-    except Exception:
-        return False
-
-
-async def check_agent_available() -> bool:
-    """Check if the local SOOPStreamer agent is running on 127.0.0.1."""
-    if is_soop_streamer_running():
-        return True
-    for port in (15530, 2935, 26737, 21201, 50801, 10023):
-        try:
-            _, writer = await asyncio.wait_for(asyncio.open_connection("127.0.0.1", port), timeout=0.5)
-            writer.close()
-            await writer.wait_closed()
-            return True
-        except Exception:
-            continue
-    return False
 
 
 class SoopLiveEngine:
@@ -370,20 +143,6 @@ class SoopLiveEngine:
         bno = str(channel.get("BNO"))
         page = f'{self.get_stream_url(cid)}/{bno}'
 
-        # 로컬 고화질 스트리머(SOOPStreamer)가 실행 중인 경우 로컬 1080p 원본 스트림 우선 연결
-        if not for_preview and await check_agent_available():
-            agent_port = _discover_agent_port()
-            if agent_port:
-                return make_agent_source({
-                    'agent_port': agent_port, 'channel_id': cid, 'bno': int(bno),
-                    'gate_ip': channel.get('GWIP'), 'gate_port': int(channel.get('GWPT', 3456)),
-                    'center_ip': channel.get('CTIP'), 'center_port': int(channel.get('CTPT', 18000)),
-                    'category': channel.get('CATE', '00040019'), 'fan_ticket': channel.get('FTK', ''),
-                    'guid': 'BD158C4AC18419F66BA047A368FCF914',
-                    'bps': int(channel.get('BPS') or 0),
-                    'buffer_seconds': float(channel.get('STREAMER_PLAYTIMINGBUFFER_DURATION') or 2),
-                }), {'User-Agent': USER_AGENT, 'Referer': page, 'Origin': ORIGIN}, None
-
         def resolve(authenticated: bool):
             from streamlink import Streamlink
             from streamlink.plugins.soop import Soop
@@ -397,12 +156,9 @@ class SoopLiveEngine:
                 pass
             session = Streamlink()
             session.set_option('http-timeout', 15)
-            session.set_option('ffmpeg-ffmpeg', __import__('app.core.config', fromlist=['get_settings']).get_settings().resolve_ffmpeg_path())
-            soop_proxy = __import__('app.core.config', fromlist=['get_settings']).get_settings().soop_proxy
-            if soop_proxy:
-                session.set_option('http-proxy', soop_proxy)
-                session.set_option('https-proxy', soop_proxy)
-            if authenticated: session.http.cookies.update(platform_cookie_jar('soop'))
+            session.set_option('ffmpeg-ffmpeg', get_settings().resolve_ffmpeg_path())
+            if authenticated:
+                session.http.cookies.update(platform_cookie_jar('soop'))
             try:
                 streams = session.streams(page)
                 ranked = [(int(m[1]), name, stream) for name, stream in streams.items()
@@ -417,22 +173,31 @@ class SoopLiveEngine:
                 url = stream.to_url()
                 cookie = '; '.join(f'{k}={v}' for k,v in get_platform_cookies('soop', url).items()) if authenticated else None
                 return url, {'User-Agent': USER_AGENT, 'Referer': page, 'Origin': ORIGIN}, cookie
-            finally: session.http.close()
-        try: result = await asyncio.to_thread(resolve, False)
-        except Exception: result = None
-        if result: return result
+            finally:
+                session.http.close()
+
+        try:
+            result = await asyncio.to_thread(resolve, False)
+        except Exception:
+            result = None
+        if result:
+            return result
         denied = channel.get('_requires_cookie', False)
         if not denied:
-            async with httpx.AsyncClient(timeout=12, headers={'User-Agent': USER_AGENT, 'Referer': page}) as client:
+            soop_proxy = get_settings().soop_proxy
+            async with httpx.AsyncClient(timeout=12, headers={'User-Agent': USER_AGENT, 'Referer': page}, proxy=soop_proxy) as client:
                 response = await client.post(CHANNEL_API, data={'bid':cid, 'bno':str(channel['BNO']), 'type':'aid', 'quality':'master', 'stream_type':'common', 'player_type':'html5'})
                 info = response.json().get('CHANNEL') or {} if response.status_code == 200 else {}
                 denied = response.status_code in (401,403) or info.get('RESULT') in (-6,'-6')
         if not denied:
             raise RuntimeError('숲 라이브 스트림을 연결하지 못했습니다. 잠시 후 다시 시도하세요.')
         if len(platform_cookie_jar('soop')):
-            try: result = await asyncio.to_thread(resolve, True)
-            except Exception: result = None
-            if result: return result
+            try:
+                result = await asyncio.to_thread(resolve, True)
+            except Exception:
+                result = None
+            if result:
+                return result
             raise PlatformAuthenticationError('soop', permission_denied=True)
         raise PlatformAuthenticationError('soop', expired=platform_cookie_status('soop')['expired'])
 
