@@ -65,7 +65,10 @@ def test_reject_bad_video_links(value):
 @pytest.mark.parametrize('change', [{'_id': 'b' * 24}, {'canView': {'canView': False, 'url': MEDIA}},
     {'canView': {'canView': 'true', 'url': MEDIA}}, {'canView': None}, {'deleted': True}, {'drm': True},
     {'canView': {'canView': True, 'url': 'https://evil.example/video.mp4'}},
-    {'canView': {'canView': True, 'url': 'https://api.rplay.live/drm_video.m3u8'}}])
+    {'canView': {'canView': True, 'url': 'https://api.rplay.live/drm_video.m3u8'}},
+    {'canView': {'canView': False, 'url': 'https://api2.rplay.live/content/hlsstream'}},
+    {'drm': True, 'canView': {'canView': True, 'url': 'https://api2.rplay.live/content/hlsstream'}},
+    {'canView': {'canView': True, 'url': 'https://api2.rplay.live/drm_video.m3u8'}}])
 def test_denied_grant_is_never_playable(monkeypatch, change):
     calls = mock_api(monkeypatch, metadata(**change))
     with pytest.raises(ExtractorError):
@@ -84,13 +87,14 @@ def test_api_errors_no_redirect_or_credential_echo(monkeypatch, tmp_path, status
     assert SESSION['accessToken'] not in str(caught.value)
 
 
-def test_session_is_api_only_and_missing_grant_is_denied(monkeypatch, tmp_path):
+@pytest.mark.parametrize('media', [MEDIA, MEDIA.replace('api.rplay.live', 'api2.rplay.live')])
+def test_session_is_api_only_and_missing_grant_is_denied(monkeypatch, tmp_path, media):
     session = tmp_path / 'session.json'; session.write_text(json.dumps(SESSION))
     get_settings().rplay_session_file = str(session)
-    data = metadata()
+    data = metadata(canView={'canView': True, 'url': media})
     calls = mock_api(monkeypatch, data)
     ie = RplayIE()
-    monkeypatch.setattr(ie, '_extract_m3u8_formats', lambda *a, **kw: [{'url': MEDIA, 'format_id': '720', 'height': 720}])
+    monkeypatch.setattr(ie, '_extract_m3u8_formats', lambda *a, **kw: [{'url': media, 'format_id': '720', 'height': 720}])
     info = ie._real_extract(URL)
     assert calls[0].headers['authorization'] == SESSION['accessToken']
     assert calls[0].url.params['requestorOid'] == SESSION['requestorOid']
@@ -123,7 +127,11 @@ def test_expired_session_no_network(monkeypatch, tmp_path):
 
 @pytest.mark.parametrize('url', ['https://api.rplay.live.evil/video.mp4', 'http://pb3.rplay.live/video.mp4',
     'https://user@api.rplay.live/video.mp4', 'https://api.rplay.live:8443/video.mp4',
-    'https://127.0.0.1/video.mp4', 'https://api.rplay.live\\@evil.example/video.mp4'])
+    'https://127.0.0.1/video.mp4', 'https://api.rplay.live\\@evil.example/video.mp4',
+    'https://api2.rplay.live.evil/video.mp4', 'http://api2.rplay.live/video.mp4',
+    'https://user@api2.rplay.live/video.mp4', 'https://api2.rplay.live:8443/video.mp4',
+    'https://api2.rplay.live@evil.example/video.mp4', 'https://api2.rplay.live\\@evil.example/video.mp4',
+    'https://api2.rplay.live/content/hlsstream\r\nAuthorization: secret'])
 def test_media_boundary(url):
     assert not rplay.valid_media_url(url)
 
@@ -168,13 +176,14 @@ def test_session_auto_refresh_on_expiration(monkeypatch, tmp_path):
 
     refresh_called = []
 
-    def mock_post(url, **kwargs):
+    def mock_post(self, url, **kwargs):
         if url == rplay.REFRESH_API:
             refresh_called.append(kwargs)
             assert kwargs['headers']['refresh-token'] == initial_session['refreshToken']
             assert kwargs['json']['requestorOid'] == SESSION['requestorOid']
-            return httpx.Response(200, json={'accessToken': fresh_access, 'refreshToken': fresh_refresh})
-        return httpx.Response(404)
+            return httpx.Response(200, json={'accessToken': fresh_access, 'refreshToken': fresh_refresh},
+                                  request=httpx.Request('POST', url))
+        return httpx.Response(404, request=httpx.Request('POST', url))
 
     monkeypatch.setattr(httpx.Client, 'post', mock_post)
 

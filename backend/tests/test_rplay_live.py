@@ -71,12 +71,12 @@ def test_bad_live_url(value):
 
 
 @pytest.mark.asyncio
-async def test_status_is_live_but_denied_media_not_used(monkeypatch):
+async def test_denied_live_is_not_recordable_and_media_not_used(monkeypatch):
     calls = mock_api(monkeypatch, metadata(accessible=False))
     stream_calls = mock_streamlink(monkeypatch)
     engine = rp.RplayLiveEngine()
     status = await engine.check_live_status(CID)
-    assert status['is_live'] and status['channel_id'] == CID and status['channel_name'] == 'RPLAY fixture'
+    assert not status['is_live'] and status['channel_id'] == CID and status['channel_name'] == 'RPLAY fixture'
     with pytest.raises(RecordingError) as caught:
         await engine.get_qualities(CID)
     assert caught.value.code == 'rplay_authentication' and len(calls) == 1 and not stream_calls

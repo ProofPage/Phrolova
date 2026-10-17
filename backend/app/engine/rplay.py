@@ -24,7 +24,7 @@ API = 'https://api.rplay.live/content'
 LOGIN_API = 'https://api.rplay.live/rplay/account/login'
 REFRESH_API = 'https://api.rplay.live/rplay/account/refresh-token'
 HOSTS = {'rplay.live', 'www.rplay.live'}
-MEDIA_HOSTS = {'api.rplay.live', 'pb.rplay.live', 'pb2.rplay.live', 'pb3.rplay.live', 'pb.sbcloudsec.net'}
+MEDIA_HOSTS = {'api.rplay.live', 'api2.rplay.live', 'pb.rplay.live', 'pb2.rplay.live', 'pb3.rplay.live', 'pb.sbcloudsec.net'}
 
 _log = logging.getLogger(__name__)
 _refresh_lock = threading.Lock()
