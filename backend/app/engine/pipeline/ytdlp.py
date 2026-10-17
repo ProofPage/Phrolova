@@ -497,6 +497,8 @@ class YtdlpLivePipeline:
             await asyncio.to_thread(session.http.close)
             raise
         self._streamlink_session, self._readers = session, readers
+        if readers and getattr(readers[0], 'capture_format', None) == 'h264':
+            self.capture_format = 'h264'
         self._continuity_active = any(getattr(getattr(r, 'stream', None), 'continuity', None) for r in readers)
         while len(self._source_files) < len(readers):
             self._source_files.append(
@@ -591,6 +593,10 @@ class YtdlpLivePipeline:
     async def _open_raw_readers(self, *args):
         loop = asyncio.get_running_loop()
         def open_sources():
+            if str(args[0]).startswith('soop-agent://'):
+                from app.engine.soop import SoopAgentReader, SoopAgentSession, load_agent_source
+                reader = SoopAgentReader(load_agent_source(args[0])).open()
+                return SoopAgentSession(), [reader]
             session, stream = self._create_streamlink_stream(
                 *args, source_page_url=self._source_page_url,
                 continuity_resume=self.continuity_resume,
@@ -697,6 +703,9 @@ class YtdlpLivePipeline:
                                 file = open(self._source_files[0], "ab")
                                 data = bytes(prefix)
                                 checked = True
+                            elif self.capture_format == 'h264':
+                                data = bytes(prefix)
+                                checked = True
                             elif len(prefix) < 376:
                                 continue
                             # Reads need not align to packet boundaries. Strip a
@@ -728,6 +737,8 @@ class YtdlpLivePipeline:
                         if index == 0:
                             if self.capture_format == "ts":
                                 self._measure_ts(data)
+                                has_payload = True
+                            elif self.capture_format == 'h264':
                                 has_payload = True
                             else:
                                 self._native_clock.feed(data)

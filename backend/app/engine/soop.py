@@ -1,6 +1,8 @@
 """SOOP live metadata and the official Streamlink SOOP stream resolver."""
 from __future__ import annotations
 import asyncio
+import base64
+import json
 import re
 import time
 from urllib.parse import urlsplit, unquote
@@ -16,6 +18,165 @@ CHANNEL_API = 'https://live.sooplive.com/afreeca/player_live_api.php'
 CHANNEL_HOSTS = {'play.sooplive.com', 'play.sooplive.co.kr', 'play.afreecatv.com',
                  'www.sooplive.com', 'www.sooplive.co.kr', 'bj.afreecatv.com', 'station.sooplive.com'}
 VOD_HOSTS = {'vod.sooplive.com', 'vod.sooplive.co.kr', 'vod.afreecatv.com'}
+
+
+class _AgentHttp:
+    def close(self):
+        return None
+
+
+class SoopAgentSession:
+    """Small Streamlink-compatible session wrapper for SOOP's local agent."""
+
+    http = _AgentHttp()
+
+
+class SoopAgentReader:
+    """Read the native TS byte stream emitted by SOOPStreamer over WebSocket."""
+
+    def __init__(self, metadata: dict):
+        self._metadata = metadata
+        self._socket = None
+        self._closed = False
+        self.stream = self
+        self.capture_format = 'h264'
+        self._video_started = False
+
+    def _connect(self):
+        import websocket
+
+        port = int(self._metadata['agent_port'])
+        channel_id = self._metadata['channel_id']
+        ws = websocket.create_connection(
+            f'ws://127.0.0.1:{port}/Websocket/{channel_id}',
+            subprotocols=['agent'],
+            origin=ORIGIN,
+            timeout=3,
+            enable_multithread=True,
+        )
+        ws.settimeout(3)
+        self._socket = ws
+
+        def send(packet):
+            ws.send(json.dumps(packet, separators=(',', ':')))
+
+        channel = self._metadata
+        send({
+            'SVC': 40, 'RESULT': 0, 'DATA': {
+                'gate_ip': channel['gate_ip'], 'gate_port': channel['gate_port'],
+                'center_ip': channel['center_ip'], 'center_port': channel['center_port'],
+                'broadno': channel['bno'], 'cookie': '',
+                'guid': channel['guid'], 'cli_type': 42, 'passwd': '',
+                'category': channel['category'],
+                'JOINLOG': 'log\x11\x06&uuid\x06=\x06test\x12',
+                'BJID': channel['channel_id'], 'fanticket': channel['fan_ticket'],
+                'addinfo': 'ad_lang\x11ko\x12is_auto\x110\x12', 'update_info': 0,
+            },
+        })
+        ticket = None
+        while ticket is None:
+            message = ws.recv()
+            if isinstance(message, str):
+                packet = json.loads(message)
+                if packet.get('SVC') == 39:
+                    ticket = packet['DATA']
+        send({
+            'SVC': 4, 'RESULT': 0, 'DATA': {
+                'CIP': channel['center_ip'], 'CPORT': channel['center_port'],
+                'BNO': channel['bno'], 'PARENTBNO': 0, 'SCRAPBJ': False,
+                'PASSWORD': '', 'GUID': channel['guid'],
+                'TICKETLEN': len(ticket['pcTicket']), 'TICKET': ticket['pcTicket'],
+                'QUALITY': 2, 'APPDATA': ticket.get('pcAppendDat', ''),
+                'JOINLOG': 'log\x11\x06&uuid\x06=\x06test\x12',
+                'SIP': ticket.get('uiIpAddr', 0), 'SPORT': ticket.get('iPort', 0),
+                'SPROTOCOL': 2, 'BJID': channel['channel_id'],
+                'SETBPS': channel['bps'] or None, 'SSBUF': channel['buffer_seconds'],
+                'BROWSER': 'Chrome', 'BROWSERVERSION': '146.0.7680.216',
+                'PLAYERVERSION': '2.5.4',
+            },
+        })
+        while True:
+            message = ws.recv()
+            if isinstance(message, str):
+                packet = json.loads(message)
+                if packet.get('SVC') == 18:
+                    send({'SVC': 5, 'RESULT': 0, 'DATA': {}})
+                    return
+
+    def open(self):
+        self._connect()
+        return self
+
+    def read(self, size=131072):
+        if self._closed:
+            return b''
+        import websocket
+
+        while True:
+            try:
+                message = self._socket.recv()
+            except websocket.WebSocketTimeoutException:
+                self._socket.send(json.dumps({
+                    'SVC': 52, 'RESULT': 0, 'DATA': {'BUFFER_LEFT': 5.0},
+                }, separators=(',', ':')))
+                continue
+            if isinstance(message, bytes):
+                # The agent multiplexes native video and AAC payloads as
+                # independent binary messages. The recording pipeline expects
+                # one elementary stream. Strip the agent block header and keep
+                # the H.264 stream only.
+                starts = [
+                    position for marker in (b'\x00\x00\x00\x01', b'\x00\x00\x01')
+                    if (position := message.find(marker)) >= 0
+                ]
+                if starts:
+                    self._video_started = True
+                    return message[min(starts):]
+                if self._video_started:
+                    continue
+                continue
+            if message is None:
+                return b''
+
+    def close(self):
+        self._closed = True
+        if self._socket is not None:
+            try:
+                self._socket.close()
+            finally:
+                self._socket = None
+
+
+def make_agent_source(metadata: dict) -> str:
+    payload = json.dumps(metadata, separators=(',', ':')).encode()
+    return 'soop-agent://' + base64.urlsafe_b64encode(payload).decode().rstrip('=')
+
+
+def load_agent_source(source: str) -> dict:
+    encoded = source.removeprefix('soop-agent://')
+    encoded += '=' * (-len(encoded) % 4)
+    return json.loads(base64.urlsafe_b64decode(encoded).decode())
+
+
+def _discover_agent_port() -> int | None:
+    import websocket
+
+    try:
+        ws = websocket.create_connection(
+            'ws://127.0.0.1:26737/Websocket',
+            subprotocols=['package'], origin=ORIGIN, timeout=2,
+        )
+        ws.send(json.dumps({'SVC': 'CAPTION', 'RESULT': 1, 'DATA': {'nCaption': 5}}))
+        while True:
+            message = ws.recv()
+            if isinstance(message, str):
+                data = json.loads(message).get('DATA', {})
+                if data.get('HTMLPLAYER_PORT'):
+                    ws.close()
+                    return int(data['HTMLPLAYER_PORT'])
+    except Exception:
+        return None
+    return None
 
 def normalize_soop_channel_id(value: str) -> str:
     raw = str(value or '').strip()
@@ -175,15 +336,17 @@ class SoopLiveEngine:
 
         # 로컬 고화질 스트리머(SOOPStreamer)가 실행 중인 경우 로컬 1080p 원본 스트림 우선 연결
         if await check_agent_available():
-            for port in (2935, 6935, 50801, 10023):
-                for agent_url in (f"http://127.0.0.1:{port}/{bno}/playlist.m3u8", f"http://localhost:{port}/{bno}/playlist.m3u8", f"http://127.0.0.1:{port}/{cid}/playlist.m3u8"):
-                    try:
-                        async with httpx.AsyncClient(timeout=1.0) as client:
-                            resp = await client.get(agent_url)
-                            if resp.status_code == 200 and "#EXTM3U" in resp.text:
-                                return agent_url, {'User-Agent': USER_AGENT, 'Referer': page, 'Origin': ORIGIN}, None
-                    except Exception:
-                        pass
+            agent_port = _discover_agent_port()
+            if agent_port:
+                return make_agent_source({
+                    'agent_port': agent_port, 'channel_id': cid, 'bno': int(bno),
+                    'gate_ip': channel.get('GWIP'), 'gate_port': int(channel.get('GWPT', 3456)),
+                    'center_ip': channel.get('CTIP'), 'center_port': int(channel.get('CTPT', 18000)),
+                    'category': channel.get('CATE', '00040019'), 'fan_ticket': channel.get('FTK', ''),
+                    'guid': 'BD158C4AC18419F66BA047A368FCF914',
+                    'bps': int(channel.get('BPS') or 0),
+                    'buffer_seconds': float(channel.get('STREAMER_PLAYTIMINGBUFFER_DURATION') or 2),
+                }), {'User-Agent': USER_AGENT, 'Referer': page, 'Origin': ORIGIN}, None
 
         def resolve(authenticated: bool):
             from streamlink import Streamlink

@@ -27,7 +27,11 @@ def test_frontend_package_versions_match_backend_version() -> None:
 
 def test_changelog_has_current_release_and_comparison_links() -> None:
     changelog = (PROJECT_ROOT / "docs/CHANGELOG.md").read_text(encoding="utf-8")
-    release_versions = re.findall(r"^## \[(\d+\.\d+\.\d+)\] - ", changelog, re.MULTILINE)
+    release_versions = re.findall(
+        r"^## \[(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\] - ",
+        changelog,
+        re.MULTILINE,
+    )
 
     assert release_versions[0] == __version__
     assert (

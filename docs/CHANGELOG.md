@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.80-preview.27] - 2026-10-17
+
+### Added
+- Connect SOOPStreamer 원본 H.264 WebSocket stream to the Phrolova recording pipeline and preserve 1920x1080 capture.
+
 ## [2.0.80-preview.26] - 2026-10-17
 
 ### Fixed
@@ -1235,7 +1240,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.79...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.80-preview.27...HEAD
+[2.0.80-preview.27]: https://github.com/ProofPage/Phrolova/compare/v2.0.80-preview.26...v2.0.80-preview.27
 [2.0.79]: https://github.com/ProofPage/Phrolova/compare/v2.0.78...v2.0.79
 [2.0.78]: https://github.com/ProofPage/Phrolova/compare/v2.0.77...v2.0.78
 [2.0.77]: https://github.com/ProofPage/Phrolova/compare/v2.0.76...v2.0.77
