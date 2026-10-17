@@ -155,6 +155,16 @@ export default function SystemLogs() {
                                 <span>{t('logs.realtimeTarget')}</span>
                                 <span className="text-ok font-medium">service.log</span>
                             </div>
+                            <div className="flex justify-between text-ink-muted">
+                                <span>{t('logs.monitorStatus')}</span>
+                                <span className="text-ok font-medium">{t('logs.serviceRunning')}</span>
+                            </div>
+                            {selectedFile && (
+                                <div className="flex justify-between text-ink-muted">
+                                    <span>{t('logs.lastLogTime')}</span>
+                                    <span className="text-ink font-medium">{formatDate(selectedFile.modified_at, true)}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
