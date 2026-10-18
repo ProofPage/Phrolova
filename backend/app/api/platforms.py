@@ -35,6 +35,16 @@ class AddPlatformChannelRequest(ChannelDownloadOptions):
     auto_record: bool = Field(True, description="방송 시작 시 자동 녹화 여부")
 
 
+def _validate_room_password(req: ChannelDownloadOptions, platform: Platform) -> None:
+    if req.popkontv_password is None:
+        return
+    if platform != Platform.POPKONTV:
+        raise HTTPException(400, "방송 비밀번호는 팝콘티비에서 지원합니다.")
+    value = req.popkontv_password.get_secret_value()
+    if len(value) > 128 or any(ord(char) < 32 or ord(char) == 127 for char in value):
+        # Do not let request-validation errors echo a submitted password.
+        raise HTTPException(400, "방송 비밀번호는 제어 문자 없이 최대 128글자까지 입력하세요.")
+
 
 
 # ── 채널 관리 ────────────────────────────────────────────
@@ -106,9 +116,10 @@ async def add_platform_channel(req: AddPlatformChannelRequest):
             raise HTTPException(400, str(error)) from None
 
     service = get_recorder_service()
+    _validate_room_password(req, platform)
     if platform != Platform.CHZZK and req.download_condition is not None:
         raise HTTPException(status_code=400, detail="같이보기 조건은 치지직에서 지원합니다.")
-    return service.add_platform_channel(
+    result = service.add_platform_channel(
         channel_id=channel_id,
         platform=platform,
         auto_record=req.auto_record,
@@ -117,6 +128,9 @@ async def add_platform_channel(req: AddPlatformChannelRequest):
         **({'recording_quality': req.recording_quality} if req.recording_quality is not None else {}),
             **({'output_format':req.output_format,'output_format_provided':True} if 'output_format' in req.model_fields_set else {}),
     )
+    if req.popkontv_password is not None:
+        service.set_popkontv_room_password(channel_id, req.popkontv_password.get_secret_value())
+    return result
 
 
 @router.delete("/channels/{platform}/{channel_id:path}", summary="플랫폼 채널 제거")
@@ -152,6 +166,7 @@ async def update_download_options(platform: str, channel_id: str, req: ChannelDo
         raise HTTPException(status_code=400, detail="지원하지 않는 플랫폼입니다.") from exc
     if platform_enum != Platform.CHZZK and req.download_condition is not None:
         raise HTTPException(status_code=400, detail="같이보기 조건은 치지직에서 지원합니다.")
+    _validate_room_password(req, platform_enum)
     try:
         get_recorder_service().set_download_options(
             f"{platform_enum.value}:{channel_id}", req.auto_record,
@@ -159,6 +174,10 @@ async def update_download_options(platform: str, channel_id: str, req: ChannelDo
             **({'recording_quality': req.recording_quality} if req.recording_quality is not None else {}),
             **({'output_format':req.output_format,'output_format_provided':True} if 'output_format' in req.model_fields_set else {}),
         )
+        if req.popkontv_password is not None:
+            get_recorder_service().set_popkontv_room_password(
+                channel_id, req.popkontv_password.get_secret_value(),
+            )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {"message": "채널 다운로드 설정이 저장되었습니다.", **req.model_dump()}

@@ -38,10 +38,12 @@ export function ChannelDownloadModal({ platform, name, channel, channelId, onClo
     const [qualityLoading, setQualityLoading] = useState(false);
     const [qualityMessage, setQualityMessage] = useState('');
     const [qualityRefresh, setQualityRefresh] = useState(0);
+    const [roomPassword, setRoomPassword] = useState<string | null>(null);
     const dirty = !channel || autoRecord !== channel.auto_record ||
         condition !== (channel.download_condition ?? "inherit") ||
         (condition === "watchalong" && tags !== initialTags) ||
-        quality !== (channel?.recording_quality || 'best') || outputFormat !== (channel?.output_format || 'inherit');
+        quality !== (channel?.recording_quality || 'best') || outputFormat !== (channel?.output_format || 'inherit') ||
+        roomPassword !== null;
     const toast = useToast();
 
     useEffect(() => {
@@ -85,6 +87,7 @@ export function ChannelDownloadModal({ platform, name, channel, channelId, onClo
                 watchalong_tags: platform === "chzzk" && condition === "watchalong" ? tags : null,
                 recording_quality: quality,
                 output_format: outputFormat === 'inherit' ? null : outputFormat as 'mp4'|'mkv',
+                ...(platform === 'popkontv' && roomPassword !== null ? { popkontv_password: roomPassword } : {}),
             });
             onClose();
         } catch (error) {
@@ -119,6 +122,17 @@ export function ChannelDownloadModal({ platform, name, channel, channelId, onClo
                     </div>
                 </Field>}
                 {platform === 'kick' && <p className="text-xs text-ink-muted">{t('live.kickQualityAuthentication')}</p>}
+                {platform === 'popkontv' && <Field label={t('live.popkontvRoomPassword')}
+                    htmlFor="popkontv-room-password" hint={t('live.popkontvRoomPasswordHint')}>
+                    <div className="flex items-center gap-2">
+                        <Input id="popkontv-room-password" type="password" autoComplete="new-password"
+                            value={roomPassword ?? ''} maxLength={128} disabled={saving}
+                            onChange={event => setRoomPassword(event.target.value)} />
+                        <Button type="button" disabled={saving} onClick={() => setRoomPassword('')}>
+                            {t('live.clearPopkontvRoomPassword')}
+                        </Button>
+                    </div>
+                </Field>}
                 {!dynamicQuality && <Field label={translate("live.recordingQuality")} htmlFor="channel-recording-quality" hint={translate("live.changesApplyToTheNextRecording")}><Select id="channel-recording-quality" value={quality} disabled={saving} onChange={e=>setQuality(e.target.value)} options={['best','1080p','720p','480p'].map(value=>({value,label:value==='best'?translate("live.highestQuality"):value}))}/></Field>}
                 <RecordingSourceFormatField label={translate("live.recordingSourceFormat")} />
                 <Field label={translate("live.outputFormatAfterRecording")} htmlFor="channel-output-format" hint={translate("live.changesApplyToTheNextRecording")}>

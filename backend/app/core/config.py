@@ -225,6 +225,7 @@ class Settings(BaseSettings):
     youtube_prefer_resolution_over_timemachine: bool = True
     youtube_po_token_provider_url: Optional[str] = None
     streamlink_platform_options: StreamlinkPlatformSettings = Field(default_factory=dict)
+    popkontv_use_playback_response: bool = True
 
     youtube_cookie_file: Optional[str] = None
     cime_cookie_file: Optional[str] = None

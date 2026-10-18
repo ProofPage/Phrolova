@@ -1370,7 +1370,16 @@ class ChzzkContinuityWriter(HLSStreamWriter):
         mapping = located.map
         if mapping is None:
             return b""
-        cache_key = (mapping.uri, mapping.byterange)
+        key = mapping.key
+        encryption = None
+        if key is not None and key.method != "NONE":
+            encryption = (
+                key.method, key.uri, key.iv or self.num_to_iv(located.num),
+                key.key_format or "identity", key.key_format_versions or "1",
+            )
+        # A reused initialization URL can belong to a new key/IV context.
+        # Cache decrypted bytes only for the context which produced them.
+        cache_key = (mapping.uri, mapping.byterange, encryption)
         with self.cache_lock:
             cached = self.maps.get(cache_key)
         if cached is not None:

@@ -39,6 +39,7 @@ class DownloadSettingsUpdateRequest(BaseModel):
     """라이브 녹화 설정 업데이트 요청."""
     live_download_dir: Optional[str] = Field(None, max_length=4096)
     streamlink_platform_options: Optional[StreamlinkPlatformSettings] = None
+    popkontv_use_playback_response: Optional[bool] = None
     monitor_interval: Optional[int] = Field(None, ge=5, le=300)
 
     # /settings/download를 사용하는 구버전 앱 호환 필드. 신규 클라이언트는
@@ -168,6 +169,7 @@ async def update_download_settings(req: DownloadSettingsUpdateRequest):
             "live_download_dir": settings.effective_live_download_dir,
             "monitor_interval": settings.monitor_interval,
             "streamlink_platform_options": serialize_streamlink_settings(settings.streamlink_platform_options),
+            "popkontv_use_playback_response": settings.popkontv_use_playback_response,
         },
     }
 

@@ -4,18 +4,19 @@ import json
 from urllib.parse import urlsplit
 
 from yt_dlp.extractor.common import InfoExtractor
+from yt_dlp.networking.exceptions import HTTPError
 from yt_dlp.utils import ExtractorError, int_or_none, unified_strdate
 
 from app.engine.popkontv import (
     ORIGIN,
     PARTNER,
     parse_popkontv_video_url,
-    popkontv_account,
     popkontv_headers,
     response_data,
     valid_media_url,
 )
 from app.engine.recording_errors import RecordingError
+from app.engine.popkontv_session import authorized_popkontv_request
 
 
 class PopkonTVIE(InfoExtractor):
@@ -26,25 +27,30 @@ class PopkonTVIE(InfoExtractor):
 
     def _metadata(self, route):
         try:
-            auth, user = popkontv_account(self._downloader.cookiejar)
-            body = {
-                "idx": int(route["id"]),
-                "partnerCode": user["partnerCode"] if user else PARTNER,
-                "signId": user["signId"] if user else "",
-            }
-            payload = self._download_json(
-                ORIGIN + "/api/proxy/vod/v1/detail",
-                route["id"],
-                data=json.dumps(body).encode(),
-                headers={
-                    **popkontv_headers(route["url"]),
-                    **auth,
-                    "Content-Type": "application/json",
-                },
-                note="팝콘티비 영상 정보를 확인합니다",
-                expected_status=400,
+            def detail(auth, user):
+                body = {
+                    "idx": int(route["id"]),
+                    "partnerCode": user["partnerCode"] if user else PARTNER,
+                    "signId": user["signId"] if user else "",
+                }
+                try:
+                    payload = self._download_json(
+                        ORIGIN + "/api/proxy/vod/v1/detail", route["id"],
+                        data=json.dumps(body).encode(),
+                        headers={**popkontv_headers(route["url"]), **auth, "Content-Type": "application/json"},
+                        note="팝콘티비 영상 정보를 확인합니다", expected_status=400,
+                    )
+                except ExtractorError as error:
+                    if isinstance(error.cause, HTTPError) and error.cause.status == 401:
+                        raise RecordingError(
+                            "popkontv_session_expired", "팝콘티비 로그인 세션이 만료되었습니다.",
+                        ) from None
+                    raise
+                return response_data(payload), user
+
+            item, user = authorized_popkontv_request(
+                detail, self._downloader.cookiejar, route["url"],
             )
-            item = response_data(payload)
             if str(item.get("isAdult")) == "1" and not (
                 user and user["adult_verified"]
             ):

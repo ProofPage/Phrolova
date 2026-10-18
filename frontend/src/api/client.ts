@@ -15,6 +15,7 @@ export type Platform = "chzzk" | "youtube" | "cime" | "kick" | "twitch" | "tikto
 export type DownloadSource = Exclude<Platform, "pandalive"> | 'hearheart' | 'anilife' | 'linkani' | 'ohli24' | 'ohli365' | 'tvwiki' | 'tvchak' | 'animaru' | 'external';
 export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
 export interface ChannelDownloadOptions {
+    popkontv_password?: string;
     output_format?: 'mp4' | 'mkv' | null;
     auto_record: boolean;
     download_condition: DownloadCondition | null;
@@ -179,6 +180,7 @@ export interface Settings {
     ffmpeg_path: string;
     streamlink_version: string | null;
     streamlink_platform_options?: StreamlinkOptionsByPlatform;
+    popkontv_use_playback_response?: boolean;
     monitor_interval: number;
     host: string;
     port: number;
@@ -563,6 +565,7 @@ export const api = {
         location?: { live_download_dir: string; monitor_interval: number },
         youtube_options?: {
             streamlink_platform_options?: StreamlinkOptionsByPlatform;
+            popkontv_use_playback_response?: boolean;
             youtube_sabr_priority?: "auto" | "sabr_fallback" | "sabr_first";
             youtube_codec_priority?: "av1" | "vp9" | "h264";
             youtube_time_machine_enabled?: boolean;

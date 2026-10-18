@@ -1,6 +1,6 @@
 """대시보드 자동 다운로드 조건 요청."""
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 from typing import Literal
 
 from app.engine.download_condition import DownloadCondition, parse_watchalong_tags
@@ -12,6 +12,7 @@ class ChannelDownloadOptions(BaseModel):
     output_format: Literal['mp4','mkv'] | None = None
     download_condition: DownloadCondition | None = None
     watchalong_tags: str | None = Field(None, max_length=500)
+    popkontv_password: SecretStr | None = Field(None, exclude=True, repr=False)
 
     @field_validator('recording_quality')
     @classmethod

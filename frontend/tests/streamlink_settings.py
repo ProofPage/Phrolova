@@ -37,7 +37,12 @@ async def main():
         if path == "/api/stream/channels":
             return await route.fulfill(json={"channels": channels})
         if path == "/api/platforms/channels":
+            if route.request.method == "POST":
+                calls.append((path, route.request.post_data_json))
+                return await route.fulfill(json={"status": "added"})
             return await route.fulfill(json=channels)
+        if path == "/api/platforms/popkontv/fixture@P-00117/qualities":
+            return await route.fulfill(json={"live": True, "qualities": [{"value": "720p", "label": "720p", "height": 720}]})
         if path == "/api/stream/record/chzzk:retry-fixture/start":
             calls.append((path, route.request.post_data_json))
             return await route.fulfill(json={"state": "connecting", "is_recording": True})
@@ -79,6 +84,20 @@ async def main():
             await expect(save).to_be_disabled()
             await parameters.fill('{"cache":"value"}')
             await expect(save).to_be_disabled()
+            popkon = root.locator('[data-settings-section="popkontv"]')
+            playback_policy = popkon.get_by_role("switch")
+            await expect(playback_policy).to_be_checked()
+            await playback_policy.click()
+            await expect(save).to_be_enabled()
+            await save.click()
+            await expect(save).to_be_disabled()
+            assert calls[-1][1]["popkontv_use_playback_response"] is False
+            await page.reload()
+            await expect(playback_policy).not_to_be_checked()
+            await playback_policy.click()
+            await save.click()
+            await expect(save).to_be_disabled()
+            assert calls[-1][1]["popkontv_use_playback_response"] is True
             format_select = root.locator('[data-settings-section="video"] select').filter(
                 has=page.locator('option[value="mkv"]'))
             await expect(format_select.locator('option[value="ts"]')).to_have_count(0)
@@ -99,8 +118,26 @@ async def main():
             channels[1]["download_hold_reason"] = "같이보기 태그 조건과 일치하지 않는 방송입니다."
             await page.reload()
             await expect(skip.get_by_text("건너뜀", exact=True)).to_be_visible()
+            await page.get_by_role("button", name="플랫폼 선택: 치지직", exact=True).click()
+            await page.get_by_role("option", name="팝콘티비", exact=True).click()
+            await page.get_by_placeholder("팝콘티비 방송 링크 또는 채널ID@파트너코드").fill(
+                "https://www.popkontv.com/live/view?castId=fixture&partnerCode=P-00117"
+            )
+            await page.locator(".dashboard-add-channel button[type=submit]").click()
+            dialog = page.get_by_role("dialog")
+            password = dialog.get_by_label("방송 비밀번호", exact=True)
+            await expect(password).to_have_attribute("type", "password")
+            await password.fill("ROOM_UI_SECRET")
+            for width in (390, 1440):
+                await page.set_viewport_size({"width": width, "height": 1000})
+                assert await page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")
+            await dialog.get_by_role("button", name="채널 추가", exact=True).click()
+            assert any(
+                path == "/api/platforms/channels" and data.get("popkontv_password") == "ROOM_UI_SECRET"
+                for path, data in calls
+            )
             assert not errors, errors
-            print("PASS: stream request settings, JSON validation, VOD formats, retry/skip states and mobile tags")
+            print("PASS: stream settings, PopkonTV playback policy persistence, JSON validation, VOD formats, retry/skip states and mobile tags")
         finally:
             await context.close()
             await browser.close()

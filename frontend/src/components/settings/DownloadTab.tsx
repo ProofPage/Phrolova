@@ -50,6 +50,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [youtubePoTokenUrl, setYoutubePoTokenUrl] = useState("");
     const [streamlinkOptions, setStreamlinkOptions] = useState<StreamlinkOptionsByPlatform>({});
     const [streamlinkOptionsValid, setStreamlinkOptionsValid] = useState(true);
+    const [popkontvUsePlaybackResponse, setPopkontvUsePlaybackResponse] = useState(true);
     const initialized = useRef(false);
     useEffect(() => {
         let active = true;
@@ -86,6 +87,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         setYoutubePreferResolution(settings.youtube_prefer_resolution_over_timemachine ?? true);
         setYoutubePoTokenUrl(settings.youtube_po_token_provider_url || "");
         setStreamlinkOptions(settings.streamlink_platform_options ?? {});
+        setPopkontvUsePlaybackResponse(settings.popkontv_use_playback_response ?? true);
         setVodFilenameTemplate(settings.vod_filename_template || "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}");
     }, [settings]);
     const liveDirty = !!settings && (
@@ -104,6 +106,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         youtubePreferResolution !== (settings.youtube_prefer_resolution_over_timemachine ?? true) ||
         youtubePoTokenUrl !== (settings.youtube_po_token_provider_url || "") ||
         streamlinkOptionsKey(streamlinkOptions) !== streamlinkOptionsKey(settings.streamlink_platform_options ?? {}) ||
+        popkontvUsePlaybackResponse !== (settings.popkontv_use_playback_response ?? true) ||
         liveFilenameTemplate !== (settings.live_filename_template || "[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}")
     );
     const vodDirty = !!settings && (
@@ -164,6 +167,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                     youtube_prefer_resolution_over_timemachine: youtubePreferResolution,
                     youtube_po_token_provider_url: youtubePoTokenUrl.trim() || undefined,
                     streamlink_platform_options: streamlinkOptions,
+                    popkontv_use_playback_response: popkontvUsePlaybackResponse,
                 }
             );
             setLiveDownloadDir(liveDownloadDir.trim());
@@ -303,6 +307,16 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
             </Card>
 
             <StreamlinkSettingsCard value={streamlinkOptions} onChange={setStreamlinkOptions} onValidityChange={setStreamlinkOptionsValid} />
+
+            <Card className="settings-section space-y-3" data-settings-section="popkontv" aria-busy={saving}>
+                <CardHeader icon={Radio} title={t('platform.popkontv')} />
+                <SettingRow
+                    label={t('settings.popkontvUsePlaybackResponse')}
+                    hint={t('settings.popkontvUsePlaybackResponseHint')}
+                    control={<Switch checked={popkontvUsePlaybackResponse} onChange={setPopkontvUsePlaybackResponse}
+                        label={t('settings.popkontvUsePlaybackResponse')} />}
+                />
+            </Card>
 
             <Card className="settings-section space-y-3" data-settings-section="youtube" aria-busy={saving}>
                 <CardHeader icon={Video} title={translate("settings.youtubeStreamingSettings")} />

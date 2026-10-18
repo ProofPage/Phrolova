@@ -971,6 +971,11 @@
   "settings.streamQueryParameters": "추가 쿼리 매개변수 (JSON)",
   "settings.streamQueryHint": "문자열 키와 값의 JSON 객체입니다. 허용된 재생 서버 요청에 적용하며 같은 키는 대체합니다. 인증·권한 검사는 유지됩니다.",
   "settings.invalidStreamQuery": "문자열 키와 값의 JSON 객체를 입력하세요. 최대 32개이며 제어 문자는 사용할 수 없습니다.",
+  "settings.popkontvUsePlaybackResponse": "서버 재생 응답 기준으로 녹화",
+  "live.popkontvRoomPassword": "방송 비밀번호",
+  "live.popkontvRoomPasswordHint": "팝콘티비의 정상 입장 요청에 사용합니다. 비밀번호는 앱 실행 중에만 보관하며 파일·로그·설정 응답에는 포함하지 않습니다. 다시 실행하면 입력해야 합니다.",
+  "live.clearPopkontvRoomPassword": "비밀번호 지우기",
+  "settings.popkontvUsePlaybackResponseHint": "기본 켜짐. 방송 종류만으로 미리 제외하지 않고 팝콘티비 서버가 허용한 재생 주소를 사용합니다. 로그인·시청 권한 확인은 유지되며, 변경은 다음 연결부터 적용됩니다.",
   "live.skippingRecording": "건너뛰기 위해 녹화 중지 중",
   "live.skippedRecording": "건너뜀"
 }

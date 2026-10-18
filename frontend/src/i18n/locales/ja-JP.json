@@ -971,6 +971,11 @@
   "settings.streamQueryParameters": "追加クエリパラメーター（JSON）",
   "settings.streamQueryHint": "キーと値が文字列のJSONオブジェクトです。許可された再生サーバーに適用し、同じキーを置換します。認証と権限確認は維持されます。",
   "settings.invalidStreamQuery": "キーと値が文字列のJSONオブジェクトを入力してください。最大32項目で、制御文字は使用できません。",
+  "settings.popkontvUsePlaybackResponse": "サーバーの再生応答に基づいて録画",
+  "live.popkontvRoomPassword": "配信パスワード",
+  "live.popkontvRoomPasswordHint": "PopkonTVの通常の入室リクエストに使用します。アプリ実行中のみ保持し、ファイル・ログ・設定応答には含めません。再起動後は再入力してください。",
+  "live.clearPopkontvRoomPassword": "パスワードを削除",
+  "settings.popkontvUsePlaybackResponseHint": "既定でオンです。配信の種類だけで除外せず、PopkonTVが許可した再生URLを使用します。ログインと視聴権限の確認は維持されます。変更は次回の接続から適用されます。",
   "live.skippingRecording": "スキップのため録画を停止中",
   "live.skippedRecording": "スキップ済み"
 }

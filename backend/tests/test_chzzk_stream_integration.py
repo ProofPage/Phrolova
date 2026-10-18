@@ -17,6 +17,9 @@ from app.engine.chzzk_stream import ChzzkHLSStream, source_paths
 from app.engine.chzzk_time_machine import _media_path
 from app.engine.pipeline import RecordingState, YtdlpLivePipeline
 from tests.test_chzzk_continuity import CDN, INITIALIZATION, MEDIA, START
+from tests.test_new_platforms import local_hls as _local_hls
+
+local_hls = _local_hls
 
 
 def media(url, mode='HLS', **kwargs):
@@ -156,6 +159,38 @@ async def test_container_boundary_continues_auto_off_with_same_policy(monkeypatc
     finally:
         await conductor.finalizer.close()
 
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["hls", "llhls"])
+async def test_encrypted_live_reaches_native_recording_file(local_hls, monkeypatch, mode):
+    from app.engine.media_inspection import probe_media
+    from tests.test_chzzk_encryption import encrypt_playlist
+
+    base, directory = local_hls
+    original = encrypt_playlist(directory / "720" / "index.m3u8")
+    get_settings().chzzk_stream_mode = "standard"
+    url = base + "/720/index.m3u8"
+    paths = [SourcePath(url, mode=mode, cdn="korean")]
+    monkeypatch.setattr(ChzzkHLSStream, "_source_snapshot", lambda self: (1, paths, False))
+
+    async def resolve(quality):
+        return url, {}, None
+
+    pipeline = YtdlpLivePipeline("fixture")
+    try:
+        await pipeline.start_recording(
+            stream_obj="https://chzzk.naver.com/live/fixture",
+            output_dir=str(directory / ("encrypted-" + mode)),
+            quality="720p", source_resolver=resolve,
+        )
+        await asyncio.wait_for(asyncio.shield(pipeline._feeder_task), 15)
+        await pipeline.stop_recording()
+        assert pipeline.state == RecordingState.COMPLETED
+        assert Path(pipeline.output_path).read_bytes() == original
+        assert probe_media(pipeline.output_path)["streams"] == {"video", "audio"}
+    finally:
+        await pipeline.stop_recording()
 
 
 def test_membership_without_cookie_is_actionable_and_never_auto_retried(monkeypatch):

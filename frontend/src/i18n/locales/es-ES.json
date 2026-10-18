@@ -971,6 +971,11 @@
   "settings.streamQueryParameters": "Parámetros de consulta adicionales (JSON)",
   "settings.streamQueryHint": "Objeto JSON con claves y valores de texto. Se aplica a servidores multimedia permitidos y reemplaza las claves coincidentes. Se mantienen la autenticación y los permisos.",
   "settings.invalidStreamQuery": "Introduce un objeto JSON con claves y valores de texto, hasta 32 entradas y sin caracteres de control.",
+  "settings.popkontvUsePlaybackResponse": "Grabar según la respuesta de reproducción del servidor",
+  "live.popkontvRoomPassword": "Contraseña de la emisión",
+  "live.popkontvRoomPasswordHint": "Se usa en las solicitudes normales de acceso a PopkonTV. Solo se conserva mientras la aplicación está abierta, nunca en archivos, registros ni respuestas de configuración. Vuelve a introducirla tras reiniciar.",
+  "live.clearPopkontvRoomPassword": "Borrar contraseña",
+  "settings.popkontvUsePlaybackResponseHint": "Activado por defecto. Usa las URL autorizadas por PopkonTV sin excluir emisiones solo por su tipo. Se mantienen las comprobaciones de acceso e inicio de sesión. Los cambios se aplican en la próxima conexión.",
   "live.skippingRecording": "Deteniendo la grabación antes de omitir",
   "live.skippedRecording": "Omitido"
 }

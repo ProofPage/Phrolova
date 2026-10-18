@@ -258,6 +258,15 @@ class Conductor:
                 self._monitor_channel(composite_key)
             )
 
+    def set_popkontv_room_password(self, channel_id: str, password: str) -> None:
+        key = self.make_composite_key(Platform.POPKONTV, channel_id)
+        task = self._channels.get(key)
+        if task is None:
+            raise ValueError("등록된 채널을 찾을 수 없습니다.")
+        self._get_engine(Platform.POPKONTV).set_room_password(channel_id, password)
+        self._reset_retry(task)
+        self.trigger_scan_now(key)
+
     def set_download_options(
         self,
         composite_key: str,
@@ -448,6 +457,8 @@ class Conductor:
             await asyncio.gather(mt, return_exceptions=True)
         if task.pipeline is not None:
             await self._stop_recording(composite_key)
+        if task.platform == Platform.POPKONTV:
+            self._get_engine(Platform.POPKONTV).set_room_password(task.channel_id, "")
         self._channels.pop(composite_key, None)
         self._scan_events.pop(composite_key, None)
         logger.info(f"채널 제거: {composite_key}")

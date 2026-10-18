@@ -174,6 +174,9 @@ async def test_mismatched_metadata_is_not_offline(monkeypatch, field, value):
     "field,value", [("mc_isPrivate", 1), ("castType", 1), ("accountType", 1)]
 )
 async def test_no_automatic_password_or_paid_view(monkeypatch, field, value):
+    from app.core.config import get_settings
+
+    get_settings().popkontv_use_playback_response = False
     calls = mock_api(monkeypatch, metadata={**META, field: value})
     with pytest.raises(RecordingError):
         await pop.PopkonTVLiveEngine().get_qualities(CHANNEL)
@@ -301,7 +304,11 @@ async def test_authenticated_api_qualities_do_not_leak_account_to_cdn(monkeypatc
     assert "720" in (await engine.resolve_stream(CHANNEL, "worst"))[0]
     with pytest.raises(RecordingError):
         await engine.resolve_stream(CHANNEL, "2160p")
-    assert len(calls) == 2 and len(seen) == 1
+    assert seen
+    assert all(
+        request.headers["authorization"] == "Bearer fixture-token"
+        for request in calls if request.url.path.endswith("/castwatchonoff")
+    )
 
 
 def test_dynamic_public_config_literals_no_evaluation(monkeypatch):
@@ -568,13 +575,19 @@ async def test_actual_streamlink_manifest_resolution(local_hls, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_live_transport_and_finalizer(local_hls, monkeypatch):
+@pytest.mark.parametrize("encrypted", [False, True])
+async def test_live_transport_and_finalizer(local_hls, monkeypatch, encrypted):
     from app.engine.media_inspection import probe_media
     from app.engine.pipeline import YtdlpLivePipeline
     from app.engine.recording_finalizer import RecordingFinalizer
     from tests.test_recording_finalization import terminal
 
     base, directory = local_hls
+    original = None
+    if encrypted:
+        from tests.test_chzzk_encryption import encrypt_playlist
+
+        original = encrypt_playlist(directory / "720" / "index.m3u8")
     engine = pop.PopkonTVLiveEngine()
     monkeypatch.setattr(
         engine,
@@ -602,6 +615,10 @@ async def test_live_transport_and_finalizer(local_hls, monkeypatch):
         )
         await asyncio.wait_for(asyncio.shield(pipeline._feeder_task), 15)
         await pipeline.stop_recording()
+        if original is not None:
+            from pathlib import Path
+
+            assert Path(pipeline.output_path).read_bytes() == original
         job_id = manager.register_capture(
             "popkontv:" + CHANNEL,
             pipeline,

@@ -114,6 +114,9 @@ class RecorderService:
         """특정 채널의 태그를 변경한다."""
         self._conductor.set_channel_tags(composite_key, tags)
 
+    def set_popkontv_room_password(self, channel_id: str, password: str) -> None:
+        self._conductor.set_popkontv_room_password(channel_id, password)
+
     def remove_tag_from_all_channels(self, tag_name: str) -> bool:
         """모든 채널에서 특정 태그를 일괄 제거한다."""
         return self._conductor.remove_tag_from_all_channels(tag_name)

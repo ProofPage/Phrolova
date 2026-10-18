@@ -971,6 +971,11 @@
   "settings.streamQueryParameters": "Zusätzliche Abfrageparameter (JSON)",
   "settings.streamQueryHint": "JSON-Objekt mit Zeichenketten als Schlüsseln und Werten. Gilt für erlaubte Medienserver und ersetzt gleichnamige Parameter. Anmeldung und Berechtigungen werden weiterhin geprüft.",
   "settings.invalidStreamQuery": "JSON-Objekt mit Zeichenketten eingeben: höchstens 32 Einträge und keine Steuerzeichen.",
+  "settings.popkontvUsePlaybackResponse": "Nach der Wiedergabeantwort des Servers aufnehmen",
+  "live.popkontvRoomPassword": "Sendungspasswort",
+  "live.popkontvRoomPasswordHint": "Für reguläre PopkonTV-Zugangsanfragen. Nur während der App-Laufzeit gespeichert, nie in Dateien, Logs oder Einstellungsantworten. Nach einem Neustart erneut eingeben.",
+  "live.clearPopkontvRoomPassword": "Passwort löschen",
+  "settings.popkontvUsePlaybackResponseHint": "Standardmäßig aktiviert. Verwendet von PopkonTV erlaubte Wiedergabe-URLs, statt Sendungen nach Typ auszuschließen. Anmeldung und Wiedergaberechte werden weiterhin geprüft. Änderungen gelten ab der nächsten Verbindung.",
   "live.skippingRecording": "Aufnahme wird vor dem Überspringen gestoppt",
   "live.skippedRecording": "Übersprungen"
 }

@@ -8,6 +8,24 @@
 
 ## [Unreleased]
 
+## [2.0.81] - 2026-10-18
+
+### Added
+- Enable PopkonTV server-authorized playback by default, with a saved option in download settings.
+- Accept per-channel PopkonTV broadcast passwords without exposing them in settings responses or storing them on disk. Passwords must be entered again after restarting the app.
+
+### Fixed
+- Reload PopkonTV broadcast and imported login state on each connection instead of reusing a grant from a previous broadcast or account.
+- Refresh expired PopkonTV live and VOD sessions through the official refresh-token API and atomically persist rotated credentials without password-based re-login.
+- Keep server permission denials, credential scoping and media-host validation intact.
+- Include the encryption key and IV context in CHZZK AES-HLS initialization caching, preventing stale initialization data after key changes.
+
+### Validation
+- Backend regression suite: 1,921 passed and 2 skipped.
+- Browser regression checks passed for the PopkonTV playback option, password entry, settings persistence, retry/skip states and responsive layout.
+- Native encrypted live capture preserves the original media bytes; PopkonTV capture and MKV finalization checks passed with local test media.
+- These tests do not establish end-to-end support for the separately investigated CHZZK AES-marked DASH-SEA VOD playback/key flow.
+
 ## [2.0.80] - 2026-10-18
 
 ### Added
@@ -1115,7 +1133,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.80...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.81...HEAD
+[2.0.81]: https://github.com/ProofPage/Phrolova/compare/v2.0.80...v2.0.81
 [2.0.80]: https://github.com/ProofPage/Phrolova/compare/v2.0.79...v2.0.80
 [2.0.79]: https://github.com/ProofPage/Phrolova/compare/v2.0.78...v2.0.79
 [2.0.78]: https://github.com/ProofPage/Phrolova/compare/v2.0.77...v2.0.78

@@ -6,6 +6,7 @@ import asyncio
 import base64
 import hashlib
 import json
+import os
 import re
 import threading
 import time
@@ -16,8 +17,9 @@ from urllib.request import Request
 
 import httpx
 from Cryptodome.Cipher import AES
-from Cryptodome.Util.Padding import unpad
+from Cryptodome.Util.Padding import pad, unpad
 
+from app.core.config import get_settings
 from app.core.http import USER_AGENT
 from app.engine.base import LiveStatus
 from app.engine.platform_auth import platform_cookie_jar
@@ -124,6 +126,23 @@ def valid_media_url(value):
         return False
 
 
+def _cookie_cipher(passphrase, salt):
+    key = b""
+    previous = b""
+    while len(key) < 48:
+        previous = hashlib.md5(previous + passphrase.encode() + salt).digest()
+        key += previous
+    return AES.new(key[:32], AES.MODE_CBC, key[32:48])
+
+
+def encode_account_cookie(value, passphrase):
+    salt = os.urandom(8)
+    data = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return base64.b64encode(
+        b"Salted__" + salt + _cookie_cipher(passphrase, salt).encrypt(pad(data, 16))
+    ).decode("ascii")
+
+
 def _decode_account_cookie(value, passphrase):
     """Decode the site's CryptoJS/OpenSSL cookie serialization, only for imported account cookies."""
     try:
@@ -132,13 +151,8 @@ def _decode_account_cookie(value, passphrase):
         raw = base64.b64decode(unquote(value), validate=True)
         if not raw.startswith(b"Salted__") or len(raw) < 32:
             raise ValueError
-        key = b""
-        previous = b""
-        while len(key) < 48:
-            previous = hashlib.md5(previous + passphrase.encode() + raw[8:16]).digest()
-            key += previous
         return json.loads(
-            unpad(AES.new(key[:32], AES.MODE_CBC, key[32:48]).decrypt(raw[16:]), 16)
+            unpad(_cookie_cipher(passphrase, raw[8:16]).decrypt(raw[16:]), 16)
         )
     except (ValueError, UnicodeError, RecursionError):
         raise RecordingError(
@@ -230,7 +244,12 @@ def _post(client, path, body, headers=None):
                 "팝콘티비 요청 한도에 도달했습니다.",
                 retryable=True,
             )
-        if response.status_code in (401, 403):
+        if response.status_code == 401:
+            raise RecordingError(
+                "popkontv_session_expired",
+                "팝콘티비 로그인 세션이 만료되었습니다.",
+            )
+        if response.status_code == 403:
             raise RecordingError(
                 "popkontv_authentication",
                 "팝콘티비 로그인 쿠키와 시청 권한을 확인하세요.",
@@ -250,7 +269,7 @@ def _post(client, path, body, headers=None):
         ) from None
 
 
-def public_web_config(client, referer):
+def public_web_config(client, referer, *, require_version=True):
     """Read literal public client/version constants from the website; never evaluate its JavaScript."""
     global _web_config
     with _web_lock:
@@ -285,6 +304,8 @@ def public_web_config(client, referer):
             )
             if not key:
                 raise ValueError
+            if not require_version:
+                return {"ClientKey": "Client " + key[1]}
             version = None
             for path in scripts:
                 if path == app or any(
@@ -325,15 +346,24 @@ def _put(cache, key, value):
 class PopkonTVLiveEngine:
     def __init__(self):
         self._cache = {}
-        self._stream_cache = {}
+        self._room_passwords = {}
+
+    def set_room_password(self, channel_id, password):
+        from pydantic import SecretStr
+
+        channel = normalize_popkontv_channel_id(channel_id)
+        if password:
+            self._room_passwords[channel] = SecretStr(password)
+        else:
+            self._room_passwords.pop(channel, None)
 
     def get_stream_url(self, channel_id):
         return popkontv_live_url(channel_id)
 
-    async def _metadata(self, channel_id):
+    async def _metadata(self, channel_id, *, refresh=False):
         channel = normalize_popkontv_channel_id(channel_id)
         cached = self._cache.get(channel)
-        if cached and time.monotonic() - cached[0] < 8:
+        if not refresh and cached and time.monotonic() - cached[0] < 8:
             return cached[1]
         cid, partner = channel.split("@")
 
@@ -403,70 +433,78 @@ class PopkonTVLiveEngine:
 
     async def _streams(self, channel_id):
         channel = normalize_popkontv_channel_id(channel_id)
-        cached = self._stream_cache.get(channel)
-        if cached and time.monotonic() - cached[0] < 4:
-            return [dict(v) for v in cached[1]]
         cid, partner = channel.split("@")
-        metadata = await self._metadata(channel)
+        # Each connection uses the current broadcast and freshly imported login.
+        # A watch grant from the previous broadcast/account is not reusable.
+        metadata = await self._metadata(channel, refresh=True)
         if not metadata.get("mc_castStartDate"):
             return []
-        if str(metadata.get("mc_isPrivate", "0")) not in ("0", "False", "false"):
-            raise RecordingError(
-                "popkontv_password",
-                "비밀번호로 보호된 팝콘티비 방송은 지원하지 않습니다.",
-            )
-        if (
-            str(metadata.get("castType", "0")) != "0"
-            or str(metadata.get("accountType", "0")) != "0"
-        ):
-            raise RecordingError(
-                "popkontv_paid",
-                "팝콘티비 유료·회원전용 방송은 자동 시청을 지원하지 않습니다.",
-            )
+        if not get_settings().popkontv_use_playback_response:
+            if (str(metadata.get("mc_isPrivate", "0")) not in ("0", "False", "false")
+                    and channel not in self._room_passwords):
+                raise RecordingError(
+                    "popkontv_password",
+                    "비밀번호로 보호된 팝콘티비 방송입니다. 서버 재생 응답 기준 옵션을 확인하세요.",
+                )
+            if (
+                str(metadata.get("castType", "0")) != "0"
+                or str(metadata.get("accountType", "0")) != "0"
+            ):
+                raise RecordingError(
+                    "popkontv_paid",
+                    "팝콘티비 유료·회원전용 방송입니다. 서버 재생 응답 기준 옵션을 확인하세요.",
+                )
         page = self.get_stream_url(channel)
         headers = popkontv_headers(page)
 
         def resolve():
+            from app.engine.popkontv_session import authorized_popkontv_request
+
             jar = platform_cookie_jar("popkontv")
-            auth, user = popkontv_account(jar)
-            if str(metadata.get("isAdult")) == "1" and not (
-                user and user["adult_verified"]
-            ):
-                raise RecordingError(
-                    "popkontv_authentication",
-                    "팝콘티비 성인 인증 계정의 쿠키가 필요합니다. 설정 → 인증에 등록하세요.",
-                )
             with httpx.Client(
                 timeout=15, follow_redirects=False, headers=headers, cookies=jar
             ) as client:
                 config = public_web_config(client, page)
-                body = {
-                    "androidStore": 0,
-                    "castCode": cid + "-" + str(metadata["mc_castStartDate"]),
-                    "castPartnerCode": partner,
-                    "castSignId": cid,
-                    "castType": metadata["castType"],
-                    "commandType": 0,
-                    "exePath": 0,
-                    "partnerCode": user["partnerCode"] if user else PARTNER,
-                    "password": "",
-                    "version": config["version"],
-                }
-                if user:
-                    body.update(signId=user["signId"], isSecret=0)
-                path = (
-                    "/broadcast/v2/castwatchonoff"
-                    if user
-                    else "/broadcast/v2/castwatchonoffguest"
-                )
-                result = response_data(
-                    _post(
-                        client,
-                        path,
-                        body,
+                def watch(auth, user):
+                    if str(metadata.get("isAdult")) == "1" and not (
+                        user and user["adult_verified"]
+                    ):
+                        raise RecordingError(
+                            "popkontv_authentication",
+                            "팝콘티비 성인 인증 계정의 쿠키가 필요합니다. 설정 → 인증에 등록하세요.",
+                        )
+                    password = self._room_passwords.get(channel)
+                    body = {
+                        "androidStore": 0,
+                        "castCode": cid + "-" + str(metadata["mc_castStartDate"]),
+                        "castPartnerCode": partner,
+                        "castSignId": cid,
+                        "castType": metadata["castType"],
+                        "commandType": 0,
+                        "exePath": 5,
+                        "partnerCode": user["partnerCode"] if user else PARTNER,
+                        "password": password.get_secret_value() if password else "",
+                        "version": config["version"],
+                    }
+                    if user:
+                        body.update(signId=user["signId"], isSecret=0)
+                    path = "/broadcast/v2/castwatchonoff" + ("" if user else "guest")
+                    payload = _post(
+                        client, path, body,
                         headers={**auth, "ClientKey": config["ClientKey"]},
-                    ),
-                    ("L0000",),
+                    )
+                    if payload.get("statusCd") == "L0001" and any(
+                        word in str(payload.get("statusMsg", "")).lower()
+                        for word in ("비밀번호", "password")
+                    ):
+                        raise RecordingError(
+                            "popkontv_password",
+                            "팝콘티비 방송 비밀번호를 채널 녹화 설정에서 확인하세요.",
+                        )
+                    return response_data(payload, ("L0000",))
+
+                result = authorized_popkontv_request(
+                    watch, jar, page, client=client, config=config,
                 )
             url = result.get("castHlsUrl")
             identity = f'/{cid}_{partner}_{metadata["mc_castStartDate"]}/'
@@ -542,7 +580,6 @@ class PopkonTVLiveEngine:
                 session.http.close()
 
         variants = await asyncio.to_thread(resolve)
-        _put(self._stream_cache, channel, variants)
         return [dict(v) for v in variants]
 
     async def get_qualities(self, channel_id):

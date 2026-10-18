@@ -971,6 +971,11 @@
   "settings.streamQueryParameters": "額外查詢參數（JSON）",
   "settings.streamQueryHint": "索引鍵和值皆為字串的JSON物件。套用至允許的媒體伺服器並取代同名參數。仍會執行驗證與權限檢查。",
   "settings.invalidStreamQuery": "請輸入索引鍵和值皆為字串的JSON物件，最多32項，不可包含控制字元。",
+  "settings.popkontvUsePlaybackResponse": "依伺服器播放回應錄製",
+  "live.popkontvRoomPassword": "直播間密碼",
+  "live.popkontvRoomPasswordHint": "用於PopkonTV的正常入場請求。僅於應用程式執行時保留，不寫入檔案、日誌或設定回應。重新啟動後需再次輸入。",
+  "live.clearPopkontvRoomPassword": "清除密碼",
+  "settings.popkontvUsePlaybackResponseHint": "預設開啟。不僅依直播類型預先排除，而是使用PopkonTV伺服器允許的播放網址。仍會檢查登入與觀看權限。變更自下次連線起生效。",
   "live.skippingRecording": "正在停止錄製以略過",
   "live.skippedRecording": "已略過"
 }
