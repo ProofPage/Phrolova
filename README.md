@@ -10,7 +10,7 @@ Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, CI
 
 | Area | What it provides |
 | --- | --- |
-| Live | Automatic/manual recording, channel tags and filters, per-channel preferences, CHZZK Time Machine and recording conditions |
+| Live | Automatic/manual recording, channel tags and filters, per-channel preferences, CHZZK live Time Machine and recording conditions |
 | Previews | In-dashboard HLS playback or refreshed frames, with loading states and retry controls; TikTok shares the recording input while recording |
 | Videos | VODs, clips, supported external links, YouTube channel imports, quality selection, queues, speed limits and task controls |
 | Media processing | FFmpeg finalization to MKV/MP4, FFprobe inspection, processing history, source preservation on failure and retry actions |
@@ -27,16 +27,16 @@ The dashboard provides **10 live platforms** and **17 video source choices**, in
 
 | Source | Live | Videos | Authentication when required |
 | --- | --- | --- | --- |
-| CHZZK | Monitoring, preview, manual/automatic recording and Time Machine | VODs and clips | Naver account cookies |
+| CHZZK | Monitoring, preview, manual/automatic recording and live Time Machine | VODs, clips and server-authorized AES-128 HLS playback | Naver account cookies for account-required playback and encryption keys |
 | YouTube | Monitoring, preview and manual/automatic recording | Videos and channel imports | Uploaded cookies for authenticated video access |
-| CIME | Monitoring, preview and manual/automatic recording | VODs and clips | Platform cookies |
+| CIME | Monitoring, preview and manual/automatic recording, including granted UHD/4K qualities | VODs and clips | Account cookies; UHD viewing permission when required |
 | Kick | Streamlink monitoring integration, preview and manual/automatic recording | VODs and clips via yt-dlp | Optional Kick cookies; required for sign-in-only qualities |
 | Twitch | Monitoring, preview and manual/automatic recording via Streamlink | VODs and individual clips via yt-dlp | Optional Twitch Netscape cookies |
 | TikTok | Monitoring, frame previews and manual/automatic recording via Streamlink | Individual videos and short share links via yt-dlp | Optional TikTok Netscape cookies |
 | Bilibili | Room monitoring, HLS previews and manual/automatic recording via Streamlink | BV/av videos, selected parts and b23.tv share links via yt-dlp | Optional Bilibili Netscape cookies |
 | PandaTV (팬더티비) | Channel monitoring, HLS previews and manual/automatic recording via Streamlink | — | Optional PandaTV Netscape cookies; identity-verified account access where required |
-| PopkonTV (팝콘티비) | Channel monitoring, HLS previews and manual/automatic recording via Streamlink | VODs and clips through the existing queue | PopkonTV Netscape cookies for sign-in-required access; verified account for adult broadcasts |
-| RPLAY (알플레이) | Channel monitoring, granted HLS recording and previews | Videos and live archives with granted HLS, DASH or MP4 playback | Exported login information file for sign-in-only content; account viewing permission required |
+| PopkonTV (팝콘티비) | Channel monitoring, recording, previews and password-protected rooms | VODs and clips through the existing queue | PopkonTV Netscape cookies for sign-in-required access; broadcast password when required |
+| RPLAY (알플레이) | Channel monitoring, granted HLS recording and previews | Videos and live archives with granted HLS, DASH or MP4 playback | Email/password login or an imported session file; account viewing permission required |
 | Anilife / Linkani / Ohli24 | — | Work/episode links, episode selection, HLS videos and VTT subtitles | Normal site playback session |
 | TVWiki (티비위키) | — | Work/episode selection and HLS videos at tvwiki54.net | Normal guest playback session |
 | TVChak (티비착) | — | Work/episode selection and original MP4 videos at tvchak208.com | Optional browser cookie file for site access checks |
@@ -47,9 +47,9 @@ Bilibili live rooms accept a numeric room ID or `https://live.bilibili.com/<room
 
 PandaTV live channels accept a channel ID or `https://www.pandalive.co.kr/play/<channel>`. Available HLS qualities are read from the broadcast rather than guessed. Public broadcasts work without a cookie file; identity- or sign-in-required broadcasts report an authentication error. Register the site's authenticated Netscape cookies under **Settings → Authentication → PandaTV** when required; signing in to a browser alone does not authenticate the server. Cookies remain scoped to `pandalive.co.kr`. See [PandaTV support](docs/pandalive-support.md) for implementation and validation details.
 
-RPLAY live links (`https://rplay.live/live/<creator-id>`) are available in **Live → RPLAY**, and video links (`https://rplay.live/play/<video-id>`) are available in **Videos → RPLAY**. Public videos use the site's guest playback grant. For sign-in-only content, **Settings → Authentication → RPLAY** includes an export-code button and instructions to create the login file in your signed-in browser without manually editing JSON. Ordinary cookie files do not include RPLAY's IndexedDB account session. Browser sign-in is separate from the server. Only granted, non-DRM media is downloaded; see [RPLAY authentication and validation](docs/rplay-support.md).
+RPLAY live links (`https://rplay.live/live/<creator-id>`) are available in **Live → RPLAY**, and video links (`https://rplay.live/play/<video-id>`) are available in **Videos → RPLAY**. Public videos use the site's guest playback grant. For account-required content, sign in with email and password under **Settings → Authentication → RPLAY**, or import a session JSON file. The export-code button remains available for an existing browser session. Ordinary Netscape cookie files do not contain RPLAY's IndexedDB session, and browser sign-in alone does not authenticate Phrolova. Only server-granted, non-DRM media is downloaded; see [RPLAY authentication and validation](docs/rplay-support.md).
 
-PopkonTV live channels accept the full `https://www.popkontv.com/live/view?castId=<channel>&partnerCode=<partner>` link or `channel@P-00117`. The partner code is preserved; a bare channel ID uses the site's default `P-00001`. Paste `/vod/<id>` or `/clip/<id>` links into **Videos → PopkonTV**. The app downloads the original video or advertised HLS qualities and inspects the saved file. When required, register the account's Netscape cookies under **Settings → Authentication → PopkonTV**. API authorization stays on `www.popkontv.com`; it is not forwarded to the media CDN. See [PopkonTV support](docs/popkontv-support.md) for validation details.
+PopkonTV live channels accept the full `https://www.popkontv.com/live/view?castId=<channel>&partnerCode=<partner>` link or `channel@P-00117`. The partner code is preserved; a bare channel ID uses the site's default `P-00001`. Paste `/vod/<id>` or `/clip/<id>` links into **Videos → PopkonTV**. **Record according to the server playback response** is enabled by default: Phrolova requests playback rather than rejecting a broadcast type locally, while server denials remain errors. New connections reload broadcast/account state, and expired sessions use the official refresh-token API. Enter a room password in that channel's recording settings; it is kept only until the app exits and must be entered again after restarting. Register account cookies under **Settings → Authentication → PopkonTV** when required. API authorization is not forwarded to the media CDN. See [PopkonTV support](docs/popkontv-support.md).
 
 For episode-based sources, paste a work link in **Videos** and select up to 100 episodes. These sources use the existing queue, quality controls and media inspection. See [episode source adapters](docs/video-site-adapters.md) for URL formats and validation details.
 
@@ -58,6 +58,29 @@ External links use yt-dlp's supported extractors. Available formats and access f
 YouTube uses the same Python yt-dlp dependency for video metadata, downloads and isolated live-extraction workers. Public requests start without account cookies, even if a saved cookie path has become stale. Node.js/EJS options are applied to metadata as well as downloads. Private, members-only and age-restricted content still uses explicit account authentication.
 
 A server-side bot challenge or HTTP 429 is reported separately from content permissions. These restrictions can affect public videos; the app reports them as connection or rate-limit errors instead of a successful download. Check the server connection and any VPN/proxy, wait before retrying, and reduce simultaneous requests. See [YouTube extractor guidance](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#youtube) and the [official client update](https://github.com/yt-dlp/yt-dlp/pull/17805).
+
+YouTube protocol, codec, Time Machine and PO Token Provider preferences are exposed in settings. The native live recorder still requires a supported HLS input; settings do not establish support for SABR-only or DASH-only live capture.
+
+### CHZZK live Time Machine
+
+Time Machine records an **ongoing live broadcast**, not a separate VOD. Phrolova reads the platform's advertised replay window, saves the selected starting point, catches up and continues receiving the live broadcast.
+
+- Where CHZZK provides a full window, up to **3,600 seconds** of earlier live media can be available. A newer broadcast can be saved from its beginning if the server still exposes that first segment.
+- Use **Settings → Downloads → recording mode** to select standard playback, prefer Time Machine with standard fallback, or require Time Machine. The default is `force-timemachine`.
+- The start offset is measured from the beginning of the available Time Machine window. `0` selects its earliest available segment; it does not promise a segment the platform no longer serves.
+- Available history is channel-dependent. An investigated broadcast with Time Machine disabled exposed only **600 seconds**, even though the broadcast was younger than an hour.
+- CHZZK live recording has **no fixed MB/s cap or artificial replay-speed limit**. Shared in-flight requests, bounded prefetch/recovery work and independent recording readers avoid redundant transfers and shared-thread starvation. Catch-up can temporarily use substantial bandwidth; simultaneous recordings still require sufficient network and disk capacity.
+- Recovery preserves segment order. Discontinuities or initialization changes create a file boundary rather than appending incompatible bytes to an existing original.
+
+For the v2.0.82 validation, one real 1080p live recording received the complete one-hour backlog and reached the live edge in about 72 seconds. Two channels then continued recording together for another two minutes and stopped cleanly, with no missing or duplicate segment checkpoints. This is a measured test result, not a guaranteed catch-up time.
+
+### CHZZK encrypted playback and CIME UHD
+
+For CHZZK VODs marked `encryptionType: "AES"`, Phrolova reads the dedicated playback manifest and uses the **advertised AES-128 HLS** rendition instead of treating DASH-SEA as a supported DASH download. Native decryption requests the provider's key through the normal account cookie jar. Live AES key requests use account credentials only on the official HTTPS CHZZK API origin, never on a media CDN. Register `NID_AUT` and `NID_SES` under **Settings → Authentication → CHZZK** when the server requires an account. Subscription/viewing decisions remain with the server; encryption alone is not a subscription check.
+
+Actual encrypted VOD metadata and advertised 144p/720p/1080p qualities have been checked. Authenticated-key handling and exact decrypted bytes are covered by local media tests; a full account-authenticated production encrypted VOD download has not been verified in the release test environment. Unsupported protection systems are not treated as AES-128.
+
+CIME records advertised UHD/4K qualities when the registered account is granted UHD viewing. Register that account's cookies in Phrolova, separately from signing in to a browser. The adapter obtains and renews the normal UHD playback cookies, keeps their scope restricted to the appropriate playback servers and preserves native source media.
 
 ### Recording pipeline
 
@@ -149,7 +172,7 @@ Open <http://127.0.0.1:8000> in the Android browser. Use `termux-setup-storage` 
 
 1. Choose separate live/video folders, recording quality and the final container. Saving setup creates missing folders.
 2. Choose your language in **Settings → Appearance**.
-3. Upload Netscape-format cookies in **Settings → Authentication** for content requiring sign-in. Public content can be used without cookies.
+3. Configure account authentication in **Settings → Authentication** when needed: platform cookies, CHZZK `NID_AUT`/`NID_SES`, or RPLAY email/password/session JSON. Browser sign-in is separate from Phrolova's server.
 4. Add channels in **Live**, review recording preferences and enable automatic recording or start manually.
 5. Add links in **Videos**, choose quality and start downloading. A YouTube channel URL or `@handle` starts a background import.
 6. Review **Statistics**, **Logs**, processing history and tool status in **Settings → Information**.
@@ -286,6 +309,10 @@ The build produces `dist/Phrolova.exe`, bundles Node.js and application icons, a
 | Tool is missing or fails | Inspect status and path in Settings → Information; install both FFmpeg and FFprobe |
 | yt-dlp is missing | Install it in the app environment or put its executable in the adjacent `bin` folder |
 | YouTube needs a JavaScript runtime | Keep Node.js 22+ available; restart after changing `PATH` |
+| CHZZK Time Machine does not start at the broadcast beginning | Check recording mode, start offset and the window actually returned by CHZZK; some broadcasts expose less than an hour |
+| Other recordings slow down during catch-up | Check network/disk capacity and concurrent work; CHZZK catch-up is uncapped, but duplicate media requests and unbounded recovery queues are avoided |
+| CHZZK encrypted video needs an account | Register valid Naver cookies in Phrolova; a signed-in browser does not provide the server's key-request cookies |
+| CIME UHD is missing | Register the account granted UHD viewing, then refresh available qualities; do not substitute a browser-only login |
 | Folder does not open | Use the returned path on the machine running Phrolova |
 | Port is in use | Check `phrolova status`, stop the old instance and wait for shutdown |
 | Update check returns HTTP 404 | Confirm the release and repository URL, then retry in Settings → Information or use the public GitHub Releases page |

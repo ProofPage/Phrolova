@@ -78,6 +78,9 @@ def platform_ydl(url: str, options: dict):
     opts = dict(options)
     if opts.get('logger'):
         opts['logger'] = SafeMediaLogger(opts['logger'])
+    from app.engine.chzzk_cdn import ChzzkCdnYoutubeDL, is_chzzk_vod_url
+    if is_chzzk_vod_url(url):
+        return ChzzkCdnYoutubeDL(opts)
     if media_platform(url) == 'rplay':
         from app.engine.rplay_extractor import RplayIE
         ydl = yt_dlp.YoutubeDL(opts, auto_init=False)

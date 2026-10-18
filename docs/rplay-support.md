@@ -4,6 +4,8 @@ RPLAY appears as **알플레이** in Korean and **RPLAY** in other interface lan
 
 ## Playback and authentication
 
+For an RPLAY email/password account, use the login form in **Settings → Authentication → RPLAY**. The app stores the returned session for subsequent authorized requests. Importing a session JSON file remains an alternative for an existing browser session; follow the export instructions below when needed.
+
 The adapter requests the website's `/content` API with `requestCanView=true` and uses only a successful `canView.canView === true` grant and its `canView.url`. It never reconstructs a restricted media URL from storage keys or substitutes a preview for the full video. The existing queue, quality selection, pause/cancel, output containers, FFprobe inspection and saved history are reused. HLS, DASH and MP4 delivery are supported; DRM-protected content is rejected.
 
 Public grants do not require an account. Videos requiring a subscription, purchase or adult verification require a session for an account that already has permission. Signing in to the Codex browser does not authenticate the separate Phrolova server.

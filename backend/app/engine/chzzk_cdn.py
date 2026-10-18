@@ -66,6 +66,8 @@ class ChzzkCdnYoutubeDL(yt_dlp.YoutubeDL):
         self.cdn_applied = False
         self.cdn_unsupported = False
         super().__init__(*args, **kwargs)
+        from app.engine.chzzk_extractor import CHZZKVideoIE
+        self.add_info_extractor(CHZZKVideoIE())
 
     def urlopen(self, request):
         if self.cdn == "default":

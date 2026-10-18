@@ -11,6 +11,7 @@ import tempfile
 import uuid
 import time
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Callable, Awaitable
@@ -634,6 +635,7 @@ class YtdlpLivePipeline:
     async def _receive_packets(self):
         readers = list(self._readers)
         loop = asyncio.get_running_loop()
+        receivers = ThreadPoolExecutor(max_workers=max(1, len(readers)), thread_name_prefix="recording-read")
 
         async def receive(index, reader):
             def copy_packets():
@@ -782,7 +784,7 @@ class YtdlpLivePipeline:
                 return False
 
             try:
-                return await asyncio.to_thread(copy_packets)
+                return await loop.run_in_executor(receivers, copy_packets)
             except Exception:
                 for other in readers:
                     if other is not reader:
@@ -824,6 +826,7 @@ class YtdlpLivePipeline:
                 type(error).__name__, self._redact_streamlink_error(str(error)),
             )
         finally:
+            receivers.shutdown(wait=False, cancel_futures=True)
             for reader in readers:
                 try:
                     await asyncio.to_thread(reader.close)

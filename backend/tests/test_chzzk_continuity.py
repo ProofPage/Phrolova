@@ -141,7 +141,7 @@ class CDN:
         self.assets[directory + "init.mp4"] = initialization
         self.assets[directory + "changed.mp4"] = initialization + box(b"free", b"changed")
 
-    def ll_playlist(self, prefix, counts=(2, 3, 1, 4), end=True):
+    def ll_playlist(self, prefix, counts=(2, 3, 1, 4), end=True, duration=4):
         groups = []
         for index, count in enumerate(counts):
             parts = [box(b"moof", bytes([index, part])) + box(b"mdat", bytes([index, part]) * 10)
@@ -149,7 +149,7 @@ class CDN:
             groups.append(b"".join(parts))
             for part, data in enumerate(parts):
                 self.assets[f"/{prefix}/1080p/{index}_{part}.m4v"] = data
-        self.playlist(prefix, indices=tuple(range(len(counts))), media=groups, end=end)
+        self.playlist(prefix, indices=tuple(range(len(counts))), media=groups, end=end, duration=duration)
         path = f"/{prefix}/1080p/list.m3u8"
         lines = self.assets[path].decode().splitlines()
         lines[2:2] = ['#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES',
@@ -159,7 +159,7 @@ class CDN:
         for line in lines:
             if line.startswith("#EXTINF:"):
                 for part in range(counts[index]):
-                    output.append(f'#EXT-X-PART:DURATION={4 / counts[index]},URI="{index}_{part}.m4v"')
+                    output.append(f'#EXT-X-PART:DURATION={duration / counts[index]},URI="{index}_{part}.m4v"')
                 index += 1
             output.append(line)
         self.assets[path] = "\n".join(output).encode()

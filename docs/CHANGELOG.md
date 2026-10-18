@@ -8,6 +8,28 @@
 
 ## [Unreleased]
 
+## [2.0.82] - 2026-10-18
+
+### Added
+- Discover CHZZK AES-marked VODs through the dedicated playback endpoint and select the server-advertised AES-128 HLS renditions, retaining normal cookie-authenticated key requests.
+- Scope live AES key credentials to the official HTTPS CHZZK API origin.
+
+### Fixed
+- Share matching in-flight CHZZK media downloads between recovery and foreground recording instead of issuing duplicate transfers.
+- Stop recovery-only capture after the entire missing interval is delivered. Keep its shared recovery deadline until that interval is complete.
+- Bound recovery downloads to available network workers instead of filling a separate background queue; avoid speculative partial copies during Time Machine catch-up.
+- Give native recording receivers their own workers so long-lived reads cannot occupy the shared asynchronous executor needed by other channels and control operations.
+
+### Documentation
+- Update the README and repository description for current platforms, account login, PopkonTV renewal/password rooms, CIME UHD and CHZZK live Time Machine.
+- Clarify that live catch-up has no fixed bandwidth or replay-speed cap, and that server-provided history can be shorter than an hour.
+
+### Validation
+- 97 focused CHZZK, encryption, recovery and recording-isolation tests passed.
+- A real 1080p live capture received the complete 3,600-second backlog, caught up in about 72 seconds, continued alongside another channel for two minutes and stopped without segment-checkpoint gaps or duplicates.
+- Both captured files passed FFprobe video/audio inspection. Frontend build and eight-language validation passed.
+- Actual encrypted VOD metadata/quality discovery was verified. Full account-authenticated production encrypted VOD downloading remains unverified in the release test environment.
+
 ## [2.0.81] - 2026-10-18
 
 ### Added
@@ -1133,7 +1155,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.81...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.82...HEAD
+[2.0.82]: https://github.com/ProofPage/Phrolova/compare/v2.0.81...v2.0.82
 [2.0.81]: https://github.com/ProofPage/Phrolova/compare/v2.0.80...v2.0.81
 [2.0.80]: https://github.com/ProofPage/Phrolova/compare/v2.0.79...v2.0.80
 [2.0.79]: https://github.com/ProofPage/Phrolova/compare/v2.0.78...v2.0.79

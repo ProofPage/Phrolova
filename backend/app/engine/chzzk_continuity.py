@@ -40,6 +40,19 @@ RECOVERY_REFRESH_INTERVAL = 5.0
 TIME_TOLERANCE = 0.02
 
 
+def encryption_context(key, number):
+    if key is None or key.method == "NONE":
+        return None
+    return (key.method, key.uri, key.iv or HLSStreamWriter.num_to_iv(number),
+            key.key_format or "identity", key.key_format_versions or "1")
+
+
+def map_context(mapping, number):
+    if mapping is None:
+        return None
+    return mapping.uri, mapping.byterange, encryption_context(mapping.key, number)
+
+
 class Unavailable(StreamError):
     """A required segment could not be delivered."""
 
@@ -366,16 +379,22 @@ class ContinuitySource:
     def progressed(self):
         with self.lock:
             self.last_progress = time.monotonic()
-            self.recovery_deadline = None
-            self.recovery_wall = None
+            if not self.recovering:
+                self.recovery_deadline = None
+                self.recovery_wall = None
 
     def emit(self, kind, **fields):
         if kind == 'recovery_started':
+            self.recovering = True
             self.recovery_target = fields.get('at')
             if self.writer is not None:
                 self.writer.start_capture(fields.get('at'))
             self.recovery_snapshot('started', fields.get('at'), force=True)
         elif kind == 'recovery_completed':
+            self.recovering = False
+            self.progressed()
+            if self.writer is not None:
+                self.writer.stop_capture()
             self.recovery_snapshot('completed', fields.get('at'), force=True)
         elif kind == 'boundary':
             self.recovery_snapshot('boundary', fields.get('resume_from'), force=True)
@@ -610,7 +629,7 @@ class ContinuitySource:
                     self.catalog.pop(key)
             while len(self.catalog) > 2048:
                 self.catalog.popitem(last=False)
-        if self.writer and self.writer.capture_thread is not None:
+        if self.writer and self.writer.capture_active():
             self.writer.capture_playlist(manifest, playlist)
 
     def retained_candidates(self, group=None):
@@ -734,8 +753,8 @@ class ChzzkContinuityWorker(HLSStreamWorker):
                             yield saved
                             last = saved
                 manifest = source.primary
-                playlist = source.playlist(manifest, force=self.writer.capture_thread is None,
-                                           blocking=last is not None and self.writer.capture_thread is None)
+                playlist = source.playlist(manifest, force=not self.writer.capture_active(),
+                                           blocking=last is not None and not self.writer.capture_active())
                 self.writer.prefetch_parts(manifest, playlist)
                 segments = [source.locate(s, manifest, playlist) for s in playlist.segments]
                 if last is None:
@@ -862,10 +881,12 @@ class ChzzkContinuityWriter(HLSStreamWriter):
         self.requests = ThreadPoolExecutor(max_workers=2 * self.threads - 1,
                                           thread_name_prefix="chzzk-request")
         self.request_slots = threading.BoundedSemaphore(2 * self.threads - 1)
-        self.capture_requests = ThreadPoolExecutor(max_workers=1, thread_name_prefix='chzzk-capture')
         self.capture_thread = None
+        self.capture_stop = threading.Event()
         self.capture_lock = threading.Lock()
         self.capture_pending = set()
+        self.request_lock = threading.Lock()
+        self.pending_requests = {}
         self.capture_from = None
         self.local = threading.local()
         self.lookups = ThreadPoolExecutor(max_workers=3, thread_name_prefix="chzzk-manifest")
@@ -971,27 +992,37 @@ class ChzzkContinuityWriter(HLSStreamWriter):
         if self.media_buffer is None or not self.buffer_writable or self.closed:
             return
         with self.capture_lock:
-            if self.capture_thread is not None:
+            if self.capture_active():
                 return
+            self.capture_stop = threading.Event()
             self.capture_from = self.previous.end if self.previous else parse_timestamp(at) if at else None
             self.media_buffer.note_pending(self.capture_from)
-            self.capture_thread = threading.Thread(target=self.capture_loop, daemon=True, name='chzzk-poll')
+            self.capture_thread = threading.Thread(
+                target=self.capture_loop, args=(self.capture_stop,), daemon=True, name='chzzk-poll')
             self.capture_thread.start()
 
-    def capture_loop(self):
-        while not self.source.stop.is_set() and self.buffer_writable:
+    def capture_active(self):
+        return self.capture_thread is not None and not self.capture_stop.is_set()
+
+    def stop_capture(self):
+        self.capture_stop.set()
+
+    def capture_loop(self, stopped):
+        while not self.source.stop.is_set() and not stopped.is_set() and self.buffer_writable:
             try:
                 manifest = self.source.primary
-                self.source.playlist(manifest, force=True)
+                playlist = self.source.playlist(manifest, force=True, blocking=True)
                 if self.source.recovering:
                     self.source.recovery_snapshot('waiting')
+                interval = playlist.part_target or playlist.targetduration or 2
             except (StreamError, ValueError, OSError):
+                interval = 1
                 if self.source.recovering:
                     self.source.recovery_snapshot('waiting')
-            self.source.stop.wait(0.5)
+            stopped.wait(min(2, interval))
 
     def capture_playlist(self, manifest, playlist):
-        if (self.source.stop.is_set() or not self.buffer_writable
+        if (self.source.stop.is_set() or not self.capture_active() or not self.buffer_writable
                 or (manifest.probe and not getattr(manifest, 'validated', False))):
             return
         for raw in playlist.segments:
@@ -1007,24 +1038,26 @@ class ChzzkContinuityWriter(HLSStreamWriter):
                     continue
                 self.capture_pending.add(key)
             try:
-                self.capture_requests.submit(self.capture_one, key, item)
-            except RuntimeError:
-                with self.capture_lock:
-                    self.capture_pending.discard(key)
-
-    def capture_one(self, key, item):
-        self.local.capture = True
-        try:
-            if (not self.source.stop.is_set() and self.buffer_writable
-                    and self.media_buffer.can_store(item.date, item.duration)):
-                # One short attempt, never a 90-second recovery in the capture lane.
-                self.preserve(self.download(item, item))
-        except (StreamError, ValueError, OSError):
-            pass
-        finally:
-            self.local.capture = False
+                future = self.submit_request(
+                    item, item, time.monotonic() + min(2, self.timeout),
+                    capture_event=self.capture_stop, block=False,
+                )
+                if future is not None:
+                    def completed(_, key=key):
+                        with self.capture_lock:
+                            self.capture_pending.discard(key)
+                    future.add_done_callback(completed)
+                    continue
+            except Unavailable:
+                pass
             with self.capture_lock:
                 self.capture_pending.discard(key)
+
+    def request_stopped(self):
+        request = getattr(self.local, 'request', None)
+        capture = request.capture_event if request is not None else None
+        return self.source.stop.is_set() or (capture is not None and capture.is_set())
+
 
     def resume_candidates(self):
         """Bound slow Korean discovery while allowing Akamai within two seconds."""
@@ -1179,7 +1212,8 @@ class ChzzkContinuityWriter(HLSStreamWriter):
         return data
 
     def prefetch_parts(self, manifest, playlist):
-        if manifest.mode != "llhls" or manifest.history or self.source.stop.is_set():
+        if (self.stream.recording_time_machine or manifest.mode != "llhls"
+                or manifest.history or self.source.stop.is_set()):
             return
         number = (playlist.media_sequence or 0) + len(playlist.segments)
         # Only fetch published parts of the unfinished group. PRELOAD-HINT
@@ -1286,6 +1320,7 @@ class ChzzkContinuityWriter(HLSStreamWriter):
             return
         self.closed = True
         self.source.stop.set()
+        self.stop_capture()
         self._wait.set()
         self.reader.worker.close()
         # RingBuffer.close wakes readers but leaves its remaining bytes readable.
@@ -1293,22 +1328,29 @@ class ChzzkContinuityWriter(HLSStreamWriter):
         self.executor.shutdown(wait=False, cancel_futures=True)
         self.requests.shutdown(wait=False, cancel_futures=True)
         self.lookups.shutdown(wait=False, cancel_futures=True)
-        self.capture_requests.shutdown(wait=False, cancel_futures=True)
         if self.media_buffer is not None:
             self.media_buffer.close()
         if self.owned_buffer is not None:
             # Active requests check stop before storing; wait for their bounded
             # attempts before removing a locally owned directory.
-            self.capture_requests.shutdown(wait=True, cancel_futures=True)
+            self.requests.shutdown(wait=True, cancel_futures=True)
             if self.capture_thread and self.capture_thread is not threading.current_thread():
                 self.capture_thread.join(timeout=6)
             self.owned_buffer.cleanup()
 
     def http_bytes(self, uri, byterange=None):
-        if self.source.stop.is_set():
+        if self.request_stopped():
             raise Unavailable("Stopped")
         params = self.source.request_params()
         headers = dict(params.pop("headers", {}))
+        api = urlparse(uri)
+        if (self.stream.api_cookie and api.scheme == "https"
+                and api.hostname == "api.chzzk.naver.com"
+                and api.port in (None, 443)
+                and api.username is None and api.password is None):
+            # The advertised live AES key can require the same account as
+            # source discovery. Never send this API cookie to a media CDN.
+            headers["Cookie"] = self.stream.api_cookie
         if byterange:
             if byterange.offset is None:
                 raise Unavailable("Implicit byte range unsupported")
@@ -1327,7 +1369,7 @@ class ChzzkContinuityWriter(HLSStreamWriter):
                 # fill a chunk. Even a trickling body cannot postpone deadline
                 # and stop checks until an entire 64 KiB has arrived.
                 while chunk := response.raw.read1(65536, decode_content=True):
-                    if self.source.stop.is_set() or time.monotonic() > deadline:
+                    if self.request_stopped() or time.monotonic() > deadline:
                         raise Unavailable("Media request interrupted", category="timeout")
                     if len(data) + len(chunk) > BUFFER_BYTES:
                         raise Unavailable('Oversized media response', category='invalid_media')
@@ -1370,16 +1412,9 @@ class ChzzkContinuityWriter(HLSStreamWriter):
         mapping = located.map
         if mapping is None:
             return b""
-        key = mapping.key
-        encryption = None
-        if key is not None and key.method != "NONE":
-            encryption = (
-                key.method, key.uri, key.iv or self.num_to_iv(located.num),
-                key.key_format or "identity", key.key_format_versions or "1",
-            )
         # A reused initialization URL can belong to a new key/IV context.
         # Cache decrypted bytes only for the context which produced them.
-        cache_key = (mapping.uri, mapping.byterange, encryption)
+        cache_key = map_context(mapping, located.num)
         with self.cache_lock:
             cached = self.maps.get(cache_key)
         if cached is not None:
@@ -1403,7 +1438,8 @@ class ChzzkContinuityWriter(HLSStreamWriter):
             stage = "media"
             media = None
             used_parts = False
-            if located.manifest.mode == "llhls" and located.parts and not getattr(self.local, 'capture', False):
+            if (not self.stream.recording_time_machine and located.manifest.mode == "llhls"
+                    and located.parts and not getattr(self.local, 'capture', False)):
                 try:
                     media = self.download_parts(located)
                     used_parts = True
@@ -1424,16 +1460,54 @@ class ChzzkContinuityWriter(HLSStreamWriter):
                                        error, located)
             raise error from None
 
-    def submit_request(self, located, target, deadline):
+    def submit_request(self, located, target, deadline, *, capture_event=None, block=True):
+        key = (located.live_id, located.rendition, located.num, located.date,
+               located.discontinuity_id, located.uri, located.byterange,
+               encryption_context(located.key, located.num),
+               map_context(located.map, located.num), map_context(target.map, target.num))
+        state = SimpleNamespace(capture_event=capture_event, future=None)
+
+        def receive():
+            self.local.capture = capture_event is not None
+            self.local.request = state
+            try:
+                return self.preserve(self.download(located, target))
+            finally:
+                self.local.capture = False
+                self.local.request = None
+
+        def finished(future):
+            with self.request_lock:
+                if self.pending_requests.get(key) is state:
+                    self.pending_requests.pop(key)
+            self.request_slots.release()
+
         while not self.source.stop.is_set() and time.monotonic() < deadline:
-            if self.request_slots.acquire(timeout=0.1):
+            with self.request_lock:
+                shared = self.pending_requests.get(key)
+                if shared is not None:
+                    if capture_event is None:
+                        shared.capture_event = None
+                    return shared.future
+            if self.request_slots.acquire(timeout=0.1 if block else 0):
                 try:
-                    future = self.requests.submit(self.download, located, target)
+                    with self.request_lock:
+                        shared = self.pending_requests.get(key)
+                        if shared is not None:
+                            self.request_slots.release()
+                            if capture_event is None:
+                                shared.capture_event = None
+                            return shared.future
+                        future = self.requests.submit(receive)
+                        state.future = future
+                        self.pending_requests[key] = state
                 except RuntimeError:
                     self.request_slots.release()
                     raise Unavailable("Stopped") from None
-                future.add_done_callback(lambda _: self.request_slots.release())
+                future.add_done_callback(finished)
                 return future
+            if not block:
+                return None
         raise Unavailable("Stopped or request deadline reached")
 
     def refresh_token(self):
@@ -1615,7 +1689,9 @@ class ChzzkContinuityWriter(HLSStreamWriter):
                         akamai_started = lookup_group("akamai")
                     while pending and len(futures) < 2:
                         alternative = pending.pop(0)
-                        futures.append(self.submit_request(alternative, required, deadline))
+                        future = self.submit_request(alternative, required, deadline)
+                        if future not in futures:
+                            futures.append(future)
                     if futures or lookups or (has_akamai and not akamai_started):
                         self.source.stop.wait(0.05)
                 if refresh_needed:
@@ -1722,9 +1798,9 @@ class ChzzkContinuityWriter(HLSStreamWriter):
                     self.parts.pop(key).cancel()
         self.start_download = None
         self.source.progressed()
-        if self.source.recovering:
+        if self.source.recovering and (
+                self.output_target is None or self.source.matches(target, self.output_target)):
             self.source.emit("recovery_completed", at=timestamp(target.end))
-            self.source.recovering = False
         return True
 
     def write(self, target, result, *data):
