@@ -100,6 +100,8 @@ class YtdlpLivePipeline:
         self._bitrate: float = 0.0
         self._last_size: int = 0
         self._last_check_time: Optional[datetime] = None
+        self._speed_samples = []
+        self._speed_window_seconds = 0.0
 
     @property
     def state(self) -> RecordingState:
@@ -1673,17 +1675,37 @@ class YtdlpLivePipeline:
                 Path(path).stat().st_size for path in paths if Path(path).is_file()
             )
             self._file_size_bytes = current_size
+            # HLS segments arrive in bursts. Bitrate describes the saved media,
+            # not how quickly the latest segment happened to reach the disk.
+            duration = self.duration_seconds
+            self._bitrate = current_size * 8 / duration / 1000 if duration > 0 else 0.0
             now = datetime.now()
-            if self._last_check_time is not None:
+            for reader in self._readers:
+                continuity = getattr(getattr(reader, "stream", None), "continuity", None)
+                if continuity and continuity.primary.playlist:
+                    self._speed_window_seconds = float(continuity.primary.playlist.targetduration or 0)
+            if self._speed_window_seconds > 0:
+                if not self._speed_samples and self._last_check_time is not None:
+                    self._speed_samples.append((self._last_check_time, self._last_size))
+                self._speed_samples.append((now, current_size))
+                # Cover one advertised segment interval. The older boundary
+                # sample is retained, so a normal gap between segments is not
+                # mistaken for a stopped receiver. Real stalls still decay to 0.
+                while len(self._speed_samples) > 2 and (
+                    now - self._speed_samples[1][0]
+                ).total_seconds() >= self._speed_window_seconds:
+                    self._speed_samples.pop(0)
+                earlier, size = self._speed_samples[0]
+                elapsed = (now - earlier).total_seconds()
+                self._download_speed = max(0, current_size - size) / elapsed / (1024 * 1024) if elapsed > 0 else 0.0
+            elif self._last_check_time is not None:
                 elapsed = (now - self._last_check_time).total_seconds()
                 if elapsed > 0:
                     size_diff = current_size - self._last_size
                     if size_diff > 0:
                         self._download_speed = (size_diff / elapsed) / (1024 * 1024)
-                        self._bitrate = (size_diff * 8 / elapsed) / 1000
                     else:
                         self._download_speed = 0.0
-                        self._bitrate = 0.0
             self._last_size = current_size
             self._last_check_time = now
         except Exception as e:

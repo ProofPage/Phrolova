@@ -83,6 +83,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     settings = get_settings()
     logger.info(f"{settings.app_name} 시작 중...")
+    from app.engine.youtube_tools import youtube_tools
+    youtube_setup = asyncio.create_task(youtube_tools.ready())
 
     # Discovery alone does not prove an executable can run (or its sibling exists).
     from app.engine.media_tools import check_media_tool
@@ -158,6 +160,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # ── 종료 ──
     logger.info(f"{settings.app_name} 종료 중...")
+    await youtube_tools.stop()
+    await youtube_setup
     if _updater_service:
         await _updater_service.stop()
     # Conductor를 먼저 멈춰야 종료 중 발생한 '녹화 완료' 알림이 큐에 들어간다.

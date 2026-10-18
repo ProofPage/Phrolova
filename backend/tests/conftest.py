@@ -9,10 +9,20 @@
 """
 
 import pytest
+from unittest.mock import AsyncMock
 
 import app.core.utils as core_utils
 from app.core.config import get_settings
 from app.store.db import Database, set_database
+
+
+@pytest.fixture(autouse=True)
+def isolate_youtube_tool_downloads(monkeypatch):
+    """Unit tests must not install software or start a real background server."""
+    from app.engine.youtube_tools import youtube_tools
+    monkeypatch.setattr(youtube_tools, "ready", AsyncMock())
+    monkeypatch.setattr(youtube_tools, "prepare", lambda: None)
+    monkeypatch.setattr(youtube_tools, "stop", AsyncMock())
 
 
 @pytest.fixture(autouse=True)

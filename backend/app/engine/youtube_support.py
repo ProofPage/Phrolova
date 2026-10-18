@@ -17,10 +17,12 @@ def is_youtube_url(url):
 
 
 def runtime_options():
+    from app.engine.youtube_tools import youtube_tools
     runtimes = {}
     for name in ("deno", "node"):
         executable = shutil.which(name)
         for folder in (
+            *([youtube_tools.bundle] if youtube_tools.bundle else []),
             Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent)) / "bin",
             Path(sys.executable).parent / "bin",
             Path(sys.executable).parent,
@@ -55,17 +57,24 @@ def youtube_extractor_command():
 
 
 def youtube_options():
-    return {**runtime_options(), 'sleep_interval_requests': 1,
+    from app.engine.youtube_tools import youtube_tools, LOCAL_URL
+    provider = get_settings().youtube_po_token_provider_url or (LOCAL_URL if youtube_tools.status == 'ready' else None)
+    return {**runtime_options(),
+            **({'extractor_args': {'youtubepot-bgutilhttp': {'base_url': [provider]}}} if provider else {}),
+            'sleep_interval_requests': 1,
             'sleep_interval': 5, 'max_sleep_interval': 10}
 
 
 def require_runtime_cli_options():
     args = runtime_cli_options()
     settings = get_settings()
-    if settings.youtube_po_token_provider_url:
-        provider = settings.youtube_po_token_provider_url.strip()
+    from app.engine.youtube_tools import youtube_tools, LOCAL_URL
+    if youtube_tools.bundle:
+        args.extend(["--plugin-dirs", str(youtube_tools.bundle / "plugins")])
+    if settings.youtube_po_token_provider_url or youtube_tools.status == 'ready':
+        provider = (settings.youtube_po_token_provider_url or LOCAL_URL).strip()
         if provider:
-            args.extend(["--extractor-args", f"youtubepot:provider={provider}"])
+            args.extend(["--extractor-args", f"youtubepot-bgutilhttp:base_url={provider}"])
     return args
 
 
@@ -179,6 +188,8 @@ def youtube_cookie_fallback(error):
 
 
 async def with_youtube_cookie_fallback(operation):
+    from app.engine.youtube_tools import youtube_tools
+    await youtube_tools.ready()
     try:
         return await operation(None)
     except Exception as error:

@@ -14,6 +14,8 @@ from app.core.logger import get_media_logger
 
 
 def channel_entries(url, stopped):
+    from app.engine.youtube_tools import youtube_tools
+    youtube_tools.prepare()
     # process=False keeps playlist generators lazy, including nested channel tabs.
     # Processing the result normally enumerates the entire channel before returning.
     options = {

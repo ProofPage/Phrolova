@@ -8,7 +8,7 @@ This is a guest-access challenge, distinct from private videos, membership entit
 
 The official 2026.10.10.233141 development build includes the new `tv_samsung` client. It retrieved 36 formats for `MFRcNvE-dGA` once without account cookies in an isolated comparison. Subsequent metadata, five-second media-download and live-HLS attempts still received bot challenges. A complete real download or live capture was **not** validated on this network.
 
-An isolated test with bgutil-ytdlp-pot-provider 2.0.2 successfully started its local HTTP provider and generated player PO tokens for both `mweb` and `tv_samsung`. The request for `MFRcNvE-dGA` still returned the same bot challenge with no formats. The helper was stopped after the test and is not a product dependency. This matches the upstream known-issues guidance: a PO-token provider cannot remove an existing IP-based login restriction. The October client fixes address separate playback failures and do not establish that this guest-access challenge is resolved.
+The helper was stopped after the test.
 
 ## Application changes
 
@@ -18,6 +18,16 @@ An isolated test with bgutil-ytdlp-pot-provider 2.0.2 successfully started its l
 - Retain the temporary anonymous session between metadata extraction and download processing. It stays in memory and does not read browser account cookies or require a cookie upload.
 - Start previews without account cookies, so an outdated saved cookie path does not break otherwise public playback. Preserve explicit cookie fallback for account-restricted content.
 - Classify guest bot checks and HTTP 429 separately, display actionable localized messages and avoid automatic download retry storms. Preserve permission errors for private, age-restricted and members-only content.
+
+## Automatic runtime setup
+
+Phrolova now prepares Deno 2.9.7 and the matching bgutil server/plugin 2.0.2 in its persistent `data/youtube-tools` directory. Official downloads are checked against pinned SHA-256 hashes before installation. Setup runs in the background so unrelated platform monitoring can start normally.
+
+On later launches, Phrolova verifies the installed Deno executable, plugin archive and required server files, checks that Deno runs, and skips downloading and installing healthy components. It reuses a matching server or starts its own server bound only to `127.0.0.1:4416`. Only the process started by Phrolova is terminated and reaped on shutdown. An explicitly configured external provider URL is retained.
+
+The Python API and live worker use `youtubepot-bgutilhttp:base_url` and the same plugin/runtime paths. Channel imports share the setup. An installation failure is logged and is not marked successful; it is not repeatedly retried for every video in that process. Restart after correcting the reported cause. Initial installation requires internet access and may take several minutes. Windows, macOS and GNU/Linux x64/ARM64 assets are supported; native Android/Termux needs a compatible manually prepared runtime/provider.
+
+Successful installation and `/ping` health are not proof of token generation or YouTube playback. A production Windows check generated a token through `/get_pot` after a second launch skipped installation. YouTube may still require valid cookies or reject the network connection.
 
 ## Deployment
 

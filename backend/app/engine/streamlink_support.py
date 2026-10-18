@@ -65,7 +65,9 @@ def configure_streamlink_session(session, platform, media_url=None, loss_report=
 
 def _thread_failure(thread, error):
     reader = thread.reader
-    reader._phrolova_error = StreamError(f"{type(error).__name__}: {redact_media_error(error)}")
+    from app.engine.recording_errors import RecordingError
+    reader._phrolova_error = (error if isinstance(error, RecordingError) else
+                             StreamError(f"{type(error).__name__}: {redact_media_error(error)}"))
     report = reader.session._phrolova_loss_report
     if report is not None:
         report.error()

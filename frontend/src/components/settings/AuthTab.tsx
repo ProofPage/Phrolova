@@ -17,13 +17,17 @@ export function AuthTab({ onSaved, onDirtyChange }: Props) {
     useEffect(() => onDirtyChange?.(false), [onDirtyChange]);
     return (
         <div className="auth-settings">
+            <Card className="auth-guidance">
+                <h3 className="font-semibold text-ink">{t("settings.authGuideTitle")}</h3>
+                <p className="settings-shared-hint">{t("settings.authGuide")}</p>
+                <p className="settings-shared-hint">{t("settings.authPermissionHelp")}</p>
+            </Card>
+            <div className="auth-platform-grid">
             {(["chzzk", "youtube", "cime", "kick", "twitch", "tiktok", "bilibili", "pandalive", "popkontv", "tvchak", "hearheart"] as const).map(platform => (
                 <PlatformCookieAuth key={platform} platform={platform} onSaved={onSaved} />
             ))}
             <RplaySessionAuth onSaved={onSaved} />
-            <Card className="auth-guidance">
-                <p className="settings-shared-hint">{t("settings.optionalPublicContentWorksWithoutCookiesRegisterANetscapeFormatCookieFileForContentThatRequiresSignIn")}</p>
-            </Card>
+            </div>
         </div>
     );
 }

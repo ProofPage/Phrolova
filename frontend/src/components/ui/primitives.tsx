@@ -131,6 +131,7 @@ export function CollapsibleCard({
     action,
     tone,
     defaultOpen = false,
+    onOpenChange,
     children,
 }: {
     icon?: LucideIcon;
@@ -139,6 +140,7 @@ export function CollapsibleCard({
     action?: ReactNode;
     tone?: "primary" | "danger" | "warn" | "ok";
     defaultOpen?: boolean;
+    onOpenChange?: (open: boolean) => void;
     children: ReactNode;
 }) {
     useLanguage();
@@ -157,7 +159,7 @@ export function CollapsibleCard({
                 {/* 헤더 전체가 토글이다. action은 버튼 밖에 둬야 중첩 클릭이 꼬이지 않는다. */}
                 <button
                     type="button"
-                    onClick={() => setOpen((v) => !v)}
+                    onClick={() => { setOpen(!open); onOpenChange?.(!open); }}
                     aria-expanded={open}
                     aria-controls={bodyId}
                     className="ui-disclosure flex items-center gap-3 min-w-0 flex-1 text-left group"

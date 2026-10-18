@@ -8,6 +8,30 @@
 
 ## [Unreleased]
 
+## [2.0.86] - 2026-10-18
+
+### Fixed
+- Fix RPLAY playlist renewal assigning a read-only Streamlink URL property. Update request arguments instead and test with the real guarded stream class.
+- Propagate RPLAY segment and mid-response failures to recording recovery instead of silently skipping failed media; preserve structured retry policies.
+- Calculate video bitrate from saved media time. Average CHZZK write speed across its advertised segment interval, retaining zero speed for genuine stalls without adding a bandwidth cap.
+- Correct authentication success notifications and clear RPLAY passwords after failed sign-in attempts.
+
+### Added
+- Automatically install hash-verified Deno 2.9.7 and matching bgutil server/plugin 2.0.2 in persistent app data. Verify and reuse healthy installations on subsequent launches.
+- Start the managed provider on IPv4 loopback only, retain explicit external provider settings and stop only the app-owned process on shutdown.
+- Share official provider arguments and runtime/plugin paths across YouTube video, live, preview and channel-import paths.
+
+### Improved
+- Compact, collapsed authentication cards with two desktop columns and one mobile column, separate account/cookie/session methods and clearer guidance in all eight languages.
+
+### Validation
+- Full backend check before the final CHZZK display change: 2,009 passed and 2 skipped. The final CHZZK/pipeline regression check passed 109 tests and 4 subtests.
+- Each supplied RPLAY IVS channel recorded 248 seconds through a controlled playlist 403, followed by real API renewal and successful media delivery.
+- With Time Machine disabled, the supplied CHZZK channel saved 166.71 seconds of 1080p video/audio. Write-speed samples were 0.51–0.93 MiB/s and media bitrate was approximately 6.2 Mbps.
+- Windows native Deno/provider installation, next-launch installation skip and actual token generation passed.
+- Authentication UI, keyboard controls, password clearing, file-method switching, 320–1440px layouts, eight-language checks and frontend build passed.
+- YouTube bot verification and account/network restrictions are not guaranteed to be resolved by a working token provider.
+
 ## [2.0.85] - 2026-10-18
 
 ### Fixed
@@ -1201,7 +1225,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.85...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.86...HEAD
+[2.0.86]: https://github.com/ProofPage/Phrolova/compare/v2.0.85...v2.0.86
 [2.0.85]: https://github.com/ProofPage/Phrolova/compare/v2.0.84...v2.0.85
 [2.0.84]: https://github.com/ProofPage/Phrolova/compare/v2.0.83...v2.0.84
 [2.0.83]: https://github.com/ProofPage/Phrolova/compare/v2.0.82...v2.0.83
