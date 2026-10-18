@@ -8,6 +8,20 @@
 
 ## [Unreleased]
 
+## [2.0.85] - 2026-10-18
+
+### Fixed
+- Renew RPLAY live playlists through the official playback grant after an HTTP 401/403, preserving the active HLS worker and its sequence tracking.
+- Stop repeated authentication failures after one renewed playback attempt; retain server-enforced account and quality permissions.
+- Renew registered RPLAY preview root playlists after HTTP 401/403 while retaining opaque local preview URLs and trusted CDN validation.
+
+### Validation
+- 254 focused backend tests passed across RPLAY, renewal, preview, recording recovery, shutdown, capture and finalization.
+- Authenticated production live captures saved 434.01 seconds for the AWS IVS channel and 438.05 seconds for the BytePlus channel, with video and audio and normal stops.
+- The IVS preview returned 43 successful playlist responses. No production 403 occurred during this check; renewal recovery is covered by mocked 403 responses, not a reproduced production failure.
+- An authenticated production VOD sample saved 305.03 seconds of 1920x1080 H.264 video with AAC audio.
+- These bounded samples do not establish full-VOD or hours-long recording reliability. YouTube bot-verification restrictions remain unresolved.
+
 ## [2.0.84] - 2026-10-18
 
 ### Fixed
@@ -1187,7 +1201,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.84...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.85...HEAD
+[2.0.85]: https://github.com/ProofPage/Phrolova/compare/v2.0.84...v2.0.85
 [2.0.84]: https://github.com/ProofPage/Phrolova/compare/v2.0.83...v2.0.84
 [2.0.83]: https://github.com/ProofPage/Phrolova/compare/v2.0.82...v2.0.83
 [2.0.82]: https://github.com/ProofPage/Phrolova/compare/v2.0.81...v2.0.82

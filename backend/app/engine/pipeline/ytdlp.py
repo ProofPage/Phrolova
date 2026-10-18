@@ -1160,9 +1160,16 @@ class YtdlpLivePipeline:
                 video.continuity.paths[0] = SourcePath(uri, False, video.continuity.primary.mode, video.continuity.primary.cdn)
                 return video
         else:
+            rplay_channel = None
+            if (urlsplit(source_page_url).hostname or "").lower() in ("rplay.live", "www.rplay.live"):
+                from app.engine.rplay_live import normalize_rplay_channel_id
+                from app.engine.rplay_stream import RplayHLSStream
+                stream_type = RplayHLSStream
+                rplay_channel = normalize_rplay_channel_id(source_page_url)
             stream_type = guarded_hls_stream(stream_type)
             def make_stream(uri, **kwargs):
-                stream = stream_type(session, uri, **kwargs)
+                stream = (stream_type(session, uri, rplay_channel, quality, **kwargs)
+                          if rplay_channel else stream_type(session, uri, **kwargs))
                 if is_youtube_url(source_page_url):
                     # YouTube audio can contain ID3v2.3, while Streamlink's
                     # packed-audio parser accepts only ID3v2.4. Preserve tags

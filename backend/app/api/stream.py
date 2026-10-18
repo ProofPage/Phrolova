@@ -173,6 +173,11 @@ async def live_preview(channel_id: str):
     from app.engine.preview_proxy import preview_proxy
     try:
         token = preview_proxy.register(key, platform.value, url)
+        if platform == Platform.RPLAY:
+            import asyncio
+            node = preview_proxy.nodes[token]
+            node["resolver"] = lambda: get_recorder_service().get_live_preview_url(key)
+            node.setdefault("renewal_lock", asyncio.Lock())
     except ValueError:
         raise HTTPException(502, "미리보기 주소가 올바르지 않습니다.") from None
     ext = "flv" if platform == Platform.TIKTOK or url.split("?")[0].endswith(".flv") else "m3u8"

@@ -210,6 +210,22 @@ class PreviewProxy:
         return "\n".join(lines) + "\n"
 
     async def fetch(self, token, query=None, range_header=None):
+        try:
+            return await self._fetch(token, query, range_header)
+        except httpx.HTTPStatusError as error:
+            node = self.nodes.get(token)
+            if error.response.status_code not in (401, 403) or not node or not node.get("resolver"):
+                raise
+        # Only the registered root playlist can obtain a fresh authorized URL.
+        # Segment URLs are never guessed or retried under different credentials.
+        async with node["renewal_lock"]:
+            url = await node["resolver"]()
+            if not self.allowed(url, node["hosts"], node["platform"]):
+                raise ValueError("갱신된 미리보기 주소가 허용되지 않습니다.")
+            node["url"] = url
+        return await self._fetch(token, query, range_header)
+
+    async def _fetch(self, token, query=None, range_header=None):
         node = self.nodes.get(token)
         if not node or time.monotonic() - node["time"] > 120:
             raise KeyError("expired")
