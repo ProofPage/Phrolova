@@ -8,6 +8,20 @@
 
 ## [Unreleased]
 
+## [2.0.84] - 2026-10-18
+
+### Fixed
+- Repair missing separators between variants in the official RPLAY BytePlus HLS master without changing signed media URLs.
+- Update live viewer query credentials and the caller's session after refreshing an expired access token.
+- Apply refreshed account parameters when retrying RPLAY VOD metadata requests; move live token renewal off the asynchronous event loop.
+- Preserve server-enforced quality permissions and keep account authorization off media delivery requests.
+
+### Validation
+- All 96 focused RPLAY live and VOD tests passed, including the real Streamlink parser, token renewal, credential scope, recording and download regression checks.
+- Authenticated production live recording saved 196.03 seconds with video and audio and stopped normally.
+- Authenticated production VOD downloading saved 185.03 seconds with video and audio.
+- YouTube live and video requests remained blocked by a bot check with the supplied cookies reported invalid by yt-dlp. This release does not claim to resolve that restriction.
+
 ## [2.0.83] - 2026-10-18
 
 ### Added
@@ -1173,7 +1187,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.83...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.84...HEAD
+[2.0.84]: https://github.com/ProofPage/Phrolova/compare/v2.0.83...v2.0.84
 [2.0.83]: https://github.com/ProofPage/Phrolova/compare/v2.0.82...v2.0.83
 [2.0.82]: https://github.com/ProofPage/Phrolova/compare/v2.0.81...v2.0.82
 [2.0.81]: https://github.com/ProofPage/Phrolova/compare/v2.0.80...v2.0.81

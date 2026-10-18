@@ -179,6 +179,67 @@ def test_cdn_boundary_and_opaque_preview():
         assert not rp.media_allowed(url) and not proxy.allowed(url, {''}, 'rplay')
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize('uhd,expected', [(200, [1080, 720, 540]), (403, [720, 540])])
+async def test_byteplus_missing_separators_real_streamlink_parser(monkeypatch, uhd, expected):
+    import requests
+    mock_api(monkeypatch, uhd=uhd)
+    monkeypatch.setattr(rp, 'account_session', lambda: dict(SESSION))
+    entries = []
+    for height, width, tier in [(1080, 1920, 'ud'), (720, 1280, 'hd'), (540, 960, 'sd')]:
+        entries.append(f'#EXT-X-STREAM-INF:BANDWIDTH=3200000,RESOLUTION={width}x{height}\n'
+                       f'/live/{CID}_abr{tier}/index.m3u8?token=FIXTURE-SESSION-PRIVATE')
+    body = '#EXTM3U\n#EXT-X-VERSION:3\n' + ''.join(entries)
+    def send(adapter, request, **kwargs):
+        response = requests.Response()
+        response.status_code = 200
+        response.url = request.url
+        response.request = request
+        response._content = body.encode()
+        return response
+    monkeypatch.setattr(requests.adapters.HTTPAdapter, 'send', send)
+    engine = rp.RplayLiveEngine()
+    assert [q['height'] for q in await engine.get_qualities(CID)] == expected
+    from urllib.parse import parse_qs, urlsplit
+    target, headers, _ = await engine.resolve_stream(CID, '720p')
+    assert urlsplit(target).path == f'/live/{CID}_abrhd/index.m3u8'
+    assert not urlsplit(target).fragment
+    assert parse_qs(urlsplit(target).query)['token'] == [SESSION['accessToken']]
+    assert 'Authorization' not in headers
+
+
+@pytest.mark.asyncio
+async def test_refresh_updates_viewer_query_and_caller_session(monkeypatch):
+    from app.engine import rplay
+    session = {**SESSION, 'refreshToken': 'r' * 32}
+    fresh = {**session, 'accessToken': 'new-access-token-PRIVATE'}
+    monkeypatch.setattr(rplay, 'refresh_session_token', lambda old: fresh)
+    calls = []
+    original = httpx.AsyncClient
+    def route(request):
+        calls.append(request)
+        return httpx.Response(401 if len(calls) == 1 else 200, json={})
+    monkeypatch.setattr(httpx, 'AsyncClient', lambda **kw: original(transport=httpx.MockTransport(route), **kw))
+    assert await rp.RplayLiveEngine()._api('/bytedance/auth',
+        {'creatorId': CID, 'userId': SESSION['requestorOid'], 'token': SESSION['accessToken']}, session)
+    assert len(calls) == 2
+    assert calls[1].headers['authorization'] == fresh['accessToken']
+    assert calls[1].url.params['token'] == fresh['accessToken']
+    assert session['accessToken'] == fresh['accessToken']
+
+
+def test_master_repair_does_not_change_other_servers_or_media():
+    import requests
+    body = b'#EXTM3U\npart.ts?value=#EXT-X-STREAM-INF:x'
+    for url in ['https://evil.example/abr.m3u8', MEDIA.replace('abr.m3u8', 'index.m3u8')]:
+        response = requests.Response()
+        response.status_code = 200
+        response.url = url
+        response._content = body
+        rp.normalize_rplay_master(response)
+        assert response.content == body
+
+
 def test_api_channel_registration_status_and_key(monkeypatch):
     import app.main
     from app.api import platforms, stream

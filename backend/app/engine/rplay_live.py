@@ -59,6 +59,15 @@ def live_headers(channel_id):
             'Referer': ORIGIN + '/live/' + normalize_rplay_channel_id(channel_id)}
 
 
+def normalize_rplay_master(response):
+    """Repair the missing separators in RPLAY's BytePlus master, not media URLs."""
+    parts = urlsplit(response.url)
+    if (response.status_code == 200 and parts.hostname == 'livestream.rplay.live'
+            and parts.path.endswith('/abr.m3u8')):
+        response._content = re.sub(
+            rb'(?<=[^\r\n])#EXT-X-STREAM-INF:', b'\n#EXT-X-STREAM-INF:', response.content)
+
+
 def account_session():
     try:
         session = read_session(auto_refresh=True)
@@ -89,8 +98,12 @@ class RplayLiveEngine:
             if response.status_code == 401 and session and session.get('refreshToken'):
                 from app.engine.rplay import refresh_session_token
                 try:
-                    session = refresh_session_token(session)
+                    updated = await asyncio.to_thread(refresh_session_token, session)
+                    session.update(updated)
                     headers['Authorization'] = session['accessToken']
+                    params.update(requestorOid=session['requestorOid'], loginType=session.get('loginType') or 'plax')
+                    if 'token' in params:
+                        params.update(token=session['accessToken'], userId=session['requestorOid'])
                     async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
                         response = await client.get(API + path, params=params, headers=headers)
                 except Exception:
@@ -200,6 +213,7 @@ class RplayLiveEngine:
             def guard(response, *args, **kwargs):
                 if response.is_redirect and not media_allowed(urljoin(response.url, response.headers.get('Location', ''))):
                     raise RecordingError('rplay_stream', '알플레이 재생 서버 이동 주소가 허용되지 않습니다.')
+                normalize_rplay_master(response)
             sl.http.hooks['response'].append(guard)
             try:
                 streams = HLSStream.parse_variant_playlist(sl, media, headers=headers)

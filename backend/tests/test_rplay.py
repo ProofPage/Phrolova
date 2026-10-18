@@ -136,6 +136,22 @@ def test_media_boundary(url):
     assert not rplay.valid_media_url(url)
 
 
+def test_video_retry_uses_refreshed_account_parameters(monkeypatch):
+    monkeypatch.setattr(rplay, 'read_session', lambda **kw: {**SESSION, 'refreshToken': 'r' * 32})
+    updated = {**SESSION, 'accessToken': 'new-access-token-PRIVATE', 'loginType': 'plax'}
+    monkeypatch.setattr(rplay, 'refresh_session_token', lambda old: updated)
+    calls = []
+    original = httpx.Client
+    def route(request):
+        calls.append(request)
+        return httpx.Response(401 if len(calls) == 1 else 200, json=metadata())
+    monkeypatch.setattr(httpx, 'Client', lambda **kw: original(transport=httpx.MockTransport(route), **kw))
+    assert rplay.video_metadata(URL)['_id'] == OID
+    assert len(calls) == 2
+    assert calls[1].headers['authorization'] == updated['accessToken']
+    assert calls[1].url.params['loginType'] == updated['loginType']
+
+
 def test_session_upload_status_delete_and_capabilities(monkeypatch, tmp_path):
     from app.api import platforms, vod
     from app.engine.base import Platform

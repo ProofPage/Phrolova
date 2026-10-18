@@ -258,6 +258,7 @@ def video_metadata(url: str) -> dict:
             try:
                 session = refresh_session_token(session)
                 headers['Authorization'] = session['accessToken']
+                params.update(requestorOid=session['requestorOid'], loginType=session['loginType'])
                 with httpx.Client(timeout=20, follow_redirects=False) as client:
                     response = client.get(API, params=params, headers=headers)
             except Exception:
