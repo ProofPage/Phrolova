@@ -55,7 +55,7 @@ def test_unicode_path_safe_arguments_and_optional_duration(media_file, monkeypat
     assert info['duration'] == 12.5 and info['streams'] == {'video'}
     args, options = calls[0]
     assert args[-1] == str(media_file) and options.get('shell', False) is False
-    assert options['timeout'] == 120 and 'format=duration,size,format_name' in args[4]
+    assert options['timeout'] == 120 and 'format=duration,size,format_name' in args[args.index('-show_entries') + 1]
     fake_probe(monkeypatch, {'format': {'format_name': 'mpegts'}, 'streams': [{'codec_type': 'video'}]})
     assert probe_media(str(media_file))['duration'] is None
 

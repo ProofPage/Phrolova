@@ -46,12 +46,14 @@ function RecordingStatus({ channel, pendingAction }: Pick<ChannelItemProps, 'cha
     const { t } = useLanguage();
     const state = channel.recording?.state;
     const error = channel.last_error && !channel.last_error.startsWith('감시 오류:') ? channel.last_error : null;
-    const [label, tone] = pendingAction === 'stop' || state === 'stopping' ? ["live.stoppingRecording", 'neutral']
+    const [label, tone] = channel.skip_pending ? ["live.skippingRecording", 'neutral']
+        : pendingAction === 'stop' || state === 'stopping' ? ["live.stoppingRecording", 'neutral']
         : pendingAction === 'start' ? ["live.preparingRecording", 'neutral']
         : state === 'connecting' ? ["live.connectingToStream", 'info']
         : state === 'reconnecting' ? ["live.reconnecting", 'warn']
         : channel.recording?.is_recording ? ["live.recording", 'ok']
         : state === 'error' || error ? [channel.recording?.has_data === false || !channel.recording?.file_size_bytes ? "live.recordingCouldNotStart" : "live.recordingError", 'danger']
+        : channel.download_hold_reason ? ["live.skippedRecording", 'neutral']
         : state === 'completed' ? ["live.recordingCompleted", 'ok']
         : ["live.waitingToRecord", 'neutral'];
     return <span className={`recording-status is-${tone}`} role="status" aria-live="polite"><i aria-hidden="true" />{t(label)}</span>;
@@ -98,6 +100,8 @@ function RecordingControls(props: ChannelItemProps) {
     const { t } = useLanguage();
     const name = channel.channel_name || channel.channel_id;
     const recording = channel.recording?.is_recording || ['connecting', 'reconnecting', 'stopping'].includes(channel.recording?.state || '');
+    const failed = channel.recording?.state === 'error' || Boolean(channel.last_error && !channel.last_error.startsWith('감시 오류:'));
+    const retryStop = channel.recording?.state === 'stopping' && pendingAction !== 'stop' && !channel.skip_pending;
     return <div className="recording-channel-controls">
             <div className="recording-auto-control" aria-busy={!!isAutoRecordLoading}>
                 <span>{t("live.autoRecord")}</span><Switch checked={channel.auto_record} disabled={isAutoRecordLoading || isActionLoading} onChange={() => onToggleAutoRecord(channel)} label={`${name} ${t("live.autoRecord")}`} />
@@ -105,8 +109,8 @@ function RecordingControls(props: ChannelItemProps) {
             </div>
         <div className="recording-primary-controls">
             <Button icon={Settings2} variant="ghost" disabled={isActionLoading} onClick={() => onEditDownloadSettings(channel)} title={t("live.recordingSettings")}>{t("live.recordingSettings")}</Button>
-            {recording ? <Button variant="danger" icon={Square} disabled={isActionLoading || channel.recording?.state === 'stopping'} loading={pendingAction === 'stop'} onClick={() => onStopRecord(channel)}>{t(pendingAction === 'stop' || channel.recording?.state === 'stopping' ? translate("live.stoppingRecording") : translate("live.stopRecording"))}</Button>
-                : channel.is_live && <Button variant="primary" icon={Play} disabled={isActionLoading} loading={pendingAction === 'start'} onClick={() => onStartRecord(channel)}>{t(pendingAction === 'start' ? translate("live.preparingRecording") : translate("live.startRecording"))}</Button>}
+            {recording ? <Button variant="danger" icon={Square} disabled={isActionLoading || channel.skip_pending} loading={pendingAction === 'stop'} onClick={() => onStopRecord(channel)}>{t(retryStop ? "live.tryAgain" : pendingAction === 'stop' || channel.recording?.state === 'stopping' ? "live.stoppingRecording" : "live.stopRecording")}</Button>
+                : (channel.is_live || failed) && <Button variant="primary" icon={Play} disabled={isActionLoading} loading={pendingAction === 'start'} onClick={() => onStartRecord(channel)}>{t(pendingAction === 'start' ? "live.preparingRecording" : failed ? "live.tryAgain" : "live.startRecording")}</Button>}
         </div>
     </div>;
 }
@@ -158,7 +162,7 @@ function RecordingChannelDetails({ channel }: { channel: Channel }) {
             {channel.recording_quality && <div><dt>{t("live.recordingQuality")}</dt><dd>{channel.recording_quality === 'best' ? t("live.highestQuality") : channel.recording_quality}</dd></div>}
             {channel.recording_inspection && <div><dt>{t("live.fileInspection")}</dt><dd className={channel.recording_inspection.state === 'passed' ? 'text-ok' : 'text-warn'} role="status">{localizedStatus(channel.recording_inspection.message, channel.recording_inspection.state === "passed" ? "download.fileInspectionComplete" : "errors.inspection")}</dd></div>}
             {channel.download_condition && <div><dt>{t("live.recordingCondition")}</dt><dd>{t(({ all: translate("live.recordAllLiveStreams"), watchalong: translate("live.recordWatchAlongStreamsOnlyInRecordingChannelCard"), exclude_watchalong: translate("live.excludeWatchAlongStreams") })[channel.download_condition])}</dd></div>}
-            {!!channel.tags?.length && <div><dt>{t("live.tags")}</dt><dd>{channel.tags.join(', ')}</dd></div>}
+            {!!channel.tags?.length && <div className="recording-tags-field"><dt>{t("live.tags")}</dt><dd>{channel.tags.join(', ')}</dd></div>}
         </dl>
         {!!channel.recent_errors?.length && <details className="recording-error"><summary>{t("live.recentErrorHistory")}</summary>{channel.recent_errors.slice().reverse().map((error,index)=><div key={`${error.timestamp}-${index}`} className="mt-2"><p className="text-ink-muted">{new Date(error.timestamp).toLocaleString(getActiveLocale())} · {error.kind === 'monitor' ? t("live.monitoringInRecordingChannelCard") : t("live.recordings")}</p><p>{localizedStatus(error.message,"errors.recording")}</p>{error.detail && <pre className="whitespace-pre-wrap break-words">{error.detail}</pre>}</div>)}</details>}
         {channel.last_error && <details className="recording-error"><summary>{t("live.recentRecordingErrors")}</summary><p>{localizedStatus(channel.last_error,"errors.recording")}</p>{channel.error_detail && <pre className="whitespace-pre-wrap break-words text-xs">{localizePlatformNames(channel.error_detail)}</pre>}</details>}

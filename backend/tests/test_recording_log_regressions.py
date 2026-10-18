@@ -295,8 +295,9 @@ async def test_unknown_container_is_not_retried(tmp_path, monkeypatch):
     assert not pipe.retryable and pipe.duration_seconds == 0
 
 
-def test_error_classes_and_runtime_missing(monkeypatch):
-    from app.engine.recording_errors import classify_recording_error, RecordingError
+def test_error_classes_and_public_runtime_fallback(monkeypatch):
+    from app.core.config import get_settings
+    from app.engine.recording_errors import classify_recording_error
     import app.engine.youtube_support as youtube
 
     for failure in (
@@ -309,9 +310,9 @@ def test_error_classes_and_runtime_missing(monkeypatch):
         assert not classify_recording_error(failure).retryable
     assert classify_recording_error(TimeoutError()).retryable
     monkeypatch.setattr(youtube, "runtime_options", lambda: {})
-    with pytest.raises(RecordingError) as failure:
-        youtube.require_runtime_cli_options()
-    assert failure.value.code == "youtube_runtime" and not failure.value.retryable
+    monkeypatch.setattr(get_settings(), "youtube_po_token_provider_url", None)
+    # Public HLS may be available without JS; do not block a usable fallback.
+    assert youtube.require_runtime_cli_options() == []
 
 
 @pytest.mark.asyncio

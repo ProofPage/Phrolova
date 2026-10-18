@@ -22,6 +22,12 @@ export interface ChannelDownloadOptions {
     recording_quality?: string;
 }
 
+export interface StreamlinkPlatformOptions {
+    playlist_reload_seconds: number;
+    query_parameters: Record<string, string>;
+}
+export type StreamlinkOptionsByPlatform = Partial<Record<Platform, StreamlinkPlatformOptions>>;
+
 export const PLATFORM_LABELS: Record<Platform, string> = {
     chzzk: "platform.chzzk",
     youtube: "platform.youtube",
@@ -65,6 +71,7 @@ export interface Channel {
     watchalong_tag?: string | null;
     auto_record_eligible?: boolean;
     download_hold_reason?: string | null;
+    skip_pending?: boolean;
     is_live: boolean;
     channel_name?: string;
     title?: string;
@@ -171,6 +178,7 @@ export interface Settings {
     vod_download_dir: string;
     ffmpeg_path: string;
     streamlink_version: string | null;
+    streamlink_platform_options?: StreamlinkOptionsByPlatform;
     monitor_interval: number;
     host: string;
     port: number;
@@ -554,6 +562,7 @@ export const api = {
         chzzk_live_cdn: ChzzkVodCdn = "akamai",
         location?: { live_download_dir: string; monitor_interval: number },
         youtube_options?: {
+            streamlink_platform_options?: StreamlinkOptionsByPlatform;
             youtube_sabr_priority?: "auto" | "sabr_fallback" | "sabr_first";
             youtube_codec_priority?: "av1" | "vp9" | "h264";
             youtube_time_machine_enabled?: boolean;

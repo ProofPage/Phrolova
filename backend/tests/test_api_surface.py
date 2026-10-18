@@ -37,6 +37,7 @@ EXPECTED_API_ROUTES = {
     ('POST', '/api/platforms/{platform}/cookie'),
     ('DELETE', '/api/platforms/{platform}/cookie'),
     ('GET', '/api/platforms/rplay/session'),
+    ('POST', '/api/platforms/rplay/login'),
     ('POST', '/api/platforms/rplay/session'),
     ('DELETE', '/api/platforms/rplay/session'),
     ('GET', '/api/stream/preview-frame/{channel_id:path}'),

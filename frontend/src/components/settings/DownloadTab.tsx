@@ -1,8 +1,9 @@
 import { translate } from "../../i18n";
 import { RecordingOutputSettingsCard } from './RecordingOutputSettingsCard';
+import { StreamlinkSettingsCard, streamlinkOptionsKey } from './StreamlinkSettingsCard';
 import { useEffect, useRef, useState } from "react";
 import { Film, Radio, Save, Video } from "lucide-react";
-import { api, type RecordingOutputSettings, type Settings as SettingsType } from "../../api/client";
+import { api, type RecordingOutputSettings, type Settings as SettingsType, type StreamlinkOptionsByPlatform } from "../../api/client";
 import { getErrorMessage } from "../../utils/error";
 import { useToast } from "../ui/Toast";
 import { Button, Card, CardHeader, Field, Input, Select, SettingRow, Switch } from "../ui/primitives";
@@ -47,6 +48,8 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [youtubeTimeMachine, setYoutubeTimeMachine] = useState(false);
     const [youtubePreferResolution, setYoutubePreferResolution] = useState(true);
     const [youtubePoTokenUrl, setYoutubePoTokenUrl] = useState("");
+    const [streamlinkOptions, setStreamlinkOptions] = useState<StreamlinkOptionsByPlatform>({});
+    const [streamlinkOptionsValid, setStreamlinkOptionsValid] = useState(true);
     const initialized = useRef(false);
     useEffect(() => {
         let active = true;
@@ -82,9 +85,11 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         setYoutubeTimeMachine(settings.youtube_time_machine_enabled ?? false);
         setYoutubePreferResolution(settings.youtube_prefer_resolution_over_timemachine ?? true);
         setYoutubePoTokenUrl(settings.youtube_po_token_provider_url || "");
+        setStreamlinkOptions(settings.streamlink_platform_options ?? {});
         setVodFilenameTemplate(settings.vod_filename_template || "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}");
     }, [settings]);
     const liveDirty = !!settings && (
+        !streamlinkOptionsValid ||
         liveDownloadDir !== (settings.live_download_dir || settings.download_dir) ||
         monitorInterval !== settings.monitor_interval ||
         maxRetries !== settings.max_record_retries ||
@@ -98,6 +103,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         youtubeTimeMachine !== (settings.youtube_time_machine_enabled ?? false) ||
         youtubePreferResolution !== (settings.youtube_prefer_resolution_over_timemachine ?? true) ||
         youtubePoTokenUrl !== (settings.youtube_po_token_provider_url || "") ||
+        streamlinkOptionsKey(streamlinkOptions) !== streamlinkOptionsKey(settings.streamlink_platform_options ?? {}) ||
         liveFilenameTemplate !== (settings.live_filename_template || "[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}")
     );
     const vodDirty = !!settings && (
@@ -115,7 +121,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const validVod = !!vodDownloadDir.trim() && !!vodFilenameTemplate.trim() && vodFilenameTemplate.length <= 240 &&
         Number.isInteger(vodMaxConcurrent) && vodMaxConcurrent >= 1 && vodMaxConcurrent <= 10 &&
         Number.isFinite(vodMaxSpeed) && vodMaxSpeed >= 0 && vodMaxSpeed <= 1000;
-    const validLive = !!liveDownloadDir.trim() && !!liveFilenameTemplate.trim() && liveFilenameTemplate.length <= 240 &&
+    const validLive = streamlinkOptionsValid && !!liveDownloadDir.trim() && !!liveFilenameTemplate.trim() && liveFilenameTemplate.length <= 240 &&
         Number.isInteger(monitorInterval) && monitorInterval >= 5 && monitorInterval <= 300 &&
         Number.isInteger(maxRetries) && maxRetries >= 0 && maxRetries <= 100 &&
         Number.isInteger(timeMachineOffset) && timeMachineOffset >= 0 && timeMachineOffset <= 86400;
@@ -157,6 +163,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                     youtube_time_machine_enabled: youtubeTimeMachine,
                     youtube_prefer_resolution_over_timemachine: youtubePreferResolution,
                     youtube_po_token_provider_url: youtubePoTokenUrl.trim() || undefined,
+                    streamlink_platform_options: streamlinkOptions,
                 }
             );
             setLiveDownloadDir(liveDownloadDir.trim());
@@ -217,7 +224,6 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                         options={[
                             { value: "mp4", label: translate("settings.mp4MPEG4Recommended") },
                             { value: "mkv", label: "MKV — Matroska" },
-                            { value: "ts", label: "TS — MPEG Transport Stream" },
                         ]}
                     />
                 </Field>
@@ -295,6 +301,8 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                 </Field>
                 {saveErrors.live != null && <p role="alert" className="text-xs text-danger break-words">{getErrorMessage(saveErrors.live, 'settings.couldNotSaveLiveSettings')}</p>}
             </Card>
+
+            <StreamlinkSettingsCard value={streamlinkOptions} onChange={setStreamlinkOptions} onValidityChange={setStreamlinkOptionsValid} />
 
             <Card className="settings-section space-y-3" data-settings-section="youtube" aria-busy={saving}>
                 <CardHeader icon={Video} title={translate("settings.youtubeStreamingSettings")} />

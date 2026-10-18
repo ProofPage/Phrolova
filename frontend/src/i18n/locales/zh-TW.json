@@ -963,5 +963,14 @@
   "settings.youtubeLink": "Link",
   "settings.youtubeHlsSummary": "• HLS (m3u8): No time machine / No ads / Max 1080p (h264) / No lost segment tracking",
   "settings.youtubeDashSummary": "• DASH: Time machine available / Only works when time machine active / No ads / Max 1080p (h264)",
-  "settings.youtubeSabrSummary": "• SABR: Time machine available / Supports all resolutions (2K+, 4K) & codecs (vp9, av1, HDR) / Lost segment tracking"
+  "settings.youtubeSabrSummary": "• SABR: Time machine available / Supports all resolutions (2K+, 4K) & codecs (vp9, av1, HDR) / Lost segment tracking",
+  "settings.streamlinkSettings": "各平台串流請求設定",
+  "settings.streamlinkPlatform": "平台",
+  "settings.playlistReloadSeconds": "播放清單更新間隔（秒）",
+  "settings.playlistReloadHint": "0代表自動，固定間隔為2至60秒。變更從下次連線起生效。",
+  "settings.streamQueryParameters": "額外查詢參數（JSON）",
+  "settings.streamQueryHint": "索引鍵和值皆為字串的JSON物件。套用至允許的媒體伺服器並取代同名參數。仍會執行驗證與權限檢查。",
+  "settings.invalidStreamQuery": "請輸入索引鍵和值皆為字串的JSON物件，最多32項，不可包含控制字元。",
+  "live.skippingRecording": "正在停止錄製以略過",
+  "live.skippedRecording": "已略過"
 }

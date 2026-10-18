@@ -169,6 +169,8 @@ class KickLiveEngine:
                 request.headers.update(kick_api_headers(request.url))
                 return request
             session.http.auth = authorize
+            from app.engine.streamlink_support import configure_streamlink_session
+            configure_streamlink_session(session, "kick", self.get_stream_url(cid))
             try:
                 streams = session.streams(self.get_stream_url(cid))
                 variants = []

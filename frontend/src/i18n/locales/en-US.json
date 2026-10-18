@@ -963,5 +963,14 @@
   "settings.youtubeLink": "Link",
   "settings.youtubeHlsSummary": "• HLS (m3u8): No time machine / No ads / Max 1080p (h264) / No lost segment tracking",
   "settings.youtubeDashSummary": "• DASH: Time machine available / Only works when time machine active / No ads / Max 1080p (h264)",
-  "settings.youtubeSabrSummary": "• SABR: Time machine available / Supports all resolutions (2K+, 4K) & codecs (vp9, av1, HDR) / Lost segment tracking"
+  "settings.youtubeSabrSummary": "• SABR: Time machine available / Supports all resolutions (2K+, 4K) & codecs (vp9, av1, HDR) / Lost segment tracking",
+  "settings.streamlinkSettings": "Per-platform stream requests",
+  "settings.streamlinkPlatform": "Platform",
+  "settings.playlistReloadSeconds": "Playlist reload interval (seconds)",
+  "settings.playlistReloadHint": "Use 0 for automatic timing or 2–60 seconds for a fixed interval. Changes apply to the next connection.",
+  "settings.streamQueryParameters": "Additional query parameters (JSON)",
+  "settings.streamQueryHint": "A JSON object with string keys and values. Applies to allowed media servers and replaces matching keys. Authentication and permissions remain enforced.",
+  "settings.invalidStreamQuery": "Enter a JSON object with string keys and values, up to 32 entries and no control characters.",
+  "live.skippingRecording": "Stopping before skipping",
+  "live.skippedRecording": "Skipped"
 }

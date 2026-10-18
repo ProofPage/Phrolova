@@ -175,12 +175,12 @@ async def test_real_ffmpeg_frame_no_upscale_and_cache(local_hls,monkeypatch,heig
     base,_=local_hls
     engine=type('Engine',(),{})()
     engine.get_qualities=AsyncMock(return_value=[{'value':height+'p','height':int(height)}])
-    engine.resolve_stream=AsyncMock(return_value=(base+'/'+height+'/index.m3u8',{},None))
+    engine.resolve_stream_spec=AsyncMock(return_value={'url':base+'/'+height+'/index.m3u8','headers':{},'cookies':None})
     get_settings().cime_cookie_file=None
     preview=FramePreviewService()
     one,two=await asyncio.gather(*(preview.get_frame('cime:fixture','cime','fixture',engine) for _ in range(2)))
     assert one==two and one[1:]==(width,int(height))
-    engine.resolve_stream.assert_awaited_once()
+    engine.resolve_stream_spec.assert_awaited_once()
 
 @pytest.mark.asyncio
 async def test_actual_cime_vod_engine_download_merge_and_probe(local_hls,monkeypatch,tmp_path):
@@ -371,7 +371,7 @@ async def test_actual_mixed_platform_download_queue_concurrency_and_restore(loca
         callback=original(task);first=True
         def progress(data):
             nonlocal first
-            if first and 'ci.me' in task.url and data.get('status')=='downloading':
+            if first and not paused.is_set() and 'ci.me' in task.url and data.get('status')=='downloading':
                 first=False;engine.pause_download(task.task_id);loop.call_soon_threadsafe(paused.set)
             callback(data)
         return progress
@@ -388,7 +388,9 @@ async def test_actual_mixed_platform_download_queue_concurrency_and_restore(loca
         assert restored.get_task_status(first)['platform']=='cime' and restored.get_task_status(second)['platform']=='cime'
         await restored.shutdown()
     finally:
-        engine._tasks[first].pause_event.set();await engine.shutdown()
+        for task in engine._tasks.values():
+            task.pause_event.set()
+        await engine.shutdown()
 
 @pytest.mark.asyncio
 async def test_actual_cime_progressive_clip_download(local_hls,monkeypatch,tmp_path):

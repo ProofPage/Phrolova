@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import math
+from fractions import Fraction
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -49,8 +50,8 @@ def probe_media(filepath: str) -> dict[str, Any]:
         binary = settings.resolve_ffprobe_path()
     except FileNotFoundError as exc:
         raise InspectionError("tool_missing", str(exc)) from exc
-    args = [binary, "-v", "error", "-show_entries",
-            "format=duration,size,format_name,start_time:stream=index,codec_type,codec_name,duration,width,height,avg_frame_rate,r_frame_rate",
+    args = [binary, "-v", "error", "-read_intervals", "%+#256", "-show_entries",
+            "format=duration,size,format_name,start_time:stream=index,codec_type,codec_name,duration,width,height,avg_frame_rate,r_frame_rate:frame=stream_index,media_type,best_effort_timestamp_time",
             "-of", "json", str(path)]
     try:
         result = subprocess.run(args, capture_output=True, timeout=settings.file_inspection_timeout,
@@ -61,6 +62,8 @@ def probe_media(filepath: str) -> dict[str, Any]:
     except OSError as exc:
         raise InspectionError("tool_failed", str(exc)) from exc
     stderr = result.stderr.decode("utf-8", "replace")
+    from app.core.logger import logger
+    logger.debug("파일 검사 FFprobe 종료 · 종료코드=%s", result.returncode)
     if result.returncode:
         raise InspectionError("probe_failed", "FFprobe exited unsuccessfully", stderr=stderr, returncode=result.returncode)
     try:
@@ -69,6 +72,30 @@ def probe_media(filepath: str) -> dict[str, Any]:
         tracks = parsed.get("streams") or []
         if not isinstance(fmt, dict) or not isinstance(tracks, list) or not all(isinstance(track, dict) for track in tracks):
             raise ValueError("Invalid format/stream structure")
+        frame_times = {}
+        for frame in parsed.get("frames") or []:
+            if frame.get("media_type") != "video":
+                continue
+            try:
+                stamp = Fraction(str(frame["best_effort_timestamp_time"]))
+                frame_times.setdefault(frame["stream_index"], set()).add(stamp)
+            except (KeyError, ValueError, ZeroDivisionError):
+                continue
+        for track in tracks:
+            if track.get("codec_type") != "video":
+                continue
+            timestamps = sorted(frame_times.get(track.get("index"), ()))
+            if len(timestamps) > 1 and timestamps[-1] > timestamps[0]:
+                track["measured_fps"] = float((len(timestamps) - 1) / (timestamps[-1] - timestamps[0]))
+                track["fps"] = track["measured_fps"]
+                track["fps_source"] = "sampled_frame_timestamps"
+            else:
+                try:
+                    fps = float(Fraction(str(track.get("avg_frame_rate") or track.get("r_frame_rate") or "0")))
+                    track["fps"] = fps if fps > 0 and math.isfinite(fps) else None
+                except (ValueError, ZeroDivisionError):
+                    track["fps"] = None
+                track["fps_source"] = "container_metadata"
         duration = None
         # Some valid containers omit format.duration; stream duration is optional too.
         for value in [fmt.get("duration"), *(track.get("duration") for track in tracks)]:

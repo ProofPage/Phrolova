@@ -14,6 +14,7 @@ from typing import Literal, Optional
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from app.core.streamlink_settings import StreamlinkPlatformSettings
 
 
 def _download_ytdlp_exe(dest: Path) -> None:
@@ -202,7 +203,14 @@ class Settings(BaseSettings):
 
     chzzk_live_cdn: Literal["default", "akamai"] = "akamai"
     chzzk_vod_cdn: Literal["default", "akamai"] = "akamai"
-    vod_format: str = "mp4"            # VOD 다운로드 포맷: mp4(권장), mkv, ts
+    vod_format: Literal["mp4", "mkv"] = "mp4"
+
+    @field_validator("vod_format", mode="before")
+    @classmethod
+    def migrate_vod_format(cls, value):
+        # Existing TS downloads stay untouched; only future VOD output changes.
+        value = str(value).lower()
+        return "mp4" if value == "ts" else value
     recording_quality: str = "best"    # 녹화 품질: best, 1080p, 720p, 480p
 
     # ── VOD 다운로드 설정 ──────────────────────────────────
@@ -216,6 +224,7 @@ class Settings(BaseSettings):
     youtube_time_machine_enabled: bool = False
     youtube_prefer_resolution_over_timemachine: bool = True
     youtube_po_token_provider_url: Optional[str] = None
+    streamlink_platform_options: StreamlinkPlatformSettings = Field(default_factory=dict)
 
     youtube_cookie_file: Optional[str] = None
     cime_cookie_file: Optional[str] = None

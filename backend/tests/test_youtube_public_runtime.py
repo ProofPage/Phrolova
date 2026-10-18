@@ -15,8 +15,9 @@ from app.engine.vod import VodEngine, VodDownloadTask
 from app.engine.recording_errors import classify_recording_error
 
 
-def test_worker_uses_same_package_without_external_cli(monkeypatch):
-    monkeypatch.setattr(type(get_settings()), 'resolve_ytdlp_path', lambda _: pytest.fail('external CLI used'))
+def test_worker_fallback_uses_same_package_without_external_cli(monkeypatch):
+    monkeypatch.setattr(type(get_settings()), 'resolve_ytdlp_path',
+                        lambda _: (_ for _ in ()).throw(FileNotFoundError("fixture")))
     result = subprocess.run([*support.youtube_extractor_command(), '--ignore-config', '--version'],
                             capture_output=True, text=True, timeout=15)
     assert result.returncode == 0 and result.stdout.strip() == __version__
@@ -24,6 +25,8 @@ def test_worker_uses_same_package_without_external_cli(monkeypatch):
 
 def test_frozen_worker_command_and_desktop_worker_entry(monkeypatch):
     monkeypatch.setattr(sys, 'frozen', True, raising=False)
+    monkeypatch.setattr(type(get_settings()), 'resolve_ytdlp_path',
+                        lambda _: (_ for _ in ()).throw(FileNotFoundError("fixture")))
     assert support.youtube_extractor_command() == [sys.executable, '--youtube-worker']
     result = subprocess.run([sys.executable, str(Path(__file__).parents[1] / 'run.py'),
                              '--youtube-worker', '--ignore-config', '--version'],

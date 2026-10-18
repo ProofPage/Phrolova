@@ -107,6 +107,7 @@
   .recording-history-row .recording-processing { border-top: 0; border-left: 1px solid var(--color-line); align-content: start; }
 }
 @media (max-width:639px) {
+  .recording-tag, .recording-tag-overflow, .recording-tags-field { display: none; }
   .recording-history-identity, .recording-history-row .recording-processing, .recording-history-message { padding: 12px; }
   .recording-history-filters { padding: 8px 12px; }
   .recording-history-panel .ui-button { min-height: 44px; }

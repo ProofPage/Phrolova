@@ -173,6 +173,8 @@ class TikTokLiveEngine:
             session.set_option('webbrowser', False)
             session.http.headers.update(tiktok_headers(cid))
             session.http.cookies.update(platform_cookie_jar('tiktok'))
+            from app.engine.streamlink_support import configure_streamlink_session
+            configure_streamlink_session(session, "tiktok", self.get_stream_url(cid))
             try:
                 variants = []
                 for name, stream in session.streams(self.get_stream_url(cid)).items():

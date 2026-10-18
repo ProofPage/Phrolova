@@ -44,7 +44,7 @@ def trim_live_playlist(body: str, max_segments: int = 6) -> str:
             seq_index = len(header_lines)
             header_lines.append(line)
             continue
-        if stripped.startswith(('#EXT-X-SERVER-CONTROL:', '#EXT-X-PART-INF:')):
+        if stripped.startswith(('#EXT-X-SERVER-CONTROL:', '#EXT-X-PART-INF:', '#EXT-X-PART:')):
             continue
         if stripped.startswith(('#EXT-X-PRELOAD-HINT:', '#EXT-X-RENDITION-REPORT:')):
             continue
@@ -56,8 +56,6 @@ def trim_live_playlist(body: str, max_segments: int = 6) -> str:
                 current_segment = []
             current_segment.append(line)
         elif in_segments:
-            if stripped.startswith('#EXT-X-PART:'):
-                continue
             if stripped and not stripped.startswith('#'):
                 current_segment.append(line)
                 segments.append(current_segment)

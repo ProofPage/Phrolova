@@ -11,6 +11,7 @@ import certifi
 from streamlink import Streamlink
 from streamlink.stream.hls import HLSStream
 from app.core.config import resolve_data_dir
+from app.core.logger import logger
 from app.engine.platform_auth import platform_cookie_jar, redact_media_error
 
 class SafeMediaLogFilter(logging.Filter):
@@ -45,6 +46,11 @@ def preview_ca_bundle() -> str:
 
 async def decode_preview(cmd: list[str], url: str, headers: dict, platform: str, authenticated: bool) -> tuple[bytes, bytes, int]:
     session = Streamlink()
+    from app.engine.cime import CimeUhdAuth
+    from app.engine.streamlink_support import configure_streamlink_session, guarded_hls_stream
+    if platform == "cime":
+        session.http.auth = CimeUhdAuth.for_url(url, "https://ci.me/")
+    configure_streamlink_session(session, platform, url)
     session.set_option('http-timeout', 5)
     session.set_option('stream-timeout', 8)
     session.set_option('hls-live-edge', 1)
@@ -72,7 +78,7 @@ async def decode_preview(cmd: list[str], url: str, headers: dict, platform: str,
         from types import SimpleNamespace
         source = SimpleNamespace(open=lambda:open_flv_input(session,url))
     else:
-        source = HLSStream(session, url)
+        source = guarded_hls_stream(HLSStream)(session, url)
     opening = asyncio.create_task(asyncio.to_thread(source.open))
     reader = None
     process = None
@@ -121,6 +127,14 @@ async def decode_preview(cmd: list[str], url: str, headers: dict, platform: str,
         if process and process.returncode is None:
             process.kill()
             await process.wait()
+        if process:
+            if process.stdin:
+                process.stdin.close()
+                try:
+                    await asyncio.wait_for(process.stdin.wait_closed(), 1)
+                except (AttributeError, asyncio.TimeoutError, BrokenPipeError, ConnectionResetError):
+                    pass
+            logger.debug("미리보기 FFmpeg 종료 · 종료코드=%s", process.returncode)
         if reader:
             await asyncio.to_thread(reader.close)
         elif not opening.done():

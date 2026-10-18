@@ -176,6 +176,9 @@ class _TikTokMuxer(FFMPEGMuxer):
                 thread.join(timeout=2)
             if self.process and self.process.stderr:
                 self.process.stderr.close()
+            if self.process:
+                from app.core.logger import logger
+                logger.debug("TikTok FFmpeg 종료 · 종료코드=%s", self.process.returncode)
 
 
 class TikTokFLVStream:

@@ -86,6 +86,9 @@ class YtdlpLivePipeline:
         self.continuity_source = {}
         self.continuity_events = []
         self._continuity_active = False
+        from app.engine.recording_loss import RecordingLossReport
+        self._loss_report = RecordingLossReport()
+        self.losscheck_path = None
         from app.engine.native_clock import NativeClock
 
         self._native_clock = NativeClock()
@@ -564,6 +567,7 @@ class YtdlpLivePipeline:
         elif kind == 'recovery_completed' and self._state == RecordingState.RECONNECTING:
             self._state = RecordingState.RECORDING
         elif kind == 'gap':
+            self._loss_report.gap(safe)
             self.warning_message = '복구하지 못한 녹화 구간이 있습니다. 원본을 구간별 파일로 보관합니다.'
         self._logger.debug(f"[{self._channel_id}] 치지직 수신 상태: {json.dumps(safe, ensure_ascii=False)}")
 
@@ -599,11 +603,13 @@ class YtdlpLivePipeline:
                 continuity_callback=lambda event: loop.call_soon_threadsafe(self._accept_continuity_event, event),
                 api_cookie=self._cookie_str,
                 continuity_buffer_dir=self._buffer_directory(),
+                loss_report=self._loss_report,
                 **({'preview_capture': self._tiktok_preview_capture} if getattr(self, '_tiktok_preview_capture', None) else {}),
             )
             readers = []
             try:
-                for source in getattr(stream, "substreams", None) or [stream]:
+                for index, source in enumerate(getattr(stream, "substreams", None) or [stream]):
+                    source._phrolova_track_id = str(index)
                     readers.append(source.open())
                 return session, readers
             except BaseException:
@@ -829,6 +835,7 @@ class YtdlpLivePipeline:
             self._streamlink_session = None
             self._closed = True
             self._update_statistics()
+            await self._write_losscheck()
             if self._capture_ready and not self._capture_ready.done():
                 self.last_exception = RecordingError(
                     "empty_stream",
@@ -869,6 +876,22 @@ class YtdlpLivePipeline:
             if self._start_time is not None and Path(self._output_path).is_file()
             else RecordingState.ERROR
         )
+        await self._write_losscheck()
+
+    async def _write_losscheck(self):
+        if not self._output_path or not self._file_size_bytes:
+            return
+        try:
+            self.losscheck_path = await asyncio.to_thread(
+                self._loss_report.write, self._output_path,
+                {"session_id": self.session_id, "channel_id": self._channel_id, "container": self.capture_format,
+                 "duration_seconds": self.duration_seconds, "file_size_bytes": self._file_size_bytes,
+                 "started_at": self._start_time.isoformat() if self._start_time else None,
+                 "ended_at": self._ended_at.isoformat() if self._ended_at else None,
+                 "end_reason": self.end_reason},
+            )
+        except OSError as error:
+            self._logger.warning("[%s] losscheck 저장 실패: %s", self._channel_id, error)
 
     async def reconnect(self):
         if not self._closed or self._state != RecordingState.ERROR:
@@ -1005,6 +1028,7 @@ class YtdlpLivePipeline:
         continuity_callback=None,
         api_cookie=None,
         preview_capture=None,
+        loss_report=None,
     ) -> tuple[object, object]:
         """Create a Streamlink reader, with a stream-copy TS adapter for TikTok FLV."""
         from streamlink import Streamlink
@@ -1028,6 +1052,14 @@ class YtdlpLivePipeline:
         }
         session.set_option("http-headers", request_headers)
 
+        uhd_auth = None
+        if (urlsplit(source_page_url).hostname or "").lower() in ("ci.me", "www.ci.me"):
+            from app.engine.cime import CimeUhdAuth
+            # Keep renewable UHD cookies out of the generic jar: that jar would
+            # otherwise widen their path and lose their Secure attribute.
+            uhd_auth = CimeUhdAuth.for_url(hls_url, source_page_url)
+            session.http.auth = uhd_auth
+
         # Keep cookies within the CDN host/domain instead of sending a global
         # Cookie header to every URL encountered while following the playlist.
         jar = SimpleCookie()
@@ -1035,6 +1067,8 @@ class YtdlpLivePipeline:
             (value for key, value in headers.items() if key.lower() == "cookie"),
             "",
         )
+        if uhd_auth is not None:
+            cookie_text = ""
         if cookie_text:
             try:
                 jar.load(cookie_text)
@@ -1058,12 +1092,18 @@ class YtdlpLivePipeline:
                 )
             )
 
+        from app.engine.platform_media import media_platform
+        from app.engine.streamlink_support import configure_streamlink_session, guarded_hls_stream
+        configure_streamlink_session(session, media_platform(source_page_url), hls_url, loss_report)
+
         if (urlsplit(source_page_url).hostname or "").lower() in ("tiktok.com", "www.tiktok.com", "m.tiktok.com"):
             from app.engine.platform_auth import platform_cookie_jar
             from app.engine.tiktok_transport import TikTokFLVStream
             from app.engine.tiktok import normalize_tiktok_channel_id
             session.http.cookies.update(platform_cookie_jar('tiktok'))
             session.set_option('stream-timeout', 10)
+            if loss_report is not None:
+                loss_report.transport = "http-flv"
             return session, TikTokFLVStream(session, hls_url, normalize_tiktok_channel_id(source_page_url), capture=preview_capture)
 
         if (urlsplit(source_page_url).hostname or "").lower() == "live.bilibili.com":
@@ -1098,6 +1138,7 @@ class YtdlpLivePipeline:
             stream_type = TwitchHLSStream
         if YtdlpLivePipeline._is_chzzk_live_page(source_page_url):
             from app.engine.chzzk_stream import ChzzkHLSStream
+            ChzzkHLSStream = guarded_hls_stream(ChzzkHLSStream)
             channel_id = urlsplit(source_page_url).path.rstrip('/').rsplit('/', 1)[-1]
             def make_stream(uri, **kwargs):
                 video = ChzzkHLSStream(
@@ -1116,6 +1157,7 @@ class YtdlpLivePipeline:
                 video.continuity.paths[0] = SourcePath(uri, False, video.continuity.primary.mode, video.continuity.primary.cdn)
                 return video
         else:
+            stream_type = guarded_hls_stream(stream_type)
             def make_stream(uri, **kwargs):
                 stream = stream_type(session, uri, **kwargs)
                 if is_youtube_url(source_page_url):
@@ -1344,6 +1386,8 @@ class YtdlpLivePipeline:
                 proc.kill()
             await proc.communicate()
             raise
+        finally:
+            self._logger.debug("미리보기 yt-dlp 종료 · 종료코드=%s", proc.returncode)
         if proc.returncode != 0:
             # stderr may contain signed URLs or upstream credentials.
             from app.engine.platform_auth import redact_media_error
@@ -1481,6 +1525,8 @@ class YtdlpLivePipeline:
                     proc.kill()
                 await proc.communicate()
                 raise
+            finally:
+                self._logger.debug("스트림 조회 yt-dlp 종료 · 종료코드=%s", proc.returncode)
         finally:
             if cookie_file_path:
                 try:
@@ -1601,7 +1647,7 @@ class YtdlpLivePipeline:
                 extension = mimetypes.guess_extension(content_type) or ".jpg"
             preview_path = output_file.with_suffix(extension)
             await asyncio.to_thread(preview_path.write_bytes, image_data)
-            self._logger.info(f"[{self._channel_id}] 라이브 미리보기 저장: {preview_path}")
+            self._logger.debug(f"[{self._channel_id}] 라이브 미리보기 저장: {preview_path}")
         except Exception as exc:
             self._logger.warning(
                 f"[{self._channel_id}] 미리보기 저장 실패 (녹화는 계속 진행): {exc}"

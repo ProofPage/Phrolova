@@ -135,7 +135,7 @@ def session_expired(session: dict) -> bool:
     exp = session_token_exp(session)
     if exp is None:
         return False
-    return exp <= time.time()
+    return exp <= time.time() + 30
 
 
 def refresh_session_token(session: dict) -> dict[str, str]:

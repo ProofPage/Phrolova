@@ -194,6 +194,8 @@ class RplayLiveEngine:
             from streamlink.stream.hls import HLSStream
             sl = Streamlink(plugins_builtin=False)
             sl.set_option('http-timeout', 15)
+            from app.engine.streamlink_support import configure_streamlink_session
+            configure_streamlink_session(sl, "rplay", media)
             headers = live_headers(cid)
             def guard(response, *args, **kwargs):
                 if response.is_redirect and not media_allowed(urljoin(response.url, response.headers.get('Location', ''))):

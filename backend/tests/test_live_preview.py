@@ -14,6 +14,7 @@ from app.engine.base import Platform
 from app.engine.channel import ChannelTask
 from app.engine.conductor import Conductor
 from app.engine.downloader import ChzzkLiveEngine
+from app.engine.chzzk_time_machine import TimeMachineUnavailableError
 
 
 def test_chzzk_preview_uses_standard_live_playback(monkeypatch):

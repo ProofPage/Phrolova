@@ -320,6 +320,8 @@ class Conductor:
         if (
             not task.is_live
             or task.is_recording
+            or task.skip_pending
+            or task.pipeline is not None and not getattr(task.pipeline, "_closed", True)
             or self._matches_download_condition(task)
         ):
             return None
@@ -597,7 +599,7 @@ class Conductor:
         if not task.is_live:
             from app.engine.preview_frames import frame_previews
             frame_previews.invalidate(task.composite_key)
-        task.channel_name = status.get("channel_name")
+        task.update_channel_name(status.get("channel_name"))
         task.title = status.get("title")
         task.category = status.get("category")
         task.broadcast_tags = status.get("broadcast_tags")
@@ -878,6 +880,20 @@ class Conductor:
                 self._broadcast_status()
                 if status["is_live"]:
                     self._record_live_detection(composite_key)
+                if (status["is_live"] and task.pipeline is not None and task.capture_automatic
+                        and not self._matches_download_condition(task)):
+                    task.skip_pending = True
+                    self._broadcast_status()
+                    try:
+                        await self._stop_recording(composite_key)
+                    except Exception as error:
+                        from app.engine.platform_auth import redact_media_error
+                        self._remember_error(task, "recording", "조건에 따른 녹화 중단에 실패했습니다.",
+                                             redact_media_error(error))
+                        logger.warning("[%s] 조건에 따른 녹화 중단 실패: %s", composite_key, redact_media_error(error))
+                    finally:
+                        task.skip_pending = False
+                        self._broadcast_status()
                 if status["is_live"] and (not was_live):
                     retry_count = await self._handle_live_started(
                         composite_key, task, retry_count
@@ -930,7 +946,14 @@ class Conductor:
         if task is None or task.pipeline is None:
             return
         pipe = task.pipeline
-        await pipe.stop_recording()
+        stop_error = None
+        try:
+            await pipe.stop_recording()
+        except Exception as error:
+            if not getattr(pipe, "_closed", True):
+                self._broadcast_status()
+                raise
+            stop_error = error
         if not getattr(pipe, "_closed", True):
             raise RuntimeError("녹화 파일 쓰기가 아직 종료되지 않았습니다.")
         if (
@@ -942,7 +965,11 @@ class Conductor:
             self._save_live_history(composite_key, task, pipe.get_status())
         task.last_recording_status = pipe.get_status()
         task.pipeline = None
+        task.capture_automatic = False
+        task.skip_pending = False
         self._broadcast_status()
+        if stop_error is not None:
+            raise stop_error
 
     async def _start_recording(
         self,
@@ -1014,7 +1041,7 @@ class Conductor:
             engine = self._get_engine(task.platform)
             live_url = engine.get_stream_url(task.channel_id)
             cookie_str = self._auth.get_ytdlp_cookies() if task.platform == Platform.CHZZK else None
-            if not is_retry:
+            if automatic and not is_retry:
                 logger.debug(f"[{composite_key}] 스트림 CDN 준비 대기 (5초)...")
                 await asyncio.sleep(5)
                 if automatic and not self._running:
@@ -1030,6 +1057,7 @@ class Conductor:
             elif automatic or is_retry:
                 pipeline._start_guard = lambda: self._running and self._can_auto_record(task)
             task.pipeline = pipeline
+            task.capture_automatic = automatic or is_retry
             task.recording_job_id = None
             task.last_recording_status = None
             from app.engine.recording_finalizer import recording_policy
@@ -1158,7 +1186,7 @@ class Conductor:
         try:
             engine = self._get_engine(task.platform)
             status = await engine.check_live_status(task.channel_id)
-            task.channel_name = status.get("channel_name")
+            task.update_channel_name(status.get("channel_name"))
             task.title = status.get("title")
         except Exception:
             pass
@@ -1243,6 +1271,7 @@ class Conductor:
                 "watchalong_tags": task.watchalong_tags,
                 "auto_record_eligible": self._can_auto_record(task),
                 "download_hold_reason": self._download_hold_reason(task),
+                "skip_pending": task.skip_pending,
                 "last_error": getattr(task, "last_error", None),
                 "broadcast_status": task.broadcast_status,
                 "monitor_status": task.monitor_status if self._running else "paused",

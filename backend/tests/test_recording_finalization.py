@@ -505,20 +505,20 @@ def test_timestamp_discontinuity_allows_frame_rate_normalization():
 
 def test_register_capture_duplicate_source_path_overwrites_gracefully(tmp_path):
     manager = RecordingFinalizer()
-    pipe1 = Mock()
+    pipe1 = YtdlpLivePipeline("c1")
     pipe1.session_id = "session-1"
+    pipe1._output_path = str(tmp_path / "live.ts")
     pipe1._source_files = [str(tmp_path / "live.ts")]
-    pipe1.get_status.return_value = {"output_path": str(tmp_path / "live.ts"), "start_time": "2026-10-17T00:00:00"}
-    ch = SimpleNamespace(platform="rplay", channel_id="c1", channel_name="Test")
+    ch = SimpleNamespace(platform=Platform.RPLAY, channel_id="c1", channel_name="Test")
 
     id1 = manager.register_capture("rplay:c1", pipe1, ch, {"output_format": "mkv", "keep_source_ts": True})
     assert id1
 
     # Simulate restart with new session claiming the same source path
-    pipe2 = Mock()
+    pipe2 = YtdlpLivePipeline("c1")
     pipe2.session_id = "session-2"
+    pipe2._output_path = str(tmp_path / "live.ts")
     pipe2._source_files = [str(tmp_path / "live.ts")]
-    pipe2.get_status.return_value = {"output_path": str(tmp_path / "live.ts"), "start_time": "2026-10-17T01:00:00"}
 
     # Should not raise sqlite3.IntegrityError: UNIQUE constraint failed: recording_jobs.source_path
     id2 = manager.register_capture("rplay:c1", pipe2, ch, {"output_format": "mkv", "keep_source_ts": True})

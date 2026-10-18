@@ -184,6 +184,8 @@ class PandaliveLiveEngine:
             session = Streamlink(plugins_builtin=False)
             session.set_option('http-timeout',12)
             session.http.cookies.update(platform_cookie_jar('pandalive'))
+            from app.engine.streamlink_support import configure_streamlink_session
+            configure_streamlink_session(session, "pandalive", self.get_stream_url(cid))
             headers = pandalive_headers(cid)
             def redirect_guard(response, *args, **kwargs):
                 if response.is_redirect and not _media_url(urljoin(response.url,response.headers.get('Location',''))):

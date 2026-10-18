@@ -27,6 +27,8 @@ class ChannelTask:
     output_format: Optional[str] = None
     recording_job_id: Optional[str] = None
     broadcast_ended: bool = False
+    capture_automatic: bool = False
+    skip_pending: bool = False
     recording_inspection: Optional[dict] = None
     last_recording_status: Optional[dict] = None
     pipeline: Optional[YtdlpLivePipeline] = field(default=None, repr=False)
@@ -71,6 +73,10 @@ class ChannelTask:
     def display_name(self) -> str:
         """UI/알림에 쓸 표시 이름."""
         return self.channel_name or self.channel_id
+
+    def update_channel_name(self, value) -> None:
+        incoming = value.strip() if isinstance(value, str) else ""
+        self.channel_name = incoming or (self.channel_name or "").strip() or self.channel_id
 
     @property
     def is_recording(self) -> bool:

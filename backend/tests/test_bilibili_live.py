@@ -218,7 +218,9 @@ def test_manifest_probe_tries_alternate_cdn_and_closes_session(monkeypatch):
                 '_sources': (('https://cdn-a.test/live.m3u8', 'ts'), ('https://cdn-b.test/index.m3u8', 'fmp4'))}
     url, container = engine._probe_hls('196', selected)
     assert url == 'https://cdn-b.test/index.m3u8' and container == 'fmp4'
-    assert len(calls) == 2 and all(options == {'timeout': (2, 3), 'retries': 0} for _, options in calls)
+    assert len(calls) == 2 and all(
+        options['retries'] == 0 and all(0 < value < float('inf') for value in options['timeout'])
+        for _, options in calls)
     assert all(session.closed for session in sessions)
 
 

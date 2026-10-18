@@ -8,13 +8,31 @@
 
 ## [Unreleased]
 
-## [2.0.80-preview.1] - 2026-10-17
+## [2.0.80] - 2026-10-18
 
 ### Added
 - Direct email/password credentials authentication for RPLAY accounts in Settings.
+- Authorized CIME UHD playback and native 4K recording with scoped, renewable playback cookies.
+- Per-platform playlist reload intervals and additional media query parameters.
+- Bounded `.losscheck` summaries for HLS sequence gaps and transport errors.
+- YouTube protocol, codec, time-machine and PO Token Provider preferences.
+
+### Fixed
+- Refresh RPLAY sessions and support authorized BytePlus, AWS IVS and `api2.rplay.live` media URLs without weakening permission or DRM checks.
+- Recover recording retry, stop and skip states; retain saved broadcaster names when metadata omits them.
+- Propagate unexpected HLS worker failures, reject invalid sequence numbers and close capture pipes cleanly.
+- Correct measured FPS from sampled frame timestamps while preserving original stream metadata and source files.
+- Repair low-latency preview playlist handling and Streamlink/yt-dlp URL parsing compatibility.
+- Limit VOD output choices to MKV and MP4 while preserving live TS recording and existing files.
+- Improve logging diagnostics, filename safety and mobile recording-card layout.
 
 ### Removed
 - Remove SOOP (숲) platform support completely from backend, frontend UI, configuration, and API routes.
+
+### Validation
+- Backend regression coverage: 1,881 passed and 2 skipped, including the corrected test's targeted rerun.
+- Browser checks cover transport settings persistence, invalid input, VOD formats, manual retry, skip transitions and mobile tags.
+- Native CIME 4K capture, MKV finalization, authorization refresh and credential-scope regressions passed using local test media and mocked service responses.
 
 ## [2.0.79] - 2026-10-16
 
@@ -1097,8 +1115,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.80-preview.1...HEAD
-[2.0.80-preview.1]: https://github.com/ProofPage/Phrolova/compare/v2.0.79...v2.0.80-preview.1
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.80...HEAD
+[2.0.80]: https://github.com/ProofPage/Phrolova/compare/v2.0.79...v2.0.80
 [2.0.79]: https://github.com/ProofPage/Phrolova/compare/v2.0.78...v2.0.79
 [2.0.78]: https://github.com/ProofPage/Phrolova/compare/v2.0.77...v2.0.78
 [2.0.77]: https://github.com/ProofPage/Phrolova/compare/v2.0.76...v2.0.77

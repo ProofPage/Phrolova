@@ -480,6 +480,8 @@ class PopkonTVLiveEngine:
 
             session = Streamlink(plugins_builtin=False)
             session.set_option("http-timeout", 15)
+            from app.engine.streamlink_support import configure_streamlink_session
+            configure_streamlink_session(session, "popkontv", url)
 
             def redirect_guard(response, *args, **kwargs):
                 if response.is_redirect and not valid_media_url(

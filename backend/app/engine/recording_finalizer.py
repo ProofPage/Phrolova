@@ -604,6 +604,10 @@ class RecordingFinalizer:
             if proc and proc.returncode is None:
                 proc.kill()
                 await proc.wait()
+            if proc:
+                from app.core.logger import get_platform_logger
+                get_platform_logger(job.get("platform"), "files").debug(
+                    "원본 정규화 FFmpeg 종료 · 종료코드=%s", proc.returncode)
 
     async def _convert(self, job_id):
         if not self._claim(job_id):
@@ -807,7 +811,11 @@ class RecordingFinalizer:
                             token in str(job["diagnostics"].get("stderr") or "").lower()
                             for token in ("discontinuity", "non-monotonic dts", "dts out of order")
                         )
-                        if avg_diff > 0.1 and r_diff > 0.1 and not has_discontinuity:
+                        measured_equal = (
+                            source.get("measured_fps") is not None and output.get("measured_fps") is not None
+                            and abs(source["measured_fps"] - output["measured_fps"]) <= 0.1
+                        )
+                        if avg_diff > 0.1 and r_diff > 0.1 and not has_discontinuity and not measured_equal:
                             raise RuntimeError("변환 후 프레임레이트가 달라졌습니다.")
             if [
                 (p.stat().st_size, p.stat().st_mtime_ns) for p in sources
@@ -904,3 +912,5 @@ class RecordingFinalizer:
                 await proc.wait()
             if stderr_task:
                 await asyncio.gather(stderr_task, return_exceptions=True)
+            if proc:
+                logger.debug("녹화 변환 FFmpeg 종료 · 종료코드=%s", proc.returncode)

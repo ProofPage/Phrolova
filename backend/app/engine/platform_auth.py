@@ -5,6 +5,7 @@ import http.cookiejar
 import os
 import re
 import tempfile
+import time
 import urllib.request
 from contextlib import contextmanager
 from pathlib import Path
@@ -63,7 +64,11 @@ def platform_cookie_jar(platform: str) -> http.cookiejar.MozillaCookieJar:
     if not source or not source.is_file():
         return http.cookiejar.MozillaCookieJar()
     try:
-        return read_cookie_jar(source, platform)
+        jar = read_cookie_jar(source, platform)
+        for cookie in list(jar):
+            if cookie.is_expired(time.time() + 30):
+                jar.clear(cookie.domain, cookie.path, cookie.name)
+        return jar
     except (OSError, ValueError, UnicodeError, http.cookiejar.LoadError):
         return http.cookiejar.MozillaCookieJar()
 
@@ -108,7 +113,7 @@ def cookie_file_status(source: Path | None, platform: str) -> dict:
         return {'configured': False, 'valid': False, 'expired': False, 'message': '쿠키가 등록되지 않았습니다.'}
     try:
         all_cookies = read_cookie_jar(source, platform, include_expired=True)
-        valid = any(not cookie.is_expired() for cookie in all_cookies)
+        valid = any(not cookie.is_expired(time.time() + 30) for cookie in all_cookies)
         expired = bool(len(all_cookies)) and not valid
         return {'configured': True, 'valid': valid, 'expired': expired,
                 'message': '쿠키가 만료되었습니다.' if expired else '쿠키 파일이 등록되었습니다.' if valid else '사용 가능한 쿠키가 없습니다.'}

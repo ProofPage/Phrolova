@@ -202,6 +202,8 @@ class BilibiliLiveEngine:
             session.set_option('webbrowser', False)
             session.http.headers.update(bilibili_headers(cid))
             session.http.cookies.update(platform_cookie_jar('bilibili'))
+            from app.engine.streamlink_support import configure_streamlink_session
+            configure_streamlink_session(session, "bilibili", self.get_stream_url(metadata["room_id"]))
             try:
                 # 기본 best는 FLV이고 대체 HLS에는 fMP4도 있어 공식 플러그인의 전송 형식을 유지해 고른다.
                 streams = Bilibili(session, self.get_stream_url(metadata['room_id']))._get_api_v2_playinfo(metadata['room_id'])
@@ -261,6 +263,8 @@ class BilibiliLiveEngine:
         session = Streamlink(plugins_builtin=False)
         session.http.headers.update(bilibili_headers(channel_id))
         session.http.cookies.update(platform_cookie_jar('bilibili'))
+        from app.engine.streamlink_support import configure_streamlink_session
+        configure_streamlink_session(session, "bilibili", selected["url"])
         errors = []
         try:
             # 첫 CDN만 느리거나 차단되어도 같은 공개 방송의 대체 CDN으로 연결할 수 있어야 한다.

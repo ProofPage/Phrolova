@@ -91,6 +91,7 @@ class GeneralSettingsUpdateRequest(BaseModel):
 @router.get("/", include_in_schema=False)
 async def get_current_settings():
     """현재 애플리케이션 설정을 조회합니다 (민감정보 마스킹)."""
+    from app.core.streamlink_settings import serialize_streamlink_settings
     settings = get_settings()
     ffmpeg_version = await _get_ffmpeg_version(settings)
     return {
@@ -101,6 +102,7 @@ async def get_current_settings():
         "ffmpeg_path": settings.ffmpeg_path,
         "ffmpeg_version": ffmpeg_version,
         "streamlink_version": _streamlink_version(),
+        "streamlink_platform_options": serialize_streamlink_settings(settings.streamlink_platform_options),
         "monitor_interval": settings.monitor_interval,
         "host": settings.host,
         "port": settings.port,

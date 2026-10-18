@@ -261,11 +261,15 @@ async def test_preview_frame_accepts_tiktok_flv(local_hls):
 
 def test_factory_and_preview_endpoint_type(monkeypatch):
     from app.api import stream
+    import app.main
     conductor=Conductor()
     assert isinstance(conductor._get_engine(Platform.TIKTOK),TikTokLiveEngine)
+    monkeypatch.setattr(app.main, "get_recorder_service", lambda: SimpleNamespace(
+        get_live_preview_url=AsyncMock(return_value="https://pull.tiktokcdn.com/live.flv")))
     app=FastAPI();app.include_router(stream.router)
     with TestClient(app)as client:
-        assert client.get('/api/stream/preview/tiktok:alice').status_code==400
+        response = client.get('/api/stream/preview/tiktok:alice')
+        assert response.status_code == 200 and response.json()["url"].endswith("/asset.flv")
 
 
 def test_failed_muxer_start_closes_input_and_pipes(monkeypatch):

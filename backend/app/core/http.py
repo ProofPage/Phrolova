@@ -15,6 +15,17 @@ import asyncio
 from typing import Optional
 
 import httpx
+from streamlink.session.http import Urllib3UtilUrlPercentReOverride
+
+
+def _percent_sub(self, *args, **kwargs):
+    return self._re_percent_encoding.sub(*args, **kwargs)
+
+
+# yt-dlp delegates through __getattribute__, bypassing Streamlink 8's
+# __getattr__. Expose sub explicitly while preserving both libraries' subn
+# behavior (signed URLs can depend on the case of percent escapes).
+Urllib3UtilUrlPercentReOverride.sub = _percent_sub
 
 from app.core.logger import logger as app_logger
 logger = app_logger.getChild("network")
