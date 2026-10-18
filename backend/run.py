@@ -190,6 +190,13 @@ def _run_dependency_check() -> bool:
         print_check("주의", "yt-dlp", "설치 실패 · 동영상 다운로드와 일부 라이브 기능을 사용할 수 없습니다.")
 
     if all_ok:
+        from app.engine.youtube_tools import youtube_tools
+        youtube_tools.prepare()
+        if youtube_tools.status == "ready":
+            print_check("정상", "YouTube", youtube_tools.message)
+        else:
+            warnings += 1
+            print_check("주의", "YouTube", youtube_tools.message)
         print(f"\n필수 항목 확인 완료 · 주의 {warnings}건. 서버를 시작합니다.\n" if warnings else "\n모든 항목 정상 · 서버를 시작합니다.\n")
         return True
 

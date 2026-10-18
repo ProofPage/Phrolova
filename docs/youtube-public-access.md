@@ -21,9 +21,9 @@ The helper was stopped after the test.
 
 ## Automatic runtime setup
 
-Phrolova now prepares Deno 2.9.7 and the matching bgutil server/plugin 2.0.2 in its persistent `data/youtube-tools` directory. Official downloads are checked against pinned SHA-256 hashes before installation. Setup runs in the background so unrelated platform monitoring can start normally.
+Phrolova prepares Deno 2.9.7 and the matching bgutil server/plugin 2.0.2 in its persistent `data/youtube-tools` directory. Official downloads are checked against pinned SHA-256 hashes before installation. Startup waits for the preparation result before starting application services. The console and service log show setup stages and failures; failures are reported as warnings, allowing other platforms to remain available.
 
-On later launches, Phrolova verifies the installed Deno executable, plugin archive and required server files, checks that Deno runs, and skips downloading and installing healthy components. It reuses a matching server or starts its own server bound only to `127.0.0.1:4416`. Only the process started by Phrolova is terminated and reaped on shutdown. An explicitly configured external provider URL is retained.
+On later launches, Phrolova verifies the installed Deno executable, plugin archive and required server files, checks that Deno runs, and skips downloading and installing healthy components. It reuses a matching server or starts its own server bound only to `127.0.0.1:4416`. Only the process started by Phrolova is terminated and reaped on shutdown. Leave the provider URL blank for automatic setup; entering the default loopback URL also uses the managed local server. Clearing and saving a custom URL restores automatic mode. An explicitly configured external provider URL is retained.
 
 The Python API and live worker use `youtubepot-bgutilhttp:base_url` and the same plugin/runtime paths. Channel imports share the setup. An installation failure is logged and is not marked successful; it is not repeatedly retried for every video in that process. Restart after correcting the reported cause. Initial installation requires internet access and may take several minutes. Windows, macOS and GNU/Linux x64/ARM64 assets are supported; native Android/Termux needs a compatible manually prepared runtime/provider.
 

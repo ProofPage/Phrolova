@@ -173,13 +173,15 @@ code, .font-mono { font-family: var(--font-mono); }
 .auth-settings { display: grid; gap: 16px; }
 .auth-platform-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
 .auth-platform-card { min-width: 0; }
+.auth-platform-column { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.auth-platform-card .ui-disclosure + div { max-width: 45%; white-space: normal; overflow-wrap: anywhere; }
 .auth-platform-card .ui-disclosure { min-height: 48px; }
 .auth-platform-card .ui-button { min-height: 40px; }
 .auth-platform-card input { min-height: 40px; min-width: 0; }
 .auth-methods { display: flex; flex-wrap: wrap; gap: 8px; }
 .auth-methods [aria-pressed="true"] { border-color: var(--primary); color: var(--color-ink); background: var(--color-surface-muted); }
 .auth-guidance { display: grid; gap: 8px; }
-@media (max-width: 767px) { .auth-platform-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 767px) { .auth-platform-grid { grid-template-columns: minmax(0, 1fr); } .auth-platform-column { display: contents; } }
 .auth-guidance .settings-shared-hint { margin: 0; line-height: 20px; }
 .settings-field-help { margin-top: 6px; color: var(--color-ink-faint); font-size: 12px; line-height: 1.6; }
 .settings-field-help summary { width: fit-content; max-width: 100%; padding-block: 4px; cursor: pointer; color: var(--color-ink-muted); overflow-wrap: anywhere; }

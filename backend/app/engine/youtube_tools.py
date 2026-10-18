@@ -5,7 +5,6 @@ import asyncio
 import hashlib
 import io
 import json
-import logging
 import os
 import platform
 import subprocess
@@ -18,8 +17,9 @@ from pathlib import Path
 import httpx
 
 from app.core.config import get_settings, resolve_data_dir
+from app.core.logger import get_platform_logger
 
-log = logging.getLogger(__name__)
+log = get_platform_logger("youtube", "tools")
 DENO_VERSION = "2.9.7"
 PROVIDER_VERSION = "2.0.2"
 SOURCE_HASH = "8bdd5d68e5ffe40fcc0a1aa131d8c39d7f279b663eed7c6c068e37bb06bc1d41"
@@ -90,8 +90,16 @@ class YouTubeTools:
     def root(self):
         return resolve_data_dir() / "youtube-tools"
 
+    def external_provider(self):
+        value = (get_settings().youtube_po_token_provider_url or "").strip().rstrip("/")
+        return value if value and value != LOCAL_URL else None
+
     def executable(self, bundle):
         return bundle / ("deno.exe" if os.name == "nt" else "deno")
+
+    def report(self, status, message):
+        self.status, self.message = status, message
+        log.info("%s", message)
 
     def run(self, args, cwd, timeout):
         result = subprocess.run(
@@ -118,21 +126,25 @@ class YouTubeTools:
         return bundle
 
     def install(self):
-        self.status = "installing"
         arch = target()
         self.root().mkdir(parents=True, exist_ok=True)
         bundle = Path(tempfile.mkdtemp(prefix="install-", dir=self.root()))
+        self.report("installing", f"[1/6] Deno {DENO_VERSION} 다운로드·SHA-256 검증 중")
         deno = download(f"https://github.com/denoland/deno/releases/download/v{DENO_VERSION}/deno-{arch}.zip", DENO_HASHES[arch])
         unpack(deno, bundle)
         self.executable(bundle).chmod(0o755)
+        self.report("installing", f"[2/6] bgutil {PROVIDER_VERSION} 서버 다운로드·SHA-256 검증 중")
         source = download("https://api.github.com/repos/Brainicism/bgutil-ytdlp-pot-provider/zipball/2.0.2", SOURCE_HASH)
         unpack(source, bundle, "Brainicism-bgutil-ytdlp-pot-provider-26475e9/")
         plugins = bundle / "plugins"
         plugins.mkdir()
+        self.report("installing", f"[3/6] bgutil {PROVIDER_VERSION} yt-dlp 플러그인 다운로드·SHA-256 검증 중")
         (plugins / "bgutil.zip").write_bytes(download(
             f"https://github.com/Brainicism/bgutil-ytdlp-pot-provider/releases/download/{PROVIDER_VERSION}/bgutil-ytdlp-pot-provider.zip", PLUGIN_HASH))
+        self.report("installing", "[4/6] Deno 서버 의존성 설치 중 · 최대 240초")
         self.run([str(self.executable(bundle)), "install", "--allow-scripts=npm:canvas", "--frozen"],
                  bundle / "server", 240)
+        self.run([str(self.executable(bundle)), "--version"], bundle, 10)
         return bundle
 
     def ping(self):
@@ -159,18 +171,21 @@ class YouTubeTools:
         with self.lock:
             if self.stopping or self.status == "failed":
                 return
-            if self.status == "ready" and (get_settings().youtube_po_token_provider_url or self.ping()):
+            if self.status == "ready" and (self.external_provider() or self.ping()):
                 return
             installed = False
             try:
+                self.report("checking", "YouTube 보조 도구 검사 중 · Deno·bgutil 서버·yt-dlp 플러그인")
                 try:
                     self.bundle = self.load_bundle()
                     log.info("YouTube 도구 설치 확인 완료 · 재설치 생략")
                 except (OSError, ValueError, KeyError, subprocess.SubprocessError):
                     self.bundle = self.install()
                     installed = True
+                self.report("checking", "[5/6] bgutil yt-dlp 플러그인 로드·확인 중")
                 self.activate_plugins()
-                if not get_settings().youtube_po_token_provider_url and not self.ping():
+                if not self.external_provider() and not self.ping():
+                    self.report("starting", f"[6/6] bgutil 로컬 서버 시작·응답 확인 중 · {LOCAL_URL} · 최대 30초")
                     if self.process is not None and self.process.poll() is None:
                         raise RuntimeError("PO Token 서버가 실행 중이지만 정상 응답하지 않습니다.")
                     self.process_log = (self.bundle / "provider.log").open("ab")
@@ -184,6 +199,10 @@ class YouTubeTools:
                         if self.process.poll() is not None or time.monotonic() >= deadline:
                             raise RuntimeError(f"PO Token 로컬 서버를 시작하지 못했습니다. 로그: {self.bundle / 'provider.log'}")
                         time.sleep(0.25)
+                elif self.external_provider():
+                    log.info("[6/6] 사용자 지정 PO Token 서버 설정 유지 · 로컬 서버 시작 생략")
+                else:
+                    log.info("[6/6] 실행 중인 bgutil 로컬 서버 응답 확인 완료 · 중복 실행 생략")
                 if installed:
                     state = {"directory": self.bundle.name, "version": PROVIDER_VERSION,
                              "deno_version": DENO_VERSION,
@@ -192,12 +211,12 @@ class YouTubeTools:
                     temporary = path.with_suffix(".tmp")
                     temporary.write_text(json.dumps(state), encoding="utf-8")
                     temporary.replace(path)
-                self.status, self.message = "ready", "Deno·PO Token 플러그인 준비 완료"
-                log.info("%s · 토큰 발급과 유튜브 재생 성공은 별도 검증입니다.", self.message)
+                self.report("ready", "Deno·bgutil 서버 연결 설정·PO Token 플러그인 준비 완료")
+                log.info("토큰 발급과 유튜브 재생 성공은 별도 검증입니다.")
             except Exception as error:
-                self.status, self.message = "failed", str(error)
+                self.status, self.message = "failed", f"{self.message} · {error}"
                 self.stop_process()
-                log.warning("YouTube 도구 준비 실패 · 다른 플랫폼은 계속 실행합니다 · %s", error)
+                log.warning("YouTube 도구 준비 실패 · 다른 플랫폼은 계속 실행합니다 · %s", self.message)
 
     def stop_process(self):
         if self.process is not None:

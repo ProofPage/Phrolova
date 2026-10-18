@@ -69,7 +69,7 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
         if (pending.current) return;
         if (await confirm({ title: `${name} ${t("settings.removeCookieFile")}`, message: t("settings.removeTheRegisteredCookiesPublicContentRemainsAvailableWithoutCookies"), confirmText: t("common.delete"), variant: 'danger' })) void change('delete');
     };
-    const label = !status ? t("live.checkingStatus") : status.expired ? t("settings.cookieExpired")
+    const label = !status ? t(error ? "settings.cookieFileNeedsAttention" : "live.checkingStatus") : status.expired ? t("settings.cookieExpired")
         : status.configured && status.valid === false ? t("settings.cookieFileNeedsAttention") : status.configured ? t("settings.cookiesRegistered") : t("settings.noRegisteredCookies");
     return <div className="auth-platform-card" data-cookie-platform={platform} aria-busy={busy}>
         <CollapsibleCard icon={KeyRound} title={t(name)}
@@ -78,8 +78,8 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
             action={<Badge tone={status?.expired || (status?.configured && status.valid === false) ? 'warn' : status?.configured ? 'ok' : undefined}>{label}</Badge>}>
         <div className="space-y-4">
         {account && <div className="auth-methods" role="group" aria-label={t('settings.authMethod')}>
-            <Button aria-pressed={method === 'account'} onClick={() => { setMethod('account'); setPassword(''); }}>{t('settings.authAccountMethod')}</Button>
-            <Button aria-pressed={method === 'file'} onClick={() => { setMethod('file'); setPassword(''); }}>{t('settings.authCookieMethod')}</Button>
+            <Button disabled={busy} aria-pressed={method === 'account'} onClick={() => { setMethod('account'); setPassword(''); }}>{t('settings.authAccountMethod')}</Button>
+            <Button disabled={busy} aria-pressed={method === 'file'} onClick={() => { setMethod('file'); setPassword(''); }}>{t('settings.authCookieMethod')}</Button>
         </div>}
         {account && method === 'account' && <form data-account-login={platform} className="space-y-3"
             onSubmit={event => { event.preventDefault(); if (username.trim() && password) void change('login'); }}>

@@ -62,6 +62,14 @@ async def main():
             await page.goto(BASE + "/settings")
             await page.get_by_role("button", name="인증", exact=True).click()
             await expect(page.locator('[data-cookie-platform] form')).to_have_count(0)
+            # Opening a left-column card must not move cards in the right column.
+            right = page.locator('.auth-platform-column').nth(1).locator('.auth-platform-card')
+            before_y = [await right.nth(i).evaluate("(e) => e.getBoundingClientRect().top") for i in range(await right.count())]
+            chzzk = page.locator('[data-cookie-platform="chzzk"] .ui-disclosure')
+            await chzzk.click()
+            after_y = [await right.nth(i).evaluate("(e) => e.getBoundingClientRect().top") for i in range(await right.count())]
+            assert before_y == after_y, (before_y, after_y)
+            await chzzk.click()
             for platform in PLATFORMS:
                 card = page.locator(f'[data-cookie-platform="{platform}"]')
                 await card.locator(".ui-disclosure").click()
@@ -97,6 +105,7 @@ async def main():
             await rplay.locator('button[type="submit"]').click()
             await expect(rplay.locator('#rplay-login-password')).to_have_value("")
             await expect(rplay.get_by_role('alert')).to_be_visible()
+            await expect(rplay.get_by_role('alert')).not_to_contain_text("settings.rplaySessionInvalid")
             upload_card = page.locator('[data-cookie-platform="cime"]')
             await upload_card.locator('.auth-methods').get_by_role('button', name="쿠키 파일 등록", exact=True).click()
             await upload_card.locator('input[type="file"]').set_input_files(
@@ -121,6 +130,8 @@ async def main():
             await expect(form.locator('input[name="username"]')).to_be_disabled()
             await expect(form.locator('button[type="submit"]')).to_be_disabled()
             await expect(card.locator('input[type="file"]')).to_be_disabled()
+            for button in await card.locator('.auth-methods button').all():
+                await expect(button).to_be_disabled()
             assert len(calls) == before + 1
             delay.set()
             await expect(form.locator('input[name="password"]')).to_have_value("")

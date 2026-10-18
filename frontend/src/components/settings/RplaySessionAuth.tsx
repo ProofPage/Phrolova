@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { KeyRound } from 'lucide-react';
 import { api, type PlatformCookieStatus } from '../../api/client';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getErrorMessage } from '../../utils/error';
@@ -37,7 +38,7 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
         pending.current = true; setBusy(true); setError('');
         try {
             const data = action === 'upload' && file ? await api.uploadRplaySession(file)
-                : action === 'login' ? await api.loginRplay(email, password)
+                : action === 'login' ? await api.loginRplay(email.trim(), password)
                 : action === 'delete' ? await api.deleteRplaySession() : await api.getRplaySessionStatus();
             setStatus(data);
             if (action !== 'refresh') {
@@ -60,7 +61,7 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
         void change('login');
     };
 
-    const label = !status ? t('live.checkingStatus') : status.expired ? t('settings.rplaySessionExpired')
+    const label = !status ? t(error ? 'settings.rplaySessionInvalid' : 'live.checkingStatus') : status.expired ? t('settings.rplaySessionExpired')
         : status.configured ? t(status.valid ? 'settings.rplaySessionRegistered' : 'settings.rplaySessionInvalid') : t('settings.rplaySessionEmpty');
     const script = makeRplaySessionExportScript({ wrongSite: t('settings.rplayExportWrongSite'),
         signedOut: t('settings.rplayExportSignedOut'), failed: t('settings.rplayExportFailed') });
@@ -77,13 +78,13 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
     };
 
     return <div className="auth-platform-card" data-auth-platform="rplay" aria-busy={busy}>
-        <CollapsibleCard title={t('platform.rplay')} description={t('settings.authAccountOrSession')}
+        <CollapsibleCard icon={KeyRound} title={t('platform.rplay')} description={t('settings.authAccountOrSession')}
             onOpenChange={open => { if (!open) setPassword(''); }}
             action={<Badge tone={status?.expired || (status?.configured && !status.valid) ? 'warn' : status?.configured ? 'ok' : undefined}>{label}</Badge>}>
         <div className="space-y-4">
         <div className="auth-methods" role="group" aria-label={t('settings.authMethod')}>
-            <Button aria-pressed={method === 'account'} onClick={() => { setMethod('account'); setPassword(''); }}>{t('settings.authAccountMethod')}</Button>
-            <Button aria-pressed={method === 'file'} onClick={() => { setMethod('file'); setPassword(''); }}>{t('settings.authSessionMethod')}</Button>
+            <Button disabled={busy} aria-pressed={method === 'account'} onClick={() => { setMethod('account'); setPassword(''); }}>{t('settings.authAccountMethod')}</Button>
+            <Button disabled={busy} aria-pressed={method === 'file'} onClick={() => { setMethod('file'); setPassword(''); }}>{t('settings.authSessionMethod')}</Button>
         </div>
 
         {method === 'account' && <form onSubmit={handleLoginSubmit} className="space-y-3">
@@ -92,6 +93,7 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
                 <input
                     id="rplay-login-email" aria-label={t('settings.rplayEmailPlaceholder')}
                     type="email"
+                    required maxLength={320}
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder={t('settings.rplayEmailPlaceholder')}
@@ -102,6 +104,7 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
                 <input
                     id="rplay-login-password" aria-label={t('settings.rplayPasswordPlaceholder')}
                     type="password"
+                    required maxLength={4096}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder={t('settings.rplayPasswordPlaceholder')}
@@ -140,6 +143,6 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
         </details>}
         </div>
         </CollapsibleCard>
-        {error && <p role="alert" className="text-xs text-danger [overflow-wrap:anywhere]">{error}</p>}
+        {error && <p role="alert" className="mt-2 text-xs text-danger [overflow-wrap:anywhere]">{t(error)}</p>}
     </div>;
 }

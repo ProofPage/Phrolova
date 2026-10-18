@@ -978,7 +978,7 @@
   "settings.youtubePreferResolution": "Prefer Resolution on 2K+ Streams",
   "settings.youtubePreferResolutionHint": "Prioritize higher resolution over time machine on 2K+ broadcasts.",
   "settings.youtubePoTokenUrl": "PO Token Provider URL",
-  "settings.youtubePoTokenUrlHint": "bgutil-ytdlp-pot-provider address (e.g. http://127.0.0.1:4416)",
+  "settings.youtubePoTokenUrlHint": "留空時，應用程式會自動準備並連線至本機伺服器（http://127.0.0.1:4416）。僅在使用其他伺服器時填寫網址。",
   "settings.youtubeProtocolComparison": "Protocol Comparison Summary (HLS / DASH / SABR)",
   "settings.youtubeJsRuntime": "JavaScript Runtime",
   "settings.youtubePoProvider": "PO Token Provider",

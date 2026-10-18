@@ -165,7 +165,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                     youtube_codec_priority: youtubeCodecPriority,
                     youtube_time_machine_enabled: youtubeTimeMachine,
                     youtube_prefer_resolution_over_timemachine: youtubePreferResolution,
-                    youtube_po_token_provider_url: youtubePoTokenUrl.trim() || undefined,
+                    youtube_po_token_provider_url: youtubePoTokenUrl.trim(),
                     streamlink_platform_options: streamlinkOptions,
                     popkontv_use_playback_response: popkontvUsePlaybackResponse,
                 }

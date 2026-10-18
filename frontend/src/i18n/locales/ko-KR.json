@@ -978,7 +978,7 @@
   "settings.youtubePreferResolution": "2K+ 스트림에서 해상도 우선",
   "settings.youtubePreferResolutionHint": "2K+ 고화질 방송일 경우 타임머신보다 최상 해상도를 우선 선택합니다.",
   "settings.youtubePoTokenUrl": "PO Token Provider URL",
-  "settings.youtubePoTokenUrlHint": "bgutil-ytdlp-pot-provider 서비스 주소 (예: http://127.0.0.1:4416)",
+  "settings.youtubePoTokenUrlHint": "비워 두면 앱이 로컬 서버(http://127.0.0.1:4416)를 자동 준비·연결합니다. 별도 서버를 사용할 때만 주소를 입력하세요.",
   "settings.youtubeProtocolComparison": "프로토콜별 특징 요약 (HLS / DASH / SABR)",
   "settings.youtubeJsRuntime": "JavaScript 런타임",
   "settings.youtubePoProvider": "PO Token Provider",

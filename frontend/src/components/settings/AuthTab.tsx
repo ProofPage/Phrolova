@@ -15,6 +15,11 @@ export function AuthTab({ onSaved, onDirtyChange }: Props) {
     const { t } = useLanguage();
     // File registration saves immediately, so this tab has no unsaved text fields.
     useEffect(() => onDirtyChange?.(false), [onDirtyChange]);
+    const cards = [
+        ...(["chzzk", "youtube", "cime", "kick", "twitch", "tiktok", "bilibili", "pandalive", "popkontv", "tvchak", "hearheart"] as const)
+            .map(platform => <PlatformCookieAuth key={platform} platform={platform} onSaved={onSaved} />),
+        <RplaySessionAuth key="rplay" onSaved={onSaved} />,
+    ];
     return (
         <div className="auth-settings">
             <Card className="auth-guidance">
@@ -23,10 +28,8 @@ export function AuthTab({ onSaved, onDirtyChange }: Props) {
                 <p className="settings-shared-hint">{t("settings.authPermissionHelp")}</p>
             </Card>
             <div className="auth-platform-grid">
-            {(["chzzk", "youtube", "cime", "kick", "twitch", "tiktok", "bilibili", "pandalive", "popkontv", "tvchak", "hearheart"] as const).map(platform => (
-                <PlatformCookieAuth key={platform} platform={platform} onSaved={onSaved} />
-            ))}
-            <RplaySessionAuth onSaved={onSaved} />
+                <div className="auth-platform-column">{cards.slice(0, 6)}</div>
+                <div className="auth-platform-column">{cards.slice(6)}</div>
             </div>
         </div>
     );

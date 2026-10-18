@@ -8,6 +8,21 @@
 
 ## [Unreleased]
 
+## [2.0.87] - 2026-10-19
+
+### Fixed
+- Route YouTube tool setup messages to the shared console and service log, including six installation stages and the failing stage.
+- Finish Deno/bgutil preparation before application startup completes. Reuse verified installations and report failures without claiming success.
+- Restore automatic local-provider mode when a custom URL is cleared and saved. Treat the default loopback URL as managed locally, including a trailing slash.
+- Stack authentication cards in independent desktop columns while retaining a single mobile column and keyboard reading order.
+- Add the missing RPLAY key icon, translate RPLAY errors, trim sign-in email, show failed status checks and disable authentication-method switching during requests.
+
+### Validation
+- Authentication browser regression passed at 320–1440px with isolated API fixtures, including request locking, password clearing and independent column positions.
+- TypeScript, production build and all eight locale checks passed. The existing bundle-size warning remains.
+- Fresh Windows tool downloads, pinned hash checks, plugin loading, an existing matching provider response and restart without installation were verified.
+- Real-account sign-in success and removal of YouTube account/network restrictions are not implied by these checks.
+
 ## [2.0.86] - 2026-10-18
 
 ### Fixed
@@ -1225,7 +1240,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.86...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.87...HEAD
+[2.0.87]: https://github.com/ProofPage/Phrolova/compare/v2.0.86...v2.0.87
 [2.0.86]: https://github.com/ProofPage/Phrolova/compare/v2.0.85...v2.0.86
 [2.0.85]: https://github.com/ProofPage/Phrolova/compare/v2.0.84...v2.0.85
 [2.0.84]: https://github.com/ProofPage/Phrolova/compare/v2.0.83...v2.0.84
