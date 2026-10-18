@@ -13,6 +13,9 @@ from app.core.logger import _AccessLogFilter, _attach_uvicorn_logging, _make_for
 
 @pytest.fixture
 def desktop(monkeypatch):
+    from app.engine.youtube_tools import youtube_tools
+    monkeypatch.setattr(youtube_tools, "status", "ready")
+    monkeypatch.setattr(youtube_tools, "message", "Deno·bgutil 준비 완료")
     spec = importlib.util.spec_from_file_location("console_run_test", Path(__file__).parents[1] / "run.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -43,6 +46,18 @@ def test_missing_optional_probe_is_warning_not_all_success(desktop, monkeypatch,
     output = capsys.readouterr().out
     assert "주의 1건" in output and "모든 항목 정상" not in output
     assert "FFPROBE_PATH" in output
+
+
+def test_youtube_setup_failure_is_warning_not_all_success(desktop, monkeypatch, capsys):
+    import app.engine.media_tools as media
+    from app.engine.youtube_tools import youtube_tools
+    monkeypatch.setattr(media, "check_media_tool", lambda tool: dict(available=True, path=tool, version="9.0.2"))
+    monkeypatch.setattr(youtube_tools, "status", "failed")
+    monkeypatch.setattr(youtube_tools, "message", "Deno download failed")
+    assert desktop._run_dependency_check()
+    output = capsys.readouterr().out
+    assert "YouTube" in output and "Deno download failed" in output
+    assert "주의 1건" in output and "모든 항목 정상" not in output
 
 
 def access_record(status):
