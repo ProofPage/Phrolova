@@ -8,6 +8,24 @@
 
 ## [Unreleased]
 
+## [2.0.83] - 2026-10-18
+
+### Added
+- Add email/password sign-in for CIME MCO and HearHeart, and username/password sign-in for PandaTV and PopkonTV, under Settings authentication.
+- Register only issued, platform-scoped cookies after a usable session is confirmed; retain cookie-file import and existing RPLAY authentication.
+- Explain official-site sign-in for social accounts, CAPTCHA, additional verification and account checks in all eight interface languages.
+
+### Security
+- Never persist account passwords; clear the password input after every sign-in attempt.
+- Preserve previous credentials when sign-in, verification or credential storage fails.
+- Reject untrusted authentication destinations, keep CIME callbacks on HTTPS and prevent duplicate concurrent sign-in attempts.
+
+### Validation
+- Backend regression coverage: 1,980 passed and 2 skipped; the API surface expectation was updated for the intentional new sign-in endpoint and rechecked.
+- Browser checks passed for all four forms, request payloads, secret clearing, failure recovery, existing session preservation and 320–1440px layouts.
+- Frontend build and all eight translation resources passed.
+- Real provider endpoints rejected the intentionally invalid test credentials. Successful production-account sign-in has not been verified; successful session issuance, validation and storage are covered by mocked protocol tests.
+
 ## [2.0.82] - 2026-10-18
 
 ### Added
@@ -1155,7 +1173,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.82...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.83...HEAD
+[2.0.83]: https://github.com/ProofPage/Phrolova/compare/v2.0.82...v2.0.83
 [2.0.82]: https://github.com/ProofPage/Phrolova/compare/v2.0.81...v2.0.82
 [2.0.81]: https://github.com/ProofPage/Phrolova/compare/v2.0.80...v2.0.81
 [2.0.80]: https://github.com/ProofPage/Phrolova/compare/v2.0.79...v2.0.80

@@ -12,7 +12,7 @@ from typing import Optional
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Request, Response
 from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
@@ -490,6 +490,58 @@ async def rplay_session_delete():
     # An environment-configured external file belongs to the user. Only remove our own copy.
     _save_credential(_COOKIE_SAVE_PATH.with_name('rplay_session.json'), None, 'rplay_session_file')
     return await rplay_session_status()
+
+
+@router.post('/{platform}/login', summary='플랫폼 계정으로 로그인하고 쿠키 등록')
+async def platform_login(platform: str, request: Request, response: Response):
+    import json
+    import os
+    import tempfile
+    from starlette.concurrency import run_in_threadpool
+    from app.engine.platform_login import (
+        ERROR_KEYS, LOGIN_LOCKS, LOGIN_URLS, PlatformLoginError, login_with_credentials,
+    )
+    if platform not in LOGIN_URLS:
+        raise HTTPException(400, '지원하지 않는 계정 로그인 플랫폼입니다.')
+    response.headers['Cache-Control'] = 'no-store'
+    lock = LOGIN_LOCKS[platform]
+    acquired = lock.acquire(blocking=False)
+    try:
+        if not acquired:
+            raise PlatformLoginError('busy')
+        # Parse here rather than echoing password-bearing validation inputs in a 422.
+        content = bytearray()
+        async for chunk in request.stream():
+            content.extend(chunk)
+            if len(content) > 32 * 1024:
+                raise PlatformLoginError('invalid')
+        try:
+            data = json.loads(content)
+        except (ValueError, UnicodeError):
+            raise PlatformLoginError('invalid') from None
+        if not isinstance(data, dict):
+            raise PlatformLoginError('invalid')
+        jar = await run_in_threadpool(
+            login_with_credentials, platform, data.get('username'), data.get('password'),
+        )
+        destination = _COOKIE_SAVE_PATH.with_name(f'{platform}_cookies.txt')
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=destination.parent) as directory:
+            temporary = Path(directory) / 'cookies.txt'
+            temporary.touch(mode=0o600)
+            jar.save(str(temporary), ignore_discard=True)
+            os.chmod(temporary, 0o600)
+            _save_credential(destination, temporary.read_bytes(), f'{platform}_cookie_file')
+        return await platform_cookie_status_api(platform)
+    except PlatformLoginError as error:
+        status = 409 if error.code in ('challenge', 'busy') else 502 if error.code in ('unavailable', 'changed') else 400
+        raise HTTPException(status, {
+            'message': ERROR_KEYS[error.code], 'code': error.code, 'login_url': LOGIN_URLS[platform],
+        }, headers={'Cache-Control': 'no-store'}) from None
+    finally:
+        if acquired:
+            lock.release()
+
 
 @router.post('/{platform}/cookie', summary='플랫폼 쿠키 파일 등록')
 async def platform_cookie_upload(platform: str, file: UploadFile = File(...)):

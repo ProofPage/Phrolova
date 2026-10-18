@@ -29,19 +29,21 @@ The dashboard provides **10 live platforms** and **17 video source choices**, in
 | --- | --- | --- | --- |
 | CHZZK | Monitoring, preview, manual/automatic recording and live Time Machine | VODs, clips and server-authorized AES-128 HLS playback | Naver account cookies for account-required playback and encryption keys |
 | YouTube | Monitoring, preview and manual/automatic recording | Videos and channel imports | Uploaded cookies for authenticated video access |
-| CIME | Monitoring, preview and manual/automatic recording, including granted UHD/4K qualities | VODs and clips | Account cookies; UHD viewing permission when required |
+| CIME | Monitoring, preview and manual/automatic recording, including granted UHD/4K qualities | VODs and clips | MCO email/password login or account cookies; UHD viewing permission when required |
 | Kick | Streamlink monitoring integration, preview and manual/automatic recording | VODs and clips via yt-dlp | Optional Kick cookies; required for sign-in-only qualities |
 | Twitch | Monitoring, preview and manual/automatic recording via Streamlink | VODs and individual clips via yt-dlp | Optional Twitch Netscape cookies |
 | TikTok | Monitoring, frame previews and manual/automatic recording via Streamlink | Individual videos and short share links via yt-dlp | Optional TikTok Netscape cookies |
 | Bilibili | Room monitoring, HLS previews and manual/automatic recording via Streamlink | BV/av videos, selected parts and b23.tv share links via yt-dlp | Optional Bilibili Netscape cookies |
-| PandaTV (팬더티비) | Channel monitoring, HLS previews and manual/automatic recording via Streamlink | — | Optional PandaTV Netscape cookies; identity-verified account access where required |
-| PopkonTV (팝콘티비) | Channel monitoring, recording, previews and password-protected rooms | VODs and clips through the existing queue | PopkonTV Netscape cookies for sign-in-required access; broadcast password when required |
+| PandaTV (팬더티비) | Channel monitoring, HLS previews and manual/automatic recording via Streamlink | — | Username/password login or PandaTV Netscape cookies; identity-verified account access where required |
+| PopkonTV (팝콘티비) | Channel monitoring, recording, previews and password-protected rooms | VODs and clips through the existing queue | Username/password login or PopkonTV Netscape cookies; broadcast password when required |
 | RPLAY (알플레이) | Channel monitoring, granted HLS recording and previews | Videos and live archives with granted HLS, DASH or MP4 playback | Email/password login or an imported session file; account viewing permission required |
 | Anilife / Linkani / Ohli24 | — | Work/episode links, episode selection, HLS videos and VTT subtitles | Normal site playback session |
 | TVWiki (티비위키) | — | Work/episode selection and HLS videos at tvwiki54.net | Normal guest playback session |
 | TVChak (티비착) | — | Work/episode selection and original MP4 videos at tvchak208.com | Optional browser cookie file for site access checks |
 | Animaru (애니마루) | — | Work/episode selection, HLS videos and provided VTT subtitles at animaru1.com | Public reader/player API |
 | Ani365 (애니365) | — | Work/episode selection, HLS quality variants and provided VTT subtitles at v2.ohli365.org | Public catalog/playback API and MegaPlay delivery |
+
+CIME (MCO) and HearHeart support email/password sign-in; PandaTV and PopkonTV support username/password sign-in under **Settings → Authentication**, alongside the existing RPLAY login. Passwords are not saved and the input is cleared after each attempt. Only issued, platform-scoped cookies are registered after session verification. Existing cookies remain unchanged if login or storage fails. Social accounts, CAPTCHA and additional verification require official-site sign-in followed by cookie import. See the release notes for the current production-account validation scope.
 
 Bilibili live rooms accept a numeric room ID or `https://live.bilibili.com/<room>`. The recorder prefers MPEG-TS HLS, tries alternate CDNs and preserves native fMP4 HLS when needed. Available native quality IDs are retained; a stream with no advertised quality ID is shown as Original rather than an inferred resolution. Bilibili's popularity metric is identified separately from viewer counts. Videos accept BV/av IDs and `b23.tv` links; `?p=2` selects a single part. Separate DASH video and audio tracks are merged into the configured container. Cropped videos display both the provider's quality tier and actual pixel dimensions. Register a Netscape cookie file under **Settings → Authentication → Bilibili** when account access or additional qualities are needed. Cookies remain scoped to `bilibili.com`.
 
@@ -172,7 +174,7 @@ Open <http://127.0.0.1:8000> in the Android browser. Use `termux-setup-storage` 
 
 1. Choose separate live/video folders, recording quality and the final container. Saving setup creates missing folders.
 2. Choose your language in **Settings → Appearance**.
-3. Configure account authentication in **Settings → Authentication** when needed: platform cookies, CHZZK `NID_AUT`/`NID_SES`, or RPLAY email/password/session JSON. Browser sign-in is separate from Phrolova's server.
+3. Configure account authentication in **Settings → Authentication** when needed: supported account login forms, platform cookies, CHZZK `NID_AUT`/`NID_SES`, or an RPLAY session JSON. Browser sign-in is separate from Phrolova's server.
 4. Add channels in **Live**, review recording preferences and enable automatic recording or start manually.
 5. Add links in **Videos**, choose quality and start downloading. A YouTube channel URL or `@handle` starts a background import.
 6. Review **Statistics**, **Logs**, processing history and tool status in **Settings → Information**.

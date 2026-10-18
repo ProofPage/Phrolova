@@ -269,7 +269,7 @@ def _post(client, path, body, headers=None):
         ) from None
 
 
-def public_web_config(client, referer, *, require_version=True):
+def public_web_config(client, referer, *, require_version=True, page_html=None):
     """Read literal public client/version constants from the website; never evaluate its JavaScript."""
     global _web_config
     with _web_lock:
@@ -292,7 +292,7 @@ def public_web_config(client, referer, *, require_version=True):
             return response.text
 
         try:
-            page = get(referer)
+            page = page_html if page_html is not None else get(referer)
             scripts = re.findall(
                 r'<script[^>]*src=["\'](/_next/static/chunks/[^"\']+\.js)["\']', page
             )

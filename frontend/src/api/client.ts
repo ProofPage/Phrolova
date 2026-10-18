@@ -255,6 +255,7 @@ export interface PlatformStatus {
 }
 
 export type CookiePlatform = 'chzzk' | 'youtube' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'tvchak' | 'hearheart';
+export type AccountLoginPlatform = 'cime' | 'pandalive' | 'popkontv' | 'hearheart';
 
 export interface PlatformCookieStatus {
     configured: boolean;
@@ -650,6 +651,8 @@ export const api = {
     },
     loginRplay: async (email: string, password: string): Promise<PlatformCookieStatus> =>
         (await client.post('/platforms/rplay/login', { email, password })).data,
+    loginPlatform: async (platform: AccountLoginPlatform, username: string, password: string): Promise<PlatformCookieStatus> =>
+        (await client.post(`/platforms/${platform}/login`, { username, password })).data,
     deleteRplaySession: async (): Promise<PlatformCookieStatus> => (await client.delete('/platforms/rplay/session')).data,
     getPlatformCookieStatus: async (platform: CookiePlatform): Promise<PlatformCookieStatus> =>
         (await client.get<PlatformCookieStatus>(`/platforms/${platform}/cookie`)).data,

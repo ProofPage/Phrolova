@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import http.cookiejar
+import copy
 import os
 import re
 import tempfile
@@ -36,6 +37,19 @@ def _source(platform: str) -> Path | None:
     return Path(value) if value else None
 
 
+def scoped_cookie_jar(jar: http.cookiejar.CookieJar, platform: str) -> http.cookiejar.MozillaCookieJar:
+    """Keep original cookie attributes, but never borrow another service's session."""
+    result = http.cookiejar.MozillaCookieJar()
+    for cookie in jar:
+        domain = cookie.domain.lstrip('.').lower()
+        # TVChak's numbered domains are separate cookie scopes, never aliases.
+        allowed = (numbered_site_for_host(domain) == 'tvchak' if platform == 'tvchak' else
+                   any(domain == host or domain.endswith('.' + host) for host in DOMAINS[platform]))
+        if allowed:
+            result.set_cookie(copy.copy(cookie))
+    return result
+
+
 def read_cookie_jar(path: Path, platform: str, *, include_expired: bool = False) -> http.cookiejar.MozillaCookieJar:
     jar = http.cookiejar.MozillaCookieJar()
     # Netscape exporters use expiry 0 for session cookies.
@@ -49,14 +63,7 @@ def read_cookie_jar(path: Path, platform: str, *, include_expired: bool = False)
         normalized.append(line)
     import io
     jar._really_load(io.StringIO('\n'.join(normalized) + '\n'), str(path), True, include_expired)
-    for cookie in list(jar):
-        domain = cookie.domain.lstrip('.').lower()
-        # TVChak's numbered domains are separate cookie scopes, never aliases.
-        allowed = (numbered_site_for_host(domain) == 'tvchak' if platform == 'tvchak' else
-                   any(domain == host or domain.endswith('.' + host) for host in DOMAINS[platform]))
-        if not allowed:
-            jar.clear(cookie.domain, cookie.path, cookie.name)
-    return jar
+    return scoped_cookie_jar(jar, platform)
 
 
 def platform_cookie_jar(platform: str) -> http.cookiejar.MozillaCookieJar:
