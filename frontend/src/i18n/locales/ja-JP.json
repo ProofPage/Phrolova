@@ -969,7 +969,7 @@
   "settings.playlistReloadSeconds": "再生リストの更新間隔（秒）",
   "settings.playlistReloadHint": "0は自動、指定する場合は2～60秒です。変更は次回の接続から適用されます。",
   "settings.streamQueryParameters": "追加クエリパラメーター（JSON）",
-  "settings.streamQueryHint": "キーと値が文字列のJSONオブジェクトです。許可された再生サーバーに��用し、同じキーを置換します。認証と権限確認は維持されます。",
+  "settings.streamQueryHint": "キーと値が文字列のJSONオブジェクトです。許可された再生サーバーに適用し、同じキーを置換します。認証と権限確認は維持されます。",
   "settings.invalidStreamQuery": "キーと値が文字列のJSONオブジェクトを入力してください。最大32項目で、制御文字は使用できません。",
   "live.skippingRecording": "スキップのため録画を停止中",
   "live.skippedRecording": "スキップ済み"
