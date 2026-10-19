@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+## [2.0.96] - 2026-10-19
+
+### Fixed
+- Fixed an issue where pipeline reconnect failure (e.g. transient `The page needs to be reloaded` or network timeout) caused recordings to permanently hang in `reconnecting` state without further retries.
+- In Conductor, detect stalled/closed pipelines in `reconnecting` state and cleanly resume automatic recording retry cycle.
+- Added `The page needs to be reloaded` to YouTube cookie fallback markers.
+
 ## [2.0.95] - 2026-10-19
 
 ### Fixed
@@ -1301,7 +1308,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.95...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.96...HEAD
+[2.0.96]: https://github.com/ProofPage/Phrolova/compare/v2.0.95...v2.0.96
 [2.0.95]: https://github.com/ProofPage/Phrolova/compare/v2.0.94...v2.0.95
 [2.0.94]: https://github.com/ProofPage/Phrolova/compare/v2.0.93...v2.0.94
 [2.0.93]: https://github.com/ProofPage/Phrolova/compare/v2.0.92...v2.0.93

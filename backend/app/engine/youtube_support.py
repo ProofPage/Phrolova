@@ -152,6 +152,8 @@ def youtube_auth_message(error, *, has_cookies=False):
             "account required",
             "sign in to view",
             "sign in to watch",
+            "the page needs to be reloaded",
+            "page needs to be reloaded",
         )
     ):
         return (
