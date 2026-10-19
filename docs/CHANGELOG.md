@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-19
+
+### Fixed
+- Fixed preview proxy 502 Bad Gateway errors by serving cached playlist manifests and retrying on upstream CDN 5xx (500, 502, 503, 504) server spikes.
+
 ## [2.0.99] - 2026-10-19
 
 ### Fixed
@@ -1330,7 +1335,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.99...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/ProofPage/Phrolova/compare/v2.0.99...v2.1.0
 [2.0.99]: https://github.com/ProofPage/Phrolova/compare/v2.0.98...v2.0.99
 [2.0.98]: https://github.com/ProofPage/Phrolova/compare/v2.0.97...v2.0.98
 [2.0.97]: https://github.com/ProofPage/Phrolova/compare/v2.0.96...v2.0.97

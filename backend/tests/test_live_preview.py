@@ -387,3 +387,38 @@ def test_preview_master_can_use_extensionless_hls_endpoint_and_keeps_format_head
     assert selected["cookies"] == video["cookies"]
     assert (selected["width"], selected["height"]) == (1920, 1080)
     assert video["url"] != video["manifest_url"]
+
+
+@pytest.mark.asyncio
+async def test_preview_returns_cached_manifest_on_transient_500():
+    from app.engine.preview_proxy import PreviewProxy
+    proxy = PreviewProxy()
+    token = proxy.register("chzzk:test", "chzzk", "https://example.com/live.m3u8")
+    manifest = b"#EXTM3U\n#EXTINF:2,\nsegment.ts\n"
+    proxy.nodes[token]["_last_manifest"] = manifest
+    import httpx
+    original = httpx.AsyncClient
+    def mock_fetch(*args, **kwargs):
+        return httpx.Response(500, request=httpx.Request("GET", "https://example.com/live.m3u8"))
+    proxy.nodes[token]["hosts"].add("example.com")
+    # Mock client.stream
+    class MockClient:
+        def __init__(self, *args, **kwargs): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): pass
+        def stream(self, method, url, **kwargs):
+            res = httpx.Response(500, request=httpx.Request(method, url))
+            class MockStream:
+                async def __aenter__(self): return res
+                async def __aexit__(self, *args): pass
+            return MockStream()
+    import app.engine.preview_proxy as pp
+    saved = pp.httpx.AsyncClient
+    pp.httpx.AsyncClient = MockClient
+    try:
+        data, kind, status, _ = await proxy.fetch(token)
+        assert status == 200
+        assert data == manifest
+        assert kind == "application/vnd.apple.mpegurl"
+    finally:
+        pp.httpx.AsyncClient = saved
