@@ -964,20 +964,30 @@ class YtdlpLivePipeline:
             self._native_clock.body.clear()
             self._native_clock.remaining = 0
             self._native_clock.position = self._native_clock.complete_media_end
-        if self._source_resolver:
-            url, headers, cookies = await asyncio.wait_for(
-                self._source_resolver(self._quality), 45
-            )
-        else:
-            url, headers, cookies = await self._extract_hls_url(
-                self._source_page_url, self._quality, self._cookie_str
-            )
-        self._resume_args = (url, headers, cookies, 0, False, self._quality)
-        if self.capture_format == "ts" and (urlsplit(self._source_page_url).hostname or "") in (
-                "twitch.tv", "www.twitch.tv", "m.twitch.tv", "go.twitch.tv"):
-            self._twitch_reconnect_pending = True
-        self._closed = False
-        await self._begin_receiver()
+        try:
+            if self._source_resolver:
+                url, headers, cookies = await asyncio.wait_for(
+                    self._source_resolver(self._quality), 45
+                )
+            else:
+                url, headers, cookies = await self._extract_hls_url(
+                    self._source_page_url, self._quality, self._cookie_str
+                )
+            self._resume_args = (url, headers, cookies, 0, False, self._quality)
+            if self.capture_format == "ts" and (urlsplit(self._source_page_url).hostname or "") in (
+                    "twitch.tv", "www.twitch.tv", "m.twitch.tv", "go.twitch.tv"):
+                self._twitch_reconnect_pending = True
+            self._closed = False
+            await self._begin_receiver()
+        except BaseException as error:
+            self._closed = True
+            self._state = RecordingState.ERROR
+            self.last_exception = error
+            failure = classify_recording_error(error)
+            self.error_code = failure.code
+            self.error_message = str(failure)
+            self.retryable = failure.retryable
+            raise
 
     async def stop_recording(self):
         self._intentional_stop = True

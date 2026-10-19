@@ -792,7 +792,20 @@ class Conductor:
             RecordingState.ERROR,
             RecordingState.COMPLETED,
         ):
-            return retry_count
+            if pipe is not None and pipe.state == RecordingState.RECONNECTING:
+                feeder = getattr(pipe, "_feeder_task", None)
+                is_stalled = (
+                    getattr(pipe, "_closed", False)
+                    or feeder is None
+                    or feeder.done()
+                )
+                if is_stalled:
+                    pipe._state = RecordingState.ERROR
+                    pipe._closed = True
+                else:
+                    return retry_count
+            else:
+                return retry_count
         if retry_count < max_retries:
             retry_count += 1
             task.retry_count = retry_count
