@@ -104,6 +104,7 @@ async def get_current_settings():
         "streamlink_version": _streamlink_version(),
         "streamlink_platform_options": serialize_streamlink_settings(settings.streamlink_platform_options),
         "popkontv_use_playback_response": settings.popkontv_use_playback_response,
+        "twitch_proxy_enabled": settings.twitch_proxy_enabled,
         "monitor_interval": settings.monitor_interval,
         "host": settings.host,
         "port": settings.port,

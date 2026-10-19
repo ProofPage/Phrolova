@@ -1,4 +1,6 @@
 {
+  "settings.twitchProxyEnabled": "使用 Twitch 高畫質代理",
+  "settings.twitchProxyWarning": "開啟後，四個 ReYohoho 代理會收到頻道、IP，以及透過 URL 中 auth= 傳遞的已登錄登入權杖。營運者可以保留權杖，請僅在信任時開啟。代理失敗時恢復直連。從下一次畫質查詢、錄製或預覽開始生效。",
   "settings.authGuideTitle": "只驗證需要的平台",
   "settings.authGuide": "選取平台後，可在下方驗證區域登入帳號或匯入驗證檔案。瀏覽器登入與本應用程式獨立。",
   "settings.authPermissionHelp": "已登錄檔案不代表擁有所有直播的觀看權限。訂閱、購買及年齡驗證由平台檢查。",

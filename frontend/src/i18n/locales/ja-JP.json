@@ -1,4 +1,6 @@
 {
+  "settings.twitchProxyEnabled": "Twitch高画質プロキシを使用",
+  "settings.twitchProxyWarning": "有効にするとReYohohoの4つのプロキシにチャンネル・IP・登録済みログイントークンをURLのauth=で送信します。運営者がトークンを保持できます。信頼する場合のみ有効にしてください。失敗時は直接接続に戻ります。次の画質取得・録画・プレビューから適用されます。",
   "settings.authGuideTitle": "必要なプラットフォームだけ認証",
   "settings.authGuide": "プラットフォームを選び、下の認証欄でログインまたは認証ファイルを登録します。ブラウザーのログインとは別です。",
   "settings.authPermissionHelp": "ファイルの登録は全配信の視聴権限を保証しません。購読・購入・年齢確認は各サイトで判定されます。",

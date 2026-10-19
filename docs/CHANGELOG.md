@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+## [2.0.90] - 2026-10-19
+
+### Added
+- Add an opt-in ReYohoho Twitch live quality proxy for quality lookup, recording and preview, including registered account-token forwarding via `auth=`. Keep it disabled by default and explain the third-party credential risk.
+- Restrict proxy destinations, reject redirects and untrusted playlist URLs, mask authentication query values and fall back to direct access when proxies fail.
+- Verify settings persistence and responsive controls. A short real humzh sample contained 1920×1080 H.264 video at an advertised 60 fps and AAC audio.
+
 ## [2.0.89] - 2026-10-19
 
 ### Fixed
@@ -1258,7 +1265,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.89...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.90...HEAD
+[2.0.90]: https://github.com/ProofPage/Phrolova/compare/v2.0.89...v2.0.90
 [2.0.89]: https://github.com/ProofPage/Phrolova/compare/v2.0.88...v2.0.89
 [2.0.88]: https://github.com/ProofPage/Phrolova/compare/v2.0.87...v2.0.88
 [2.0.87]: https://github.com/ProofPage/Phrolova/compare/v2.0.86...v2.0.87

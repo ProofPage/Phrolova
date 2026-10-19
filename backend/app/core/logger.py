@@ -114,7 +114,7 @@ def _redact_log_secrets(text: str) -> str:
             path = path.split("/webhooks/", 1)[0] + "/webhooks/<redacted>"
         return urlunsplit((parsed.scheme, host, path, "", ""))
     text = re.sub(r'https?://[^\s\"\'<>]+', url, text)
-    text = re.sub(r'(?i)\b(NID_AUT|NID_SES|auth[-_]token|ct0|sessionid|sessionid_ss|sid_tt|sid_guard|ttwid)=([^;\s]+)', r'\1=<redacted>', text)
+    text = re.sub(r'(?i)\b(NID_AUT|NID_SES|auth|auth[-_]token|ct0|sessionid|sessionid_ss|sid_tt|sid_guard|ttwid)=([^;&\s]+)', r'\1=<redacted>', text)
     return re.sub(r'(?im)\b(Authorization|Cookie|x-csrf-token):[^\r\n]+', r'\1: <redacted>', text)
 
 
