@@ -293,6 +293,12 @@ def _save_credential(destination: Path, content: bytes | None, field: str):
             pass
     get_settings.cache_clear()
     setattr(get_settings(), field, str(destination) if content is not None else None)
+    try:
+        from app.main import get_recorder_service
+        platform_name = field.replace("_cookie_file", "").replace("_session_file", "")
+        get_recorder_service().on_credentials_updated(platform_name)
+    except Exception:
+        pass
 
 
 @router.get("/youtube/cookie")
@@ -380,7 +386,9 @@ async def upload_chzzk_cookie(file: UploadFile = File(...)):
             raise HTTPException(400, "사용 가능한 치지직 로그인 쿠키가 포함된 Netscape 형식 파일을 선택하세요.") from None
     # Reuse the existing authentication path for Streamlink, live detection and VOD.
     try:
-        get_recorder_service().update_cookies(values["NID_AUT"], values["NID_SES"])
+        service = get_recorder_service()
+        service.update_cookies(values["NID_AUT"], values["NID_SES"])
+        service.on_credentials_updated("chzzk")
     except OSError:
         raise HTTPException(500, "인증 설정을 저장하지 못했습니다. 저장 위치의 권한과 여유 공간을 확인하세요.") from None
     return await chzzk_cookie_status()

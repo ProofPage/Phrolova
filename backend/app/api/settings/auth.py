@@ -29,7 +29,9 @@ async def update_cookies(req: CookieUpdateRequest):
 
     service = get_recorder_service()
     try:
-        return service.update_cookies(req.nid_aut, req.nid_ses)
+        result = service.update_cookies(req.nid_aut, req.nid_ses)
+        service.on_credentials_updated("chzzk")
+        return result
     except OSError:
         raise HTTPException(500, "인증 설정을 저장하지 못했습니다. 저장 위치의 권한과 여유 공간을 확인하세요.") from None
 

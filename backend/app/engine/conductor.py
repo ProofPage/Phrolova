@@ -744,6 +744,22 @@ class Conductor:
         task.error_detail = None
         self._persist_retry(task)
 
+    def on_credentials_updated(self, platform: Optional[str] = None) -> None:
+        """인증 정보 등록/갱신 시 차단되거나 실패한 채널들의 재시도를 초기화하고 즉시 스캔한다."""
+        target_platform = None
+        if platform is not None:
+            try:
+                target_platform = Platform(platform.lower())
+            except ValueError:
+                target_platform = None
+        for key, task in list(self._channels.items()):
+            if target_platform is None or task.platform == target_platform:
+                if task.retry_blocked or task.retry_count > 0 or task.last_error or task.pipeline is None:
+                    self._reset_retry(task)
+                    task.broadcast_ended = False
+                    self.trigger_scan_now(key)
+        self._broadcast_status()
+
     def _record_failure(self, task, error):
         from app.engine.platform_auth import redact_media_error
 

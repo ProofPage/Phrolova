@@ -290,6 +290,11 @@ class RecorderService:
         self._auth.update_cookies(nid_aut, nid_ses, persist=persist)
         return {"message": "쿠키 업데이트 완료.", "authenticated": self._auth.is_authenticated}
 
+    def on_credentials_updated(self, platform: Optional[str] = None) -> None:
+        """인증 정보 변경을 Conductor에 통지한다."""
+        if hasattr(self._conductor, "on_credentials_updated"):
+            self._conductor.on_credentials_updated(platform)
+
     def get_auth_status(self) -> dict:
         """인증 상태를 반환한다."""
         return {"authenticated": self._auth.is_authenticated}
