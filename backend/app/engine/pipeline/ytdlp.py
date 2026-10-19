@@ -1700,9 +1700,11 @@ class YtdlpLivePipeline:
         return hls_url, http_headers, cookies
 
     async def _resolve_stream_spec(self, engine, channel_id, quality):
-        spec = await engine.resolve_stream_spec(channel_id, quality)
-        self.recording_resolution = {key: spec.get(key) for key in ("width", "height", "fps")}
-        return spec["url"], spec["headers"], spec["cookies"]
+        if hasattr(engine, "resolve_stream_spec"):
+            spec = await engine.resolve_stream_spec(channel_id, quality)
+            self.recording_resolution = {key: spec.get(key) for key in ("width", "height", "fps")}
+            return spec["url"], spec["headers"], spec["cookies"]
+        return await engine.resolve_stream(channel_id, quality)
 
     async def _extract_youtube_source(self, page_url, quality, cookie_file=None):
         height = re.match(r"(\d+)p", quality)
