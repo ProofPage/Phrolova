@@ -97,7 +97,7 @@ def guarded_hls_stream(stream_type):
         def write(self, segment, result, *data):
             super().write(segment, result, *data)
             report = self.session._phrolova_loss_report
-            if report is not None:
+            if report is not None and not self.should_filter_segment(segment):
                 report.segment(getattr(self.stream, "_phrolova_track_id", "0"), segment.num)
 
         def run(self):

@@ -113,7 +113,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
         <>
         <form onSubmit={handleSubmit} aria-label={translate("live.addMonitoredChannel")} className="dashboard-add-channel media-add-form space-y-2">
             <div className="flex w-full min-w-0 flex-col items-stretch gap-2 sm:flex-row">
-            <div className="relative min-w-0 shrink-0 w-full sm:w-[120px]" ref={dropdownRef}>
+            <div className="relative min-w-0 shrink-0 w-fit max-w-full" ref={dropdownRef}>
                 <PlatformSelectTrigger
                     label={PLATFORM_LABELS[selectedPlatform]}
                     dotClass={PLATFORM_DOT_STYLES[selectedPlatform]}
