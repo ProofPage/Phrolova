@@ -17,11 +17,12 @@ def is_youtube_url(url):
 
 
 def runtime_options():
-    from app.engine.youtube_tools import youtube_tools
+    from app.engine.youtube_tools import youtube_tools, deno_executable
     runtimes = {}
     for name in ("deno", "node"):
         executable = shutil.which(name)
         for folder in (
+            *([deno_executable().parent] if name == "deno" else []),
             *([youtube_tools.bundle] if youtube_tools.bundle else []),
             Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent)) / "bin",
             Path(sys.executable).parent / "bin",

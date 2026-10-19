@@ -10,14 +10,14 @@ WIDTHS=(320,375,430,640,768,1024,1280,1440,1920,2560)
 async def main():
     OUT.mkdir(parents=True,exist_ok=True)
     channels=[]
-    for i,platform in enumerate(("cime","chzzk","soop")):
+    for i,platform in enumerate(("cime","chzzk","rplay")):
         c=copy.deepcopy(FIX["channels"][0])
         c.update(platform=platform,composite_key=f"{platform}:audit",channel_id="audit",channel_name=platform,
             is_live=False,recording=None,last_error=None,monitor_error="상태 조회 시간 초과" if i==0 else None,
             monitor_status="retry_wait" if i==0 else "watching",broadcast_status="error" if i==0 else "offline",
             title=None,postprocess=None,recording_quality="best",recent_errors=[])
         channels.append(c)
-    job=dict(id="warn",composite_key="soop:old",platform="soop",channel_name="경고 완료 파일",state="completed",target_format="mkv",
+    job=dict(id="warn",composite_key="rplay:old",platform="rplay",channel_name="경고 완료 파일",state="completed",target_format="mkv",
         progress=100,output_path="/output/result.mkv",source_paths=["/output/source.ts"],source_available=True,output_available=True,
         can_open=True,can_inspect=True,can_retry=True,inspection_state="passed",error_message=None,
         warning_message="변환 결과 검사를 통과했지만 FFmpeg 경고가 있습니다. 원본 파일은 보관합니다.",

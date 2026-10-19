@@ -1,12 +1,13 @@
 import { translate } from "../../i18n";
 import { useEffect, useRef, useState } from 'react';
-import { KeyRound, RefreshCw, Trash2, Upload } from 'lucide-react';
+import { RefreshCw, Trash2, Upload } from 'lucide-react';
 import { api, DOWNLOAD_SOURCE_LABELS, PLATFORM_LABELS, type AccountLoginPlatform, type CookiePlatform, type PlatformCookieStatus } from '../../api/client';
 import { getErrorMessage } from '../../utils/error';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useConfirm } from '../ui/ConfirmModal';
 import { useToast } from '../ui/Toast';
-import { Badge, Button, CollapsibleCard } from '../ui/primitives';
+import { Badge, Button } from '../ui/primitives';
+import { AuthPlatformCard } from './AuthPlatformCard';
 
 const ACCOUNT_LOGINS: Record<AccountLoginPlatform, { email: boolean; url: string }> = {
     cime: { email: true, url: 'https://ci.me/auth/login' },
@@ -72,9 +73,9 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
     const label = !status ? t(error ? "settings.cookieFileNeedsAttention" : "live.checkingStatus") : status.expired ? t("settings.cookieExpired")
         : status.configured && status.valid === false ? t("settings.cookieFileNeedsAttention") : status.configured ? t("settings.cookiesRegistered") : t("settings.noRegisteredCookies");
     return <div className="auth-platform-card" data-cookie-platform={platform} aria-busy={busy}>
-        <CollapsibleCard icon={KeyRound} title={t(name)}
+        <AuthPlatformCard platform={platform} title={t(name)}
             description={t(account ? "settings.authAccountOrCookie" : "settings.authCookieMethod")}
-            onOpenChange={open => { if (!open) setPassword(''); }}
+            onClose={() => setPassword('')}
             action={<Badge tone={status?.expired || (status?.configured && status.valid === false) ? 'warn' : status?.configured ? 'ok' : undefined}>{label}</Badge>}>
         <div className="space-y-4">
         {account && <div className="auth-methods" role="group" aria-label={t('settings.authMethod')}>
@@ -123,7 +124,7 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
         ) : null}
         {status?.expired && <p className="text-xs text-warn">{t("settings.exportCookiesAgainFromASignedInBrowserAndRegisterTheFile")}</p>}
         </div>
-        </CollapsibleCard>
         {error && <p role="alert" className="mt-2 text-xs text-danger [overflow-wrap:anywhere]">{t(error)}</p>}
+        </AuthPlatformCard>
     </div>;
 }

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { KeyRound } from 'lucide-react';
 import { api, type PlatformCookieStatus } from '../../api/client';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getErrorMessage } from '../../utils/error';
 import { makeRplaySessionExportScript } from '../../utils/rplaySessionExport';
-import { Badge, Button, CollapsibleCard } from '../ui/primitives';
+import { Badge, Button } from '../ui/primitives';
+import { AuthPlatformCard } from './AuthPlatformCard';
 import { useConfirm } from '../ui/ConfirmModal';
 import { useToast } from '../ui/Toast';
 
@@ -78,8 +78,8 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
     };
 
     return <div className="auth-platform-card" data-auth-platform="rplay" aria-busy={busy}>
-        <CollapsibleCard icon={KeyRound} title={t('platform.rplay')} description={t('settings.authAccountOrSession')}
-            onOpenChange={open => { if (!open) setPassword(''); }}
+        <AuthPlatformCard platform="rplay" title={t('platform.rplay')} description={t('settings.authAccountOrSession')}
+            onClose={() => setPassword('')}
             action={<Badge tone={status?.expired || (status?.configured && !status.valid) ? 'warn' : status?.configured ? 'ok' : undefined}>{label}</Badge>}>
         <div className="space-y-4">
         <div className="auth-methods" role="group" aria-label={t('settings.authMethod')}>
@@ -90,7 +90,8 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
         {method === 'account' && <form onSubmit={handleLoginSubmit} className="space-y-3">
             <div className="text-xs font-medium text-ink">{t('settings.rplayAccountLogin')}</div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <input
+                <label className="space-y-1 text-xs text-ink-muted" htmlFor="rplay-login-email">
+                <span>{t('settings.rplayEmailPlaceholder')}</span><input
                     id="rplay-login-email" aria-label={t('settings.rplayEmailPlaceholder')}
                     type="email"
                     required maxLength={320}
@@ -100,8 +101,9 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
                     disabled={busy}
                     className="ui-input input-focus text-xs"
                     autoComplete="username"
-                />
-                <input
+                /></label>
+                <label className="space-y-1 text-xs text-ink-muted" htmlFor="rplay-login-password">
+                <span>{t('settings.rplayPasswordPlaceholder')}</span><input
                     id="rplay-login-password" aria-label={t('settings.rplayPasswordPlaceholder')}
                     type="password"
                     required maxLength={4096}
@@ -111,7 +113,7 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
                     disabled={busy}
                     className="ui-input input-focus text-xs"
                     autoComplete="current-password"
-                />
+                /></label>
             </div>
             <div className="flex justify-end">
                 <Button type="submit" disabled={busy || !email.trim() || !password} loading={busy}>
@@ -142,7 +144,7 @@ export function RplaySessionAuth({ onSaved }: { onSaved: () => void }) {
                 aria-label={t('settings.rplayExportCopy')} className="ui-input input-focus w-full resize-y font-mono text-xs" />
         </details>}
         </div>
-        </CollapsibleCard>
         {error && <p role="alert" className="mt-2 text-xs text-danger [overflow-wrap:anywhere]">{t(error)}</p>}
+        </AuthPlatformCard>
     </div>;
 }

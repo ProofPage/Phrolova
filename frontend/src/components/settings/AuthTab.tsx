@@ -4,6 +4,7 @@ import { type Settings as SettingsType } from "../../api/client";
 import { PlatformCookieAuth } from "./PlatformCookieAuth";
 import { RplaySessionAuth } from "./RplaySessionAuth";
 import { Card } from "../ui/primitives";
+import { AuthPlatformLayout } from "./AuthPlatformCard";
 
 interface Props {
     settings: SettingsType | null;
@@ -27,10 +28,7 @@ export function AuthTab({ onSaved, onDirtyChange }: Props) {
                 <p className="settings-shared-hint">{t("settings.authGuide")}</p>
                 <p className="settings-shared-hint">{t("settings.authPermissionHelp")}</p>
             </Card>
-            <div className="auth-platform-grid">
-                <div className="auth-platform-column">{cards.slice(0, 6)}</div>
-                <div className="auth-platform-column">{cards.slice(6)}</div>
-            </div>
+            <AuthPlatformLayout>{cards}</AuthPlatformLayout>
         </div>
     );
 }

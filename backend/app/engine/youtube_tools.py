@@ -7,7 +7,9 @@ import io
 import json
 import os
 import platform
+import re
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -16,7 +18,7 @@ from pathlib import Path
 
 import httpx
 
-from app.core.config import get_settings, resolve_data_dir
+from app.core.config import get_settings
 from app.core.logger import get_platform_logger
 
 log = get_platform_logger("youtube", "tools")
@@ -33,6 +35,11 @@ DENO_HASHES = {
     "aarch64-unknown-linux-gnu": "c832298b1ad4422481334855f6003e0f54145762c5a134f20a489511d2f65bbf",
 }
 LOCAL_URL = "http://127.0.0.1:4416"
+
+
+def deno_executable():
+    root = Path(os.environ.get("DENO_INSTALL") or Path.home() / ".deno")
+    return root / "bin" / ("deno.exe" if os.name == "nt" else "deno")
 
 
 def target():
@@ -88,14 +95,43 @@ class YouTubeTools:
         self.stopping = False
 
     def root(self):
-        return resolve_data_dir() / "youtube-tools"
+        if sys.platform == "win32":
+            base = Path(os.environ["LOCALAPPDATA"])
+        elif sys.platform == "darwin":
+            base = Path.home() / "Library" / "Application Support"
+        else:
+            base = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share")
+        return base / "Phrolova" / "youtube-tools"
 
     def external_provider(self):
         value = (get_settings().youtube_po_token_provider_url or "").strip().rstrip("/")
         return value if value and value != LOCAL_URL else None
 
     def executable(self, bundle):
-        return bundle / ("deno.exe" if os.name == "nt" else "deno")
+        return deno_executable()
+
+    def ensure_runtime(self, arch):
+        executable = self.executable(None)
+        self.report("installing", f"[1/6] Deno 검사·설치 중 · 경로: {executable}")
+        if not executable.exists():
+            executable.parent.mkdir(parents=True, exist_ok=True)
+            data = download(f"https://github.com/denoland/deno/releases/download/v{DENO_VERSION}/deno-{arch}.zip", DENO_HASHES[arch])
+            with tempfile.TemporaryDirectory(prefix=".phrolova-deno-", dir=executable.parent) as temporary:
+                staging = Path(temporary)
+                unpack(data, staging)
+                source = staging / executable.name
+                source.chmod(0o755)
+                try:
+                    # Publish the complete verified binary without replacing a
+                    # concurrently installed or user-managed executable.
+                    executable.hardlink_to(source)
+                except FileExistsError:
+                    pass
+        version = self.run([str(executable), "--version"], executable.parent, 10)
+        match = re.match(rb"deno (\d+)\.", version)
+        if not match or int(match[1]) < 2:
+            raise RuntimeError(f"기존 Deno는 덮어쓰지 않습니다. Deno 2 이상을 설치하세요: {executable}")
+        log.info("Deno 실행 확인 완료 · 경로: %s", executable)
 
     def report(self, status, message):
         self.status, self.message = status, message
@@ -129,10 +165,7 @@ class YouTubeTools:
         arch = target()
         self.root().mkdir(parents=True, exist_ok=True)
         bundle = Path(tempfile.mkdtemp(prefix="install-", dir=self.root()))
-        self.report("installing", f"[1/6] Deno {DENO_VERSION} 다운로드·SHA-256 검증 중")
-        deno = download(f"https://github.com/denoland/deno/releases/download/v{DENO_VERSION}/deno-{arch}.zip", DENO_HASHES[arch])
-        unpack(deno, bundle)
-        self.executable(bundle).chmod(0o755)
+        self.ensure_runtime(arch)
         self.report("installing", f"[2/6] bgutil {PROVIDER_VERSION} 서버 다운로드·SHA-256 검증 중")
         source = download("https://api.github.com/repos/Brainicism/bgutil-ytdlp-pot-provider/zipball/2.0.2", SOURCE_HASH)
         unpack(source, bundle, "Brainicism-bgutil-ytdlp-pot-provider-26475e9/")

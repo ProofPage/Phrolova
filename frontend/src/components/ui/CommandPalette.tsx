@@ -1,5 +1,6 @@
 import { createElement, useEffect, useRef, useState } from "react";
 import { Command } from "cmdk";
+import { Title, Description } from "@radix-ui/react-dialog";
 import { useNavigate } from "react-router-dom";
 import { NAV_ITEMS } from "../../config/navigation";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -43,9 +44,12 @@ export function CommandPalette() {
         <Command.Dialog
             open={open}
             onOpenChange={setOpen}
-            className="command-palette fixed inset-0 z-[100] flex items-start justify-center pt-[18vh] bg-surface-0/75 "
+            overlayClassName="fixed inset-0 z-[100] bg-surface-0/75"
+            contentClassName="command-palette fixed inset-0 z-[101] flex items-start justify-center pt-[18vh] pointer-events-none"
             label={t("common.quickNavigation")}
         >
+            <Title className="sr-only">{t("common.quickNavigation")}</Title>
+            <Description className="sr-only">{t("common.navigateToAPage")}</Description>
             <div className="ui-popover w-[calc(100vw_-_2rem)] max-w-lg shadow-[var(--shadow-pop)] rounded-[var(--radius-card)] overflow-hidden pointer-events-auto">
                 <Command.Input
                     placeholder={t("common.searchPages")}

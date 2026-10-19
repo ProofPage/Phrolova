@@ -101,14 +101,17 @@ async def main():
         assert await page.locator('.logs-page').evaluate('e => e.getBoundingClientRect().height < 1000')
         left=await page.locator('.logs-file-panel').bounding_box()
         right=await page.locator('.logs-content-panel').bounding_box()
-        assert left['height'] <= right['height'], (left,right)
+        assert abs(left['width'] - 240) < 1 and right['width'] > left['width'], (left, right)
+        assert abs(right['x'] - left['x'] - left['width'] - 16) < 1, (left, right)
+        assert abs(left['y'] - right['y']) < 1, (left, right)
+        assert abs(left['height'] - right['height']) < 1, (left, right)
         rows = await page.locator('.logs-file-option').evaluate_all('es => es.map(e => e.getBoundingClientRect().height)')
         assert all(height < 130 for height in rows), rows
         list_box = await page.locator('.logs-file-list').bounding_box()
         breakdown = await page.locator('.logs-file-breakdown').bounding_box()
         assert abs(list_box['height'] - sum(rows)) < 2, (list_box, rows)
         assert abs(list_box['y'] + list_box['height'] - breakdown['y']) < 2, (list_box, breakdown)
-        assert abs(left['y'] + left['height'] - breakdown['y'] - breakdown['height']) < 2, (left, breakdown)
+        assert breakdown['y'] + breakdown['height'] <= left['y'] + left['height'] + 1, (left, breakdown)
         backup = files.pop()
         state['entries'] = ENTRIES * 3
         await page.reload()
@@ -122,20 +125,28 @@ async def main():
         assert abs(list_box['y'] + list_box['height'] - breakdown['y']) < 2, (list_box, breakdown)
         left = await page.locator('.logs-file-panel').bounding_box()
         right = await page.locator('.logs-content-panel').bounding_box()
-        assert left['height'] < 390, left
+        # Desktop cards share both top and bottom edges, regardless of content.
+        await expect(page.get_by_text(d['logs.specTitle'], exact=True)).to_have_count(0)
+        spec = page.locator('.logs-file-breakdown > div:last-child')
+        spec_box = await spec.bounding_box()
+        assert abs(left['width'] - 240) < 1 and right['width'] > left['width'], (left, right)
+        assert abs(left['y'] - right['y']) < 1, (left, right)
+        assert abs(left['y'] + left['height'] - right['y'] - right['height']) < 1, (left, right)
+        assert spec_box['y'] + spec_box['height'] <= left['y'] + left['height'] + 1
         summary_rows = await page.locator('.logs-file-breakdown dl > div').evaluate_all('es => es.map(e => { const r=e.getBoundingClientRect(); return {y:r.y,height:r.height}; })')
         assert all(row['height'] < 55 for row in summary_rows), summary_rows
         gap = summary_rows[1]['y'] - summary_rows[0]['y'] - summary_rows[0]['height']
         assert 8 <= gap <= 16, summary_rows
-        assert breakdown['height'] < 160, breakdown
-        assert abs(left['y'] + left['height'] - breakdown['y'] - breakdown['height']) < 2, (left, breakdown)
+        assert breakdown['y'] + breakdown['height'] <= left['y'] + left['height'] + 1, (left, breakdown)
         await page.set_viewport_size({'width': 1440, 'height': 1050})
         await page.screenshot(path=str(OUT / 'logs-single-file.png'), full_page=True)
         for width in (320, 390, 768):
             await page.set_viewport_size({'width': width, 'height': 900})
             await page.locator('.logs-back button').click()
             await expect(page.locator('.logs-file-panel')).to_be_visible()
-            assert await page.locator('.logs-file-panel').evaluate('e => e.getBoundingClientRect().height < 390')
+            panel_box = await page.locator('.logs-file-panel').bounding_box()
+            spec_box = await spec.bounding_box()
+            assert abs(panel_box['y'] + panel_box['height'] - spec_box['y'] - spec_box['height']) < 2
             assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth')
             if width == 390:
                 await page.screenshot(path=str(OUT / 'logs-single-file-mobile.png'), full_page=True)
@@ -177,7 +188,10 @@ async def main():
         state['delay'] = 0.5
         await page.locator('.logs-actions').get_by_role('button', name=d['common.refresh'], exact=True).click()
         await page.locator('.logs-file-option').filter(has_text=BACKUP).click()
-        await expect(page.locator('.logs-entry')).to_have_text('2026-10-12 | INFO | service | Backup-only entry')
+        await expect(page.locator('.logs-entry-time')).to_have_text('2026-10-12')
+        await expect(page.locator('.logs-entry-level')).to_have_text('INFO')
+        await expect(page.locator('.logs-entry-scope')).to_have_text('service')
+        await expect(page.locator('.logs-entry-message')).to_have_text('Backup-only entry')
         await asyncio.sleep(0.6)
         await expect(page.locator('.logs-entry')).to_have_count(1)
         await expect(page.get_by_role('button', name=d['logs.enableLiveRefresh'], exact=True)).to_have_attribute('aria-pressed', 'false')

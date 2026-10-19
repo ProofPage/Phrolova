@@ -8,6 +8,16 @@
 
 ## [Unreleased]
 
+## [2.0.88] - 2026-10-19
+
+### Improved
+- Keep the familiar narrow file list and wide log viewer, with a 240px sidebar and 16px gap. Remove the system logging specification block.
+- Align structured log timestamps, severity, service and message columns while preserving raw search, continuation lines and original file export.
+- Separate equal-height authentication selectors from one full-width detail panel. Add persistent RPLAY field labels and 44px controls.
+
+### Fixed
+- Provide an accessible quick-navigation dialog title and description; correct its dialog geometry, backdrop dismissal and keyboard focus restoration.
+
 ## [2.0.87] - 2026-10-19
 
 ### Fixed
@@ -1240,7 +1250,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.87...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.88...HEAD
+[2.0.88]: https://github.com/ProofPage/Phrolova/compare/v2.0.87...v2.0.88
 [2.0.87]: https://github.com/ProofPage/Phrolova/compare/v2.0.86...v2.0.87
 [2.0.86]: https://github.com/ProofPage/Phrolova/compare/v2.0.85...v2.0.86
 [2.0.85]: https://github.com/ProofPage/Phrolova/compare/v2.0.84...v2.0.85

@@ -12,6 +12,13 @@ from app.engine.youtube_support import require_runtime_cli_options, youtube_opti
 from app.core.config import get_settings
 
 
+@pytest.fixture(autouse=True)
+def isolated_install_locations(tmp_path, monkeypatch):
+    monkeypatch.setenv("DENO_INSTALL", str(tmp_path / "deno"))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "share"))
+
+
 def manager(tmp_path, monkeypatch):
     result = tools.YouTubeTools()
     result.root = lambda: tmp_path
@@ -19,6 +26,7 @@ def manager(tmp_path, monkeypatch):
     (bundle / "server/node_modules").mkdir(parents=True)
     (bundle / "server/src").mkdir()
     (bundle / "server/src/main.ts").write_text("// fixture")
+    result.executable(bundle).parent.mkdir(parents=True, exist_ok=True)
     result.executable(bundle).write_bytes(b"deno fixture")
     (bundle / "plugins").mkdir()
     (bundle / "plugins/bgutil.zip").write_bytes(b"plugin fixture")
@@ -183,13 +191,15 @@ def test_install_reports_each_download_and_dependency_stage(tmp_path, monkeypatc
     monkeypatch.setattr(tools, "download", Mock(return_value=b"verified archive"))
 
     def unpack(data, bundle, prefix=""):
-        result.executable(bundle).write_bytes(b"deno fixture")
+        if not prefix:
+            (bundle / result.executable(bundle).name).write_bytes(b"deno fixture")
+            return
         (bundle / "server/node_modules").mkdir(parents=True, exist_ok=True)
         (bundle / "server/src").mkdir(exist_ok=True)
         (bundle / "server/src/main.ts").write_text("// fixture")
 
     monkeypatch.setattr(tools, "unpack", unpack)
-    monkeypatch.setattr(result, "run", Mock())
+    monkeypatch.setattr(result, "run", Mock(return_value=b"deno 2.9.7\n"))
     monkeypatch.setattr(result, "activate_plugins", Mock())
     monkeypatch.setattr(result, "ping", lambda: True)
     result.prepare()
@@ -201,6 +211,38 @@ def test_install_reports_each_download_and_dependency_stage(tmp_path, monkeypatc
     assert result.status == "ready"
     assert (tmp_path / "state.json").is_file()
     assert result.run.call_args_list[-1].args[0][-1] == "--version"
+
+
+def test_official_runtime_reuses_existing_binary_without_download(tmp_path, monkeypatch):
+    result = tools.YouTubeTools()
+    executable = tools.deno_executable()
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"user-owned-deno")
+    monkeypatch.setattr(result, "run", Mock(return_value=b"deno 2.10.0\n"))
+    download = Mock(side_effect=AssertionError("existing Deno must not be downloaded"))
+    monkeypatch.setattr(tools, "download", download)
+    result.ensure_runtime("x86_64-pc-windows-msvc")
+    assert executable.read_bytes() == b"user-owned-deno"
+    download.assert_not_called()
+
+
+def test_incompatible_user_runtime_is_not_overwritten(monkeypatch):
+    result = tools.YouTubeTools()
+    executable = tools.deno_executable()
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"user-owned-old-deno")
+    monkeypatch.setattr(result, "run", Mock(return_value=b"deno 1.0.0\n"))
+    with pytest.raises(RuntimeError, match="Deno 2"):
+        result.ensure_runtime("x86_64-pc-windows-msvc")
+    assert executable.read_bytes() == b"user-owned-old-deno"
+
+
+def test_default_runtime_location_and_windows_provider_location(tmp_path, monkeypatch):
+    monkeypatch.delenv("DENO_INSTALL")
+    monkeypatch.setattr(tools.Path, "home", lambda: tmp_path)
+    assert tools.deno_executable() == tmp_path / ".deno/bin" / ("deno.exe" if tools.os.name == "nt" else "deno")
+    monkeypatch.setattr(tools.sys, "platform", "win32")
+    assert tools.YouTubeTools().root() == tmp_path / "local/Phrolova/youtube-tools"
 
 
 def test_failure_reports_stage_through_shared_log_without_success(tmp_path, monkeypatch, shared_tool_log):

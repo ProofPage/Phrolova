@@ -168,37 +168,6 @@ export default function SystemLogs() {
                         </div>
                     </div>
 
-                    <div className="mt-4 pt-4 border-t border-line/60 space-y-2.5 text-xs text-ink-muted bg-surface-muted/40 -mx-4 p-4 rounded-b">
-                        <div className="text-[11px] font-semibold text-ink uppercase tracking-wider">{t('logs.specTitle')}</div>
-                        <div className="flex justify-between">
-                            <span>{t('logs.specStorageDir')}</span>
-                            <span className="font-mono text-ink text-[11px]">/logs</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>{t('logs.specRotation')}</span>
-                            <span className="text-ink">{t('logs.specRotationDaily')}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>{t('logs.specEncoding')}</span>
-                            <span className="text-ink">UTF-8 / LF</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>{t('logs.specTimestamp')}</span>
-                            <span className="font-mono text-ink text-[11px]">YYYY-MM-DD HH:mm:ss</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>{t('logs.specStreamSplit')}</span>
-                            <span className="text-ok">{t('logs.specStreamSplitDetail')}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>{t('logs.specBackup')}</span>
-                            <span className="text-ink font-medium">{t('logs.specBackupPermanent')}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>{t('logs.specPrivacy')}</span>
-                            <span className="text-ok">{t('logs.specPrivacyDetail')}</span>
-                        </div>
-                    </div>
                 </div>
             </section>
             <section className={clsx("logs-content-panel", !selectedFile && "logs-panel-mobile-hidden")} aria-label={t("logs.title")}>
@@ -300,7 +269,8 @@ function LogContentViewer({ file }: { file: SystemLogFile }) {
             const headerLevel = logLevel(text);
             // 예외 스택과 상세 경로는 앞선 항목에 속한다. 오류 필터에서도 함께 표시한다.
             if (/^[^|]*\|\s*(TRACE|DEBUG|INFO|SUCCESS|WARNING|WARN|ERROR|CRITICAL|FATAL)\s*\|/i.test(text)) previousLevel = headerLevel;
-            return {text, index, level: previousLevel, headerLevel};
+            const fields = text.match(/^(\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}:\d{2})?)\s*\|\s*([^|]+)\|\s*([^|]+)\|\s?(.*)$/);
+            return {text, index, level: previousLevel, headerLevel, fields};
         });
         const totals = {all:entries.length,error:0,warning:0,info:0};
         for (const entry of entries) if (entry.headerLevel !== "other") totals[entry.headerLevel]++;
@@ -328,7 +298,12 @@ function LogContentViewer({ file }: { file: SystemLogFile }) {
         </div>
         {loadError && content && <div role="status" className="logs-load-error">{t("logs.couldNotRefreshLogsShowingThePreviousContent")}</div>}
         <div ref={terminalRef} className="log-viewer" role="region" tabIndex={0} aria-label={t("logs.logEntries")} aria-busy={loading || undefined}>
-            {loading && !content ? <p className="logs-empty" role="status">{t("logs.loadingLogs")}</p> : loadError && !content ? <EmptyState compact title={t("logs.couldNotLoadTheLogContent")} description={t("settings.checkTheServerConnectionAndTryAgain")} action={<Button onClick={() => void loadContent()}>{t("live.tryAgain")}</Button>} /> : !lines.length ? <p className="logs-empty">{t(autoRefresh ? "logs.noLogsYetWaitingForNewEntries" : "logs.noLogEntries")}</p> : !visibleLines.length ? <p className="logs-empty">{t("common.noResultsFound")}</p> : visibleLines.map(line => <div key={line.index} className={clsx("logs-entry",`logs-entry-${line.level}`)}>{highlight(line.text)}</div>)}
+            {loading && !content ? <p className="logs-empty" role="status">{t("logs.loadingLogs")}</p> : loadError && !content ? <EmptyState compact title={t("logs.couldNotLoadTheLogContent")} description={t("settings.checkTheServerConnectionAndTryAgain")} action={<Button onClick={() => void loadContent()}>{t("live.tryAgain")}</Button>} /> : !lines.length ? <p className="logs-empty">{t(autoRefresh ? "logs.noLogsYetWaitingForNewEntries" : "logs.noLogEntries")}</p> : !visibleLines.length ? <p className="logs-empty">{t("common.noResultsFound")}</p> : visibleLines.map(line => <div key={line.index} className={clsx("logs-entry",`logs-entry-${line.level}`, line.fields && !searchTerm && "logs-entry-structured")}>{line.fields && !searchTerm ? <>
+                <time className="logs-entry-time">{line.fields[1]}</time>
+                <span className="logs-entry-level">{line.fields[2].trim()}</span>
+                <span className="logs-entry-scope">{line.fields[3].trim()}</span>
+                <span className="logs-entry-message">{line.fields[4]}</span>
+            </> : highlight(line.text)}</div>)}
         </div>
         <footer className="logs-content-footer"><span>{t("logs.lineSummary",{shown:visibleLines.length,total:totalLines})}</span><span>{updatedAt ? `${t("logs.refresh")} ${formatDateTime(updatedAt,{hour:"2-digit",minute:"2-digit",second:"2-digit"})}` : "—"}</span></footer>
     </div>;
