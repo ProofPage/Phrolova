@@ -167,7 +167,8 @@ def test_session_upload_status_delete_and_capabilities(monkeypatch, tmp_path):
         assert client.post('/api/platforms/rplay/session', files={'file': ('bad.json', b'not json')}).status_code == 400
         assert (tmp_path / 'rplay_session.json').read_bytes() == saved
         sources = [s['id'] for s in client.get('/api/vod/capabilities').json()['sources']]
-        assert len(sources) == 18 and 'rplay' in sources and 'pandalive' not in sources
+        assert len(sources) == 17 and 'rplay' in sources and 'pandalive' not in sources
+        assert 'tvchak' not in sources
         assert 'rplay' in [p.value for p in Platform]
         assert not client.delete('/api/platforms/rplay/session').json()['configured']
         assert not (tmp_path / 'rplay_session.json').exists()
