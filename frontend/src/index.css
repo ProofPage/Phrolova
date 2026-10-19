@@ -705,7 +705,7 @@ html[lang="ja-JP"], html[lang="zh-CN"], html[lang="zh-TW"] { line-break: strict;
   .logs-page .log-toolbar-row .ui-input { flex-basis: 100%; }
 }
 
-.logs-file-breakdown { display: flex; flex-direction: column; flex: 0 0 auto; border-top: 1px solid var(--color-line); padding: 14px 16px 0; }
+.logs-file-breakdown { display: flex; flex-direction: column; flex: 0 0 auto; border-top: 1px solid var(--color-line); padding: 14px 16px 14px; }
 .logs-file-breakdown h3 { color: var(--color-ink-faint); font-size: 11px; }
 .logs-file-breakdown dl { display: grid; grid-auto-rows: max-content; gap: 12px; margin-top: 12px; }
 .logs-file-breakdown dl > div { display: flex; flex-direction: column; }

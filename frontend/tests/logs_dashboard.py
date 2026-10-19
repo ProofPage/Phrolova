@@ -146,7 +146,8 @@ async def main():
             await expect(page.locator('.logs-file-panel')).to_be_visible()
             panel_box = await page.locator('.logs-file-panel').bounding_box()
             spec_box = await spec.bounding_box()
-            assert abs(panel_box['y'] + panel_box['height'] - spec_box['y'] - spec_box['height']) < 2
+            bottom_gap = panel_box['y'] + panel_box['height'] - (spec_box['y'] + spec_box['height'])
+            assert 12 <= bottom_gap <= 18, bottom_gap
             assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth')
             if width == 390:
                 await page.screenshot(path=str(OUT / 'logs-single-file-mobile.png'), full_page=True)
