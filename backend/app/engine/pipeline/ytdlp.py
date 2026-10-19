@@ -118,10 +118,16 @@ class YtdlpLivePipeline:
 
     @property
     def preview_source_url(self) -> Optional[str]:
-        """Reuse only a CHZZK source that this active capture has already received."""
+        """Reuse only an active CHZZK or YouTube source that this capture has already received."""
         if (self._state not in (RecordingState.RECORDING, RecordingState.RECONNECTING)
-                or self._start_time is None or self._closed or not self._resume_args
-                or not self._is_chzzk_live_page(self._source_page_url)):
+                or self._start_time is None or self._closed or not self._resume_args):
+            return None
+        if is_youtube_url(self._source_page_url):
+            from app.engine.preview_proxy import PreviewProxy
+            url = self._resume_args[0] if self._resume_args else None
+            if url and PreviewProxy.allowed(url, set(), "youtube"):
+                return url
+        if not self._is_chzzk_live_page(self._source_page_url):
             return None
         from app.engine.chzzk_stream import trusted_media_url
         reader = self._readers[0] if self._readers else None

@@ -26,6 +26,20 @@ export function parsePlatformChannelInput(platform: Platform, value: string): st
     if (platform === 'twitch') return parseTwitchChannelInput(text);
     if (platform === 'kick') return parseKickChannelInput(text);
     if (platform === 'chzzk') return parseChzzkChannelInput(text);
+    if (platform === 'youtube') {
+        if (!text) return null;
+        if (text.startsWith('@') && !text.startsWith('@http')) return text;
+        if (/^UC[A-Za-z0-9_-]{22}$/.test(text)) return text;
+        try {
+            const url = new URL(text.startsWith('http') ? text : `https://${text}`);
+            if (!['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be'].includes(url.hostname)) return text;
+            const handle = url.pathname.match(/^\/@([A-Za-z0-9_.-]+)(?:\/live)?\/?$/);
+            if (handle) return `@${handle[1]}`;
+            const channel = url.pathname.match(/^\/channel\/(UC[A-Za-z0-9_-]{22})(?:\/live)?\/?$/);
+            if (channel) return channel[1];
+            return text;
+        } catch { return text; }
+    }
     if (platform !== 'cime') return text || null;
     const validId = (id: string) => /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,99}$/.test(id) ? id : null;
     if (!text.includes('://')) return validId(text.replace(/^@/, ''));

@@ -1,5 +1,5 @@
 {
-  "live.twitchAdWaiting": "等待 Twitch 廣告���束 · 不錄製廣告片段。",
+  "live.twitchAdWaiting": "等待 Twitch 廣告結束 · 不錄製廣告片段。",
   "live.twitchCaptureSplit": "略過廣告或時間軸變更後，原始檔案將分段保留。",
   "settings.twitchProxyEnabled": "使用 Twitch 高畫質代理",
   "settings.twitchProxyWarning": "開啟後，四個 ReYohoho 代理會收到頻道、IP，以及透過 URL 中 auth= 傳遞的已登錄登入權杖。營運者可以保留權杖，請僅在信任時開啟。代理失敗時恢復直連。從下一次畫質查詢、錄製或預覽開始生效。",
