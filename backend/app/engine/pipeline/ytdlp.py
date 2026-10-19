@@ -1192,10 +1192,6 @@ class YtdlpLivePipeline:
         from app.engine.streamlink_support import configure_streamlink_session, guarded_hls_stream
         configure_streamlink_session(session, media_platform(source_page_url), hls_url, loss_report)
 
-        if (urlsplit(source_page_url).hostname or "").lower() in ("twitch.tv", "www.twitch.tv", "m.twitch.tv", "go.twitch.tv"):
-            # TTV-AB 23.0.2: popout/embed 플레이어 타입을 우선 적용하여 무광고 원본 스트림 수신
-            session.set_plugin_option("twitch", "access-token-param", ["playerType=popout", "platform=site"])
-
         if (urlsplit(source_page_url).hostname or "").lower() in ("tiktok.com", "www.tiktok.com", "m.tiktok.com"):
             from app.engine.platform_auth import platform_cookie_jar
             from app.engine.tiktok_transport import TikTokFLVStream

@@ -151,14 +151,15 @@ class TwitchLiveEngine:
             session.http.cookies.update(platform_cookie_jar('twitch'))
             from app.engine.streamlink_support import configure_streamlink_session
             configure_streamlink_session(session, "twitch", self.get_stream_url(channel_id))
-            # TTV-AB 23.0.2: popout/embed 플레이어 타입을 우선 요청하여 광고 주입(SSAI)을 우회
-            session.set_plugin_option("twitch", "access-token-param", ["playerType=popout", "platform=site"])
             from app.engine.twitch_proxy import configure_twitch_proxy
             configure_twitch_proxy(session, twitch_api_headers().get("Authorization", "").removeprefix("OAuth "))
             try:
                 # 인증은 Twitch API 전용 옵션으로 넘겨 CDN에 OAuth가 유출되지 않게 한다.
+                # TTV-AB 23.0.2: popout/embed 플레이어 타입을 우선 요청하여 광고 주입(SSAI)을 우회
                 streams = session.streams(self.get_stream_url(channel_id), options=Options({
-                    'api-header': list(twitch_api_headers().items()), 'supported-codecs': ['h264', 'h265', 'av1'],
+                    'api-header': list(twitch_api_headers().items()),
+                    'supported-codecs': ['h264', 'h265', 'av1'],
+                    'access-token-param': [('playerType', 'popout'), ('platform', 'site')],
                 }))
                 variants = []
                 for name, stream in streams.items():
