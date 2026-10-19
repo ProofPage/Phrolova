@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.99] - 2026-10-19
+
+### Fixed
+- Fixed an issue where channels blocked due to pre-login access failures (`empty_stream` or auth failure) remained permanently blocked after the user subsequently logged in or updated credentials in Settings -> Authentication.
+- Automatically unblock and trigger immediate monitoring scan for affected channels when platform credentials or session tokens are updated.
+
 ## [2.0.98] - 2026-10-19
 
 ### Fixed
@@ -1324,7 +1330,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.98...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.99...HEAD
+[2.0.99]: https://github.com/ProofPage/Phrolova/compare/v2.0.98...v2.0.99
 [2.0.98]: https://github.com/ProofPage/Phrolova/compare/v2.0.97...v2.0.98
 [2.0.97]: https://github.com/ProofPage/Phrolova/compare/v2.0.96...v2.0.97
 [2.0.96]: https://github.com/ProofPage/Phrolova/compare/v2.0.95...v2.0.96
