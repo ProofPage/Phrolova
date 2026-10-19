@@ -166,6 +166,11 @@ class Conductor:
                 raise
         if task.platform in (Platform.CHZZK, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY):
             return await engine.get_preview_url(task.channel_id)
+        pipeline = getattr(task, 'pipeline', None)
+        if task.platform == Platform.YOUTUBE and pipeline:
+            url = getattr(pipeline, 'preview_source_url', None)
+            if isinstance(url, str) and url:
+                return url
         page_url = engine.get_stream_url(task.channel_id)
         pipeline = YtdlpLivePipeline(task.channel_id)
         from app.engine.youtube_support import with_youtube_cookie_fallback

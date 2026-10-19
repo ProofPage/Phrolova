@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+## [2.0.92] - 2026-10-19
+
+### Fixed
+- Pass registered YouTube cookies to live status requests and preview stream proxy connections.
+- Extract YouTube live viewer count from modern `runs` renderer, and parse channel profile image and channel name from video owner structures.
+- Reuse active YouTube live recording stream URLs directly for dashboard preview playback to avoid redundant bot verification checks.
+- Handle YouTube channel/video URLs correctly without generating duplicate `@https://...` handle prefixes.
+
 ## [2.0.91] - 2026-10-19
 
 ### Fixed
@@ -1272,7 +1280,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.91...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.92...HEAD
+[2.0.92]: https://github.com/ProofPage/Phrolova/compare/v2.0.91...v2.0.92
 [2.0.91]: https://github.com/ProofPage/Phrolova/compare/v2.0.90...v2.0.91
 [2.0.90]: https://github.com/ProofPage/Phrolova/compare/v2.0.89...v2.0.90
 [2.0.89]: https://github.com/ProofPage/Phrolova/compare/v2.0.88...v2.0.89

@@ -28,14 +28,19 @@ class YoutubeLiveEngine:
 
     async def check_live_status(self, channel_id: str) -> LiveStatus:
         """유튜브 라이브 채널의 생방송 여부를 확인한다."""
-        if channel_id.startswith("UC"):
-            url = f"https://www.youtube.com/channel/{channel_id}/live"
+        raw = channel_id.strip()
+        if raw.startswith("@http"):
+            raw = raw[1:]
+        if "://" in raw or "youtube.com" in raw or "youtu.be" in raw:
+            url = raw if "://" in raw else f"https://{raw}"
+        elif raw.startswith("UC"):
+            url = f"https://www.youtube.com/channel/{raw}/live"
         else:
-            handle = channel_id if channel_id.startswith("@") else f"@{channel_id}"
-            url = f"https://www.youtube.com/{handle}/live"
+            url = f"https://www.youtube.com/@{raw.lstrip('@')}/live"
 
         self._metadata_errors.pop(url, None)
-        headers = {"Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"}
+        from app.engine.platform_auth import platform_cookie_jar
+        headers = {"Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
         # 1차 체크: 가벼운 HTML 스크래핑으로 감지
         is_live = False
@@ -44,7 +49,7 @@ class YoutubeLiveEngine:
 
         try:
             resp = await get_http_client().get(
-                url, headers=headers, follow_redirects=True
+                url, headers=headers, follow_redirects=True, cookies=platform_cookie_jar("youtube")
             )
             if resp.status_code == 200:
                 html = resp.text
@@ -90,7 +95,7 @@ class YoutubeLiveEngine:
                     category="YouTube Live",
                     viewer_count=viewer_count,
                     thumbnail_url=thumbnail_url,
-                    profile_image_url="",
+                    profile_image_url=thumbnail_url,
                 )
 
         if not is_live:
@@ -121,15 +126,30 @@ class YoutubeLiveEngine:
                 return self._offline_status(channel_id)
 
         channel_name = channel_id
-        author_match = re.search(r'"author":"([^"]+)"', html)
-        if author_match:
-            channel_name = author_match.group(1)
+        owner_match = re.search(r'"videoOwnerRenderer":\{.*?"title":\{"runs":\[\{"text":"([^"]+)"', html)
+        if owner_match:
+            channel_name = owner_match.group(1)
+        else:
+            author_match = re.search(r'"author":"([^"]+)"', html)
+            if author_match:
+                channel_name = author_match.group(1)
 
         viewer_count = 0
+        # 최신 유튜브 runs 형식 및 레거시 simpleText 형식 모두 지원
         viewer_match = re.search(
-            r'"viewCount":\{\"videoViewCountRenderer\":\{\"viewCount\":\{\"simpleText\":\"(?:시청자\s*)?([0-9,]+)명?\"\}',
+            r'"videoViewCountRenderer":\{"viewCount":\{"runs":\[.*?"text":"([0-9,]+)"',
             html,
         )
+        if not viewer_match:
+            viewer_match = re.search(
+                r'"viewCount":\{\"videoViewCountRenderer\":\{\"viewCount\":\{\"simpleText\":\"(?:시청자\s*)?([0-9,]+)명?\"\}',
+                html,
+            )
+        if not viewer_match:
+            viewer_match = re.search(
+                r'"(?:shortViewCount|viewCount)":\{.*?"(?:simpleText|text)":"(?:시청자\s*)?([0-9,]+)명?',
+                html,
+            )
         if viewer_match:
             try:
                 viewer_count = int(viewer_match.group(1).replace(",", ""))
@@ -141,6 +161,13 @@ class YoutubeLiveEngine:
         if thumb_match:
             thumbnail_url = thumb_match.group(1)
 
+        profile_image_url = ""
+        avatar_match = re.search(r'"videoOwnerRenderer":\{.*?"thumbnail":\{"thumbnails":\[\{"url":"([^"]+)"', html)
+        if not avatar_match:
+            avatar_match = re.search(r'"avatar":\{"avatarViewModel":\{"image":\{"sources":\[\{"url":"([^"]+)"', html)
+        if avatar_match:
+            profile_image_url = avatar_match.group(1)
+
         return LiveStatus(
             channel_id=channel_id,
             is_live=True,
@@ -149,7 +176,7 @@ class YoutubeLiveEngine:
             category="YouTube Live",
             viewer_count=viewer_count,
             thumbnail_url=thumbnail_url,
-            profile_image_url="",
+            profile_image_url=profile_image_url or thumbnail_url,
         )
 
     async def _check_via_ytdlp(self, url: str) -> tuple[bool, dict | None]:
@@ -210,11 +237,15 @@ class YoutubeLiveEngine:
         """라이브 스트림 다운로드 주소를 반환한다."""
         if channel_id in self._live_urls:
             return self._live_urls[channel_id]
-        if channel_id.startswith("UC"):
-            return f"https://www.youtube.com/channel/{channel_id}/live"
+        raw = channel_id.strip()
+        if raw.startswith("@http"):
+            raw = raw[1:]
+        if "://" in raw or "youtube.com" in raw or "youtu.be" in raw:
+            return raw if "://" in raw else f"https://{raw}"
+        if raw.startswith("UC"):
+            return f"https://www.youtube.com/channel/{raw}/live"
         else:
-            handle = channel_id if channel_id.startswith("@") else f"@{channel_id}"
-            return f"https://www.youtube.com/{handle}/live"
+            return f"https://www.youtube.com/@{raw.lstrip('@')}/live"
 
     @staticmethod
     def _offline_status(channel_id: str) -> LiveStatus:

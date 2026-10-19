@@ -263,7 +263,7 @@ class PreviewProxy:
         async with self.limit:
             async with httpx.AsyncClient(
                 verify=preview_ca_bundle(), timeout=15, follow_redirects=False,
-                cookies=platform_cookie_jar(node["platform"]) if node["platform"] in ("cime", "kick", "twitch", "bilibili", "pandalive", "popkontv") else None
+                cookies=platform_cookie_jar(node["platform"]) if node["platform"] in ("cime", "kick", "twitch", "bilibili", "pandalive", "popkontv", "youtube") else None
             ) as client:
                 url = node["url"]
                 for _ in range(4):
@@ -320,7 +320,7 @@ class PreviewProxy:
         async with httpx.AsyncClient(
             verify=preview_ca_bundle(), timeout=httpx.Timeout(connect=15.0, read=None, write=15.0, pool=15.0),
             follow_redirects=True,
-            cookies=platform_cookie_jar(node["platform"]) if node["platform"] in ("cime", "kick", "twitch", "bilibili", "pandalive", "popkontv") else None
+            cookies=platform_cookie_jar(node["platform"]) if node["platform"] in ("cime", "kick", "twitch", "bilibili", "pandalive", "popkontv", "youtube") else None
         ) as client:
             async with client.stream("GET", node["url"], headers=headers) as upstream:
                 upstream.raise_for_status()
