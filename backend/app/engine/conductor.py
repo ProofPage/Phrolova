@@ -924,6 +924,9 @@ class Conductor:
                 self._persist_retry(task)
                 self._broadcast_status()
                 if status["is_live"]:
+                    if task.broadcast_ended:
+                        task.broadcast_ended = False
+                        self._persist_retry(task)
                     self._record_live_detection(composite_key)
                 if (status["is_live"] and task.pipeline is not None and task.capture_automatic
                         and not self._matches_download_condition(task)):
@@ -1133,7 +1136,17 @@ class Conductor:
                     boundary = (capture.end_reason == 'continuity_boundary'
                                 and getattr(capture, 'continuity_resume', None)
                                 and not capture._intentional_stop)
-                    task.broadcast_ended = not bool(boundary)
+                    if boundary:
+                        task.broadcast_ended = False
+                    elif capture._intentional_stop:
+                        task.broadcast_ended = True
+                    else:
+                        try:
+                            fresh = await self._get_engine(task.platform).check_live_status(task.channel_id)
+                            self._apply_status(task, fresh)
+                            task.broadcast_ended = not bool(fresh.get("is_live", False))
+                        except Exception:
+                            task.broadcast_ended = not task.is_live
                     self._persist_retry(task)
                     task.pipeline = None
                     self._broadcast_status()
@@ -1145,6 +1158,9 @@ class Conductor:
                             composite_key, channel_name=task.channel_name, title=task.title,
                             is_retry=True, continuation={'resume': capture.continuity_resume, 'policy': policy, 'quality': quality, 'buffer': getattr(capture, 'continuity_buffer', None)},
                         )
+                    elif not task.broadcast_ended and self._running and self._can_auto_record(task) and self._channels.get(composite_key) is task:
+                        logger.info(f"[{composite_key}] 라이브 방송 지속 확인됨. 새 세션으로 자동 녹화 재개.")
+                        self.trigger_scan_now(composite_key)
 
             pipeline._on_capture_ended = capture_ended
             extra = {}

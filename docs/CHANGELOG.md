@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-10-19
+
+### Fixed
+- Fixed an issue where active live streams stopped recording prematurely when HLS sessions closed, by verifying live status and automatically resuming recording in a new session while the broadcast remains active.
+- Prevented false `broadcast_ended` state locking from blocking auto-recording during ongoing livestreams.
+
 ## [2.1.0] - 2026-10-19
 
 ### Fixed
@@ -1335,7 +1341,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.1...HEAD
+[2.1.1]: https://github.com/ProofPage/Phrolova/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/ProofPage/Phrolova/compare/v2.0.99...v2.1.0
 [2.0.99]: https://github.com/ProofPage/Phrolova/compare/v2.0.98...v2.0.99
 [2.0.98]: https://github.com/ProofPage/Phrolova/compare/v2.0.97...v2.0.98
