@@ -111,6 +111,26 @@ class TwitchCaptureWorker(_Worker):
         return super().process_segments(playlist)
 
 
+def _send_ttv_ad_spoof():
+    """TTV-AB 23.0.2: Twitch GraphQL에 광고 시청 완료 이벤트를 전송하여 강제 480p 다운그레이드 방지."""
+    import requests
+    from streamlink.plugins.twitch import TwitchAPI
+    payload = [
+        {"operationName": "ClientSideAdEventHandling_RecordAdEvent",
+         "variables": {"input": {"eventName": "video_ad_impression", "eventPayload": "{}", "radToken": ""}},
+         "extensions": {"persistedQuery": {"version": 1, "sha256Hash": "7e6c69e6eb59f8ccb97ab73686f3d8b7d85a72a0298745ccd8bfc68e4054ca5b"}}},
+        {"operationName": "ClientSideAdEventHandling_RecordAdEvent",
+         "variables": {"input": {"eventName": "video_ad_complete", "eventPayload": "{}", "radToken": ""}},
+         "extensions": {"persistedQuery": {"version": 1, "sha256Hash": "7e6c69e6eb59f8ccb97ab73686f3d8b7d85a72a0298745ccd8bfc68e4054ca5b"}}},
+    ]
+    try:
+        requests.post("https://gql.twitch.tv/gql", json=payload,
+                      headers={"Client-ID": TwitchAPI.CLIENT_ID, "Content-Type": "application/json"},
+                      timeout=4)
+    except Exception:
+        pass
+
+
 class TwitchCaptureWriter(_Writer):
     def _write_plain(self, segment, response):
         if not super()._write_plain(segment, response):
@@ -136,6 +156,9 @@ class TwitchCaptureWriter(_Writer):
         if segment.ad:
             stream.ad_active = True
             stream.excluded_ads += 1
+            if stream.excluded_ads % 5 == 1:
+                # 광고 감지 시 백그라운드 스레드로 ad spoofing 신호 1회 발송
+                threading.Thread(target=_send_ttv_ad_spoof, daemon=True).start()
         else:
             resumed = stream.ad_active
             if stream._written and (resumed or segment.discontinuity):

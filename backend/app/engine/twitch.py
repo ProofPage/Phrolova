@@ -151,6 +151,8 @@ class TwitchLiveEngine:
             session.http.cookies.update(platform_cookie_jar('twitch'))
             from app.engine.streamlink_support import configure_streamlink_session
             configure_streamlink_session(session, "twitch", self.get_stream_url(channel_id))
+            # TTV-AB 23.0.2: popout/embed 플레이어 타입을 우선 요청하여 광고 주입(SSAI)을 우회
+            session.set_plugin_option("twitch", "access-token-param", ["playerType=popout", "platform=site"])
             from app.engine.twitch_proxy import configure_twitch_proxy
             configure_twitch_proxy(session, twitch_api_headers().get("Authorization", "").removeprefix("OAuth "))
             try:
