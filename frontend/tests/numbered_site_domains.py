@@ -17,8 +17,6 @@ from app.engine.episode_sites import EpisodeSiteError, parse_episode_url
 BASE = os.environ.get('PHROLOVA_TEST_URL', 'http://127.0.0.1:3013')
 SOURCES = [
     ('animaru', '애니마루', 'animaru2.com', '/content/42', '/content/42/1.5'),
-    ('tvchak', '티비착', 'tvchak209.com', '/index.php/vod/detail/id/123703.html',
-     '/index.php/vod/play/id/123703/sid/1/nid/1.html'),
     ('tvwiki', '티비위키', 'tvwiki55.net', '/drama/42', '/drama/42/11'),
     ('anilife', '애니라이프', 'anilife02.tv', '/content/1', '/content/1/one'),
 ]

@@ -10,8 +10,8 @@ from download_redesign import make_task
 
 BASE = os.environ.get('PHROLOVA_TEST_URL', 'http://127.0.0.1:3013')
 OUT = Path(os.environ.get('PHROLOVA_TEST_OUTPUT', str(Path(__file__).resolve().parents[4]/'work/animaru-ui')))
-IDS = ['chzzk','youtube','soop','cime','kick','twitch','tiktok','bilibili','popkontv','rplay','anilife','linkani','ohli24','ohli365','tvwiki','tvchak','animaru','external']
-LABELS = ['치지직','유튜브','숲','씨미','Kick','트위치','틱톡','Bilibili','팝콘티비','알플레이','애니라이프','Linkani','애니24','애니365','티비위키','티비착','애니마루','외부 영상']
+IDS = ['chzzk','youtube','soop','cime','kick','twitch','tiktok','bilibili','popkontv','rplay','anilife','linkani','ohli24','ohli365','tvwiki','animaru','external']
+LABELS = ['치지직','유튜브','숲','씨미','Kick','트위치','틱톡','Bilibili','팝콘티비','알플레이','애니라이프','Linkani','애니24','애니365','티비위키','애니마루','외부 영상']
 WORK = 'https://animaru1.com/content/42'
 
 

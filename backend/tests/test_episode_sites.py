@@ -121,10 +121,12 @@ def test_anilife_catalog_media_and_subtitle():
 
 @pytest.mark.parametrize('player_host,cdn',[
     ('michealcdn.com','hol1ncloud2-nocdn.xyz'),
+    *(('michealcdn.com', f'hol{i}ncloud1-nocdn.xyz') for i in range(1, 8)),
     ('michealcdn.com','ohli1ncloud1-nocdn.xyz'),
     ('michealcdn.com','ohli7ncloud5-nocdn.xyz'),
     ('cdndania.com','tue1bcloud-starcdn.xyz'),
     ('cdndania.com','tue7bcloud-starcdn.xyz'),
+    *(('cdndania.com', f'fri{i}bcloud-starcdn.xyz') for i in range(1, 8)),
 ])
 def test_ohli_normal_player_issuance_and_identity(player_host,cdn):
     import json
@@ -255,6 +257,10 @@ def test_proof_headers_are_not_forwarded_to_a_different_host_on_redirect():
 
 
 @pytest.mark.parametrize('host',['cdndania.com.evil.example','tue1bcloud-starcdn.xyz.evil.example',
+                               'fri1bcloud-starcdn.xyz.evil.example', 'fri0bcloud-starcdn.xyz',
+                               'fri8bcloud-starcdn.xyz', 'fri01bcloud-starcdn.xyz',
+                               'hol1ncloud1-nocdn.xyz.evil.example', 'hol0ncloud1-nocdn.xyz',
+                               'hol8ncloud1-nocdn.xyz', 'hol1ncloud3-nocdn.xyz',
                                'ohli1ncloud5-nocdn.xyz.evil.example','127.0.0.1'])
 def test_new_ohli_hosts_still_reject_lookalikes_and_private_addresses(host):
     with pytest.raises(EpisodeSiteError):
@@ -275,9 +281,9 @@ def test_catalog_api_errors_and_no_queue_mutation(monkeypatch):
 @pytest.mark.parametrize('encrypted',[False,True])
 @pytest.mark.parametrize('episode_url',[
     EP,'https://anilife01.tv/content/1/one',OHLI_EP,'https://tvwiki54.net/drama/42/11',
-    'https://tvchak208.com/index.php/vod/play/id/123703/sid/1/nid/1.html','https://animaru1.com/content/42/1.5',
+    'https://animaru1.com/content/42/1.5',
     'https://anilife02.tv/content/1/one','https://tvwiki55.net/drama/42/11',
-    'https://tvchak209.com/index.php/vod/play/id/123703/sid/1/nid/1.html','https://animaru2.com/content/42/1.5',
+    'https://animaru2.com/content/42/1.5',
     'https://v2.ohli365.org/?title=11111111-1111-4111-8111-111111111111&episode=22222222-2222-4222-8222-222222222222',
 ])
 async def test_real_upstream_download_and_inspection(local_hls,monkeypatch,encrypted,episode_url):

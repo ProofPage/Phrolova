@@ -409,8 +409,9 @@ def test_platform_registration_cookie_crud_and_capabilities(monkeypatch, tmp_pat
             s["id"] for s in client.get("/api/vod/capabilities").json()["sources"]
         ]
         assert (
-            len(sources) == 18 and "popkontv" in sources and "pandalive" not in sources
+            len(sources) == 17 and "popkontv" in sources and "pandalive" not in sources
         )
+        assert "tvchak" not in sources
         cookies = b"# Netscape HTTP Cookie File\n.popkontv.com\tTRUE\t/\tTRUE\t0\tfixture\tSECRET\n.evil.example\tTRUE\t/\tTRUE\t0\tfixture\tOTHER\n"
         result = client.post(
             "/api/platforms/popkontv/cookie", files={"file": ("cookies.txt", cookies)}

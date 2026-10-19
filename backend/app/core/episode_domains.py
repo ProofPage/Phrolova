@@ -4,7 +4,6 @@ import re
 
 NUMBERED_SITE_HOSTS = {
     'animaru': re.compile(r'animaru[0-9]+\.com'),
-    'tvchak': re.compile(r'tvchak[0-9]+\.com'),
     'tvwiki': re.compile(r'tvwiki[0-9]+\.net'),
     'anilife': re.compile(r'anilife[0-9]+\.tv'),
 }

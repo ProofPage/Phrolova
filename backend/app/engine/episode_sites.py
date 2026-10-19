@@ -11,7 +11,7 @@ from urllib.parse import unquote, urlencode, urljoin, urlsplit, urlunsplit
 import httpx
 
 from app.core.http import USER_AGENT
-from app.core.episode_domains import NUMBERED_SITE_HOSTS, numbered_site_for_host
+from app.core.episode_domains import NUMBERED_SITE_HOSTS
 
 SITES = {
     'ohli365': {'name': '애니365', 'hosts': ('v2.ohli365.org',), 'players': ('megaplay.buzz',),
@@ -19,8 +19,6 @@ SITES = {
     'animaru': {'name': '애니마루', 'hosts': (NUMBERED_SITE_HOSTS['animaru'],),
                 'api': ('api.storagewebtoon.store',),
                 'media': ('api.storagewebtoon.store', 'play.storagewebtoon.store')},
-    'tvchak': {'name': '티비착', 'hosts': (NUMBERED_SITE_HOSTS['tvchak'],),
-               'media': ('bodaponi.b-cdn.net',)},
     'tvwiki': {'name': '티비위키', 'hosts': (NUMBERED_SITE_HOSTS['tvwiki'],),
                'players': ('player.bunny-frame.online', 'bunny-cdn-player.online'),
                'media': ('poorcdn.com', 'toki56.com', 'amberbloom784.site', 'azuretrail425.site',
@@ -33,7 +31,8 @@ SITES = {
                'players': ('michealcdn.com', 'cdndania.com'),
                # 회차별로 다른 세대의 CDN을 반환하므로 확인된 호스트 계열을 함께 허용한다.
                'media': ('michealcdn.com', 'cdndania.com', *(f'tue{i}bcloud-starcdn.xyz' for i in range(1, 8)),
-                         *(f'hol{i}ncloud2-nocdn.xyz' for i in range(1, 8)),
+                         *(f'fri{i}bcloud-starcdn.xyz' for i in range(1, 8)),
+                         *(f'hol{i}ncloud{generation}-nocdn.xyz' for generation in (1, 2) for i in range(1, 8)),
                          *(f'ohli{i}ncloud{generation}-nocdn.xyz' for generation in range(1, 6) for i in range(1, 8)))},
 }
 AD_PATH = re.compile(r'/(?:ads?|banner|advert[^/]*|popunder|tracking)/', re.I)
@@ -90,9 +89,6 @@ def parse_episode_url(value: str) -> dict:
     if site == 'animaru':
         from app.engine.animaru import parse_animaru_url
         return parse_animaru_url(value)
-    if site == 'tvchak':
-        from app.engine.tvchak import parse_tvchak_url
-        return parse_tvchak_url(value)
     if site == 'tvwiki':
         from app.engine.tvwiki import parse_tvwiki_url
         return parse_tvwiki_url(value)
@@ -176,7 +172,6 @@ class SiteClient:
     """다른 사이트의 쿠키를 빌리지 않고 리다이렉트마다 허용 호스트를 재확인한다."""
     def __init__(self):
         self.http = httpx.Client(timeout=15, follow_redirects=False, headers={'User-Agent': USER_AGENT})
-        self._tvchak_cookies_loaded = set()
 
     def close(self): self.http.close()
 
@@ -190,12 +185,6 @@ class SiteClient:
         while redirects < 6:
             url = checked_url(url, domains, subdomains=subdomains)
             host = urlsplit(url).hostname
-            if numbered_site_for_host(host) == 'tvchak' and host not in self._tvchak_cookies_loaded:
-                from app.engine.platform_auth import platform_cookie_jar
-                for cookie in platform_cookie_jar('tvchak'):
-                    if cookie.domain.lstrip('.').lower() == host:
-                        self.http.cookies.jar.set_cookie(cookie)
-                self._tvchak_cookies_loaded.add(host)
             request_headers = {'Referer': str(httpx.URL(referer or url)), 'Accept': 'text/html,application/json,application/vnd.apple.mpegurl'}
             if method == 'POST': request_headers['X-Requested-With'] = 'XMLHttpRequest'
             # 재생 증명 헤더는 발급받은 API 호스트에서만 쓰고 CDN 이동에는 넘기지 않는다.
@@ -204,9 +193,7 @@ class SiteClient:
                 body_args = {'json': json_body} if json_body is not None else {'data': form}
                 with self.http.stream(method, url, headers=request_headers, **body_args) as response:
                     if response.headers.get('x-amzn-waf-action') in ('challenge', 'captcha') or response.headers.get('cf-mitigated') == 'challenge':
-                        guidance = ('서버와 같은 인터넷 연결의 브라우저에서 사이트를 연 뒤 설정 → 인증에 티비착 쿠키 파일을 등록하세요.'
-                                    if numbered_site_for_host(host) == 'tvchak'
-                                    else '브라우저에서 접속 상태와 인증 설정을 확인하세요.')
+                        guidance = '브라우저에서 접속 상태와 인증 설정을 확인하세요.'
                         raise EpisodeSiteError('사이트 접속 확인이 필요합니다. '+guidance+' (HTTP '+str(response.status_code)+')', status=response.status_code)
                     if response.status_code in (301,302,303,307,308):
                         redirects += 1
@@ -277,9 +264,6 @@ def _load_catalog(route, client):
     if route['site'] == 'animaru':
         from app.engine.animaru import load_animaru_catalog
         return load_animaru_catalog(route, client)
-    if route['site'] == 'tvchak':
-        from app.engine.tvchak import load_tvchak_catalog
-        return load_tvchak_catalog(route, client)
     if route['site'] == 'tvwiki':
         from app.engine.tvwiki import load_tvwiki_catalog
         return load_tvwiki_catalog(route, client)
@@ -450,9 +434,6 @@ def _extract_episode(url,client):
     if route['site'] == 'animaru':
         from app.engine.animaru import extract_animaru_episode
         return extract_animaru_episode(route, client)
-    if route['site'] == 'tvchak':
-        from app.engine.tvchak import extract_tvchak_episode
-        return extract_tvchak_episode(route, client)
     if route['site'] == 'tvwiki':
         from app.engine.tvwiki import extract_tvwiki_episode
         return extract_tvwiki_episode(route, client)

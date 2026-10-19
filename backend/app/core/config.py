@@ -236,7 +236,6 @@ class Settings(BaseSettings):
     pandalive_cookie_file: Optional[str] = None
     popkontv_cookie_file: Optional[str] = None
     rplay_session_file: Optional[str] = None
-    tvchak_cookie_file: Optional[str] = None
     hearheart_cookie_file: Optional[str] = None
 
 
