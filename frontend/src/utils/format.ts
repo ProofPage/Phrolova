@@ -58,12 +58,14 @@ export function formatDate(iso: string | null, includeYear = false): string {
 }
 
 /**
- * ISO 날짜 문자열에서 시:분:초만 추출한다.
+ * ISO 날짜 문자열에서 시:분(:초)만 추출한다.
  */
-export function formatTime(iso: string): string {
-    return formatDateTime(iso, {
+export function formatTime(iso: string | null, includeSeconds = false): string {
+    if (!iso) return "-";
+    const opts: Intl.DateTimeFormatOptions = {
         hour: "2-digit",
         minute: "2-digit",
-        second: "2-digit",
-    });
+    };
+    if (includeSeconds) opts.second = "2-digit";
+    return formatDateTime(iso, opts);
 }

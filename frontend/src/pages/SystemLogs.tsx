@@ -7,7 +7,7 @@ import { useToast } from "../components/ui/Toast";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useConfirm } from "../components/ui/ConfirmModal";
 import { Button, EmptyState, Input, PageHeader } from "../components/ui/primitives";
-import { formatBytes, formatDate } from "../utils/format";
+import { formatBytes, formatDate, formatTime } from "../utils/format";
 
 type LogLevel = "error" | "warning" | "info" | "other";
 type LevelFilter = "all" | Exclude<LogLevel, "other">;
@@ -163,14 +163,14 @@ export default function SystemLogs() {
                                 <span>{t('logs.realtimeTarget')}</span>
                                 <span className="text-ok font-medium">service.log</span>
                             </div>
-                            <div className="flex justify-between text-ink-muted">
+                            <div className="flex justify-between items-center text-ink-muted">
                                 <span>{t('logs.monitorStatus')}</span>
                                 <span className="text-ok font-medium">{t('logs.serviceRunning')}</span>
                             </div>
                             {selectedFile && (
-                                <div className="flex justify-between text-ink-muted">
+                                <div className="flex justify-between items-center text-ink-muted">
                                     <span>{t('logs.lastLogTime')}</span>
-                                    <span className="text-ink font-medium">{formatDate(selectedFile.modified_at, true)}</span>
+                                    <span className="text-ink font-medium">{formatTime(selectedFile.modified_at)}</span>
                                 </div>
                             )}
                         </div>
