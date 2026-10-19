@@ -1000,5 +1000,7 @@
   "live.clearPopkontvRoomPassword": "Borrar contraseña",
   "settings.popkontvUsePlaybackResponseHint": "Activado por defecto. Usa las URL autorizadas por PopkonTV sin excluir emisiones solo por su tipo. Se mantienen las comprobaciones de acceso e inicio de sesión. Los cambios se aplican en la próxima conexión.",
   "live.skippingRecording": "Deteniendo la grabación antes de omitir",
-  "live.skippedRecording": "Omitido"
+  "live.skippedRecording": "Omitido",
+  "settings.twitchTtvAbTitle": "Activar bloqueador de anuncios Twitch TTV-AB",
+  "settings.twitchTtvAbHelp": "Aplica el motor TTV-AB para omitir anuncios pre-roll y mid-roll, grabando transmisiones limpias con spoofing de anuncios."
 }

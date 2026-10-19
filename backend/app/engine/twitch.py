@@ -154,13 +154,15 @@ class TwitchLiveEngine:
             from app.engine.twitch_proxy import configure_twitch_proxy
             configure_twitch_proxy(session, twitch_api_headers().get("Authorization", "").removeprefix("OAuth "))
             try:
-                # 인증은 Twitch API 전용 옵션으로 넘겨 CDN에 OAuth가 유출되지 않게 한다.
-                # TTV-AB 23.0.2: popout/embed 플레이어 타입을 우선 요청하여 광고 주입(SSAI)을 우회
-                streams = session.streams(self.get_stream_url(channel_id), options=Options({
+                from app.core.config import get_settings
+                stream_opts = {
                     'api-header': list(twitch_api_headers().items()),
                     'supported-codecs': ['h264', 'h265', 'av1'],
-                    'access-token-param': [('playerType', 'popout'), ('platform', 'site')],
-                }))
+                }
+                if get_settings().twitch_ttv_ab_enabled:
+                    stream_opts['access-token-param'] = [('playerType', 'popout'), ('platform', 'site')]
+                # 인증은 Twitch API 전용 옵션으로 넘겨 CDN에 OAuth가 유출되지 않게 한다.
+                streams = session.streams(self.get_stream_url(channel_id), options=Options(stream_opts))
                 variants = []
                 for name, stream in streams.items():
                     match = re.fullmatch(r'(\d+)p(?:(\d+(?:\.\d+)?))?', name)

@@ -232,6 +232,7 @@ class Settings(BaseSettings):
     kick_cookie_file: Optional[str] = None
     twitch_cookie_file: Optional[str] = None
     twitch_proxy_enabled: bool = False
+    twitch_ttv_ab_enabled: bool = True
     tiktok_cookie_file: Optional[str] = None
     bilibili_cookie_file: Optional[str] = None
     pandalive_cookie_file: Optional[str] = None

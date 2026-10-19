@@ -1000,5 +1000,7 @@
   "live.clearPopkontvRoomPassword": "清除密碼",
   "settings.popkontvUsePlaybackResponseHint": "預設開啟。不僅依直播類型預先排除，而是使用PopkonTV伺服器允許的播放網址。仍會檢查登入與觀看權限。變更自下次連線起生效。",
   "live.skippingRecording": "正在停止錄製以略過",
-  "live.skippedRecording": "已略過"
+  "live.skippedRecording": "已略過",
+  "settings.twitchTtvAbTitle": "啟用 Twitch TTV-AB 廣告攔截",
+  "settings.twitchTtvAbHelp": "套用 TTV-AB 引擎繞過片頭與片中廣告，透過無廣告串流與背景廣告偽裝信號進行純淨錄製。"
 }

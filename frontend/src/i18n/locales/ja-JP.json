@@ -1000,5 +1000,7 @@
   "live.clearPopkontvRoomPassword": "パスワードを削除",
   "settings.popkontvUsePlaybackResponseHint": "既定でオンです。配信の種類だけで除外せず、PopkonTVが許可した再生URLを使用します。ログインと視聴権限の確認は維持されます。変更は次回の接続から適用されます。",
   "live.skippingRecording": "スキップのため録画を停止中",
-  "live.skippedRecording": "スキップ済み"
+  "live.skippedRecording": "スキップ済み",
+  "settings.twitchTtvAbTitle": "Twitch TTV-AB 広告ブロックを有効化",
+  "settings.twitchTtvAbHelp": "TTV-AB エンジンを適用してプレロールおよびミッドロール広告を回避し、クリーンなストリームと広告スプーフィングで録画します。"
 }

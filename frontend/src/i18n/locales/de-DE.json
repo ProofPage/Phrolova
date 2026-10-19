@@ -1000,5 +1000,7 @@
   "live.clearPopkontvRoomPassword": "Passwort löschen",
   "settings.popkontvUsePlaybackResponseHint": "Standardmäßig aktiviert. Verwendet von PopkonTV erlaubte Wiedergabe-URLs, statt Sendungen nach Typ auszuschließen. Anmeldung und Wiedergaberechte werden weiterhin geprüft. Änderungen gelten ab der nächsten Verbindung.",
   "live.skippingRecording": "Aufnahme wird vor dem Überspringen gestoppt",
-  "live.skippedRecording": "Übersprungen"
+  "live.skippedRecording": "Übersprungen",
+  "settings.twitchTtvAbTitle": "Twitch TTV-AB Werbeblocker aktivieren",
+  "settings.twitchTtvAbHelp": "Wendet die TTV-AB-Engine an, um Pre-Roll- und Mid-Roll-Werbung zu umgehen und saubere Streams aufzuzeichnen."
 }

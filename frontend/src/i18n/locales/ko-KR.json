@@ -1000,5 +1000,7 @@
   "live.clearPopkontvRoomPassword": "비밀번호 지우기",
   "settings.popkontvUsePlaybackResponseHint": "기본 켜짐. 방송 종류만으로 미리 제외하지 않고 팝콘티비 서버가 허용한 재생 주소를 사용합니다. 로그인·시청 권한 확인은 유지되며, 변경은 다음 연결부터 적용됩니다.",
   "live.skippingRecording": "건너뛰기 위해 녹화 중지 중",
-  "live.skippedRecording": "건너뜀"
+  "live.skippedRecording": "건너뜀",
+  "settings.twitchTtvAbTitle": "Twitch TTV-AB 광고 차단 활성화",
+  "settings.twitchTtvAbHelp": "TTV-AB 엔진을 적용하여 프리롤 및 미드롤 광고를 우회하고, 클린 스트림 및 백그라운드 Ad Spoofing을 통해 무광고 원본으로 녹화합니다."
 }

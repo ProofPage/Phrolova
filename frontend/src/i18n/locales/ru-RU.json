@@ -1000,5 +1000,7 @@
   "live.clearPopkontvRoomPassword": "Удалить пароль",
   "settings.popkontvUsePlaybackResponseHint": "Включено по умолчанию. Используются разрешённые PopkonTV адреса без предварительного исключения по типу трансляции. Проверки входа и прав просмотра сохраняются. Изменения действуют со следующего подключения.",
   "live.skippingRecording": "Остановка записи перед пропуском",
-  "live.skippedRecording": "Пропущено"
+  "live.skippedRecording": "Пропущено",
+  "settings.twitchTtvAbTitle": "Включить блокировку рекламы Twitch TTV-AB",
+  "settings.twitchTtvAbHelp": "Применяет движок TTV-AB для обхода pre-roll и mid-roll рекламы, записывая чистый поток с фоновым спуфингом рекламы."
 }

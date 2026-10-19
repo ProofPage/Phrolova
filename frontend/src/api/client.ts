@@ -214,6 +214,7 @@ export interface Settings {
     youtube_prefer_resolution_over_timemachine?: boolean;
     youtube_po_token_provider_url?: string;
     twitch_proxy_enabled?: boolean;
+    twitch_ttv_ab_enabled?: boolean;
 
     // VOD 설정
     vod_max_concurrent: number;
@@ -570,6 +571,7 @@ export const api = {
             streamlink_platform_options?: StreamlinkOptionsByPlatform;
             popkontv_use_playback_response?: boolean;
             twitch_proxy_enabled?: boolean;
+            twitch_ttv_ab_enabled?: boolean;
             youtube_sabr_priority?: "auto" | "sabr_fallback" | "sabr_first";
             youtube_codec_priority?: "av1" | "vp9" | "h264";
             youtube_time_machine_enabled?: boolean;

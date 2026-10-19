@@ -52,6 +52,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [streamlinkOptionsValid, setStreamlinkOptionsValid] = useState(true);
     const [popkontvUsePlaybackResponse, setPopkontvUsePlaybackResponse] = useState(true);
     const [twitchProxyEnabled, setTwitchProxyEnabled] = useState(false);
+    const [twitchTtvAbEnabled, setTwitchTtvAbEnabled] = useState(true);
     const initialized = useRef(false);
     useEffect(() => {
         let active = true;
@@ -90,6 +91,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         setStreamlinkOptions(settings.streamlink_platform_options ?? {});
         setPopkontvUsePlaybackResponse(settings.popkontv_use_playback_response ?? true);
         setTwitchProxyEnabled(settings.twitch_proxy_enabled ?? false);
+        setTwitchTtvAbEnabled(settings.twitch_ttv_ab_enabled ?? true);
         setVodFilenameTemplate(settings.vod_filename_template || "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}");
     }, [settings]);
     const liveDirty = !!settings && (
@@ -110,6 +112,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         streamlinkOptionsKey(streamlinkOptions) !== streamlinkOptionsKey(settings.streamlink_platform_options ?? {}) ||
         popkontvUsePlaybackResponse !== (settings.popkontv_use_playback_response ?? true) ||
         twitchProxyEnabled !== (settings.twitch_proxy_enabled ?? false) ||
+        twitchTtvAbEnabled !== (settings.twitch_ttv_ab_enabled ?? true) ||
         liveFilenameTemplate !== (settings.live_filename_template || "[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}")
     );
     const vodDirty = !!settings && (
@@ -172,6 +175,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
                     streamlink_platform_options: streamlinkOptions,
                     popkontv_use_playback_response: popkontvUsePlaybackResponse,
                     twitch_proxy_enabled: twitchProxyEnabled,
+                    twitch_ttv_ab_enabled: twitchTtvAbEnabled,
                 }
             );
             setLiveDownloadDir(liveDownloadDir.trim());
@@ -314,6 +318,12 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
 
             <Card className="settings-section space-y-3 [&_.ui-switch]:min-w-11 [&_.ui-switch]:min-h-11" data-settings-section="twitch" aria-busy={saving}>
                 <CardHeader icon={Radio} title={t('platform.twitch')} />
+                <SettingRow
+                    label={t('settings.twitchTtvAbTitle')}
+                    hint={t('settings.twitchTtvAbHelp')}
+                    control={<Switch checked={twitchTtvAbEnabled} onChange={setTwitchTtvAbEnabled}
+                        label={t('settings.twitchTtvAbTitle')} />}
+                />
                 <SettingRow
                     label={t('settings.twitchProxyEnabled')}
                     hint={t('settings.twitchProxyWarning')}

@@ -1000,5 +1000,7 @@
   "live.clearPopkontvRoomPassword": "Clear password",
   "settings.popkontvUsePlaybackResponseHint": "Enabled by default. Use playback URLs authorized by PopkonTV instead of excluding broadcasts by type. Login and viewing permissions still apply. Changes take effect on the next connection.",
   "live.skippingRecording": "Stopping before skipping",
-  "live.skippedRecording": "Skipped"
+  "live.skippedRecording": "Skipped",
+  "settings.twitchTtvAbTitle": "Enable Twitch TTV-AB ad blocker",
+  "settings.twitchTtvAbHelp": "Applies the TTV-AB engine to bypass pre-roll and mid-roll ads, recording clean streams with background ad spoofing."
 }

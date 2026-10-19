@@ -26,6 +26,9 @@ _orig_is_daterange_ad = TwitchM3U8Parser._is_daterange_ad
 def _ttv_ab_is_daterange_ad(daterange):
     if _orig_is_daterange_ad(daterange):
         return True
+    from app.core.config import get_settings
+    if not get_settings().twitch_ttv_ab_enabled:
+        return False
     cls = str(getattr(daterange, "classname", "") or "")
     dr_id = str(getattr(daterange, "id", "") or "")
     if TTV_AB_AD_METADATA_RE.search(cls) or TTV_AB_AD_METADATA_RE.search(dr_id):
@@ -46,6 +49,9 @@ _orig_is_segment_ad = TwitchM3U8Parser._is_segment_ad
 def _ttv_ab_is_segment_ad(self, date, title=None):
     if _orig_is_segment_ad(self, date, title):
         return True
+    from app.core.config import get_settings
+    if not get_settings().twitch_ttv_ab_enabled:
+        return False
     if title and TTV_AB_AD_METADATA_RE.search(title):
         return True
     return False
@@ -58,7 +64,8 @@ _orig_get_segment = TwitchM3U8Parser.get_segment
 
 def _ttv_ab_get_segment(self, uri, **data):
     segment = _orig_get_segment(self, uri, **data)
-    if not segment.ad and uri and TTV_AB_AD_METADATA_RE.search(uri):
+    from app.core.config import get_settings
+    if get_settings().twitch_ttv_ab_enabled and not segment.ad and uri and TTV_AB_AD_METADATA_RE.search(uri):
         segment.ad = True
     return segment
 
@@ -156,7 +163,8 @@ class TwitchCaptureWriter(_Writer):
         if segment.ad:
             stream.ad_active = True
             stream.excluded_ads += 1
-            if stream.excluded_ads % 5 == 1:
+            from app.core.config import get_settings
+            if get_settings().twitch_ttv_ab_enabled and stream.excluded_ads % 5 == 1:
                 # 광고 감지 시 백그라운드 스레드로 ad spoofing 신호 1회 발송
                 threading.Thread(target=_send_ttv_ad_spoof, daemon=True).start()
         else:
