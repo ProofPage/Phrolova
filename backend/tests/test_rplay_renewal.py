@@ -43,6 +43,17 @@ def test_expired_playlist_renews_without_resetting_sequence(monkeypatch):
     assert instance.session.http.get.call_count == 2
 
 
+def test_500_server_error_playlist_renews_without_breaking_stream(monkeypatch):
+    response = SimpleNamespace(encoding=None)
+    instance, resolver = worker(monkeypatch, [StreamError("500 Server Error: Internal Server Error"), response])
+    assert instance._fetch_playlist() is response
+    assert instance.stream.url == NEW and instance.sequence == 123
+    assert instance.stream.to_url() == NEW
+    assert instance.session.http.get.call_args.args[0] == NEW
+    resolver.assert_awaited_once_with(CID, "720p60")
+    assert instance.session.http.get.call_count == 2
+
+
 def test_rejected_renewal_is_not_retried_forever(monkeypatch):
     instance, resolver = worker(monkeypatch, [StreamError("403 Forbidden")] * 2)
     with pytest.raises(RecordingError) as caught:

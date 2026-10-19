@@ -11,9 +11,10 @@ from app.engine.rplay_live import RplayLiveEngine, media_allowed
 
 class RplayWorker(HLSStream.__reader__.__worker__):
     def _fetch_playlist(self):
+        attempts = max(1, int(getattr(self, "reload_attempts", 1)))
         def fetch():
             response = self.session.http.get(
-                self.stream.url, exception=StreamError, retries=1,
+                self.stream.url, exception=StreamError, retries=attempts,
                 **self.reader.request_params)
             response.encoding = "utf-8"
             return response
@@ -21,7 +22,9 @@ class RplayWorker(HLSStream.__reader__.__worker__):
         try:
             return fetch()
         except StreamError as error:
-            if classify_recording_error(error).code != "authentication":
+            err_text = str(error)
+            is_5xx = any(code in err_text for code in ("500", "502", "503", "504"))
+            if classify_recording_error(error).code != "authentication" and not is_5xx:
                 raise
         # Obtain a new grant, not a guessed unsigned URL or another account.
         url, _, _ = asyncio.run(
