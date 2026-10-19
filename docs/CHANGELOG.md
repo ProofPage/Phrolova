@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.0.98] - 2026-10-19
+
+### Fixed
+- Fixed RPLAY playlist reload `500 Server Error` warning logs by respecting `reload_attempts` retries and automatically refreshing stream authorization grants on transient CDN 5xx responses.
+
 ## [2.0.97] - 2026-10-19
 
 ### Added
@@ -1319,7 +1324,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.97...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.98...HEAD
+[2.0.98]: https://github.com/ProofPage/Phrolova/compare/v2.0.97...v2.0.98
 [2.0.97]: https://github.com/ProofPage/Phrolova/compare/v2.0.96...v2.0.97
 [2.0.96]: https://github.com/ProofPage/Phrolova/compare/v2.0.95...v2.0.96
 [2.0.95]: https://github.com/ProofPage/Phrolova/compare/v2.0.94...v2.0.95
