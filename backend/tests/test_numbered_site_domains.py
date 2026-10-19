@@ -14,19 +14,15 @@ from app.engine.episode_extractor import EpisodeSiteIE
 from app.engine.episode_sites import (
     EpisodeSiteError, SITES, SiteClient, extract_episode, load_catalog, parse_episode_url,
 )
-from app.engine.platform_auth import platform_cookie_jar
 from app.engine.platform_media import canonical_platform_video, media_platform
 from app.engine.vod_preparation import canonical_prepared_url
 from tests.test_animaru import fixture_client as animaru_fixture
 from tests.test_episode_sites import FixtureClient
-from tests.test_tvchak import fixture_client as tvchak_fixture
 from tests.test_tvwiki import fixture_client as tvwiki_fixture
 
 
 SOURCES = [
     ('animaru', 'animaru1.com', 'animaru2.com', '/content/42', '/content/42/1.5'),
-    ('tvchak', 'tvchak208.com', 'tvchak209.com', '/index.php/vod/detail/id/123703.html',
-     '/index.php/vod/play/id/123703/sid/1/nid/1.html'),
     ('tvwiki', 'tvwiki54.net', 'tvwiki55.net', '/drama/42', '/drama/42/11'),
     ('anilife', 'anilife01.tv', 'anilife02.tv', '/content/1', '/content/1/one'),
 ]
@@ -74,8 +70,6 @@ def test_host_family_is_exact_and_ascii(host):
 def rotated_fixture(site, old, host):
     if site == 'animaru':
         client, _ = animaru_fixture()
-    elif site == 'tvchak':
-        client, _ = tvchak_fixture()
     elif site == 'tvwiki':
         client = tvwiki_fixture()
     else:
@@ -125,13 +119,12 @@ def test_catalog_uses_final_host_after_website_rotation(site, old, host, work, e
 @pytest.mark.parametrize('site,old,host,work,episode', SOURCES)
 @pytest.mark.parametrize('destination', ['same_family', 'lookalike', 'credentials', 'http', 'other_family'])
 def test_each_website_redirect_is_checked_before_sending(site, old, host, work, episode, destination, monkeypatch):
-    monkeypatch.setattr(get_settings(), 'tvchak_cookie_file', None)
     target = {
         'same_family': 'https://' + host + work,
         'lookalike': 'https://' + host + '.evil.example' + work,
         'credentials': 'https://u:p@' + host + work,
         'http': 'http://' + host + work,
-        'other_family': 'https://' + ('tvwiki99.net' if site != 'tvwiki' else 'tvchak999.com') + work,
+        'other_family': 'https://' + ('tvwiki99.net' if site != 'tvwiki' else 'anilife99.tv') + work,
     }[destination]
     calls = []
     def handle(request):
@@ -156,7 +149,7 @@ def test_each_website_redirect_is_checked_before_sending(site, old, host, work, 
         client.close()
 
 
-@pytest.mark.parametrize('site,old,host,work,episode', SOURCES[2:])
+@pytest.mark.parametrize('site,old,host,work,episode', SOURCES[1:])
 def test_session_api_does_not_forward_proofs_or_body_to_another_number(site, old, host, work, episode):
     fixture = rotated_fixture(site, old, host)
     protected = '/api/create_session.php' if site == 'tvwiki' else '/api/playback/1/one'
@@ -178,55 +171,19 @@ def test_session_api_does_not_forward_proofs_or_body_to_another_number(site, old
         client.close()
 
 
-def test_tvchak_cookie_upload_rotation_and_cdn_scope(monkeypatch, tmp_path):
+def test_removed_platform_is_not_supported_and_cookie_file_is_preserved(tmp_path):
     from app.api import platforms
-    monkeypatch.setattr(platforms, '_COOKIE_SAVE_PATH', tmp_path / 'unused.txt')
+    path = tmp_path / 'cookies.txt'
+    path.write_text('existing user file', encoding='utf-8')
     app = FastAPI()
     app.include_router(platforms.router)
-    text = '# Netscape HTTP Cookie File\n' + ''.join(
-        f'.{domain}\tTRUE\t/\tTRUE\t0\tsession\t{value}\n' for domain, value in [
-            ('tvchak208.com', 'old-session'), ('tvchak209.com', 'new-session'),
-            ('tvchak209.com.evil.example', 'wrong'), ('tvchak209.net', 'wrong'),
-            ('tvchak.com', 'wrong'), ('youtube.com', 'wrong'),
-        ])
+    url = 'https://tvchak209.com/index.php/vod/play/id/123703/sid/1/nid/1.html'
+    assert numbered_site_for_host('tvchak209.com') is None
+    assert media_platform(url) == 'external'
+    assert not EpisodeSiteIE.suitable(url)
+    with pytest.raises(EpisodeSiteError):
+        parse_episode_url(url)
     with TestClient(app) as api:
-        reply = api.post('/api/platforms/tvchak/cookie', files={'file': ('cookies.txt', text.encode())})
-        assert reply.status_code == 200 and reply.json()['valid']
-        assert 'session' not in reply.text
-        assert {c.domain for c in platform_cookie_jar('tvchak')} == {'.tvchak208.com', '.tvchak209.com'}
-        received = []
-        def handle(request):
-            received.append((request.url.host, request.headers.get('cookie')))
-            if request.url.host == 'tvchak208.com':
-                return httpx.Response(302, headers={'Location': 'https://tvchak209.com/'})
-            return httpx.Response(200, text='ok')
-        client = SiteClient()
-        client.http.close()
-        client.http = httpx.Client(transport=httpx.MockTransport(handle))
-        try:
-            client.request('https://tvchak208.com/', SITES['tvchak']['hosts'])
-            client.request('https://bodaponi.b-cdn.net/video.mp4', SITES['tvchak']['media'])
-            assert received == [('tvchak208.com', 'session=old-session'),
-                                ('tvchak209.com', 'session=new-session'), ('bodaponi.b-cdn.net', None)]
-        finally:
-            client.close()
-        assert api.delete('/api/platforms/tvchak/cookie').status_code == 200
-        assert not platform_cookie_jar('tvchak')
-
-
-def test_old_cookie_is_not_reused_on_new_domain(monkeypatch, tmp_path):
-    path = tmp_path / 'cookies.txt'
-    path.write_text('# Netscape HTTP Cookie File\n.tvchak208.com\tTRUE\t/\tTRUE\t0\tsession\told\n')
-    monkeypatch.setattr(get_settings(), 'tvchak_cookie_file', str(path))
-    calls = []
-    def handle(request):
-        calls.append(request)
-        return httpx.Response(200, text='ok')
-    client = SiteClient()
-    client.http.close()
-    client.http = httpx.Client(transport=httpx.MockTransport(handle))
-    try:
-        client.request('https://tvchak209.com/', SITES['tvchak']['hosts'])
-        assert len(calls) == 1 and 'cookie' not in calls[0].headers
-    finally:
-        client.close()
+        assert api.get('/api/platforms/tvchak/cookie').status_code == 400
+        assert api.delete('/api/platforms/tvchak/cookie').status_code == 400
+    assert path.read_text(encoding='utf-8') == 'existing user file'

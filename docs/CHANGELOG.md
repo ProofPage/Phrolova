@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+## [2.0.89] - 2026-10-19
+
+### Fixed
+- Accept the observed Anime24 episode CDN hosts while preserving HTTPS, redirect, private-address and hostname validation.
+
+### Removed
+- Remove TVCHAK from platform selection, authentication, URL recognition, API registration and extraction. Preserve existing files, records and credentials.
+
 ## [2.0.88] - 2026-10-19
 
 ### Improved
@@ -1250,7 +1258,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.88...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.89...HEAD
+[2.0.89]: https://github.com/ProofPage/Phrolova/compare/v2.0.88...v2.0.89
 [2.0.88]: https://github.com/ProofPage/Phrolova/compare/v2.0.87...v2.0.88
 [2.0.87]: https://github.com/ProofPage/Phrolova/compare/v2.0.86...v2.0.87
 [2.0.86]: https://github.com/ProofPage/Phrolova/compare/v2.0.85...v2.0.86

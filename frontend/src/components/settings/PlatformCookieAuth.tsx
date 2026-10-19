@@ -21,7 +21,7 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
     const { t } = useLanguage();
     const toast = useToast();
     const confirm = useConfirm();
-    const name = t(platform === 'tvchak' || platform === 'hearheart' ? DOWNLOAD_SOURCE_LABELS[platform] : PLATFORM_LABELS[platform]);
+    const name = t(platform === 'hearheart' ? DOWNLOAD_SOURCE_LABELS[platform] : PLATFORM_LABELS[platform]);
     const fileInput = useRef<HTMLInputElement>(null);
     const pending = useRef(false);
     const revision = useRef(0);
@@ -117,8 +117,6 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
         {(!account || method === 'file') && <p className="text-xs text-ink-muted">{t('settings.authCookieFileHelp')}</p>}
         {t(`settings.cookieHelp.${platform}`) !== `settings.cookieHelp.${platform}` ? (
             <p className="text-xs text-ink-muted">{t(`settings.cookieHelp.${platform}`)}</p>
-        ) : platform === 'tvchak' ? (
-            <p className="text-xs text-ink-muted">{t('settings.tvchakCookieHelp')}</p>
         ) : platform === 'kick' ? (
             <p className="text-xs text-ink-muted">{t('live.kickQualityAuthentication')}</p>
         ) : null}

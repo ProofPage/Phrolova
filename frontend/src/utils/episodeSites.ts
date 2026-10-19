@@ -5,7 +5,7 @@ const FIXED_EPISODE_HOSTS = new Map<string, DownloadSource>([
     ['v2.ohli365.org', 'ohli365'],
 ]);
 const NUMBERED_EPISODE_HOSTS: [DownloadSource, RegExp][] = [
-    ['animaru', /^animaru[0-9]+\.com$/], ['tvchak', /^tvchak[0-9]+\.com$/],
+    ['animaru', /^animaru[0-9]+\.com$/],
     ['tvwiki', /^tvwiki[0-9]+\.net$/], ['anilife', /^anilife[0-9]+\.tv$/],
 ];
 export function episodeSourceForHost(host: string): DownloadSource | undefined {
@@ -39,12 +39,6 @@ export function parseEpisodeInput(value: string): { url: string; collection: boo
             const episode = raw?.includes('.') ? raw.replace(/0+$/, '').replace(/\.$/, '') : raw;
             return {url:`${url.origin}/content/${match[1]}${episode !== undefined ? '/'+episode : ''}`,collection:episode === undefined,source};
         }
-        if (source === 'tvchak') {
-            const work = url.pathname.match(/^\/index\.php\/vod\/detail\/id\/([1-9]\d*)\.html$/);
-            const episode = url.pathname.match(/^\/index\.php\/vod\/play\/id\/([1-9]\d*)\/sid\/([1-9]\d*)\/nid\/([1-9]\d*)\.html$/);
-            if (!work && !episode) return null;
-            return {url:`${url.origin}${url.pathname}`,collection:!!work,source};
-        }
         if (source === 'tvwiki') {
             const match = url.pathname.match(/^\/(movie|kor_movie|drama|ent|sisa|world|ott_ent|short_drama|ani_movie|animation|old_ent|old_drama)\/([1-9]\d*)(?:\/([1-9]\d*))?\/?$/);
             return match ? {url:`${url.origin}/${match[1]}/${match[2]}${match[3]?'/'+match[3]:''}`,collection:!match[3],source} : null;
@@ -70,5 +64,5 @@ export function parseEpisodeInput(value: string): { url: string; collection: boo
 }
 
 export function isEpisodeSource(source: DownloadSource) {
-    return source === 'anilife' || source === 'linkani' || source === 'ohli24' || source === 'ohli365' || source === 'tvwiki' || source === 'tvchak' || source === 'animaru';
+    return source === 'anilife' || source === 'linkani' || source === 'ohli24' || source === 'ohli365' || source === 'tvwiki' || source === 'animaru';
 }

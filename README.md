@@ -39,7 +39,6 @@ The dashboard provides **10 live platforms** and **17 video source choices**, in
 | RPLAY (알플레이) | Channel monitoring, granted HLS recording and previews | Videos and live archives with granted HLS, DASH or MP4 playback | Email/password login or an imported session file; account viewing permission required |
 | Anilife / Linkani / Ohli24 | — | Work/episode links, episode selection, HLS videos and VTT subtitles | Normal site playback session |
 | TVWiki (티비위키) | — | Work/episode selection and HLS videos at tvwiki54.net | Normal guest playback session |
-| TVChak (티비착) | — | Work/episode selection and original MP4 videos at tvchak208.com | Optional browser cookie file for site access checks |
 | Animaru (애니마루) | — | Work/episode selection, HLS videos and provided VTT subtitles at animaru1.com | Public reader/player API |
 | Ani365 (애니365) | — | Work/episode selection, HLS quality variants and provided VTT subtitles at v2.ohli365.org | Public catalog/playback API and MegaPlay delivery |
 
@@ -201,13 +200,12 @@ Source installations read root `.env`, with `backend/.env` as a legacy fallback.
 | `VOD_FORMAT`, `VOD_MAX_SPEED` | `mp4`, `0` for unlimited speed in MB/s |
 | `KEEP_DOWNLOAD_PARTS` | `false` |
 | `FILE_INSPECTION_TIMEOUT` | `120` seconds; allowed range 1–600 |
-| `YOUTUBE_COOKIE_FILE`, `CIME_COOKIE_FILE`, `KICK_COOKIE_FILE`, `TWITCH_COOKIE_FILE`, `TIKTOK_COOKIE_FILE`, `BILIBILI_COOKIE_FILE`, `PANDALIVE_COOKIE_FILE`, `POPKONTV_COOKIE_FILE`, `TVCHAK_COOKIE_FILE` | Optional Netscape cookie files; upload through Settings → Authentication |
+| `YOUTUBE_COOKIE_FILE`, `CIME_COOKIE_FILE`, `KICK_COOKIE_FILE`, `TWITCH_COOKIE_FILE`, `TIKTOK_COOKIE_FILE`, `BILIBILI_COOKIE_FILE`, `PANDALIVE_COOKIE_FILE`, `POPKONTV_COOKIE_FILE` | Optional Netscape cookie files; upload through Settings → Authentication |
 
 Use absolute media paths. Relative paths follow the working directory; the source manager starts from `backend/`. Enter actual paths in `.env` rather than relying on shell-variable expansion. Saved preferences are preserved when defaults change in a later release.
 
-TVChak accepts work and episode links under `tvchak208.com/index.php/vod/`. Site access checks can require a browser cookie export from the same internet connection as the server. Register it under **Settings → Authentication → TVChak**. The application reports access checks explicitly and keeps those cookies scoped to the site; it does not solve challenges.
 
-Animaru, TVChak, TVWiki and Anilife also accept changing numeric domain suffixes (`animaru[0-9]+.com`, `tvchak[0-9]+.com`, `tvwiki[0-9]+.net`, `anilife[0-9]+.tv`). Paste the current work/episode address; its hostname is preserved throughout selection and downloading. Website redirects stay within the same domain family, and cookies remain scoped to each original domain.
+Animaru, TVWiki and Anilife also accept changing numeric domain suffixes (`animaru[0-9]+.com`, `tvwiki[0-9]+.net`, `anilife[0-9]+.tv`). Paste the current work/episode address; its hostname is preserved throughout selection and downloading. Website redirects stay within the same domain family, and cookies remain scoped to each original domain.
 
 CHZZK account cookies use `NID_AUT` and `NID_SES`. YouTube, CIME, Kick, Twitch, TikTok and Bilibili use their corresponding `*_COOKIE_FILE` settings. Kick uses registered cookies for both live quality resolution and VOD extraction so sign-in-only qualities can appear. Register a Netscape cookie file under Settings → Authentication → Kick, then refresh the quality list or retry video metadata. Only advertised qualities are offered; explicitly requested 1080p is never silently replaced with 720p. Kick cookies and API authorization stay scoped to Kick and are not forwarded to unrelated media CDNs.
 

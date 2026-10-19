@@ -35,11 +35,11 @@ async def main():
             await page.goto(BASE + "/settings")
             await page.get_by_role("button", name="인증", exact=True).click()
             selectors = page.locator(".auth-platform-card .ui-disclosure")
-            await expect(selectors).to_have_count(12)
+            await expect(selectors).to_have_count(11)
             positions = "(es)=>es.map(e=>{const r=e.getBoundingClientRect();return [r.x,r.y-es[0].getBoundingClientRect().y,r.height]})"
             baseline = await selectors.evaluate_all(positions)
             assert len({box[2] for box in baseline}) == 1
-            for i in range(12):
+            for i in range(11):
                 await selectors.nth(i).click()
                 await expect(page.locator("[data-auth-detail]")).to_have_count(1)
                 await expect(page.locator(".ui-disclosure[aria-expanded=true]")).to_have_count(1)
