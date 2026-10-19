@@ -214,7 +214,7 @@ class PreviewProxy:
             return await self._fetch(token, query, range_header)
         except httpx.HTTPStatusError as error:
             node = self.nodes.get(token)
-            if error.response.status_code not in (401, 403) or not node or not node.get("resolver"):
+            if error.response.status_code not in (401, 403, 500, 502, 503, 504) or not node or not node.get("resolver"):
                 raise
         # Only the registered root playlist can obtain a fresh authorized URL.
         # Segment URLs are never guessed or retried under different credentials.
@@ -280,7 +280,7 @@ class PreviewProxy:
                             if not self.allowed(url, node["hosts"], node["platform"]):
                                 raise ValueError("허용되지 않은 CDN 이동입니다.")
                             continue
-                        if response.status_code == 429:
+                        if response.status_code in (429, 500, 502, 503, 504):
                             if node.get("_last_manifest") and bytes(node["_last_manifest"]).lstrip().startswith(b"#EXTM3U"):
                                 return bytes(node["_last_manifest"]), "application/vnd.apple.mpegurl", 200, {}
                             await asyncio.sleep(0.5)
