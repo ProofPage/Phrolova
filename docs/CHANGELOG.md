@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.93] - 2026-10-19
+
+### Fixed
+- Handle transient CDN 429 rate limits in preview proxy by caching valid manifests and backing off requests.
+- Enhance frontend live preview with exponential retry recovery and robust Hls.js error tolerance to eliminate spurious "preview unavailable" interruptions.
+
 ## [2.0.92] - 2026-10-19
 
 ### Fixed
@@ -1280,7 +1286,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.92...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.93...HEAD
+[2.0.93]: https://github.com/ProofPage/Phrolova/compare/v2.0.92...v2.0.93
 [2.0.92]: https://github.com/ProofPage/Phrolova/compare/v2.0.91...v2.0.92
 [2.0.91]: https://github.com/ProofPage/Phrolova/compare/v2.0.90...v2.0.91
 [2.0.90]: https://github.com/ProofPage/Phrolova/compare/v2.0.89...v2.0.90

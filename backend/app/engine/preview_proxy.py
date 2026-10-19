@@ -280,6 +280,11 @@ class PreviewProxy:
                             if not self.allowed(url, node["hosts"], node["platform"]):
                                 raise ValueError("허용되지 않은 CDN 이동입니다.")
                             continue
+                        if response.status_code == 429:
+                            if node.get("_last_manifest") and bytes(node["_last_manifest"]).lstrip().startswith(b"#EXTM3U"):
+                                return bytes(node["_last_manifest"]), "application/vnd.apple.mpegurl", 200, {}
+                            await asyncio.sleep(0.5)
+                            continue
                         response.raise_for_status()
                         data = bytearray()
                         async for chunk in response.aiter_bytes():
@@ -296,6 +301,7 @@ class PreviewProxy:
                                 {**node, "url": url}, data.decode("utf-8-sig")
                             ).encode()
                             kind = "application/vnd.apple.mpegurl"
+                            node["_last_manifest"] = bytes(data)
                         extra = {
                             k: response.headers[k]
                             for k in ("content-range", "accept-ranges")

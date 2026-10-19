@@ -219,7 +219,8 @@ function HlsLivePreview({ channelKey, isLive, name, poster, broadcastState }: Pr
         const abort = new AbortController();
         let hls: Hls | null = null;
         let refreshTimer: ReturnType<typeof setTimeout> | undefined;
-        let refreshed = false;
+        let retryCount = 0;
+        const MAX_RETRIES = 5;
         let stopped = false;
         let startupTimer: ReturnType<typeof setTimeout> | undefined;
         let loadingTimer: ReturnType<typeof setTimeout> | undefined;
@@ -266,6 +267,7 @@ function HlsLivePreview({ channelKey, isLive, name, poster, broadcastState }: Pr
         const ready = () => {
             if (stopped || failed) return;
             clearTimeout(loadingTimer);
+            retryCount = 0;
             if (!hls && !nativeStarted && video.seekable.length) {
                 nativeStarted = true;
                 loaded();
@@ -278,10 +280,11 @@ function HlsLivePreview({ channelKey, isLive, name, poster, broadcastState }: Pr
             recovering = true;
             clearTimeout(loadingTimer);
             detach();
-            if (!refreshed) {
-                refreshed = true;
+            if (retryCount < MAX_RETRIES) {
+                retryCount++;
                 setState("loading");
-                refreshTimer = setTimeout(() => { void load(); }, 5000);
+                const delay = Math.min(8000, 1500 * retryCount);
+                refreshTimer = setTimeout(() => { void load(); }, delay);
             } else fail();
         };
         const load = async () => {
@@ -304,6 +307,12 @@ function HlsLivePreview({ channelKey, isLive, name, poster, broadcastState }: Pr
                         maxBufferLength: 15,
                         maxMaxBufferLength: 30,
                         maxBufferSize: 12 * 1024 * 1024,
+                        manifestLoadingMaxRetry: 4,
+                        manifestLoadingRetryDelay: 1000,
+                        levelLoadingMaxRetry: 4,
+                        levelLoadingRetryDelay: 1000,
+                        fragLoadingMaxRetry: 4,
+                        fragLoadingRetryDelay: 1000,
                     });
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
                         if (stopped || failed || !hls) return;
