@@ -9,7 +9,7 @@ def media_platform(url: str) -> str:
     if numbered: return numbered
     if host in ('rplay.live', 'www.rplay.live'): return 'rplay'
     if host in ('popkontv.com','www.popkontv.com'): return 'popkontv'
-    if host == 'v2.ohli365.org': return 'ohli365'
+    if host in ('v2.ohli365.org', 'ohli365.org', 'www.ohli365.org'): return 'ohli365'
     if host == 'linkani.tv': return 'linkani'
     if host in ('www.ohli24.net', 'ohli24.net'): return 'ohli24'
     if host in ('bilibili.com', 'www.bilibili.com', 'm.bilibili.com', 'live.bilibili.com', 'b23.tv'): return 'bilibili'

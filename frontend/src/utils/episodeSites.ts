@@ -2,7 +2,7 @@ import type { DownloadSource } from '../api/client';
 
 const FIXED_EPISODE_HOSTS = new Map<string, DownloadSource>([
     ['linkani.tv', 'linkani'], ['www.ohli24.net', 'ohli24'], ['ohli24.net', 'ohli24'],
-    ['v2.ohli365.org', 'ohli365'],
+    ['v2.ohli365.org', 'ohli365'], ['ohli365.org', 'ohli365'], ['www.ohli365.org', 'ohli365'],
 ]);
 const NUMBERED_EPISODE_HOSTS: [DownloadSource, RegExp][] = [
     ['animaru', /^animaru[0-9]+\.com$/],

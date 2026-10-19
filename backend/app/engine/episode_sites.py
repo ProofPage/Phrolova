@@ -14,7 +14,7 @@ from app.core.http import USER_AGENT
 from app.core.episode_domains import NUMBERED_SITE_HOSTS
 
 SITES = {
-    'ohli365': {'name': '애니365', 'hosts': ('v2.ohli365.org',), 'players': ('megaplay.buzz',),
+    'ohli365': {'name': '애니365', 'hosts': ('v2.ohli365.org', 'ohli365.org', 'www.ohli365.org'), 'players': ('megaplay.buzz',),
                 'media': ('nexabloom.top', 'qeltrix.top', 'silverorbit.top', 'broforgotsave.online')},
     'animaru': {'name': '애니마루', 'hosts': (NUMBERED_SITE_HOSTS['animaru'],),
                 'api': ('api.storagewebtoon.store',),

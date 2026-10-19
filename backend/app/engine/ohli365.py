@@ -201,10 +201,14 @@ def _subtitles(data, media, client):
     if not identity:
         raise EpisodeSiteError('애니365 영상 경로의 식별 정보가 다릅니다.')
     languages = {'eng':'en','kor':'ko','ara':'ar','fre':'fr','ger':'de','ita':'it','rus':'ru',
-                 'Brazil_por':'pt-BR','Latin_America_spa':'es-419','Spain_spa':'es-ES'}
+                 'brazil_por':'pt-BR','latin_america_spa':'es-419','spain_spa':'es-ES',
+                 'simplified_chi':'zh-Hans','traditional_chi':'zh-Hant','chi':'zh','zho':'zh',
+                 'ind':'id','may':'ms','msa':'ms','tha':'th','vie':'vi','jpn':'ja'}
     labels = {'english':'en','korean':'ko','arabic':'ar','french':'fr','german':'de',
               'italian':'it','russian':'ru','japanese':'ja', 'portuguese (brazil)':'pt-BR',
-              'spanish (latin america)':'es-419','spanish (spain)':'es-ES'}
+              'spanish (latin america)':'es-419','spanish (spain)':'es-ES',
+              'chinese (simplified)':'zh-Hans','chinese (traditional)':'zh-Hant','chinese':'zh',
+              'indonesian':'id','malay':'ms','thai':'th','vietnamese':'vi'}
     for track in tracks:
         if not isinstance(track, dict):
             raise EpisodeSiteError('애니365 자막 항목이 올바르지 않습니다.')
@@ -215,7 +219,8 @@ def _subtitles(data, media, client):
                              urlsplit(url).path)
         if not match:
             raise EpisodeSiteError('애니365 자막의 회차 식별 정보가 다릅니다.')
-        lang = (languages.get(match[1], 'und-'+match[1].lower().replace('_','-')) if match[1]
+        key = match[1].casefold() if match[1] else ''
+        lang = (languages.get(key, 'und-'+key.replace('_','-')) if key
                 else labels.get(str(track.get('label', '')).strip().casefold(), 'und'))
         try:
             _, text = client.request(url, SITES['ohli365']['media'], subdomains=True,
