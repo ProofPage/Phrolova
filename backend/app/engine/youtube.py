@@ -75,7 +75,7 @@ class YoutubeLiveEngine:
 
         # 2차 체크: HTML로 명확히 감지되지 않았지만 차단 등으로 인한 이슈일 수 있어 yt-dlp 덤프 백업 적용
         if not is_live:
-            is_live, yt_info = await self._check_via_ytdlp(url)
+            is_live, yt_info = await self._check_via_ytdlp(url, channel_id)
             if is_live and yt_info:
                 video_id = yt_info.get("id", "")
                 if re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
@@ -121,9 +121,14 @@ class YoutubeLiveEngine:
         if title_match:
             title = title_match.group(1)
             # 대기 중/오프라인 안내 문구가 포함되어 있다면 오프라인 처리
-            if "대기 중" in title or "대기중" in title:
+            if "대기 중" in title or "대기중" in title or "비공개" in title or "사용할 수 없음" in title:
                 # 실제로 방송을 송출하기 전 예약 대기 상태인 경우
                 return self._offline_status(channel_id)
+
+        # 방송 종료 후 비공개 또는 재생 불가로 전환된 경우
+        if any(marker in html for marker in ("비공개 동영상입니다", "사용할 수 없는 동영상입니다", "동영상이 삭제되었습니다", "This video is private", "Video unavailable")):
+            self._metadata_errors.pop(url, None)
+            return self._offline_status(channel_id)
 
         channel_name = channel_id
         owner_match = re.search(r'"videoOwnerRenderer":\{.*?"title":\{"runs":\[\{"text":"([^"]+)"', html)
@@ -179,7 +184,7 @@ class YoutubeLiveEngine:
             profile_image_url=profile_image_url or thumbnail_url,
         )
 
-    async def _check_via_ytdlp(self, url: str) -> tuple[bool, dict | None]:
+    async def _check_via_ytdlp(self, url: str, channel_id: str | None = None) -> tuple[bool, dict | None]:
         """yt-dlp 메타데이터 조회를 통해 라이브 여부를 검증한다."""
         import json as _json
 
@@ -224,6 +229,19 @@ class YoutubeLiveEngine:
         except Exception as error:
             from app.engine.platform_auth import redact_media_error
             from app.engine.recording_errors import classify_recording_error
+
+            err_text = str(error).lower()
+            # 방송 종료 후 비공개, 삭제, 사용할 수 없는 영상 등은 모니터링 장애가 아닌 방송 종료(오프라인)로 처리
+            if any(m in err_text for m in (
+                "video unavailable", "this video is private", "private video",
+                "live stream recording is not available", "removed by the uploader",
+                "this video has been removed", "is not a live stream", "video is unavailable",
+                "비공개", "사용할 수 없는", "삭제된"
+            )):
+                self._metadata_errors.pop(url, None)
+                if channel_id:
+                    self._live_urls.pop(channel_id, None)
+                return False, None
 
             self._metadata_errors[url] = (
                 classify_recording_error(error),
