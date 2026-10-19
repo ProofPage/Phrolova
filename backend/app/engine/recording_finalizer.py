@@ -632,7 +632,19 @@ class RecordingFinalizer:
             inputs = await asyncio.gather(
                 *(asyncio.to_thread(probe_media, str(p)) for p in sources)
             )
-            if "mpegts" not in inputs[0]["format_name"]:
+            native_dash = job.get("capture_format") == "youtube_dash"
+            direct_cime = (job.get("platform") == "cime"
+                           and job.get("capture_format") == "fmp4"
+                           and job["target_format"] in ("mkv", "mp4")
+                           and len(sources) == 1)
+            if native_dash:
+                if job["target_format"] not in ("mkv", "mp4"):
+                    raise RuntimeError("유튜브 DASH 원본은 MKV 또는 MP4로 저장하세요. 원본은 보관됩니다.")
+                if len(inputs) != 2 or "video" not in inputs[0]["streams"] or "audio" not in inputs[1]["streams"]:
+                    raise RuntimeError("유튜브 DASH 영상·음성 원본을 모두 확인하지 못했습니다.")
+                # Live DASH timestamps retain the broadcast's absolute position.
+                # Capture duration counts complete received video fragments.
+            if not native_dash and not direct_cime and "mpegts" not in inputs[0]["format_name"]:
                 # The live receiver preserved native fMP4. Only now, after its
                 # writer has closed, create the actual TS original with stream copy.
                 sources, inputs = await self._normalize_ts(job, sources, inputs)
@@ -654,7 +666,13 @@ class RecordingFinalizer:
                                        for t in m["tracks"] if t.get("codec_type") in ("video", "audio")]
                 if any(signature(m) != signature(inputs[0]) for m in inputs[1:]):
                     raise RuntimeError("구간별 영상·음성 형식이 달라 자동 병합하지 않습니다. 모든 원본을 보관했습니다.")
-            duration = sum(m["duration"] or 0 for m in inputs) if sequential else inputs[0]["duration"]
+            duration = (job.get("duration_seconds") if native_dash else
+                        sum(m["duration"] or 0 for m in inputs) if sequential else inputs[0]["duration"])
+            if direct_cime and duration and inputs[0].get("start_time"):
+                # Native fMP4 reports a decode-end timestamp, not a span.
+                # Remux directly; preserve the captured native original rather
+                # than creating a redundant TS copy of the same packets.
+                duration = max(0, duration - float(inputs[0]["start_time"]))
             job.update(
                 state="converting",
                 processing_stage="conversion",

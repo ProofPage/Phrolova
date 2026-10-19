@@ -62,6 +62,11 @@ class YtdlpLivePipeline:
         self.output_errors = []
         self.continuity_buffer = None
         self._source_resolver = None
+        self._dash_source = None
+        self._dash_resume = {}
+        self._dash_received = set()
+        self._dash_duration_base = 0.0
+        self.recording_resolution = None
         self._source_page_url = ""
         self._cookie_str = None
         self._closed = True
@@ -119,6 +124,8 @@ class YtdlpLivePipeline:
     @property
     def preview_source_url(self) -> Optional[str]:
         """Reuse only an active CHZZK or YouTube source that this capture has already received."""
+        if self._dash_source:
+            return None
         if (self._state not in (RecordingState.RECORDING, RecordingState.RECONNECTING)
                 or self._start_time is None or self._closed or not self._resume_args):
             return None
@@ -510,6 +517,18 @@ class YtdlpLivePipeline:
             await asyncio.to_thread(session.http.close)
             raise
         self._streamlink_session, self._readers = session, readers
+        if self._dash_source:
+            self._dash_received.clear()
+            self._dash_duration_base = self._media_duration or 0.0
+            if self.capture_format != "youtube_dash":
+                from app.engine.recording_finalizer import publish_file
+                video = self._dash_source[0]
+                suffix = ".native.webm" if video.get("ext") == "webm" else ".native.mp4"
+                native = str(Path(self._output_path).with_suffix(suffix))
+                publish_file(Path(self._source_files[0]), Path(native + ".part"))
+                self._output_path = native
+                self._source_files[0] = native + ".part"
+            self.capture_format = "youtube_dash"
         if readers and getattr(readers[0], 'capture_format', None) == 'h264':
             self.capture_format = 'h264'
         self._continuity_active = any(getattr(getattr(r, 'stream', None), 'continuity', None) for r in readers)
@@ -613,6 +632,10 @@ class YtdlpLivePipeline:
     async def _open_raw_readers(self, *args):
         loop = asyncio.get_running_loop()
         def open_sources():
+            if self._dash_source:
+                from app.engine.youtube_dash import open_dash
+                return open_dash(self._dash_source, self._dash_resume,
+                                 get_settings().youtube_time_machine_enabled)
             session, stream = self._create_streamlink_stream(
                 *args, source_page_url=self._source_page_url,
                 continuity_resume=self.continuity_resume,
@@ -694,6 +717,8 @@ class YtdlpLivePipeline:
                                     "라이브 연결이 중단되었습니다. 재연결을 시도합니다."
                                 )
                             return True
+                        if self.capture_format == "youtube_dash":
+                            checked = True
                         if index == 0 and not checked:
                             prefix.extend(data)
                             if len(prefix) >= 8 and prefix[4:8] in (
@@ -769,6 +794,8 @@ class YtdlpLivePipeline:
                             file.write(piece)
                             if index == 0 and self.capture_format == "ts":
                                 self._measure_ts(piece)
+                        if self.capture_format == "youtube_dash":
+                            self._dash_received.add(index)
                         now_mono = time.monotonic()
                         if now_mono - last_flush >= 1.0:
                             file.flush()
@@ -778,6 +805,9 @@ class YtdlpLivePipeline:
                                 has_payload = True
                             elif self.capture_format == 'h264':
                                 has_payload = True
+                            elif self.capture_format == "youtube_dash":
+                                self._media_duration = self._dash_duration_base + reader.received_duration
+                                has_payload = len(self._dash_received) == len(readers)
                             else:
                                 self._native_clock.feed(data)
                                 self._media_duration = self._native_clock.duration
@@ -865,6 +895,8 @@ class YtdlpLivePipeline:
             self._readers = []
             self._streamlink_session = None
             self._closed = True
+            if self.capture_format == "youtube_dash" and readers:
+                self._media_duration = self._dash_duration_base + readers[0].received_duration
             self._update_statistics()
             await self._write_losscheck()
             if self._capture_ready and not self._capture_ready.done():
@@ -1490,6 +1522,7 @@ class YtdlpLivePipeline:
         quality: str,
         cookie_str: Optional[str],
         cookie_file: Optional[str] = None,
+        dash: bool = False,
     ) -> tuple[str, dict[str, str], Optional[str]]:
         """yt-dlp로 라이브 HLS URL과 HTTP 헤더를 추출한다.
 
@@ -1509,7 +1542,11 @@ class YtdlpLivePipeline:
             else "best[protocol^=m3u8]"
         )
         youtube = is_youtube_url(page_url)
-        if youtube:
+        if youtube and dash:
+            preference = "worst" if quality == "worst" else "best"
+            limit = f"[height<={height[1]}]" if height else ""
+            fmt = f"{preference}video{limit}+bestaudio"
+        elif youtube:
             settings = get_settings()
             sabr_priority = getattr(settings, "youtube_sabr_priority", "auto")
             codec_priority = getattr(settings, "youtube_codec_priority", "av1")
@@ -1572,6 +1609,8 @@ class YtdlpLivePipeline:
         if is_youtube_url(page_url):
             cmd.extend(require_runtime_cli_options())
             cmd.extend(['--no-playlist', '--socket-timeout', '10', '--extractor-retries', '1', '--sleep-requests', '1'])
+            if dash:
+                cmd.append("--live-from-start")
 
         cookie_file_path: Optional[str] = None
         if cookie_file:
@@ -1611,6 +1650,25 @@ class YtdlpLivePipeline:
             )
 
         info = _json.loads(stdout.decode())
+        if dash:
+            tracks = info.get("requested_formats") or []
+            if (len(tracks) != 2 or tracks[0].get("vcodec") in (None, "none")
+                    or tracks[1].get("acodec") in (None, "none")
+                    or any(track.get("protocol") != "http_dash_segments_generator"
+                           or not track.get("target_duration") for track in tracks)):
+                raise RecordingError("youtube_dash_unavailable", "이 방송에서 DASH 원본을 제공하지 않습니다.")
+            if self._dash_source and [
+                (track.get("format_id"), track.get("vcodec"), track.get("acodec"))
+                for track in tracks
+            ] != [
+                (track.get("format_id"), track.get("vcodec"), track.get("acodec"))
+                for track in self._dash_source
+            ]:
+                raise RecordingError("container_changed", "재연결된 영상·음성 형식이 달라졌습니다. 원본을 보관합니다.")
+            self._dash_source = tracks
+            self.recording_resolution = {key: tracks[0].get(key) for key in ("width", "height", "fps")}
+            return tracks[0]["url"], tracks[0].get("http_headers") or {}, None
+        self.recording_resolution = {key: info.get(key) for key in ("width", "height", "fps")}
 
         selected = info
         hls_url: Optional[str] = info.get("url")
@@ -1640,6 +1698,32 @@ class YtdlpLivePipeline:
 
         self._logger.debug(f"[{self._channel_id}] HLS URL 추출 완료")
         return hls_url, http_headers, cookies
+
+    async def _resolve_stream_spec(self, engine, channel_id, quality):
+        if hasattr(engine, "resolve_stream_spec"):
+            spec = await engine.resolve_stream_spec(channel_id, quality)
+            self.recording_resolution = {key: spec.get(key) for key in ("width", "height", "fps")}
+            return spec["url"], spec["headers"], spec["cookies"]
+        return await engine.resolve_stream(channel_id, quality)
+
+    async def _extract_youtube_source(self, page_url, quality, cookie_file=None):
+        height = re.match(r"(\d+)p", quality)
+        settings = get_settings()
+        use_dash = (bool(self._dash_source) or settings.youtube_time_machine_enabled
+                    or quality == "best" or height and int(height[1]) > 1080)
+        if use_dash:
+            try:
+                return await self._extract_hls_url(page_url, quality, None,
+                                                   cookie_file=cookie_file, dash=True)
+            except Exception as error:
+                # Authentication, throttling and network failures must not be
+                # disguised as a successful lower-quality recording.
+                unavailable = (getattr(error, "code", None) == "youtube_dash_unavailable"
+                               or "requested format is not available" in str(error).lower())
+                if not unavailable or self._dash_source or settings.youtube_time_machine_enabled:
+                    raise
+                self._logger.info("YouTube DASH 미제공 · HLS 원본으로 전환")
+        return await self._extract_hls_url(page_url, quality, None, cookie_file=cookie_file)
 
     @staticmethod
     def _is_chzzk_live_page(page_url: str) -> bool:
@@ -1815,6 +1899,7 @@ class YtdlpLivePipeline:
             "end_reason": self.end_reason,
             "session_id": self.session_id,
             "capture_format": self.capture_format,
+            "recording_resolution": self.recording_resolution,
             "cdn": self.cdn,
             "warning_message": "live.twitchAdWaiting" if self._twitch_ad_waiting() else self.warning_message,
             "continuity_source": dict(self.continuity_source),

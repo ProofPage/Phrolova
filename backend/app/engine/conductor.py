@@ -1136,6 +1136,13 @@ class Conductor:
                 from app.engine.youtube_support import with_youtube_cookie_fallback
 
                 async def resolve_youtube(selected_quality):
+                    extract = getattr(pipeline, "_extract_youtube_source", None)
+                    if extract is not None:
+                        return await with_youtube_cookie_fallback(
+                            lambda cookie_file: extract(
+                                live_url, selected_quality, cookie_file=cookie_file
+                            )
+                        )
                     return await with_youtube_cookie_fallback(
                         lambda cookie_file: pipeline._extract_hls_url(
                             live_url, selected_quality, None, cookie_file=cookie_file
@@ -1144,7 +1151,14 @@ class Conductor:
 
                 extra["source_resolver"] = resolve_youtube
                 cookie_str = None
-            elif task.platform in (Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY):
+            elif task.platform == Platform.CIME:
+                extra["source_resolver"] = (
+                    lambda selected_quality: pipeline._resolve_stream_spec(
+                        engine, task.channel_id, selected_quality
+                    )
+                )
+                cookie_str = None
+            elif task.platform in (Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY):
                 extra["source_resolver"] = (
                     lambda selected_quality: engine.resolve_stream(
                         task.channel_id, selected_quality

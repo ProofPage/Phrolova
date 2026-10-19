@@ -106,6 +106,45 @@ def test_segment_fetch_failure_is_not_silently_skipped(message):
     assert writer.session.http.get.call_args.kwargs["retries"] == 1
 
 
+def test_segment_inherits_stream_query_parameters():
+    writer = object.__new__(rplay_stream.RplayReader.__writer__)
+    writer.closed = False
+    writer.timeout = 30
+    writer.stream_data = False
+    writer.create_request_params = Mock(return_value={})
+    mock_get = Mock(return_value=SimpleNamespace())
+    writer.session = SimpleNamespace(http=SimpleNamespace(get=mock_get))
+    stream_url = "https://livestream.rplay.live/live/123/abr.m3u8?creatorId=abc&token=xyz"
+    writer.reader = SimpleNamespace(stream=SimpleNamespace(url=stream_url, channel_id="123", quality="720p"))
+    writer.fetch(SimpleNamespace(uri="https://livestream.rplay.live/live/123/segment_0.ts", num=1))
+    called_url = mock_get.call_args.args[0]
+    from urllib.parse import parse_qs, urlsplit
+    query = parse_qs(urlsplit(called_url).query)
+    assert query["creatorId"] == ["abc"] and query["token"] == ["xyz"]
+
+
+def test_segment_403_renews_token_and_retries_successfully(monkeypatch):
+    writer = object.__new__(rplay_stream.RplayReader.__writer__)
+    writer.closed = False
+    writer.timeout = 30
+    writer.stream_data = False
+    writer.create_request_params = Mock(return_value={})
+    success_response = SimpleNamespace()
+    mock_get = Mock(side_effect=[StreamError("403 Forbidden"), success_response])
+    writer.session = SimpleNamespace(http=SimpleNamespace(get=mock_get))
+    old_stream = "https://livestream.rplay.live/live/123/abr.m3u8?token=old"
+    stream_obj = SimpleNamespace(url=old_stream, args={"url": old_stream}, channel_id=CID, quality="720p")
+    writer.reader = SimpleNamespace(stream=stream_obj)
+    new_stream = "https://livestream.rplay.live/live/123/abr.m3u8?token=fresh_token"
+    monkeypatch.setattr(rplay_stream.RplayLiveEngine, "resolve_stream", AsyncMock(return_value=(new_stream, {}, None)))
+    result = writer.fetch(SimpleNamespace(uri="https://livestream.rplay.live/live/123/segment_0.ts", num=1))
+    assert result is success_response
+    assert mock_get.call_count == 2
+    from urllib.parse import parse_qs, urlsplit
+    called_url = mock_get.call_args_list[1].args[0]
+    assert parse_qs(urlsplit(called_url).query)["token"] == ["fresh_token"]
+
+
 def test_mid_segment_disconnect_reaches_guarded_reader():
     from requests.exceptions import ChunkedEncodingError
     writer = object.__new__(rplay_stream.RplayReader.__writer__)

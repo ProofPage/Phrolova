@@ -1,5 +1,6 @@
 """Renew server-authorized IVS playlists without restarting HLS sequence tracking."""
 import asyncio
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from streamlink.exceptions import StreamError
 from streamlink.stream.hls import HLSStream
@@ -44,11 +45,43 @@ class RplayReader(HLSStream.__reader__):
         def _fetch(self, url, **request_params):
             if self.closed:
                 return None
+            stream_obj = getattr(getattr(self, "reader", None), "stream", None)
+            base_url = getattr(stream_obj, "url", "")
+            base_query = parse_qsl(urlsplit(base_url).query)
+            if base_query:
+                parts = urlsplit(url)
+                current_query = dict(parse_qsl(parts.query))
+                for k, v in base_query:
+                    if k not in current_query:
+                        current_query[k] = v
+                url = urlunsplit(parts._replace(query=urlencode(current_query)))
+            attempts = (
+                int(self.session.options.get("stream-segment-attempts") or 3)
+                if hasattr(self.session, "options")
+                else 1
+            )
             try:
                 return self.session.http.get(
-                    url, timeout=self.timeout, retries=1, exception=StreamError,
+                    url, timeout=self.timeout, retries=attempts, exception=StreamError,
                     **request_params)
-            except StreamError:
+            except StreamError as err:
+                if stream_obj and getattr(stream_obj, "channel_id", None):
+                    try:
+                        new_url, _, _ = asyncio.run(
+                            RplayLiveEngine().resolve_stream(stream_obj.channel_id, stream_obj.quality)
+                        )
+                        if media_allowed(new_url):
+                            stream_obj.args["url"] = new_url
+                            new_query = dict(parse_qsl(urlsplit(new_url).query))
+                            parts = urlsplit(url)
+                            current_query = dict(parse_qsl(parts.query))
+                            current_query.update(new_query)
+                            retry_url = urlunsplit(parts._replace(query=urlencode(current_query)))
+                            return self.session.http.get(
+                                retry_url, timeout=self.timeout, retries=attempts, exception=StreamError,
+                                **request_params)
+                    except Exception:
+                        pass
                 raise RecordingError(
                     "rplay_segment_connection",
                     "알플레이 영상 조각 수신이 실패했습니다. 새 재생 주소로 재연결합니다.",

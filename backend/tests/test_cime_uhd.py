@@ -267,7 +267,8 @@ def test_streamlink_uses_renewable_scoped_uhd_auth(api, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_real_single_fmp4_4k_capture_and_finalization(local_hls, monkeypatch):
+@pytest.mark.parametrize("output_format", ["mkv", "mp4"])
+async def test_real_single_fmp4_4k_capture_and_finalization(local_hls, monkeypatch, output_format):
     from app.engine.media_inspection import probe_media
     from app.engine.pipeline import YtdlpLivePipeline
     from app.engine.recording_finalizer import RecordingFinalizer
@@ -308,22 +309,26 @@ async def test_real_single_fmp4_4k_capture_and_finalization(local_hls, monkeypat
     try:
         await pipeline.start_recording(stream_obj="https://ci.me/@fixture/live", quality="2160p5",
                                        output_dir=str(directory / "capture"),
-                                       source_resolver=lambda quality: engine.resolve_stream("fixture", quality))
+                                       source_resolver=lambda quality: pipeline._resolve_stream_spec(engine, "fixture", quality))
         await asyncio.wait_for(asyncio.shield(pipeline._feeder_task), 30)
         await pipeline.stop_recording()
         assert pipeline.state.value == "completed" and pipeline.capture_format == "fmp4"
+        assert pipeline.get_status()["recording_resolution"] == {"width": 3840, "height": 2160, "fps": 5}
         captured = probe_media(pipeline.output_path)
         assert captured["streams"] == {"video", "audio"}
         assert next(track for track in captured["tracks"] if track["codec_type"] == "video")["height"] == 2160
-        job_id = manager.register_capture("cime:fixture", pipeline, channel(),
-                                          {"output_format": "mkv", "keep_source_ts": True})
+        original = Path(pipeline.output_path).read_bytes()
+        job_id = manager.register_capture("cime:fixture", pipeline, channel("cime"),
+                                          {"output_format": output_format, "keep_source_ts": True})
         await manager.capture_finished(job_id, pipeline)
         job = await terminal(manager, job_id)
         assert job["state"] == "completed", job
         output = probe_media(job["output_path"])
         assert output["streams"] == {"video", "audio"}
         assert next(track for track in output["tracks"] if track["codec_type"] == "video")["width"] == 3840
-        assert Path(job["output_path"]).suffix == ".mkv"
+        assert Path(job["output_path"]).suffix == "." + output_format
+        assert Path(pipeline.output_path).read_bytes() == original
+        assert not list(Path(pipeline.output_path).parent.glob("*.ts"))
     finally:
         await pipeline.stop_recording()
         await manager.close()
