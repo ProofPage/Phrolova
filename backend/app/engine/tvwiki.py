@@ -43,6 +43,7 @@ def _catalog(route, final, body, doc):
     title = re.sub(r'\s+다시보기\s*-\s*티비위키\s*$', '', titles[0].text).strip() if titles else ''
     if not title:
         raise EpisodeSiteError('티비위키 작품 제목을 확인할 수 없습니다.')
+    has_player = bool(doc.find('iframe', id='view_iframe'))
     episodes = {}
     for link in doc.find('a', cls='ep-link', href=None):
         label = link.text.strip()
@@ -55,8 +56,10 @@ def _catalog(route, final, body, doc):
         if not episode['episode']:
             continue
         number = re.search(r'(\d+(?:\.\d+)?)\s*(?:화|회)(?:\s|$)', label)
+        is_current = episode['episode'] == route['episode']
+        available = has_player if is_current else True
         episodes[episode['episode']] = dict(id=episode['episode'], title=label,
-            url=episode['url'], number=float(number[1]) if number else None, available=True)
+            url=episode['url'], number=float(number[1]) if number else None, available=available)
     total = re.search(r'\btotalEpisodes\s*:\s*(\d+)', body)
     incomplete = bool(total and int(total[1]) > len(episodes))
     if route['episode']:
@@ -184,7 +187,7 @@ def extract_tvwiki_episode(route, client):
     catalog = _catalog(route, final, body, doc)
     frames = doc.find('iframe', id='view_iframe')
     if len(frames) != 1:
-        raise EpisodeSiteError('티비위키 본편 플레이어를 확인할 수 없습니다.')
+        raise EpisodeSiteError('아직 본편 영상이 준비되지 않았거나 재생할 수 없는 회차입니다.')
     raw = frames[0].attrs.get('data-session1', '')
     try:
         if len(raw) > 32768:
