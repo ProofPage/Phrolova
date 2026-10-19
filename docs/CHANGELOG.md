@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.1.2] - 2026-10-19
+
+### Fixed
+- Extended Streamlink read timeout and segment queue deadline to 90s/60s to prevent transient network read timeouts (`Read timeout`) during live stream recording.
+
 ## [2.1.1] - 2026-10-19
 
 ### Fixed
@@ -1341,7 +1346,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.1...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.2...HEAD
+[2.1.2]: https://github.com/ProofPage/Phrolova/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/ProofPage/Phrolova/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/ProofPage/Phrolova/compare/v2.0.99...v2.1.0
 [2.0.99]: https://github.com/ProofPage/Phrolova/compare/v2.0.98...v2.0.99
