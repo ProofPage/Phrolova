@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.0.95] - 2026-10-19
+
+### Fixed
+- Treat post-broadcast private and unavailable YouTube stream addresses as clean offline states rather than retryable monitoring failures, preventing infinite automatic recording loops and error spam.
+- Classify unavailable/private stream errors as non-retryable in recording error handling.
+
 ## [2.0.94] - 2026-10-19
 
 ### Changed
@@ -1295,7 +1301,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.94...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.95...HEAD
+[2.0.95]: https://github.com/ProofPage/Phrolova/compare/v2.0.94...v2.0.95
 [2.0.94]: https://github.com/ProofPage/Phrolova/compare/v2.0.93...v2.0.94
 [2.0.93]: https://github.com/ProofPage/Phrolova/compare/v2.0.92...v2.0.93
 [2.0.92]: https://github.com/ProofPage/Phrolova/compare/v2.0.91...v2.0.92
