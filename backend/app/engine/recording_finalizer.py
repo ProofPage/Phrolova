@@ -319,6 +319,10 @@ class RecordingFinalizer:
             file_size_bytes=pipeline.file_size_bytes,
         )
         status = pipeline.get_status()
+        if getattr(pipeline, "_sequential_sources", False):
+            job["source_layout"] = "sequential"
+            job["keep_source_ts"] = True
+            job["warning_message"] = "live.twitchCaptureSplit"
         if status.get('continuity_events'):
             job.setdefault('diagnostics', {})['continuity'] = status['continuity_events']
         if status.get('continuity_source'):
@@ -616,6 +620,7 @@ class RecordingFinalizer:
         logger = get_platform_logger(job.get("platform", "external"), "files")
         proc = None
         stderr_task = None
+        concat = None
         try:
             if not job["writer_closed"]:
                 raise RuntimeError("녹화 종료 확인 후 변환할 수 있습니다.")
@@ -642,7 +647,14 @@ class RecordingFinalizer:
             }
             if "video" not in expected:
                 raise RuntimeError("원본에서 영상 스트림을 찾지 못했습니다.")
-            duration = inputs[0]["duration"]
+            sequential = job.get("source_layout") == "sequential"
+            if sequential:
+                signature = lambda m: [(t.get("codec_type"), t.get("codec_name"), t.get("width"),
+                                        t.get("height"), t.get("sample_rate"), t.get("channels"))
+                                       for t in m["tracks"] if t.get("codec_type") in ("video", "audio")]
+                if any(signature(m) != signature(inputs[0]) for m in inputs[1:]):
+                    raise RuntimeError("구간별 영상·음성 형식이 달라 자동 병합하지 않습니다. 모든 원본을 보관했습니다.")
+            duration = sum(m["duration"] or 0 for m in inputs) if sequential else inputs[0]["duration"]
             job.update(
                 state="converting",
                 processing_stage="conversion",
@@ -677,10 +689,16 @@ class RecordingFinalizer:
                     "-n",
                     "-ignore_unknown",
                 ]
-                for source in sources:
-                    cmd += ["-i", str(source)]
+                if sequential:
+                    concat = candidate.with_suffix(".concat")
+                    concat.write_text("".join("file '" + str(p.resolve()).replace("\\", "/").replace("'", "'\\''") + "'\n"
+                                              for p in sources), encoding="utf-8")
+                    cmd += ["-f", "concat", "-safe", "0", "-i", str(concat)]
+                else:
+                    for source in sources:
+                        cmd += ["-i", str(source)]
                 cmd += ["-map", "0:v?"]
-                if len(sources) == 1:
+                if len(sources) == 1 or sequential:
                     cmd += ["-map", "0:a?"]
                 else:
                     for index in range(1, len(sources)):
@@ -778,7 +796,7 @@ class RecordingFinalizer:
             for kind in expected:
                 before = [
                     t
-                    for m in inputs
+                    for m in (inputs[:1] if sequential else inputs)
                     for t in m["tracks"]
                     if t.get("codec_type") == kind
                 ]
@@ -912,5 +930,7 @@ class RecordingFinalizer:
                 await proc.wait()
             if stderr_task:
                 await asyncio.gather(stderr_task, return_exceptions=True)
+            if concat is not None:
+                concat.unlink(missing_ok=True)
             if proc:
                 logger.debug("녹화 변환 FFmpeg 종료 · 종료코드=%s", proc.returncode)

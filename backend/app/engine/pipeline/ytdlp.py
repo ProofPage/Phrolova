@@ -68,6 +68,7 @@ class YtdlpLivePipeline:
         self._ended_at = None
         self._readers = []
         self._source_files = []
+        self._sequential_sources = False
         self._resume_args = None
         self._quality = "best"
         self.end_reason = None
@@ -518,7 +519,13 @@ class YtdlpLivePipeline:
         )
         asyncio.create_task(self._update_statistics_loop())
         try:
-            await asyncio.wait_for(asyncio.shield(self._capture_ready), 45)
+            while True:
+                try:
+                    await asyncio.wait_for(asyncio.shield(self._capture_ready), 45)
+                    break
+                except asyncio.TimeoutError:
+                    if not self._twitch_ad_waiting():
+                        raise
         except BaseException:
             self._intentional_stop = True
             for reader in list(self._readers):
@@ -643,7 +650,8 @@ class YtdlpLivePipeline:
             def copy_packets():
                 checked = False
                 prefix = bytearray()
-                file = open(self._source_files[index], "ab")
+                source_index = -1 if self._sequential_sources and index == 0 else index
+                file = open(self._source_files[source_index], "ab")
                 last_flush = time.monotonic()
                 try:
                     # Stop the producer first, then read through EOF. Accepted
@@ -741,14 +749,26 @@ class YtdlpLivePipeline:
                                     )
                                 data = bytes(prefix[offset:])
                                 checked = True
-                        file.write(data)
+                        if index == 0 and getattr(self, "_twitch_reconnect_pending", False):
+                            file = self._rotate_twitch_source(file, "connection_recovered")
+                            self._twitch_reconnect_pending = False
+                        stream = getattr(reader, "stream", None)
+                        splitter = getattr(stream, "split_capture_data", None)
+                        pieces = splitter(data) if splitter else [(None, data)]
+                        for boundary, piece in pieces:
+                            if boundary:
+                                if self.capture_format != "ts" or len(readers) != 1:
+                                    raise RecordingError("stream_discontinuity", "스트림 형식이 변경되었습니다. 원본 파일을 보관합니다.", retryable=True)
+                                file = self._rotate_twitch_source(file, boundary)
+                            file.write(piece)
+                            if index == 0 and self.capture_format == "ts":
+                                self._measure_ts(piece)
                         now_mono = time.monotonic()
                         if now_mono - last_flush >= 1.0:
                             file.flush()
                             last_flush = now_mono
                         if index == 0:
                             if self.capture_format == "ts":
-                                self._measure_ts(data)
                                 has_payload = True
                             elif self.capture_format == 'h264':
                                 has_payload = True
@@ -883,6 +903,25 @@ class YtdlpLivePipeline:
         )
         await self._write_losscheck()
 
+    def _rotate_twitch_source(self, file, reason):
+        file.flush()
+        os.fsync(file.fileno())
+        file.close()
+        number = len(self._source_files) + 1
+        path = self._output_path + f".segment{number}.ts.part"
+        following = open(path, "xb")
+        self._source_files.append(path)
+        self._sequential_sources = True
+        self._pcr_last = None
+        self._ts_tail = b""
+        self.warning_message = "live.twitchCaptureSplit"
+        self.continuity_events.append({"kind": "capture_split", "reason": reason,
+                                       "part": number, "at": datetime.now().isoformat()})
+        del self.continuity_events[:-64]
+        self._loss_report.gap({"reason": reason})
+        self._logger.warning("[%s] Twitch 원본 구간 분리: %s · 구간=%s", self._channel_id, reason, number)
+        return following
+
     async def _write_losscheck(self):
         if not self._output_path or not self._file_size_bytes:
             return
@@ -928,6 +967,9 @@ class YtdlpLivePipeline:
                 self._source_page_url, self._quality, self._cookie_str
             )
         self._resume_args = (url, headers, cookies, 0, False, self._quality)
+        if self.capture_format == "ts" and (urlsplit(self._source_page_url).hostname or "") in (
+                "twitch.tv", "www.twitch.tv", "m.twitch.tv", "go.twitch.tv"):
+            self._twitch_reconnect_pending = True
         self._closed = False
         await self._begin_receiver()
 
@@ -1138,9 +1180,9 @@ class YtdlpLivePipeline:
 
             stream_type = KickHLSStream
         if (urlsplit(source_page_url).hostname or "").lower() in ("twitch.tv", "www.twitch.tv", "m.twitch.tv", "go.twitch.tv"):
-            from streamlink.plugins.twitch import TwitchHLSStream
+            from app.engine.twitch_stream import TwitchCaptureStream
 
-            stream_type = TwitchHLSStream
+            stream_type = TwitchCaptureStream
         if YtdlpLivePipeline._is_chzzk_live_page(source_page_url):
             from app.engine.chzzk_stream import ChzzkHLSStream
             ChzzkHLSStream = guarded_hls_stream(ChzzkHLSStream)
@@ -1728,6 +1770,7 @@ class YtdlpLivePipeline:
                 if (
                     self._last_data_at
                     and (datetime.now() - self._last_data_at).total_seconds() > (95 if self._continuity_active else 90)
+                    and not self._twitch_ad_waiting()
                     and not self._stall_detected
                 ):
                     self._stall_detected = True
@@ -1756,7 +1799,7 @@ class YtdlpLivePipeline:
             "session_id": self.session_id,
             "capture_format": self.capture_format,
             "cdn": self.cdn,
-            "warning_message": self.warning_message,
+            "warning_message": "live.twitchAdWaiting" if self._twitch_ad_waiting() else self.warning_message,
             "continuity_source": dict(self.continuity_source),
             "continuity_events": list(self.continuity_events),
             "output_errors": list(self.output_errors),
@@ -1774,6 +1817,15 @@ class YtdlpLivePipeline:
             "download_speed": round(self._download_speed, 2),
             "bitrate": round(self._bitrate, 1),
         }
+
+    def _twitch_ad_waiting(self):
+        from app.engine.twitch_stream import TwitchCaptureStream
+        return any(
+            isinstance(getattr(reader, "stream", None), TwitchCaptureStream)
+            and reader.stream.ad_active
+            and time.monotonic() - reader.stream.last_activity < 90
+            for reader in self._readers
+        )
 
     @staticmethod
     def _write_cookie_file(cookie_str: str) -> str:

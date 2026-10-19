@@ -1,4 +1,6 @@
 {
+  "live.twitchAdWaiting": "等待 Twitch 广告结束 · 不录制广告片段。",
+  "live.twitchCaptureSplit": "跳过广告或时间轴变化后，原始文件将分段保留。",
   "settings.twitchProxyEnabled": "使用 Twitch 高清代理",
   "settings.twitchProxyWarning": "开启后，四个 ReYohoho 代理会收到频道、IP 和通过 URL 中 auth= 传递的已登记登录令牌。运营者可以保留令牌，请仅在信任时开启。代理失败时恢复直连。从下一次画质查询、录制或预览开始生效。",
   "settings.authGuideTitle": "仅认证需要的平台",

@@ -1,4 +1,6 @@
 {
+  "live.twitchAdWaiting": "Esperando anuncios de Twitch · No se graban los anuncios.",
+  "live.twitchCaptureSplit": "Se conservan partes separadas tras omitir anuncios o cambiar la línea temporal.",
   "settings.twitchProxyEnabled": "Usar proxy de calidad de Twitch",
   "settings.twitchProxyWarning": "Los cuatro proxies ReYohoho reciben el canal, la IP y el token de inicio de sesión registrado como auth= en la URL. Sus operadores pueden conservar el token; actívelo solo si confía en ellos. Si fallan, se conecta directamente. Se aplica a la siguiente consulta de calidad, grabación o vista previa.",
   "settings.authGuideTitle": "Autentica solo las plataformas necesarias",

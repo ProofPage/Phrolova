@@ -7,9 +7,9 @@ import { ChevronDown } from 'lucide-react';
 export function PlatformSelectTrigger({ label, dotClass, className = '', ...props }:
     ButtonHTMLAttributes<HTMLButtonElement> & { label: string; dotClass: string }) {
     useLanguage();
-    return <button type="button" {...props} className={`ui-input input-focus w-full flex items-center gap-2 media-platform-trigger ${className}`}>
+    return <button type="button" {...props} className={`ui-input input-focus w-fit max-w-full flex items-center gap-2 media-platform-trigger ${className}`}>
         <span aria-hidden="true" className={`size-2 rounded-full shrink-0 ${dotClass}`} />
-        <span className="flex-1 text-left">{translate(label)}</span>
+        <span className="text-left whitespace-nowrap">{translate(label)}</span>
         <ChevronDown aria-hidden="true" className="size-3 shrink-0 text-ink-faint" />
     </button>;
 }

@@ -1,4 +1,6 @@
 {
+  "live.twitchAdWaiting": "Twitch広告の終了待ち · 広告区間は録画しません。",
+  "live.twitchCaptureSplit": "広告の除外や時間軸の変更により、元データを区間別に保存します。",
   "settings.twitchProxyEnabled": "Twitch高画質プロキシを使用",
   "settings.twitchProxyWarning": "有効にするとReYohohoの4つのプロキシにチャンネル・IP・登録済みログイントークンをURLのauth=で送信します。運営者がトークンを保持できます。信頼する場合のみ有効にしてください。失敗時は直接接続に戻ります。次の画質取得・録画・プレビューから適用されます。",
   "settings.authGuideTitle": "必要なプラットフォームだけ認証",

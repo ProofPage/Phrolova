@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+## [2.0.91] - 2026-10-19
+
+### Fixed
+- Distinguish active Twitch advertisement waits from stalled input, and propagate failed media segment reception to recovery.
+- Split Twitch capture at byte-exact boundaries after skipped ads, discontinuities and reconnections. Preserve original parts and remux compatible sequential parts in order after capture closes.
+- Size live and video platform selectors to their labels, preserving an 8px arrow gap across responsive layouts.
+
 ## [2.0.90] - 2026-10-19
 
 ### Added
@@ -1265,7 +1272,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.90...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.91...HEAD
+[2.0.91]: https://github.com/ProofPage/Phrolova/compare/v2.0.90...v2.0.91
 [2.0.90]: https://github.com/ProofPage/Phrolova/compare/v2.0.89...v2.0.90
 [2.0.89]: https://github.com/ProofPage/Phrolova/compare/v2.0.88...v2.0.89
 [2.0.88]: https://github.com/ProofPage/Phrolova/compare/v2.0.87...v2.0.88

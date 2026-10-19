@@ -1,4 +1,6 @@
 {
+  "live.twitchAdWaiting": "Twitch 광고 구간 대기 중 · 광고 조각은 저장하지 않습니다.",
+  "live.twitchCaptureSplit": "광고 제외 또는 시간축 변경으로 원본을 구간별로 보관합니다.",
   "settings.twitchProxyEnabled": "Twitch 고화질 프록시 사용",
   "settings.twitchProxyWarning": "켜면 ReYohoho 프록시 4곳에 채널·IP와 등록된 로그인 토큰을 URL의 auth= 값으로 전달합니다. 운영자가 토큰을 보유할 수 있으므로 신뢰하는 경우에만 사용하세요. 프록시 실패 시 직접 연결로 복구합니다. 다음 화질 조회·녹화·미리보기부터 적용됩니다.",
   "settings.authGuideTitle": "필요한 플랫폼만 인증하세요",

@@ -1,4 +1,6 @@
 {
+  "live.twitchAdWaiting": "Warten auf Twitch-Werbung · Werbesegmente werden nicht aufgenommen.",
+  "live.twitchCaptureSplit": "Nach übersprungener Werbung oder Zeitachsenänderungen werden Quellen getrennt aufbewahrt.",
   "settings.twitchProxyEnabled": "Twitch-Qualitätsproxy verwenden",
   "settings.twitchProxyWarning": "Die vier ReYohoho-Proxys erhalten Kanal, IP und das gespeicherte Anmeldetoken als auth= in der URL. Betreiber können das Token speichern. Nur bei Vertrauen aktivieren. Bei Proxyfehlern wird direkt verbunden. Gilt ab der nächsten Qualitätsabfrage, Aufnahme oder Vorschau.",
   "settings.authGuideTitle": "Nur benötigte Plattformen anmelden",
