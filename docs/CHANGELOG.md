@@ -8,6 +8,15 @@
 
 ## [Unreleased]
 
+## [2.0.94] - 2026-10-19
+
+### Changed
+- Switch the VOD download URL input from a multiline textarea to a single-line input field, and update helper copy across all 8 languages to remove "separate multiple links with line breaks".
+- Support pressing Enter in the VOD download input to immediately start downloading.
+
+### Fixed
+- Prevent extreme bitrate spikes (hundreds of Mbps) during the first 3 seconds of live recording by deferring bitrate calculation until stable media duration samples accumulate.
+
 ## [2.0.93] - 2026-10-19
 
 ### Fixed
@@ -1286,7 +1295,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.93...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.94...HEAD
+[2.0.94]: https://github.com/ProofPage/Phrolova/compare/v2.0.93...v2.0.94
 [2.0.93]: https://github.com/ProofPage/Phrolova/compare/v2.0.92...v2.0.93
 [2.0.92]: https://github.com/ProofPage/Phrolova/compare/v2.0.91...v2.0.92
 [2.0.91]: https://github.com/ProofPage/Phrolova/compare/v2.0.90...v2.0.91

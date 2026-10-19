@@ -245,7 +245,7 @@
   "download.downloadStarted": "download started.",
   "download.noNewLinksAdded": "No new links added.",
   "download.downloadURLList": "Download URL list",
-  "download.enterVODOrClipLinksSeparateMultipleLinksWithLineBreaks": "Enter VOD or clip links. Separate multiple links with line breaks.",
+  "download.enterVODOrClipLinksSeparateMultipleLinksWithLineBreaks": "Enter a VOD or clip link.",
   "download.addingURLsToTheList": "Adding URLs to the list.",
   "download.requestingDownloadStart": "Requesting download start.",
   "download.enteredLinks": "Entered links",

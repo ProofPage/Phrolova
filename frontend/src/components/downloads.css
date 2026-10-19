@@ -8,7 +8,7 @@
 .download-input-buttons { grid-column: 2; grid-row: 1; align-self: center; }
 .download-input-card.is-dragging { border-color: var(--color-info); }
 .download-input-fields { display: grid; grid-template-columns: max-content minmax(0,1fr); gap: 8px; align-items: start; }
-.download-input-fields textarea { padding: 6px 10px; height: auto; min-height: 34px; line-height: 20px; }
+.download-input-fields input { height: 34px; padding: 6px 10px; }
 .download-input-buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .download-input-buttons .ui-button { min-height: 34px; white-space: nowrap; }
 .download-list-heading { display: flex; align-items: center; gap: 8px; min-width: 0; }

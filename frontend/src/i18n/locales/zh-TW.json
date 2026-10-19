@@ -245,7 +245,7 @@
   "download.downloadStarted": "已開始下載。",
   "download.noNewLinksAdded": "沒有新加入的連結。",
   "download.downloadURLList": "下載 URL 清單",
-  "download.enterVODOrClipLinksSeparateMultipleLinksWithLineBreaks": "請輸入回放或剪輯連結，多個連結請換行分隔。",
+  "download.enterVODOrClipLinksSeparateMultipleLinksWithLineBreaks": "請輸入回放或剪輯連結。",
   "download.addingURLsToTheList": "正在將 URL 新增至清單。",
   "download.requestingDownloadStart": "正在要求開始下載。",
   "download.enteredLinks": "已輸入連結",
