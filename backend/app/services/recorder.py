@@ -292,8 +292,9 @@ class RecorderService:
 
     def on_credentials_updated(self, platform: Optional[str] = None) -> None:
         """인증 정보 변경을 Conductor에 통지한다."""
-        if hasattr(self._conductor, "on_credentials_updated"):
-            self._conductor.on_credentials_updated(platform)
+        conductor = getattr(self, "_conductor", None)
+        if conductor and hasattr(conductor, "on_credentials_updated"):
+            conductor.on_credentials_updated(platform)
 
     def get_auth_status(self) -> dict:
         """인증 상태를 반환한다."""
