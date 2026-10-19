@@ -245,7 +245,7 @@
   "download.downloadStarted": "загрузка начата.",
   "download.noNewLinksAdded": "Новых ссылок нет.",
   "download.downloadURLList": "Список URL для загрузки",
-  "download.enterVODOrClipLinksSeparateMultipleLinksWithLineBreaks": "Введите ссылки на записи или клипы, по одной в строке.",
+  "download.enterVODOrClipLinksSeparateMultipleLinksWithLineBreaks": "Введите ссылку на запись или клип.",
   "download.addingURLsToTheList": "Добавление URL в список.",
   "download.requestingDownloadStart": "Запрос на начало загрузки.",
   "download.enteredLinks": "Введённые ссылки",

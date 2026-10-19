@@ -245,7 +245,7 @@
   "download.downloadStarted": "Download gestartet.",
   "download.noNewLinksAdded": "Keine neuen Links hinzugefügt.",
   "download.downloadURLList": "Download-URL-Liste",
-  "download.enterVODOrClipLinksSeparateMultipleLinksWithLineBreaks": "Video- oder Cliplinks eingeben, einen pro Zeile.",
+  "download.enterVODOrClipLinksSeparateMultipleLinksWithLineBreaks": "Video- oder Cliplink eingeben.",
   "download.addingURLsToTheList": "URLs werden hinzugefügt.",
   "download.requestingDownloadStart": "Downloadstart wird angefordert.",
   "download.enteredLinks": "Eingegebene Links",

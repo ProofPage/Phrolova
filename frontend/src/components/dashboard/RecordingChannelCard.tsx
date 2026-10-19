@@ -135,7 +135,7 @@ const RecordingMetrics = memo(function RecordingMetrics({ recording }: { recordi
         ["live.recordingTime", hasData && finite(value.duration) ? formatDuration(Math.floor(value.duration)) : '—'],
         ["live.fileSize", finite(value.size) ? formatBytes(value.size) : '—'],
         ["live.writeSpeed", hasData && finite(value.speed) ? `${formatNumber(value.speed, {minimumFractionDigits:2, maximumFractionDigits:2})} MB/s` : '—'],
-        ["live.bitrate", hasData && finite(value.bitrate) ? `${formatNumber(value.bitrate / 1000, {minimumFractionDigits:2, maximumFractionDigits:2})} Mbps` : '—'],
+        ["live.bitrate", hasData && finite(value.bitrate) && value.bitrate > 0 ? `${formatNumber(value.bitrate / 1000, {minimumFractionDigits:2, maximumFractionDigits:2})} Mbps` : '—'],
     ];
     return <dl className={clsx('recording-metrics', !active && 'is-inactive')} aria-label={t("live.recordingDetails")}>
         {metrics.map(([label, text]) => <div key={label}><dt>{t(label)}</dt><dd className={label === "live.recordingTime" && active ? 'text-ok' : undefined}>{text}</dd></div>)}

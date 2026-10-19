@@ -245,7 +245,7 @@
   "download.downloadStarted": "のダウンロードを開始しました。",
   "download.noNewLinksAdded": "新しく追加されたリンクはありません。",
   "download.downloadURLList": "ダウンロードURL一覧",
-  "download.enterVODOrClipLinksSeparateMultipleLinksWithLineBreaks": "アーカイブやクリップのリンクを入力してください。複数の場合は改行で区切れます。",
+  "download.enterVODOrClipLinksSeparateMultipleLinksWithLineBreaks": "アーカイブまたはクリップのリンクを入力してください。",
   "download.addingURLsToTheList": "URLを一覧に登録しています。",
   "download.requestingDownloadStart": "ダウンロード開始を要求しています。",
   "download.enteredLinks": "入力したリンク",

@@ -1726,7 +1726,8 @@ class YtdlpLivePipeline:
             # HLS segments arrive in bursts. Bitrate describes the saved media,
             # not how quickly the latest segment happened to reach the disk.
             duration = self.duration_seconds
-            self._bitrate = current_size * 8 / duration / 1000 if duration > 0 else 0.0
+            # 초기 3초 미만 구간에서는 분모가 극소화되어 수백 Mbps로 스파이크되는 현상을 방지한다.
+            self._bitrate = current_size * 8 / duration / 1000 if duration >= 3.0 else 0.0
             now = datetime.now()
             for reader in self._readers:
                 continuity = getattr(getattr(reader, "stream", None), "continuity", None)
