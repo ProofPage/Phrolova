@@ -967,7 +967,24 @@ class Conductor:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self._monitor_failure(task, e)
+                code = getattr(e, "code", None)
+                err_text = str(e).lower()
+                is_ended = (
+                    code in ("rplay_authentication", "rplay_access", "rplay_not_found", "not_available")
+                    or any(m in err_text for m in ("비공개", "삭제", "private", "unavailable"))
+                )
+                if is_ended and task.is_live:
+                    logger = get_platform_logger(composite_key, "live")
+                    logger.info(f"[{composite_key}] ⚫ 방송 비공개/종료 감지.")
+                    task.is_live = False
+                    task.monitor_error = None
+                    task.monitor_error_detail = None
+                    task.monitor_status = "watching"
+                    await self._handle_live_ended(composite_key, task)
+                    self._reset_retry(task)
+                    self._broadcast_status()
+                else:
+                    self._monitor_failure(task, e)
             delay = interval
             if task.retry_at and self._can_auto_record(task):
                 delay = min(

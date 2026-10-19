@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+## [2.1.3] - 2026-10-19
+
+### Fixed
+- Fixed an issue where channels transitioning to private/restricted/unauthorized post-broadcast caused infinite monitoring error logging loops (`감시 실패 · 누적=...`).
+- Automatically classify post-broadcast 403 Forbidden / restricted responses as clean broadcast completion (`is_live: False`).
+
 ## [2.1.2] - 2026-10-19
 
 ### Fixed
@@ -1346,7 +1352,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.2...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.3...HEAD
+[2.1.3]: https://github.com/ProofPage/Phrolova/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/ProofPage/Phrolova/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/ProofPage/Phrolova/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/ProofPage/Phrolova/compare/v2.0.99...v2.1.0
