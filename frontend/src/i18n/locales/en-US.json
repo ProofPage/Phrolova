@@ -1,4 +1,6 @@
 {
+  "settings.twitchProxyEnabled": "Use Twitch quality proxy",
+  "settings.twitchProxyWarning": "When enabled, the four ReYohoho proxies receive your channel, IP and registered login token as auth= in the URL. Operators can retain the token; enable only if you trust them. Falls back to direct access on proxy failure. Applies to the next quality lookup, recording or preview.",
   "settings.authGuideTitle": "Authenticate only the platforms you need",
   "settings.authGuide": "Select a platform to sign in or import credentials in the panel below. Browser sign-in is separate from this app.",
   "settings.authPermissionHelp": "A registered file does not guarantee access to every stream. The platform checks subscriptions, purchases and age verification.",

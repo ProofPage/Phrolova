@@ -1,4 +1,6 @@
 {
+  "settings.twitchProxyEnabled": "Usar proxy de calidad de Twitch",
+  "settings.twitchProxyWarning": "Los cuatro proxies ReYohoho reciben el canal, la IP y el token de inicio de sesión registrado como auth= en la URL. Sus operadores pueden conservar el token; actívelo solo si confía en ellos. Si fallan, se conecta directamente. Se aplica a la siguiente consulta de calidad, grabación o vista previa.",
   "settings.authGuideTitle": "Autentica solo las plataformas necesarias",
   "settings.authGuide": "Selecciona una plataforma para iniciar sesión o importar credenciales en el panel inferior. La sesión del navegador es independiente.",
   "settings.authPermissionHelp": "Registrar un archivo no garantiza acceso a todas las emisiones. La plataforma comprueba suscripciones, compras y edad.",

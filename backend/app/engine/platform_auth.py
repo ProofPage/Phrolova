@@ -167,5 +167,5 @@ async def with_platform_cookie_fallback(platform: str, operation: Callable[[str 
 def redact_media_error(error: object, *, max_length: int = 1000) -> str:
     text = re.sub(r'https?://[^\s\]\)\"\']+', '[영상 주소]', str(error))
     text = re.sub(r'(?i)(\b(?:url|uri):\s*)/[^\s)]+', r'\1[영상 경로]', text)
-    text = re.sub(r'(?i)(cookie|authorization|token|sessionid(?:_ss)?|sid_tt|sid_guard|ttwid)\s*[:=]\s*[^\r\n]+', r'\1=[비공개]', text)
+    text = re.sub(r'(?i)(cookie|authorization|\bauth\b|token|sessionid(?:_ss)?|sid_tt|sid_guard|ttwid)\s*[:=]\s*[^\r\n]+', r'\1=[비공개]', text)
     return text[:max_length]

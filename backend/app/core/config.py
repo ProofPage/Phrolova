@@ -231,6 +231,7 @@ class Settings(BaseSettings):
     cime_cookie_file: Optional[str] = None
     kick_cookie_file: Optional[str] = None
     twitch_cookie_file: Optional[str] = None
+    twitch_proxy_enabled: bool = False
     tiktok_cookie_file: Optional[str] = None
     bilibili_cookie_file: Optional[str] = None
     pandalive_cookie_file: Optional[str] = None
