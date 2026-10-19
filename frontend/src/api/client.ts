@@ -85,6 +85,7 @@ export interface Channel {
         session_id?: string;
         has_data?: boolean;
         capture_format?: string;
+        recording_resolution?: { width?: number; height?: number; fps?: number } | null;
         cdn?: string;
         warning_message?: string;
         continuity_source?: {

@@ -8,6 +8,17 @@
 
 ## [Unreleased]
 
+## [2.0.97] - 2026-10-19
+
+### Added
+- YouTube 4K live recording support via signed live DASH streams (both live-from-start and real-time capture).
+- Pass actual recorded resolution to UI status display.
+- Direct remux from native fMP4 to MKV/MP4 for CIME 4K recordings without redundant TS intermediate copy.
+
+### Fixed
+- Fixed RPLAY live segment fetch failures (`알플레이 영상 조각 수신이 실패했습니다`) by inheriting viewer auth query parameters from stream URL into segment requests.
+- Added in-flight segment token renewal on 403 Forbidden to prevent stream disconnects during RPLAY live recording.
+
 ## [2.0.96] - 2026-10-19
 
 ### Fixed
@@ -1308,7 +1319,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.96...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.0.97...HEAD
+[2.0.97]: https://github.com/ProofPage/Phrolova/compare/v2.0.96...v2.0.97
 [2.0.96]: https://github.com/ProofPage/Phrolova/compare/v2.0.95...v2.0.96
 [2.0.95]: https://github.com/ProofPage/Phrolova/compare/v2.0.94...v2.0.95
 [2.0.94]: https://github.com/ProofPage/Phrolova/compare/v2.0.93...v2.0.94
