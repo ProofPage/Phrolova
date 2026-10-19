@@ -30,7 +30,7 @@ export default function SystemLogs() {
     const [loading, setLoading] = useState(true);
     const [listError, setListError] = useState(false);
     const [clearing, setClearing] = useState(false);
-    const autoSelected = useRef(false);
+    const userNavigatedBack = useRef(false);
     const listRequest = useRef<AbortController | null>(null);
     const toast = useToast();
     const confirm = useConfirm();
@@ -45,9 +45,16 @@ export default function SystemLogs() {
             if (request.signal.aborted) return;
             setFiles(data);
             setListError(false);
-            if (!autoSelected.current && data.length) {
-                autoSelected.current = true;
-                setSelectedName(data.find(file => file.filename === "service.log")?.filename ?? data[0].filename);
+            if (data.length) {
+                setSelectedName(prev => {
+                    if (prev && data.some(file => file.filename === prev)) {
+                        return prev;
+                    }
+                    if (!userNavigatedBack.current) {
+                        return data.find(file => file.filename === "service.log")?.filename ?? data[0].filename;
+                    }
+                    return null;
+                });
             }
         } catch {
             if (!request.signal.aborted) setListError(true);
@@ -82,8 +89,9 @@ export default function SystemLogs() {
             const result = await api.clearSystemLogs();
             listRequest.current?.abort();
             listRequest.current = null;
-            setSelectedName(null);
-            await loadFiles();
+            userNavigatedBack.current = false;
+            setSelectedName("service.log");
+            await loadFiles(true);
             toast.success(localizedStatus(result.message, "logs.logsCleared"));
         } catch {
             toast.error("logs.couldNotClearLogs");
@@ -113,7 +121,7 @@ export default function SystemLogs() {
                 <p className="logs-panel-hint">{t("logs.listRefreshInterval")}</p>
                 {listError && files.length > 0 && <div role="status" className="logs-list-error">{t("logs.couldNotLoadTheLogList")}</div>}
                 {loading && !files.length ? <p className="logs-empty" role="status">{t("logs.loadingLogFiles")}</p> : !files.length ? <EmptyState title={t(listError ? "logs.couldNotLoadTheLogList" : "logs.noLogFiles")} description={listError ? t("settings.checkTheServerConnectionAndTryAgain") : undefined} compact /> : <div className="logs-file-list">
-                    {files.map(file => <button type="button" key={file.filename} onClick={() => setSelectedName(file.filename)} aria-pressed={file.filename === selectedName} className={clsx("logs-file-option", file.filename === selectedName && "logs-file-selected")}>
+                    {files.map(file => <button type="button" key={file.filename} onClick={() => { userNavigatedBack.current = false; setSelectedName(file.filename); }} aria-pressed={file.filename === selectedName} className={clsx("logs-file-option", file.filename === selectedName && "logs-file-selected")}>
                         <div className="flex items-center justify-between gap-2">
                             <span className="logs-file-name">{file.filename}</span>
                             <span className={clsx("text-[10px] font-medium px-1.5 py-0.5 rounded", file.filename === "service.log" ? "bg-ok/10 text-ok" : "bg-surface-3 text-ink-muted")}>
@@ -172,7 +180,7 @@ export default function SystemLogs() {
             </section>
             <section className={clsx("logs-content-panel", !selectedFile && "logs-panel-mobile-hidden")} aria-label={t("logs.title")}>
                 {selectedFile ? <>
-                    <div className="logs-back"><Button variant="ghost" onClick={() => setSelectedName(null)}>{t("logs.logFiles")}</Button></div>
+                    <div className="logs-back"><Button variant="ghost" onClick={() => { userNavigatedBack.current = true; setSelectedName(null); }}>{t("logs.logFiles")}</Button></div>
                     <LogContentViewer key={selectedFile.filename} file={selectedFile} />
                 </> : <EmptyState title={t("logs.chooseALogFileFromTheListOnTheLeft")} compact />}
             </section>

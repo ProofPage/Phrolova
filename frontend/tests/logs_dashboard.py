@@ -207,9 +207,7 @@ async def main():
         assert state['clears'] == 0
         await page.get_by_role('button', name=d['logs.clearLogs'], exact=True).click()
         await page.get_by_role('dialog').get_by_role('button', name=d['logs.clearLogs'], exact=True).click()
-        await expect(page.locator('.logs-content-panel')).to_contain_text(d['logs.chooseALogFileFromTheListOnTheLeft'])
         assert state['clears'] == 1
-        await page.locator('.logs-file-option').filter(has_text='service.log').click()
         await expect(page.get_by_text(d['logs.noLogsYetWaitingForNewEntries'], exact=True)).to_be_visible()
         await expect(page.locator('[data-log-level="all"] strong')).to_have_text('0')
         await browser.close()
