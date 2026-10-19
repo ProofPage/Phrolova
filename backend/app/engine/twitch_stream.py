@@ -1,11 +1,69 @@
-"""Twitch advertisement state and byte-exact capture boundaries."""
+"""Twitch advertisement state and byte-exact capture boundaries.
+
+TTV-AB 23.0.2 (GosuDRM/TTV-AB) ad metadata signature patterns are integrated into
+Streamlink's TwitchM3U8Parser for zero-ad capture precision.
+"""
 from collections import deque
 from dataclasses import replace
+import re
 import threading
 import time
 
-from streamlink.plugins.twitch import TwitchHLSStream
+from streamlink.plugins.twitch import TwitchHLSStream, TwitchM3U8Parser
 from streamlink.exceptions import StreamError
+
+# TTV-AB 23.0.2 comprehensive ad metadata pattern
+TTV_AB_AD_METADATA_RE = re.compile(
+    r'stitched-ad|X-TV-TWITCH-AD|/adsquared/|SCTE35-OUT|EXT-X-CUE-OUT'
+    r'|twitch-(?:stitched-)?ad|midroll',
+    re.I
+)
+
+# Monkey-patch Streamlink's Twitch DateRange parser with TTV-AB rules
+_orig_is_daterange_ad = TwitchM3U8Parser._is_daterange_ad
+
+
+def _ttv_ab_is_daterange_ad(daterange):
+    if _orig_is_daterange_ad(daterange):
+        return True
+    cls = str(getattr(daterange, "classname", "") or "")
+    dr_id = str(getattr(daterange, "id", "") or "")
+    if TTV_AB_AD_METADATA_RE.search(cls) or TTV_AB_AD_METADATA_RE.search(dr_id):
+        return True
+    attrs = getattr(daterange, "attributes", None)
+    if isinstance(attrs, dict):
+        for k, v in attrs.items():
+            if TTV_AB_AD_METADATA_RE.search(str(k)) or TTV_AB_AD_METADATA_RE.search(str(v)):
+                return True
+    return False
+
+
+TwitchM3U8Parser._is_daterange_ad = staticmethod(_ttv_ab_is_daterange_ad)
+
+_orig_is_segment_ad = TwitchM3U8Parser._is_segment_ad
+
+
+def _ttv_ab_is_segment_ad(self, date, title=None):
+    if _orig_is_segment_ad(self, date, title):
+        return True
+    if title and TTV_AB_AD_METADATA_RE.search(title):
+        return True
+    return False
+
+
+TwitchM3U8Parser._is_segment_ad = _ttv_ab_is_segment_ad
+
+_orig_get_segment = TwitchM3U8Parser.get_segment
+
+
+def _ttv_ab_get_segment(self, uri, **data):
+    segment = _orig_get_segment(self, uri, **data)
+    if not segment.ad and uri and TTV_AB_AD_METADATA_RE.search(uri):
+        segment.ad = True
+    return segment
+
+
+TwitchM3U8Parser.get_segment = _ttv_ab_get_segment
 
 
 class TwitchCaptureStream(TwitchHLSStream):

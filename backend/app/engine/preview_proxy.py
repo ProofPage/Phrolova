@@ -188,10 +188,17 @@ class PreviewProxy:
 
         lines = []
         for line in body.splitlines():
-            if (node["platform"] == "twitch" and line.startswith("#EXT-X-DATERANGE:")
-                    and 'X-TV-TWITCH-TRIGGER-URL="' in line):
-                # 영상 재생에 쓰지 않는 Twitch 전용 트리거의 서명 주소는 전달하지 않는다.
-                continue
+            if node["platform"] == "twitch":
+                if (line.startswith("#EXT-X-DATERANGE:")
+                        and ('X-TV-TWITCH-TRIGGER-URL="' in line
+                             or 'twitch-stitched-ad' in line
+                             or 'twitch-ad' in line
+                             or 'stitched-ad' in line
+                             or 'SCTE35' in line)):
+                    # TTV-AB 23.0.2: 불필요한 광고 트리거 및 광고 메타데이터 태그를 필터링하여 플레이어 정체 방지
+                    continue
+                if line.startswith("#EXT-X-CUE-OUT"):
+                    continue
             if line.startswith("#EXT-X-PREFETCH:"):
                 # AWS IVS 등의 저지연 HLS도 미리 읽을 영상 주소를 프록시로 전달한다.
                 line = "#EXT-X-PREFETCH:" + replace(line.split(":", 1)[1].strip())
