@@ -28,8 +28,6 @@ async def vod_capabilities():
         {'id': 'ohli365', 'label': 'platform.ohli365'},
         {'id': 'tvwiki', 'label': 'platform.tvwiki'},
         {'id': 'animaru', 'label': 'platform.animaru'},
-        {'id': 'moeni', 'label': 'platform.moeni'},
-        {'id': 'reanime', 'label': 'platform.reanime'},
         {'id': 'external', 'label': '외부 영상'},
     ], 'prepare': True, 'pause': True, 'file_open': True}
 

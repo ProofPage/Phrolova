@@ -22,9 +22,23 @@ import "../components/anime/lilac.css";
 const STORAGE_BOOKMARKS_KEY = "phrolova_lilac_bookmarks";
 const STORAGE_HISTORY_KEY = "phrolova_lilac_history";
 
+const SRC_LABELS = {
+    zzapflix: "짭플릭스 (Zzapflix)",
+    aniwolf: "애니울프 (AniWolf)",
+    aniweek: "애니위크 (AniWeek)",
+    ohli24: "Ohli24",
+    moeni: "Moeni",
+    reanime: "Re:Anime",
+    anilife: "Anilife",
+    animaru: "Animaru",
+    linkani: "Linkani",
+    tvwiki: "TVWiki",
+};
+
 export default function AnimeView() {
     const { t } = useLanguage();
     const [activeTab, setActiveTab] = useState<"home" | "schedule" | "catalog" | "library">("home");
+    const [currentSource, setCurrentSource] = useState<string>("ohli24");
 
     // Home data
     const [seasonList, setSeasonList] = useState<AnimeItem[]>([]);
@@ -58,10 +72,10 @@ export default function AnimeView() {
         episodeNumber: number;
     } | null>(null);
 
-    const loadHomeData = async () => {
+    const loadHomeData = async (source: string = currentSource) => {
         setLoadingHome(true);
         try {
-            const res = await fetch("/api/lilac/home");
+            const res = await fetch(`/api/lilac/home?source=${encodeURIComponent(source)}`);
             if (res.ok) {
                 const data = await res.json();
                 setSeasonList(data.season || []);
@@ -75,8 +89,8 @@ export default function AnimeView() {
     };
 
     useEffect(() => {
-        loadHomeData();
-    }, []);
+        loadHomeData(currentSource);
+    }, [currentSource]);
 
     // Save bookmarks to localStorage
     const handleToggleBookmark = (anime: AnimeItem) => {
@@ -162,19 +176,22 @@ export default function AnimeView() {
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs">
                         <span className="text-ink-faint font-semibold">{t("anime.source")}:</span>
                         <select
-                            defaultValue="reanime"
+                            value={currentSource}
                             className="bg-transparent text-[#C8A2C8] font-bold focus:outline-none cursor-pointer"
                             onChange={(e) => {
-                                // Navigate to VOD or update source filter
+                                setCurrentSource(e.target.value);
                             }}
                         >
-                            <option value="reanime" className="bg-[#141418] text-white">Re:Anime</option>
-                            <option value="ohli24" className="bg-[#141418] text-white">Ohli24</option>
-                            <option value="moeni" className="bg-[#141418] text-white">Moeni</option>
-                            <option value="anilife" className="bg-[#141418] text-white">Anilife</option>
-                            <option value="animaru" className="bg-[#141418] text-white">Animaru</option>
-                            <option value="linkani" className="bg-[#141418] text-white">Linkani</option>
-                            <option value="tvwiki" className="bg-[#141418] text-white">TVWiki</option>
+                            <option value="aniwolf" className="bg-[#141418] text-white">{SRC_LABELS.aniwolf}</option>
+                            <option value="aniweek" className="bg-[#141418] text-white">{SRC_LABELS.aniweek}</option>
+                            <option value="zzapflix" className="bg-[#141418] text-white">{SRC_LABELS.zzapflix}</option>
+                            <option value="ohli24" className="bg-[#141418] text-white">{SRC_LABELS.ohli24}</option>
+                            <option value="moeni" className="bg-[#141418] text-white">{SRC_LABELS.moeni}</option>
+                            <option value="reanime" className="bg-[#141418] text-white">{SRC_LABELS.reanime}</option>
+                            <option value="anilife" className="bg-[#141418] text-white">{SRC_LABELS.anilife}</option>
+                            <option value="animaru" className="bg-[#141418] text-white">{SRC_LABELS.animaru}</option>
+                            <option value="linkani" className="bg-[#141418] text-white">{SRC_LABELS.linkani}</option>
+                            <option value="tvwiki" className="bg-[#141418] text-white">{SRC_LABELS.tvwiki}</option>
                         </select>
                     </div>
 
