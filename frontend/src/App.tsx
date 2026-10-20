@@ -10,6 +10,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
 import Dashboard from "./pages/Dashboard";
 import VodDownload from "./pages/VodDownload";
+import AnimeView from "./pages/AnimeView";
 import Settings from "./pages/Settings";
 import Stats from "./pages/Stats";
 import SystemLogs from "./pages/SystemLogs";
@@ -82,6 +83,7 @@ const router = createBrowserRouter([
                 children: [
                     { index: true, element: <Dashboard /> },
                     { path: "vod", element: <VodDownload /> },
+                    { path: "anime", element: <AnimeView /> },
                     { path: "stats", element: <Stats /> },
                     { path: "settings", element: <Settings /> },
                     { path: "system-logs", element: <SystemLogs /> },

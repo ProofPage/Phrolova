@@ -46,6 +46,7 @@ from app.api.settings import router as settings_router
 from app.api.stats import router as stats_router
 from app.api.setup import router as setup_router
 from app.api.platforms import router as platforms_router
+from app.api.lilac import router as lilac_router
 from app.api.tags import router as tags_router
 from app.api.events import router as events_router
 from app.api.system import router as system_router
@@ -253,6 +254,7 @@ app.include_router(settings_router)
 app.include_router(stats_router)
 app.include_router(setup_router)
 app.include_router(platforms_router)
+app.include_router(lilac_router)
 app.include_router(tags_router)
 app.include_router(events_router)
 app.include_router(system_router)

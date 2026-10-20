@@ -8,6 +8,17 @@
 
 ## [Unreleased]
 
+## [2.1.5] - 2026-10-20
+
+### Added
+- **Anime Hub & Dedicated Player**:
+  - Integrated an interactive anime catalog featuring seasonal highlights, popularity leaderboards, and weekly broadcast schedules.
+  - Built-in anime streaming player with aspect ratio presets (Fit, Crop, Stretch), custom playback speeds, and seek steps.
+  - Subtitle customization engine with real-time size scaling (50%~200%) and sync offset adjustments.
+  - Integrated AniSkip opening and ending chapter detection with one-click skip and auto-skip capabilities.
+  - Seamless one-click anime episode transfer to the Phrolova high-speed VOD download queue.
+  - Local watch history tracking with resume playback progress and personal library bookmarks.
+
 ## [2.1.4] - 2026-10-19
 
 ### Added
@@ -1371,7 +1382,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.4...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.5...HEAD
+[2.1.5]: https://github.com/ProofPage/Phrolova/compare/v2.1.4...v2.1.5
 [2.1.4]: https://github.com/ProofPage/Phrolova/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/ProofPage/Phrolova/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/ProofPage/Phrolova/compare/v2.1.1...v2.1.2

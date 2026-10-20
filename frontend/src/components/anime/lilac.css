@@ -1,0 +1,186 @@
+/* LilacAnime Signature Styling for Phrolova */
+
+:root {
+  --lilac-primary: #C8A2C8;
+  --lilac-primary-rgb: 200, 162, 200;
+  --lilac-hover: #D8B4D8;
+  --lilac-faint: rgba(200, 162, 200, 0.12);
+  --lilac-border: rgba(200, 162, 200, 0.25);
+  --lilac-glow: rgba(200, 162, 200, 0.35);
+}
+
+.lilac-theme {
+  --accent-color: var(--lilac-primary);
+}
+
+/* Hero Section */
+.lilac-hero {
+  position: relative;
+  min-height: 380px;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 2.5rem;
+  border: 1px solid var(--lilac-border);
+  background: linear-gradient(180deg, rgba(18, 18, 22, 0.3) 0%, rgba(18, 18, 22, 0.95) 100%);
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 0 24px -4px var(--lilac-glow);
+}
+
+.lilac-hero-backdrop {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 25%;
+  filter: brightness(0.4) saturate(1.15) blur(1px);
+  z-index: 0;
+  transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lilac-hero:hover .lilac-hero-backdrop {
+  transform: scale(1.03);
+}
+
+.lilac-hero-content {
+  position: relative;
+  z-index: 10;
+  max-width: 640px;
+}
+
+.lilac-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  background: var(--lilac-faint);
+  color: var(--lilac-primary);
+  border: 1px solid var(--lilac-border);
+}
+
+/* Card Poster & Hover Motion */
+.lilac-card {
+  position: relative;
+  border-radius: 0.875rem;
+  overflow: hidden;
+  background: rgba(25, 25, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.lilac-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--lilac-border);
+  box-shadow: 0 14px 28px -6px rgba(0, 0, 0, 0.6), 0 0 16px -2px var(--lilac-glow);
+}
+
+.lilac-poster-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  background: #141418;
+}
+
+.lilac-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.lilac-card:hover .lilac-poster-img {
+  transform: scale(1.06);
+}
+
+.lilac-score-pill {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: rgba(15, 15, 20, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.5rem;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* Horizontal Poster Rail */
+.lilac-rail {
+  display: flex;
+  gap: 1.125rem;
+  overflow-x: auto;
+  padding-bottom: 0.75rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--lilac-border) transparent;
+}
+
+.lilac-rail::-webkit-scrollbar {
+  height: 6px;
+}
+
+.lilac-rail::-webkit-scrollbar-thumb {
+  background: var(--lilac-border);
+  border-radius: 9999px;
+}
+
+/* Schedule Tab Strip */
+.lilac-day-tab {
+  padding: 0.5rem 1.125rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  color: #9ca3af;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.lilac-day-tab:hover {
+  color: #f3f4f6;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lilac-day-tab.active {
+  color: #111827;
+  background: var(--lilac-primary);
+  border-color: var(--lilac-primary);
+  box-shadow: 0 4px 14px -2px var(--lilac-glow);
+}
+
+/* AniSkip Overlay Pill */
+.lilac-aniskip-banner {
+  position: absolute;
+  bottom: 5.5rem;
+  right: 2rem;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 9999px;
+  background: rgba(18, 18, 24, 0.9);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--lilac-border);
+  color: #f9fafb;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px var(--lilac-glow);
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

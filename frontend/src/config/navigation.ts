@@ -5,6 +5,7 @@ import {
     Radio,
     Settings,
     Terminal,
+    Tv,
     type LucideIcon,
 } from "lucide-react";
 
@@ -35,6 +36,7 @@ export const NAV_GROUPS: NavGroup[] = [
         items: [
             { name: "live.title", to: "/", icon: LayoutDashboard },
             { name: "download.title", to: "/vod", icon: Download },
+            { name: "anime.title", to: "/anime", icon: Tv },
         ],
     },
     {
