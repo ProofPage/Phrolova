@@ -2,6 +2,7 @@ import type { DownloadSource } from '../api/client';
 
 const FIXED_EPISODE_HOSTS = new Map<string, DownloadSource>([
     ['linkani.tv', 'linkani'], ['www.ohli24.net', 'ohli24'], ['ohli24.net', 'ohli24'],
+    ['ani.ohli24.com', 'ohli24'], ['ohli24.com', 'ohli24'], ['www.ohli24.com', 'ohli24'],
     ['v2.ohli365.org', 'ohli365'], ['ohli365.org', 'ohli365'], ['www.ohli365.org', 'ohli365'],
 ]);
 const NUMBERED_EPISODE_HOSTS: [DownloadSource, RegExp][] = [
@@ -52,6 +53,12 @@ export function parseEpisodeInput(value: string): { url: string; collection: boo
             if (episode) return {url:`https://linkani.tv/watch/${episode[1]}/a${episode[2]}/k${episode[3]}/`,collection:false,source};
             const work = url.pathname.match(/^\/ani\/(\d+)\/?$/);
             return work ? {url:`https://linkani.tv/ani/${work[1]}/`,collection:true,source} : null;
+        }
+        if (source === 'ohli24') {
+            const newWork = url.pathname.match(/^\/c\/([^/?#]+)\/?$/);
+            if (newWork) return {url:`${url.origin}/c/${encodeURIComponent(decodeURIComponent(newWork[1]))}`,collection:true,source};
+            const newEp = url.pathname.match(/^\/e\/([^/?#]+)\/?$/);
+            if (newEp) return {url:`${url.origin}/e/${encodeURIComponent(decodeURIComponent(newEp[1]))}`,collection:false,source};
         }
         if (!/^\/\d+\/[^/]+\.html$/.test(url.pathname)) {
             const id = url.pathname.match(/^\/(\d+)\/[^/]+$/)?.[1];

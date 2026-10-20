@@ -11,7 +11,7 @@ def media_platform(url: str) -> str:
     if host in ('popkontv.com','www.popkontv.com'): return 'popkontv'
     if host in ('v2.ohli365.org', 'ohli365.org', 'www.ohli365.org'): return 'ohli365'
     if host == 'linkani.tv': return 'linkani'
-    if host in ('www.ohli24.net', 'ohli24.net'): return 'ohli24'
+    if host in ('www.ohli24.net', 'ohli24.net', 'ani.ohli24.com', 'ohli24.com', 'www.ohli24.com'): return 'ohli24'
     if host in ('bilibili.com', 'www.bilibili.com', 'm.bilibili.com', 'live.bilibili.com', 'b23.tv'): return 'bilibili'
     if host in ('tiktok.com', 'www.tiktok.com', 'm.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com'): return 'tiktok'
     if host in ('twitch.tv', 'www.twitch.tv', 'm.twitch.tv', 'go.twitch.tv', 'clips.twitch.tv', 'player.twitch.tv'): return 'twitch'

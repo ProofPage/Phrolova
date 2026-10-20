@@ -6,7 +6,7 @@ from html.parser import HTMLParser
 import json
 import math
 import re
-from urllib.parse import unquote, urlencode, urljoin, urlsplit, urlunsplit
+from urllib.parse import quote, unquote, urlencode, urljoin, urlsplit, urlunsplit
 
 import httpx
 
@@ -32,11 +32,11 @@ SITES = {
                 'media': ('aniplayer1.site', 'noblepulse539.com', 'quietsummit393.com', 'getvfa.store', 'getvfa.site', 's9.toki56.com')},
     'linkani': {'name': 'Linkani', 'hosts': ('linkani.tv',),
                 'media': ('aniplayer1.site', 'noblepulse539.com', 'quietsummit393.com', 'getvfa.store', 'getvfa.site', 's9.toki56.com')},
-    'ohli24': {'name': '애니24', 'hosts': ('www.ohli24.net', 'ohli24.net'),
+    'ohli24': {'name': '애니24', 'hosts': ('www.ohli24.net', 'ohli24.net', 'ani.ohli24.com', 'ohli24.com', 'www.ohli24.com'),
                'players': ('michealcdn.com', 'cdndania.com'),
-               # 회차별로 다른 세대의 CDN을 반환하므로 확인된 호스트 계열을 함께 허용한다.
-               'media': ('michealcdn.com', 'cdndania.com', *(f'tue{i}bcloud-starcdn.xyz' for i in range(1, 8)),
-                         *(f'fri{i}bcloud-starcdn.xyz' for i in range(1, 8)),
+               # 회차별로 다른 세대의 CDN을 반환하므로 확인된 요일별 호스트 계열을 모두 허용한다.
+               'media': ('michealcdn.com', 'cdndania.com',
+                         *(f'{day}{i}bcloud-starcdn.xyz' for day in ('mon','tue','wed','thu','fri','sat','sun') for i in range(1, 8)),
                          *(f'hol{i}ncloud{generation}-nocdn.xyz' for generation in (1, 2) for i in range(1, 8)),
                          *(f'ohli{i}ncloud{generation}-nocdn.xyz' for generation in range(1, 6) for i in range(1, 8)))},
 }
@@ -113,6 +113,16 @@ def parse_episode_url(value: str) -> dict:
         if match:
             return dict(site=site, work=match[1], episode=None, url=f'https://linkani.tv/ani/{match[1]}/', collection=True)
     else:
+        new_work = re.fullmatch(r'/c/([^/?#]+)/?', path)
+        if new_work:
+            slug = unquote(new_work[1]).strip()
+            return dict(site=site, work=slug, episode=None,
+                        url=f'https://{parts.netloc.lower()}/c/{quote(slug)}', collection=True)
+        new_ep = re.fullmatch(r'/e/([^/?#]+)/?', path)
+        if new_ep:
+            slug = unquote(new_ep[1]).strip()
+            return dict(site=site, work=slug, episode=slug,
+                        url=f'https://{parts.netloc.lower()}/e/{quote(slug)}', collection=False)
         match = re.fullmatch(r'/(\d+)/[^/]+\.html', path)
         if not match and (parts.query or parts.fragment) and re.search(r'\.html(?:[?#].*)?$', value):
             # 사이트가 제목의 물음표를 인코딩하지 않은 링크도 ID로 정상 페이지에 연결한다.
@@ -316,21 +326,56 @@ def _load_catalog(route, client):
         incomplete = not selected and [row['number'] for row in rows] != list(range(1,len(rows)+1))
     else:
         final, body = client.request(route['url'], hosts)
-        if parse_episode_url(final)['work'] != work: raise EpisodeSiteError('이동된 작품·회차 ID가 다릅니다.')
-        doc = Document(body).root
-        title = _title(doc.find('h2'))
-        players = doc.find('iframe', id='video', src=None)
-        if len(players) == 1:
-            parent, title_work = _ohli_parent(doc, final)
-            rows = [dict(id=work, title=title, url=final, number=None, available=True)]
-            work, title = parent['work'], title_work
+        if '/c/' in final or '/e/' in final or urlsplit(final).hostname in ('ani.ohli24.com', 'ohli24.com'):
+            scripts = re.findall(r'<script[^>]*>([\s\S]*?)</script>', body)
+            inertia = next((json.loads(s.strip()) for s in scripts if s.strip().startswith('{"component":') and '"props":' in s), None)
+            if not inertia or not isinstance(inertia.get('props'), dict):
+                raise EpisodeSiteError('애니24 작품 데이터를 확인할 수 없습니다.')
+            props = inertia['props']
+            comic = props.get('comic') or {}
+            title = (comic.get('title') or '').strip()
+            work = str(comic.get('id') or work)
+            ep_list = props.get('episodes', {}).get('data', [])
+            netloc = urlsplit(final).netloc.lower()
+            rows = []
+            for ep in ep_list:
+                ep_title = (ep.get('title') or '').strip()
+                slug = ep.get('slug') or ep_title
+                num_m = re.search(r'(\d+(?:\.\d+)?)화', ep_title)
+                ep_url = f"https://{netloc}/e/{quote(slug)}"
+                has_video = bool(ep.get('body', {}).get('url'))
+                rows.append(dict(id=str(ep.get('id')), title=ep_title, url=ep_url,
+                                 number=float(num_m[1]) if num_m else None, available=has_video))
+            if selected:
+                rows = [r for r in rows if unquote(selected) in (r['title'], unquote(urlsplit(r['url']).path.removeprefix('/e/')))]
+                if not rows:
+                    playing = props.get('playing') or {}
+                    p_title = (playing.get('title') or '').strip()
+                    p_slug = playing.get('slug') or p_title
+                    if p_title:
+                        num_m = re.search(r'(\d+(?:\.\d+)?)화', p_title)
+                        has_video = bool(playing.get('body', {}).get('url'))
+                        rows = [dict(id=str(playing.get('content_id') or '1'), title=p_title,
+                                     url=f"https://{netloc}/e/{quote(p_slug)}",
+                                     number=float(num_m[1]) if num_m else None, available=has_video)]
+            incomplete = False
         else:
-            for container in doc.find(cls='eps-item'):
-                for node in container.find('a', href=None):
-                    episode = parse_episode_url(urljoin(final,node.attrs['href']))
-                    number = re.search(r'(\d+(?:\.\d+)?)화', node.text)
-                    rows.append(dict(id=episode['work'], title=node.text.strip(), url=episode['url'],
-                                     number=float(number[1]) if number else None, available=True))
+            if parse_episode_url(final)['work'] != work: raise EpisodeSiteError('이동된 작품·회차 ID가 다릅니다.')
+            doc = Document(body).root
+            title = _title(doc.find('h2'))
+            players = doc.find('iframe', id='video', src=None)
+            if len(players) == 1:
+                parent, title_work = _ohli_parent(doc, final)
+                rows = [dict(id=work, title=title, url=final, number=None, available=True)]
+                work, title = parent['work'], title_work
+            else:
+                for container in doc.find(cls='eps-item'):
+                    for node in container.find('a', href=None):
+                        episode = parse_episode_url(urljoin(final,node.attrs['href']))
+                        number = re.search(r'(\d+(?:\.\d+)?)화', node.text)
+                        rows.append(dict(id=episode['work'], title=node.text.strip(), url=episode['url'],
+                                         number=float(number[1]) if number else None, available=True))
+                incomplete = False
     rows = _rows(rows)
     if not title or any(not row['title'] for row in rows): raise EpisodeSiteError('작품·회차 제목이 비어 있습니다.')
     return dict(source=site, id=work, title=title, url=route['url'], episodes=rows, incomplete=incomplete)
@@ -482,16 +527,37 @@ def _extract_episode(url,client):
                     if not re.fullmatch(r'[A-Za-z0-9-]+',lang): raise EpisodeSiteError('자막 언어를 확인할 수 없습니다.')
                     subtitles.append((lang,urljoin(final,track.attrs['src'])))
         else:
-            parent,_ = _ohli_parent(doc,final)
-            if parent['work']!=catalog['id']: raise EpisodeSiteError('회차의 작품 연결이 변경되었습니다.')
-            nodes = doc.find('iframe',id='video',src=None)
-            if len(nodes)!=1: raise EpisodeSiteError('회차 플레이어를 확인할 수 없습니다.')
-            player = urljoin(final,nodes[0].attrs['src'])
-            checked_url(player,data['players'])
-            match = re.fullmatch(r'/video/([a-fA-F0-9]{32})',urlsplit(player).path)
-            if not match: raise EpisodeSiteError('지원하지 않는 플레이어 경로입니다.')
-            player_final,html = client.request(player,data['players'],referer=address)
-            if urlsplit(player_final).path != urlsplit(player).path: raise EpisodeSiteError('플레이어 주소가 변경되었습니다.')
+            if '/c/' in final or '/e/' in final or urlsplit(final).hostname in ('ani.ohli24.com', 'ohli24.com'):
+                scripts = re.findall(r'<script[^>]*>([\s\S]*?)</script>', body)
+                inertia = next((json.loads(s.strip()) for s in scripts if s.strip().startswith('{"component":') and '"props":' in s), None)
+                if not inertia or not isinstance(inertia.get('props'), dict):
+                    raise EpisodeSiteError('회차 플레이어 정보를 확인할 수 없습니다.')
+                playing = inertia['props'].get('playing') or {}
+                body_info = playing.get('body') or {}
+                player = body_info.get('url')
+                if not player:
+                    for ep_item in inertia['props'].get('episodes', {}).get('data', []):
+                        if str(ep_item.get('id')) == str(episode['id']) or (ep_item.get('slug') and quote(ep_item['slug']) in address):
+                            player = (ep_item.get('body') or {}).get('url')
+                            break
+                if not player:
+                    raise EpisodeSiteError('회차 재생 주소를 확인할 수 없습니다.')
+                checked_url(player, data['players'])
+                match = re.fullmatch(r'/video/([a-fA-F0-9]{32})', urlsplit(player).path)
+                if not match:
+                    raise EpisodeSiteError('지원하지 않는 플레이어 경로입니다.')
+                player_final, html = client.request(player, data['players'], referer=address)
+            else:
+                parent,_ = _ohli_parent(doc,final)
+                if parent['work']!=catalog['id']: raise EpisodeSiteError('회차의 작품 연결이 변경되었습니다.')
+                nodes = doc.find('iframe',id='video',src=None)
+                if len(nodes)!=1: raise EpisodeSiteError('회차 플레이어를 확인할 수 없습니다.')
+                player = urljoin(final,nodes[0].attrs['src'])
+                checked_url(player,data['players'])
+                match = re.fullmatch(r'/video/([a-fA-F0-9]{32})',urlsplit(player).path)
+                if not match: raise EpisodeSiteError('지원하지 않는 플레이어 경로입니다.')
+                player_final,html = client.request(player,data['players'],referer=address)
+                if urlsplit(player_final).path != urlsplit(player).path: raise EpisodeSiteError('플레이어 주소가 변경되었습니다.')
             player = player_final
             player_host = urlsplit(player).hostname
             bundles = [urljoin(player,node.attrs['src']) for node in Document(html).root.find('script',src=None)
