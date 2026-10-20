@@ -136,78 +136,100 @@ export default function AnimeView() {
 
     return (
         <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto lilac-theme">
-            {/* Top Navigation Bar for LilacAnime */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-5 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-2xl bg-lilac-faint border border-lilac-border flex items-center justify-center text-lilac-primary shadow-sm">
+            {/* Top Navigation Bar for Anime Hub */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8 pb-5 border-b border-white/5">
+                <div className="flex items-center gap-3.5">
+                    <div className="size-11 rounded-2xl bg-lilac-faint border border-lilac-border flex items-center justify-center text-lilac-primary shadow-sm shrink-0">
                         <Sparkles className="size-5" />
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
                             <h1 className="text-xl sm:text-2xl font-black text-ink tracking-tight">
-                                LilacAnime
+                                Anime Hub
                             </h1>
-                            <span className="lilac-badge">Desktop Client</span>
+                            <span className="lilac-badge">Phrolova Engine</span>
                         </div>
                         <p className="text-xs text-ink-faint mt-0.5">
-                            Broadcast schedule, seasonal catalog, and high-speed Phrolova downloading
+                            Seasonal catalog, weekly broadcast schedules, and high-speed VOD archiving
                         </p>
                     </div>
                 </div>
 
-                {/* Sub Tab Navigation */}
-                <div className="flex items-center gap-1.5 p-1 bg-black/40 border border-white/5 rounded-2xl overflow-x-auto text-xs font-semibold">
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("home")}
-                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all ${
-                            activeTab === "home"
-                                ? "bg-lilac-primary text-gray-950 font-bold shadow-md"
-                                : "text-ink-muted hover:text-ink"
-                        }`}
-                    >
-                        <Sparkles className="size-3.5" />
-                        <span>Home</span>
-                    </button>
+                <div className="flex flex-wrap items-center gap-2.5">
+                    {/* Content / Video Source Selector (from Lilac specification) */}
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs">
+                        <span className="text-ink-faint font-semibold">Source:</span>
+                        <select
+                            defaultValue="reanime"
+                            className="bg-transparent text-lilac-primary font-bold focus:outline-none cursor-pointer"
+                            onChange={(e) => {
+                                // Navigate to VOD or update source filter
+                            }}
+                        >
+                            <option value="reanime" className="bg-[#141418] text-white">Re:Anime</option>
+                            <option value="ohli24" className="bg-[#141418] text-white">Ohli24</option>
+                            <option value="moeni" className="bg-[#141418] text-white">Moeni</option>
+                            <option value="anilife" className="bg-[#141418] text-white">Anilife</option>
+                            <option value="animaru" className="bg-[#141418] text-white">Animaru</option>
+                            <option value="linkani" className="bg-[#141418] text-white">Linkani</option>
+                            <option value="tvwiki" className="bg-[#141418] text-white">TVWiki</option>
+                        </select>
+                    </div>
 
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("schedule")}
-                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all ${
-                            activeTab === "schedule"
-                                ? "bg-lilac-primary text-gray-950 font-bold shadow-md"
-                                : "text-ink-muted hover:text-ink"
-                        }`}
-                    >
-                        <Calendar className="size-3.5" />
-                        <span>Schedule</span>
-                    </button>
+                    {/* Sub Tab Navigation */}
+                    <div className="flex items-center gap-1 p-1 bg-black/40 border border-white/5 rounded-2xl overflow-x-auto text-xs font-semibold">
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("home")}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
+                                activeTab === "home"
+                                    ? "bg-lilac-primary text-gray-950 font-bold shadow-md"
+                                    : "text-ink-muted hover:text-ink"
+                            }`}
+                        >
+                            <Sparkles className="size-3.5" />
+                            <span>Home</span>
+                        </button>
 
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("catalog")}
-                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all ${
-                            activeTab === "catalog"
-                                ? "bg-lilac-primary text-gray-950 font-bold shadow-md"
-                                : "text-ink-muted hover:text-ink"
-                        }`}
-                    >
-                        <Search className="size-3.5" />
-                        <span>Catalog</span>
-                    </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("schedule")}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
+                                activeTab === "schedule"
+                                    ? "bg-lilac-primary text-gray-950 font-bold shadow-md"
+                                    : "text-ink-muted hover:text-ink"
+                            }`}
+                        >
+                            <Calendar className="size-3.5" />
+                            <span>Schedule</span>
+                        </button>
 
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("library")}
-                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all ${
-                            activeTab === "library"
-                                ? "bg-lilac-primary text-gray-950 font-bold shadow-md"
-                                : "text-ink-muted hover:text-ink"
-                        }`}
-                    >
-                        <FolderHeart className="size-3.5" />
-                        <span>Library ({bookmarks.length})</span>
-                    </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("catalog")}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
+                                activeTab === "catalog"
+                                    ? "bg-lilac-primary text-gray-950 font-bold shadow-md"
+                                    : "text-ink-muted hover:text-ink"
+                            }`}
+                        >
+                            <Search className="size-3.5" />
+                            <span>Catalog</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("library")}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
+                                activeTab === "library"
+                                    ? "bg-lilac-primary text-gray-950 font-bold shadow-md"
+                                    : "text-ink-muted hover:text-ink"
+                            }`}
+                        >
+                            <FolderHeart className="size-3.5" />
+                            <span>Library ({bookmarks.length})</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
