@@ -1,5 +1,6 @@
 import React from "react";
 import { Play, Trash2, Clock } from "lucide-react";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { AnimeItem } from "./AnimeCard";
 
 export interface WatchHistoryItem {
@@ -25,6 +26,7 @@ export const AnimeHistoryRail: React.FC<AnimeHistoryRailProps> = ({
     onClearHistory,
     onRemoveItem,
 }) => {
+    const { t } = useLanguage();
     if (!history || history.length === 0) return null;
 
     const formatTime = (secs: number) => {
@@ -39,7 +41,7 @@ export const AnimeHistoryRail: React.FC<AnimeHistoryRailProps> = ({
                 <div className="flex items-center gap-2">
                     <Clock className="size-5 text-lilac-primary" />
                     <h2 className="text-lg sm:text-xl font-bold text-ink tracking-tight">
-                        Continue Watching
+                        {t("anime.continueWatching")}
                     </h2>
                 </div>
 
@@ -51,7 +53,7 @@ export const AnimeHistoryRail: React.FC<AnimeHistoryRailProps> = ({
                         title="Clear History"
                     >
                         <Trash2 className="size-3.5" />
-                        <span>Clear All</span>
+                        <span>{t("anime.clearAll")}</span>
                     </button>
                 )}
             </div>

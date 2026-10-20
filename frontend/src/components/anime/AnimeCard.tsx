@@ -139,7 +139,7 @@ export const AnimeCard: React.FC<AnimeCardProps> = ({
                         {anime.type || "Anime"}
                     </span>
                     <span>
-                        {anime.episodes ? `EP ${anime.episodes}` : anime.status === "Currently Airing" ? t("anime.airing") : t("anime.completed")}
+                        {anime.episodes ? t("anime.episodeFormat", { num: anime.episodes }) : anime.status === "Currently Airing" ? t("anime.airing") : t("anime.completed")}
                     </span>
                 </div>
             </div>

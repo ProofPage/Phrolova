@@ -158,12 +158,12 @@ export default function AnimeView() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5">
-                    {/* Content / Video Source Selector (from Lilac specification) */}
+                    {/* Content / Video Source Selector */}
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs">
-                        <span className="text-ink-faint font-semibold">Source:</span>
+                        <span className="text-ink-faint font-semibold">{t("anime.source")}:</span>
                         <select
                             defaultValue="reanime"
-                            className="bg-transparent text-lilac-primary font-bold focus:outline-none cursor-pointer"
+                            className="bg-transparent text-[#C8A2C8] font-bold focus:outline-none cursor-pointer"
                             onChange={(e) => {
                                 // Navigate to VOD or update source filter
                             }}
@@ -183,53 +183,53 @@ export default function AnimeView() {
                         <button
                             type="button"
                             onClick={() => setActiveTab("home")}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
+                            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all ${
                                 activeTab === "home"
-                                    ? "bg-lilac-primary text-gray-950 font-bold shadow-md"
+                                    ? "bg-[#C8A2C8] text-gray-950 font-bold shadow-md"
                                     : "text-ink-muted hover:text-ink"
                             }`}
                         >
                             <Sparkles className="size-3.5" />
-                            <span>Home</span>
+                            <span>{t("anime.home")}</span>
                         </button>
 
                         <button
                             type="button"
                             onClick={() => setActiveTab("schedule")}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
+                            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all ${
                                 activeTab === "schedule"
-                                    ? "bg-lilac-primary text-gray-950 font-bold shadow-md"
+                                    ? "bg-[#C8A2C8] text-gray-950 font-bold shadow-md"
                                     : "text-ink-muted hover:text-ink"
                             }`}
                         >
                             <Calendar className="size-3.5" />
-                            <span>Schedule</span>
+                            <span>{t("anime.schedule")}</span>
                         </button>
 
                         <button
                             type="button"
                             onClick={() => setActiveTab("catalog")}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
+                            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all ${
                                 activeTab === "catalog"
-                                    ? "bg-lilac-primary text-gray-950 font-bold shadow-md"
+                                    ? "bg-[#C8A2C8] text-gray-950 font-bold shadow-md"
                                     : "text-ink-muted hover:text-ink"
                             }`}
                         >
                             <Search className="size-3.5" />
-                            <span>Catalog</span>
+                            <span>{t("anime.catalog")}</span>
                         </button>
 
                         <button
                             type="button"
                             onClick={() => setActiveTab("library")}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
+                            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all ${
                                 activeTab === "library"
-                                    ? "bg-lilac-primary text-gray-950 font-bold shadow-md"
+                                    ? "bg-[#C8A2C8] text-gray-950 font-bold shadow-md"
                                     : "text-ink-muted hover:text-ink"
                             }`}
                         >
                             <FolderHeart className="size-3.5" />
-                            <span>Library ({bookmarks.length})</span>
+                            <span>{t("anime.library")} ({bookmarks.length})</span>
                         </button>
                     </div>
                 </div>

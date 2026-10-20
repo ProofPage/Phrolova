@@ -12,7 +12,7 @@ import {
     Download,
     Trash2,
 } from "lucide-react";
-import { Button, Card, Input } from "../ui/primitives";
+import { Button, Card, Input, Switch } from "../ui/primitives";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useToast } from "../ui/Toast";
 
@@ -392,11 +392,10 @@ export function AnimeTab() {
                                 {t("settings.animeAutoSkipDesc")}
                             </span>
                         </div>
-                        <input
-                            type="checkbox"
+                        <Switch
                             checked={settings.autoSkip}
-                            onChange={(e) => setSettings({ ...settings, autoSkip: e.target.checked })}
-                            className="size-4 rounded accent-[#C8A2C8] cursor-pointer"
+                            onChange={(v) => setSettings({ ...settings, autoSkip: v })}
+                            label={S_TXT.autoSkip}
                         />
                     </div>
 

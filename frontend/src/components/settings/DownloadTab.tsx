@@ -316,7 +316,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
 
             <StreamlinkSettingsCard value={streamlinkOptions} onChange={setStreamlinkOptions} onValidityChange={setStreamlinkOptionsValid} />
 
-            <Card className="settings-section space-y-3 [&_.ui-switch]:min-w-11 [&_.ui-switch]:min-h-11" data-settings-section="twitch" aria-busy={saving}>
+            <Card className="settings-section space-y-3" data-settings-section="twitch" aria-busy={saving}>
                 <CardHeader icon={Radio} title={t('platform.twitch')} />
                 <SettingRow
                     label={t('settings.twitchTtvAbTitle')}

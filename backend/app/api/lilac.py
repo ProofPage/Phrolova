@@ -17,7 +17,7 @@ from app.core.logger import logger
 
 router = APIRouter(prefix="/api/lilac", tags=["anime-hub"])
 
-ANILIST_GRAPHQL = "https://graphql.anilist.co"
+ANILIST_GRAPHQL = "https://graphql.anilist.co/"
 ANISKIP_BASE = "https://api.aniskip.com/v2"
 
 # In-memory TTL cache to deliver instant responses
@@ -109,6 +109,7 @@ async def _anilist_query(query: str, variables: Dict[str, Any], ttl: int = DEFAU
             "Accept": "application/json",
             "Content-Type": "application/json",
         },
+        follow_redirects=True,
     ) as client:
         try:
             resp = await client.post(
