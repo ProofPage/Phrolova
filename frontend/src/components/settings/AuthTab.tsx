@@ -17,7 +17,7 @@ export function AuthTab({ onSaved, onDirtyChange }: Props) {
     // File registration saves immediately, so this tab has no unsaved text fields.
     useEffect(() => onDirtyChange?.(false), [onDirtyChange]);
     const cards = [
-        ...(["chzzk", "youtube", "cime", "kick", "twitch", "tiktok", "bilibili", "pandalive", "popkontv", "hearheart"] as const)
+        ...(["chzzk", "youtube", "cime", "kick", "twitch", "tiktok", "bilibili", "pandalive", "popkontv", "hearheart", "animaru", "anilife"] as const)
             .map(platform => <PlatformCookieAuth key={platform} platform={platform} onSaved={onSaved} />),
         <RplaySessionAuth key="rplay" onSaved={onSaved} />,
     ];

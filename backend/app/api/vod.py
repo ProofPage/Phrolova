@@ -28,6 +28,8 @@ async def vod_capabilities():
         {'id': 'ohli365', 'label': 'platform.ohli365'},
         {'id': 'tvwiki', 'label': 'platform.tvwiki'},
         {'id': 'animaru', 'label': 'platform.animaru'},
+        {'id': 'moeni', 'label': 'platform.moeni'},
+        {'id': 'reanime', 'label': 'platform.reanime'},
         {'id': 'external', 'label': '외부 영상'},
     ], 'prepare': True, 'pause': True, 'file_open': True}
 
@@ -262,7 +264,7 @@ async def cancel_channel_import(import_id: str):
 
 class VodPrepareRequest(BaseModel):
     urls: list[Annotated[str, Field(max_length=2048)]] = Field(..., min_length=1, max_length=100)
-    source: Literal['chzzk', 'youtube', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'popkontv', 'rplay', 'anilife', 'linkani', 'ohli24', 'ohli365', 'tvwiki', 'animaru', 'external', 'auto'] = 'auto'
+    source: Literal['chzzk', 'youtube', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'popkontv', 'rplay', 'anilife', 'linkani', 'ohli24', 'ohli365', 'tvwiki', 'animaru', 'moeni', 'reanime', 'external', 'auto'] = 'auto'
 
 
 class VodCatalogRequest(BaseModel):

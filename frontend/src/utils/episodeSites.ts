@@ -1,6 +1,8 @@
 import type { DownloadSource } from '../api/client';
 
 const FIXED_EPISODE_HOSTS = new Map<string, DownloadSource>([
+    ['reanime.to', 'reanime'], ['www.reanime.to', 'reanime'],
+    ['moeni.net', 'moeni'], ['www.moeni.net', 'moeni'],
     ['linkani.tv', 'linkani'], ['www.ohli24.net', 'ohli24'], ['ohli24.net', 'ohli24'],
     ['ani.ohli24.com', 'ohli24'], ['ohli24.com', 'ohli24'], ['www.ohli24.com', 'ohli24'],
     ['v2.ohli365.org', 'ohli365'], ['ohli365.org', 'ohli365'], ['www.ohli365.org', 'ohli365'],
@@ -48,6 +50,20 @@ export function parseEpisodeInput(value: string): { url: string; collection: boo
             const match = url.pathname.match(/^\/content\/(\d+)(?:\/([A-Za-z0-9_-]+|\d+\.\d+))?\/?$/);
             return match ? {url:`${url.origin}/content/${match[1]}${match[2]?'/'+match[2]:''}`,collection:!match[2],source} : null;
         }
+        if (source === 'moeni') {
+            const match = url.pathname.match(/^\/([1-9]\d*)(?:\/([1-9]\d*(?:\.\d+)?))?\/?$/);
+            return match ? {url:`${url.origin}/${match[1]}${match[2]?'/'+match[2]:''}`,collection:!match[2],source} : null;
+        }
+        if (source === 'reanime') {
+            const animeMatch = url.pathname.match(/^\/anime\/([a-zA-Z0-9_-]+)\/?$/);
+            if (animeMatch) return {url:`${url.origin}/watch/${animeMatch[1]}`,collection:true,source};
+            const watchMatch = url.pathname.match(/^\/watch\/([a-zA-Z0-9_-]+)\/?$/);
+            if (watchMatch) {
+                const ep = url.searchParams.get('ep');
+                return {url:`${url.origin}/watch/${watchMatch[1]}${ep ? '?ep='+ep : ''}`,collection:!ep,source};
+            }
+            return null;
+        }
         if (source === 'linkani') {
             const episode = url.pathname.match(/^\/watch\/(\d+)\/a(\d+)\/k(\d+)\/?$/);
             if (episode) return {url:`https://linkani.tv/watch/${episode[1]}/a${episode[2]}/k${episode[3]}/`,collection:false,source};
@@ -71,5 +87,5 @@ export function parseEpisodeInput(value: string): { url: string; collection: boo
 }
 
 export function isEpisodeSource(source: DownloadSource) {
-    return source === 'anilife' || source === 'linkani' || source === 'ohli24' || source === 'ohli365' || source === 'tvwiki' || source === 'animaru';
+    return source === 'anilife' || source === 'linkani' || source === 'ohli24' || source === 'ohli365' || source === 'tvwiki' || source === 'animaru' || source === 'moeni' || source === 'reanime';
 }

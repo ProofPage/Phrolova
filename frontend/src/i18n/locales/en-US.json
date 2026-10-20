@@ -905,6 +905,8 @@
   "platform.ohli365": "Ani365",
   "platform.tvwiki": "TVWiki",
   "platform.animaru": "Animaru",
+  "platform.moeni": "Moeni",
+  "platform.reanime": "Re:ANIME",
   "episodes.start": "Download selected episodes ({count})",
   "episodes.partial": "Only episodes listed by the site are shown. Some earlier episodes are missing.",
   "platform.bilibili": "Bilibili",

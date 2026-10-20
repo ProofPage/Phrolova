@@ -36,6 +36,8 @@ def _number(value):
 def parse_animaru_url(value):
     value = checked_url(value, SITES['animaru']['hosts'])
     parts = urlsplit(value)
+    if parts.path.rstrip('/') == '/adult':
+        raise EpisodeSiteError('애니마루 성인 메뉴 주소입니다. 다운로드할 개별 작품 주소(/content/{id})를 입력하세요.')
     match = PATH.fullmatch(parts.path)
     if not match:
         raise EpisodeSiteError('애니마루 작품 또는 회차 주소를 입력하세요.')
@@ -46,30 +48,72 @@ def parse_animaru_url(value):
 
 
 def _work(route, client):
-    final, data = client.json(READER+route['work'], SITES['animaru']['api'],
-                              referer=route['url'], headers={'Origin':'https://'+urlsplit(route['url']).hostname})
-    if urlsplit(final).path != urlsplit(READER+route['work']).path:
-        raise EpisodeSiteError('애니마루 작품 API 주소가 변경되었습니다.')
-    if not isinstance(data, dict) or data.get('ok') is not True or not isinstance(data.get('item'), dict):
-        raise EpisodeSiteError('애니마루 작품 정보를 확인할 수 없습니다.')
-    item = data['item']
-    if str(item.get('id')) != route['work'] or item.get('media_type') != 'ANIME':
-        raise EpisodeSiteError('애니마루 작품 ID 또는 콘텐츠 종류가 다릅니다.')
-    if item.get('adult') is True:
-        raise EpisodeSiteError('시청 권한 확인이 필요한 애니마루 콘텐츠입니다.')
-    title, episodes = item.get('title'), data.get('episodes')
-    if not isinstance(title, str) or not title.strip() or not isinstance(episodes, list) or not 1 <= len(episodes) <= 10000:
-        raise EpisodeSiteError('애니마루 작품 제목·회차 목록을 확인할 수 없습니다.')
-    return item, episodes
+    from app.engine.platform_auth import platform_cookie_jar
+    http_cookies = getattr(client, 'http', None)
+    if http_cookies is not None:
+        target_jar = getattr(http_cookies.cookies, 'jar', getattr(http_cookies, 'cookies', None))
+        for cookie in platform_cookie_jar('animaru'):
+            if hasattr(target_jar, 'set_cookie'):
+                target_jar.set_cookie(cookie)
+    host = urlsplit(route['url']).hostname
+    origin = 'https://' + host
+
+    # 1. 기존 백엔드 스토리지 API 시도
+    try:
+        final, data = client.json(READER+route['work'], SITES['animaru']['api'],
+                                  referer=route['url'], headers={'Origin': origin})
+        if urlsplit(final).path != urlsplit(READER+route['work']).path:
+            raise EpisodeSiteError('애니마루 작품 API 주소가 변경되었습니다.')
+        if isinstance(data, dict) and data.get('ok') is True and isinstance(data.get('item'), dict):
+            item = data['item']
+            if str(item.get('id')) != route['work'] or item.get('media_type') != 'ANIME':
+                raise EpisodeSiteError('애니마루 작품 ID 또는 콘텐츠 종류가 다릅니다.')
+            if item.get('adult') is True and not len(platform_cookie_jar('animaru')):
+                raise EpisodeSiteError('시청 권한 확인(성인 로그인 쿠키)이 필요한 애니마루 콘텐츠입니다.')
+            title, episodes = item.get('title'), data.get('episodes')
+            if not isinstance(title, str) or not title.strip() or not isinstance(episodes, list) or not 1 <= len(episodes) <= 10000:
+                raise EpisodeSiteError('애니마루 작품 제목·회차 목록을 확인할 수 없습니다.')
+            return item, episodes
+    except EpisodeSiteError:
+        raise
+    except Exception:
+        pass
+
+    # 2. 신형 공식 API 폴백 (성인 및 신규 등록 작품 지원)
+    new_api_url = f'{origin}/api/anime/{route["work"]}'
+    try:
+        _, data = client.json(new_api_url, (host,), referer=route['url'], headers={'Origin': origin})
+        item = data.get('item') if isinstance(data, dict) else None
+        if isinstance(item, dict) and str(item.get('id')) == route['work']:
+            title = item.get('title')
+            episodes = item.get('episodes') or []
+            if not isinstance(title, str) or not title.strip():
+                raise EpisodeSiteError('애니마루 작품 제목을 확인할 수 없습니다.')
+            if item.get('adult') is True and episodes and all(ep.get('playable') is False for ep in episodes):
+                if not len(platform_cookie_jar('animaru')):
+                    raise EpisodeSiteError('성인 인증(로그인 쿠키)이 필요한 애니마루 콘텐츠입니다. 설정에서 쿠키를 등록하세요.')
+                if item.get('hasVideo') is False or item.get('playableEpisode') == 0:
+                    raise EpisodeSiteError('아직 본편 영상이 준비되지 않았거나 재생할 수 없는 애니마루 회차입니다.')
+            return item, episodes
+    except EpisodeSiteError:
+        raise
+    except Exception:
+        pass
+
+    raise EpisodeSiteError('애니마루 작품 정보를 확인할 수 없습니다.')
 
 
 def _catalog(route, item, episodes):
     rows, entries, identities = {}, {}, {}
     for episode in episodes:
-        if not isinstance(episode, dict) or not re.fullmatch(r'[1-9]\d*', str(episode.get('id'))):
-            raise EpisodeSiteError('애니마루 회차 ID가 올바르지 않습니다.')
-        number = _number(episode.get('number'))
-        identifier = str(episode['id'])
+        if not isinstance(episode, dict):
+            raise EpisodeSiteError('애니마루 회차 정보 형식이 올바르지 않습니다.')
+        raw_num = episode.get('number') if episode.get('number') is not None else episode.get('n')
+        number = _number(raw_num)
+        raw_id = episode.get('id') or episode.get('key') or raw_num
+        if not re.fullmatch(r'[1-9]\d*', str(raw_id)):
+            raw_id = str(number)
+        identifier = str(raw_id)
         if identifier in identities and identities[identifier] != number:
             raise EpisodeSiteError('애니마루 회차 ID가 중복되어 있습니다.')
         identities[identifier] = number
@@ -83,16 +127,18 @@ def _catalog(route, item, episodes):
             label += '화'
         if not label:
             label = number+'화'
-        player = episode.get('embed_url')
+        player = episode.get('playbackUrl') or episode.get('embed_url')
         if player is not None and not isinstance(player, str):
             raise EpisodeSiteError('애니마루 회차 재생 주소가 올바르지 않습니다.')
+        episode['embed_url'] = player
+        is_ready = episode.get('ready') is not False and episode.get('playable') is not False
         row = dict(id=number, title=label, number=float(number),
                    url=f'https://{urlsplit(route["url"]).hostname}/content/{route["work"]}/{number}',
-                   available=bool(player) and episode.get('ready') is not False)
+                   available=bool(player) and is_ready)
         if number in entries and entries[number] != episode:
             raise EpisodeSiteError('애니마루 회차 번호가 중복되어 있습니다.')
         rows[number], entries[number] = row, episode
-    total = item.get('episode_count')
+    total = item.get('episode_count') or item.get('episodeCount')
     incomplete = type(total) is int and total > len(rows)
     if route['episode'] is not None:
         rows = {key:row for key,row in rows.items() if key == route['episode']}
@@ -146,22 +192,29 @@ def extract_animaru_episode(route, client):
         r'''\btr\.src\s*=\s*(['"])(https://[^'"\\\s]+)\1\s*;''', script.text)]
     if len(tracks) > 1:
         raise EpisodeSiteError('애니마루 자막 식별 정보가 중복되어 있습니다.')
+    entry_ident = str(entry.get('id') or entry.get('key') or entry.get('number') or '')
     for track in tracks:
         track = checked_url(track, SITES['animaru']['media'], subdomains=True)
-        if not re.fullmatch(r'/ani/'+route['work']+'/'+str(entry['id'])+r'/[A-Za-z0-9_.-]+\.vtt',urlsplit(track).path):
-            raise EpisodeSiteError('애니마루 자막의 작품·회차 ID가 다릅니다.')
+        if entry.get('id'):
+            if not re.fullmatch(r'/ani/'+route['work']+'/'+str(entry['id'])+r'/[A-Za-z0-9_.-]+\.vtt', urlsplit(track).path):
+                raise EpisodeSiteError('애니마루 자막의 작품·회차 ID가 다릅니다.')
+        else:
+            t_path = urlsplit(track).path
+            if not re.search(r'/ani/' + re.escape(route['work']) + r'/', t_path) or not t_path.endswith('.vtt'):
+                raise EpisodeSiteError('애니마루 자막의 작품·회차 ID가 다릅니다.')
         try:
             _, text = client.request(track, SITES['animaru']['media'], referer=final, subdomains=True)
             if not text.lstrip().startswith('WEBVTT') or ' --> ' not in text:
-                raise EpisodeSiteError('정상 VTT 자막이 아닙니다.')
-            subtitles['ko'] = [{'ext':'vtt','data':text}]
+                logger.warning('애니마루 자막 형식이 올바르지 않아 영상만 다운로드합니다.')
+            else:
+                subtitles['ko'] = [{'ext':'vtt','data':text}]
         except EpisodeSiteError:
             logger.warning('애니마루 자막을 불러오지 못해 영상만 다운로드합니다.')
     duration = sum(float(value) for value in re.findall(r'^#EXTINF:(\d+(?:\.\d+)?),',manifest,re.M)) or None
     if duration is not None and (not math.isfinite(duration) or duration <= 0):
         raise EpisodeSiteError('애니마루 영상 길이를 확인할 수 없습니다.')
     title = episode['title'] if episode['title'].startswith(catalog['title']) else f'{catalog["title"]} · {episode["title"]}'
-    return dict(id=route['work']+'-'+str(entry['id']), title=title, series=catalog['title'],
+    return dict(id=route['work']+'-'+entry_ident, title=title, series=catalog['title'],
                 episode=episode['title'], episode_number=episode['number'], duration=duration,
                 webpage_url=route['url'], uploader='애니마루', url=media, manifest=manifest,
                 subtitles=subtitles, is_live=False,

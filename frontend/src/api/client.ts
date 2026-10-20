@@ -12,7 +12,7 @@ export const client = axios.create({
 // ── Types ───────────────────────────────────────────────
 
 export type Platform = "chzzk" | "youtube" | "cime" | "kick" | "twitch" | "tiktok" | "bilibili" | "pandalive" | "popkontv" | "rplay";
-export type DownloadSource = Exclude<Platform, "pandalive"> | 'hearheart' | 'anilife' | 'linkani' | 'ohli24' | 'ohli365' | 'tvwiki' | 'animaru' | 'external';
+export type DownloadSource = Exclude<Platform, "pandalive"> | 'hearheart' | 'anilife' | 'linkani' | 'ohli24' | 'ohli365' | 'tvwiki' | 'animaru' | 'moeni' | 'reanime' | 'external';
 export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
 export interface ChannelDownloadOptions {
     popkontv_password?: string;
@@ -45,7 +45,7 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
 // Live-only providers must also stay out of the fallback video source menu.
 const { pandalive: _liveOnlyPandalive, ...videoPlatformLabels } = PLATFORM_LABELS;
 export const DOWNLOAD_SOURCE_LABELS: Record<DownloadSource, string> = {
-    ...videoPlatformLabels, hearheart: 'platform.hearheart', anilife: 'platform.anilife', linkani: 'platform.linkani', ohli24: 'platform.ohli24', ohli365: 'platform.ohli365', tvwiki: 'platform.tvwiki', animaru: 'platform.animaru', external: 'download.externalVideo',
+    ...videoPlatformLabels, hearheart: 'platform.hearheart', anilife: 'platform.anilife', linkani: 'platform.linkani', ohli24: 'platform.ohli24', ohli365: 'platform.ohli365', tvwiki: 'platform.tvwiki', animaru: 'platform.animaru', moeni: 'platform.moeni', reanime: 'platform.reanime', external: 'download.externalVideo',
 };
 export interface VideoEpisode { id: string; title: string; url: string; number?: number | null; available: boolean; }
 export interface VideoCatalog { source: DownloadSource; id: string; title: string; url: string; episodes: VideoEpisode[]; incomplete?:boolean; }
@@ -257,8 +257,8 @@ export interface PlatformStatus {
     rplay?: { enabled: boolean; authenticated: boolean };
 }
 
-export type CookiePlatform = 'chzzk' | 'youtube' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'hearheart';
-export type AccountLoginPlatform = 'cime' | 'pandalive' | 'popkontv' | 'hearheart';
+export type CookiePlatform = 'chzzk' | 'youtube' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'hearheart' | 'animaru' | 'anilife';
+export type AccountLoginPlatform = 'cime' | 'pandalive' | 'popkontv' | 'hearheart' | 'animaru' | 'anilife';
 
 export interface PlatformCookieStatus {
     configured: boolean;

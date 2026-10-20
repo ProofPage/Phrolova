@@ -19,6 +19,8 @@ LOGIN_URLS = {
     "pandalive": "https://www.pandalive.co.kr/",
     "popkontv": "https://www.popkontv.com/",
     "hearheart": "https://hearheart.com/",
+    "animaru": "https://animaru1.com/api/auth/login",
+    "anilife": "https://anilife01.tv/api/auth/login",
 }
 LOGIN_LOCKS = {platform: threading.Lock() for platform in LOGIN_URLS}
 ERROR_KEYS = {
@@ -244,6 +246,60 @@ def _hearheart(client, username, password):
     _check_response(profile)
 
 
+def _animaru(client, username, password):
+    host = "animaru1.com"
+    origin = f"https://{host}"
+    url = f"{origin}/api/auth/login"
+    response = client.post(
+        url,
+        json={"username": username, "password": password},
+        headers={"Origin": origin, "Referer": f"{origin}/"},
+    )
+    if response.status_code == 400:
+        try:
+            data = response.json()
+            err = str(data.get("error", ""))
+            if any(k in err for k in ("없는 회원", "비밀번호", "일치하지", "아이디", "가입")):
+                raise PlatformLoginError("invalid")
+        except (ValueError, TypeError):
+            pass
+        raise PlatformLoginError("invalid")
+    _check_response(response)
+    data = response.json()
+    if not isinstance(data, dict) or data.get("ok") is not True or not data.get("member"):
+        raise PlatformLoginError("invalid")
+
+
+def _anilife(client, username, password):
+    from app.engine.tls_compat import enable_tls_compat
+    host = "anilife01.tv"
+    origin = f"https://{host}"
+    url = f"{origin}/api/auth/login"
+    try:
+        enable_tls_compat(client, host)
+    except Exception:
+        pass
+    response = client.post(
+        url,
+        json={"username": username, "password": password},
+        headers={"Origin": origin, "Referer": f"{origin}/"},
+    )
+    if response.status_code in (400, 401):
+        try:
+            data = response.json()
+            err = str(data.get("error", ""))
+            code = str(data.get("code", ""))
+            if code == "INVALID_CREDENTIALS" or any(k in err for k in ("아이디", "비밀번호", "올바르지", "없는", "가입")):
+                raise PlatformLoginError("invalid")
+        except (ValueError, TypeError):
+            pass
+        raise PlatformLoginError("invalid")
+    _check_response(response)
+    data = response.json()
+    if not isinstance(data, dict) or not data.get("member"):
+        raise PlatformLoginError("invalid")
+
+
 def login_with_credentials(platform: str, username: str, password: str):
     if platform not in LOGIN_URLS:
         raise PlatformLoginError("changed")
@@ -259,7 +315,7 @@ def login_with_credentials(platform: str, username: str, password: str):
             headers={"User-Agent": USER_AGENT, "Accept": "application/json, text/html"},
         ) as client:
             {"cime": _cime, "pandalive": _pandalive, "popkontv": _popkontv,
-             "hearheart": _hearheart}[platform](client, username, password)
+             "hearheart": _hearheart, "animaru": _animaru, "anilife": _anilife}[platform](client, username, password)
             jar = scoped_cookie_jar(client.cookies.jar, platform)
             for cookie in list(jar):
                 if cookie.is_expired(time.time() + 30):

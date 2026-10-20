@@ -8,6 +8,25 @@
 
 ## [Unreleased]
 
+## [2.1.4] - 2026-10-19
+
+### Added
+- **Moeni (모에니)**: Added full support for `moeni.net` catalog and episode streaming, implementing custom dynamic AES-256-CBC decryption, session key derivation, and HLS manifest reconstruction.
+- **Re:ANIME**: Added full support for `reanime.to` SvelteKit SSR catalog extraction, `/anime/{slug}` and `/watch/{slug}?ep={n}` routing, and multi-server HD HLS video resolution.
+- **Animaru (애니마루)**: Added account ID/PW authentication handler (`/api/auth/login`), adult content cookie injection, and support for the new `/api/anime/{id}` REST API.
+- **Anilife (애니라이프)**: Added account ID/PW authentication handler (`/api/auth/login`), adult-restricted content cookie injection, and TLS record fragmentation compatibility for SNI blocking defense.
+- **Twitch TTV-AB**: Built-in TTV-AB v23.0.2 ad-block engine with user ON/OFF toggle switch in Settings -> Downloads and 8-language localization.
+
+### Changed
+- **Linkani**: Enhanced episode title normalization (e.g. converting bare numeric badges to standardized `N화`) and added HLS manifest duration calculation.
+- **Ohli24 (애니24)**: Upgraded to support Vite/Inertia.js SPA parsing (`/c/...`, `/e/...`) and expanded multi-CDN allowed host regex patterns.
+- **Ani365 (애니365)**: Expanded support for `ohli365.org` domains and normalized MegaPlay multi-language subtitle tags to BCP 47 standards.
+- **TVWiki (티비위키)**: Registered 13 new distributed media CDN patterns across all 12 categories.
+
+### Fixed
+- Fixed an issue where channels transitioning to private/restricted/unauthorized post-broadcast caused infinite monitoring error logging loops (`감시 실패 · 누적=...`).
+- Automatically classify post-broadcast 403 Forbidden / restricted responses as clean broadcast completion (`is_live: False`).
+
 ## [2.1.3] - 2026-10-19
 
 ### Fixed
@@ -1352,7 +1371,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.3...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.4...HEAD
+[2.1.4]: https://github.com/ProofPage/Phrolova/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/ProofPage/Phrolova/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/ProofPage/Phrolova/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/ProofPage/Phrolova/compare/v2.1.0...v2.1.1

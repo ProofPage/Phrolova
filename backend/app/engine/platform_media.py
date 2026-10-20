@@ -10,6 +10,8 @@ def media_platform(url: str) -> str:
     if host in ('rplay.live', 'www.rplay.live'): return 'rplay'
     if host in ('popkontv.com','www.popkontv.com'): return 'popkontv'
     if host in ('v2.ohli365.org', 'ohli365.org', 'www.ohli365.org'): return 'ohli365'
+    if host in ('moeni.net', 'www.moeni.net'): return 'moeni'
+    if host in ('reanime.to', 'www.reanime.to'): return 'reanime'
     if host == 'linkani.tv': return 'linkani'
     if host in ('www.ohli24.net', 'ohli24.net', 'ani.ohli24.com', 'ohli24.com', 'www.ohli24.com'): return 'ohli24'
     if host in ('bilibili.com', 'www.bilibili.com', 'm.bilibili.com', 'live.bilibili.com', 'b23.tv'): return 'bilibili'
@@ -27,7 +29,7 @@ def canonical_platform_video(url: str) -> str:
     if platform == 'rplay':
         from app.engine.rplay import canonical_rplay_video_url
         return canonical_rplay_video_url(url)
-    if platform in ('anilife', 'linkani', 'ohli24', 'tvwiki', 'animaru', 'ohli365'):
+    if platform in ('anilife', 'linkani', 'ohli24', 'tvwiki', 'animaru', 'ohli365', 'moeni', 'reanime'):
         from app.engine.episode_sites import parse_episode_url
         route = parse_episode_url(url)
         if route['collection'] and platform != 'ohli24':
@@ -87,7 +89,7 @@ def platform_ydl(url: str, options: dict):
         ydl.add_info_extractor(RplayIE())
         ydl.add_default_info_extractors()
         return ydl
-    if media_platform(url) in ('anilife', 'linkani', 'ohli24', 'tvwiki', 'animaru', 'ohli365'):
+    if media_platform(url) in ('anilife', 'linkani', 'ohli24', 'tvwiki', 'animaru', 'ohli365', 'moeni', 'reanime'):
         from app.engine.episode_extractor import EpisodeSiteIE
         if media_platform(url) == 'tvwiki':
             from app.engine.tvwiki_downloader import TVWikiYoutubeDL

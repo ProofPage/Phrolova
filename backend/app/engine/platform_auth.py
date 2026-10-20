@@ -15,8 +15,10 @@ from typing import Callable, Awaitable, TypeVar
 from app.core.config import get_settings
 
 DOMAINS = {'cime': ('ci.me',), 'kick': ('kick.com',), 'twitch': ('twitch.tv',), 'tiktok': ('tiktok.com',), 'bilibili': ('bilibili.com',), 'pandalive': ('pandalive.co.kr',), 'popkontv': ('popkontv.com',),
-           'chzzk': ('naver.com',), 'youtube': ('youtube.com', 'google.com'), 'hearheart': ('hearheart.com',)}
-NAMES = {'cime': '씨미', 'kick': '킥', 'twitch': '트위치', 'tiktok': '틱톡', 'bilibili': '빌리빌리', 'pandalive': '팬더티비', 'popkontv': '팝콘티비', 'hearheart': '히어하트'}
+           'chzzk': ('naver.com',), 'youtube': ('youtube.com', 'google.com'), 'hearheart': ('hearheart.com',),
+           'animaru': ('animaru1.com', 'storagewebtoon.store'),
+           'anilife': ('anilife01.tv', 'anilife02.tv', 'anilife03.tv', 'anilife04.tv', 'anilife05.tv', 'anilife.tv')}
+NAMES = {'cime': '씨미', 'kick': '킥', 'twitch': '트위치', 'tiktok': '틱톡', 'bilibili': '빌리빌리', 'pandalive': '팬더티비', 'popkontv': '팝콘티비', 'hearheart': '히어하트', 'animaru': '애니마루', 'anilife': '애니라이프'}
 T = TypeVar('T')
 
 
@@ -42,6 +44,8 @@ def scoped_cookie_jar(jar: http.cookiejar.CookieJar, platform: str) -> http.cook
     for cookie in jar:
         domain = cookie.domain.lstrip('.').lower()
         allowed = any(domain == host or domain.endswith('.' + host) for host in DOMAINS[platform])
+        if not allowed and platform == 'anilife':
+            allowed = bool(re.fullmatch(r'anilife[0-9]*\.tv', domain))
         if allowed:
             result.set_cookie(copy.copy(cookie))
     return result

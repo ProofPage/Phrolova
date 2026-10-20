@@ -13,6 +13,8 @@ class EpisodeSiteIE(InfoExtractor):
         r'|linkani\.tv/watch/\d+/a\d+/k\d+/?'
         rf'|{NUMBERED_SITE_HOSTS["tvwiki"].pattern}/(?:movie|kor_movie|drama|ent|sisa|world|ott_ent|short_drama|ani_movie|animation|old_ent|old_drama)/[1-9]\d*/[1-9]\d*/?'
         rf'|{NUMBERED_SITE_HOSTS["animaru"].pattern}/contents?/[1-9]\d*/(?:0|[1-9]\d*)(?:\.\d+)?/?'
+        r'|(?:www\.)?moeni\.net/[1-9]\d*/[1-9]\d*(?:\.\d+)?/?'
+        r'|(?:www\.)?reanime\.to/watch/[a-zA-Z0-9_-]+(?:\?ep=\d+)?/?'
         r'|(?:(?:v2|www)\.)?ohli365\.org/\?title=[0-9a-f-]+&episode=(?:[0-9a-f-]+|movie)'
         r'|(?:(?:ani|www)\.)?ohli24\.(?:net|com)/(?:(?:\d+/[^/?#]+\.html)|(?:[ce]/[^/?#]+)))(?:[?#].*)?$'
     )

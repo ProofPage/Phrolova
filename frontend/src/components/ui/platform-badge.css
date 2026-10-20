@@ -8,7 +8,7 @@
 .platform-badge.platform-bilibili { color: var(--color-bilibili); }
 .platform-badge.platform-pandalive { color: var(--color-pandalive); }
 .platform-badge.platform-popkontv { color: var(--color-popkontv); }
-.platform-badge.platform-anilife,.platform-badge.platform-linkani,.platform-badge.platform-ohli24,.platform-badge.platform-ohli365,.platform-badge.platform-tvwiki,.platform-badge.platform-animaru { color: var(--color-info); }
+.platform-badge.platform-anilife,.platform-badge.platform-linkani,.platform-badge.platform-ohli24,.platform-badge.platform-ohli365,.platform-badge.platform-tvwiki,.platform-badge.platform-animaru,.platform-badge.platform-moeni,.platform-badge.platform-reanime { color: var(--color-info); }
 
 .platform-badge.platform-rplay { color: var(--color-rplay); }
 .platform-badge.platform-hearheart { color: var(--color-hearheart); }

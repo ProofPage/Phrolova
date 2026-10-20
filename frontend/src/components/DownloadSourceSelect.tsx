@@ -5,7 +5,7 @@ import { useListboxPosition } from '../hooks/useListboxPosition';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { DownloadSource } from '../utils/downloads';
 
-const dots = { chzzk: 'bg-chzzk', youtube: 'bg-youtube', cime: 'bg-cime', kick: 'bg-kick', twitch: 'bg-twitch', tiktok: 'bg-tiktok', bilibili: 'bg-bilibili', popkontv:'bg-popkontv', rplay:'bg-rplay', hearheart: 'bg-hearheart', anilife:'bg-info', linkani:'bg-info', ohli24:'bg-info', ohli365:'bg-info', tvwiki:'bg-info', animaru:'bg-info', external: 'bg-ink-faint' };
+const dots = { chzzk: 'bg-chzzk', youtube: 'bg-youtube', cime: 'bg-cime', kick: 'bg-kick', twitch: 'bg-twitch', tiktok: 'bg-tiktok', bilibili: 'bg-bilibili', popkontv:'bg-popkontv', rplay:'bg-rplay', hearheart: 'bg-hearheart', anilife:'bg-info', linkani:'bg-info', ohli24:'bg-info', ohli365:'bg-info', tvwiki:'bg-info', animaru:'bg-info', moeni:'bg-info', reanime:'bg-info', external: 'bg-ink-faint' };
 export function DownloadSourceSelect({ sources, value, disabled, onChange }: {
     sources: { id: DownloadSource; label: string }[]; value: DownloadSource;
     disabled: boolean; onChange: (value: DownloadSource) => void;

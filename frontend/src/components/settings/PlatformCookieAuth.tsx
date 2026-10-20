@@ -14,6 +14,8 @@ const ACCOUNT_LOGINS: Record<AccountLoginPlatform, { email: boolean; url: string
     pandalive: { email: false, url: 'https://www.pandalive.co.kr/' },
     popkontv: { email: false, url: 'https://www.popkontv.com/' },
     hearheart: { email: true, url: 'https://hearheart.com/' },
+    animaru: { email: false, url: 'https://animaru1.com/' },
+    anilife: { email: false, url: 'https://anilife01.tv/' },
 };
 
 /** Only registration/validation status is returned; cookie values never enter UI state. */
@@ -21,7 +23,7 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
     const { t } = useLanguage();
     const toast = useToast();
     const confirm = useConfirm();
-    const name = t(platform === 'hearheart' ? DOWNLOAD_SOURCE_LABELS[platform] : PLATFORM_LABELS[platform]);
+    const name = t(platform === 'hearheart' || platform === 'animaru' || platform === 'anilife' ? DOWNLOAD_SOURCE_LABELS[platform] : PLATFORM_LABELS[platform]);
     const fileInput = useRef<HTMLInputElement>(null);
     const pending = useRef(false);
     const revision = useRef(0);

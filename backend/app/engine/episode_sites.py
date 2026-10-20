@@ -32,6 +32,10 @@ SITES = {
                 'media': ('aniplayer1.site', 'noblepulse539.com', 'quietsummit393.com', 'getvfa.store', 'getvfa.site', 's9.toki56.com')},
     'linkani': {'name': 'Linkani', 'hosts': ('linkani.tv',),
                 'media': ('aniplayer1.site', 'noblepulse539.com', 'quietsummit393.com', 'getvfa.store', 'getvfa.site', 's9.toki56.com')},
+    'moeni': {'name': '모에니', 'hosts': ('moeni.net', 'www.moeni.net'),
+              'media': ('video.modumo.bid', 'modumo.bid', 'api.modumo.bid', 'api.moeni.net')},
+    'reanime': {'name': 'Re:ANIME', 'hosts': ('reanime.to', 'www.reanime.to'),
+                'media': ('flixcloud.cc', 'fetch8.flixcloud.cc', 'pulsarcdn.top', 'spectralcdn.top')},
     'ohli24': {'name': '애니24', 'hosts': ('www.ohli24.net', 'ohli24.net', 'ani.ohli24.com', 'ohli24.com', 'www.ohli24.com'),
                'players': ('michealcdn.com', 'cdndania.com'),
                # 회차별로 다른 세대의 CDN을 반환하므로 확인된 요일별 호스트 계열을 모두 허용한다.
@@ -97,13 +101,23 @@ def parse_episode_url(value: str) -> dict:
     if site == 'tvwiki':
         from app.engine.tvwiki import parse_tvwiki_url
         return parse_tvwiki_url(value)
+    if site == 'moeni':
+        from app.engine.moeni import parse_moeni_url
+        return parse_moeni_url(value)
+    if site == 'reanime':
+        from app.engine.reanime import parse_reanime_url
+        return parse_reanime_url(value)
     if site == 'anilife':
+        if path.rstrip('/') == '/adult':
+            raise EpisodeSiteError('애니라이프 성인 메뉴 주소입니다. 다운로드할 개별 작품 주소(/content/{id})를 입력하세요.')
         match = re.fullmatch(r'/content/(\d+)(?:/([A-Za-z0-9_-]+|\d+\.\d+))?/?', path)
         if match:
             work, episode = match.groups()
             return dict(site=site, work=work, episode=episode,
                         url=f'https://{parts.hostname}/content/{work}'+(f'/{episode}' if episode else ''), collection=not episode)
     elif site == 'linkani':
+        if path.rstrip('/') in ('', '/ani'):
+            raise EpisodeSiteError('Linkani 메인 주소입니다. 다운로드할 개별 작품 주소(/ani/{id}) 또는 회차 주소(/watch/{id}/...)를 입력하세요.')
         match = re.fullmatch(r'/watch/(\d+)/a(\d+)/k(\d+)/?', path)
         if match:
             work, source, number = match.groups()
@@ -282,18 +296,38 @@ def _load_catalog(route, client):
     if route['site'] == 'tvwiki':
         from app.engine.tvwiki import load_tvwiki_catalog
         return load_tvwiki_catalog(route, client)
+    if route['site'] == 'moeni':
+        from app.engine.moeni import load_moeni_catalog
+        return load_moeni_catalog(route, client)
+    if route['site'] == 'reanime':
+        from app.engine.reanime import load_reanime_catalog
+        return load_reanime_catalog(route, client)
     site, work, selected = route['site'], route['work'], route['episode']
     hosts = SITES[site]['hosts']
     rows = []
     incomplete = False
     if site == 'anilife':
+        from app.engine.platform_auth import platform_cookie_jar
+        http_cookies = getattr(client, 'http', None)
+        if http_cookies is not None:
+            target_jar = getattr(http_cookies.cookies, 'jar', getattr(http_cookies, 'cookies', None))
+            for cookie in platform_cookie_jar('anilife'):
+                if hasattr(target_jar, 'set_cookie'):
+                    target_jar.set_cookie(cookie)
         final, _ = client.request(route['url'], hosts)
         target = parse_episode_url(final)
         if target['site'] != site or target['work'] != work: raise EpisodeSiteError('이동된 작품 ID가 다릅니다.')
         route = target
         origin = 'https://'+urlsplit(final).hostname
         hosts = (urlsplit(final).hostname,)
-        _, payload = client.json(origin+'/api/anime/'+work, hosts, referer=final)
+        try:
+            _, payload = client.json(origin+'/api/anime/'+work, hosts, referer=final)
+        except EpisodeSiteError as error:
+            if error.status == 401:
+                if not len(platform_cookie_jar('anilife')):
+                    raise EpisodeSiteError('성인 인증(로그인 쿠키)이 필요한 애니라이프 콘텐츠입니다. 설정에서 계정 로그인 또는 쿠키를 등록하세요.', status=401)
+                raise EpisodeSiteError('애니라이프 로그인 세션이 만료되었습니다. 설정에서 다시 로그인하세요.', status=401)
+            raise
         item = payload.get('item') if isinstance(payload, dict) else None
         if not isinstance(item, dict) or str(item.get('id')) != work or not isinstance(item.get('title'), str):
             raise EpisodeSiteError('작품 API의 식별 정보가 다릅니다.')
@@ -320,7 +354,12 @@ def _load_catalog(route, client):
             if (not selected or selected == key) and key not in seen:
                 seen.add(key)
                 number = int(key.split('-k')[1])
-                rows.append(dict(id=key, title=node.text.strip() or f'{number}화', number=number, url=episode['url'], available=True))
+                ep_text = node.text.strip()
+                if not ep_text or re.fullmatch(r'\d+(?:\.\d+)?', ep_text):
+                    ep_text = f'{number}화'
+                elif not ep_text.endswith('화') and re.search(r'\d+$', ep_text):
+                    ep_text += '화'
+                rows.append(dict(id=key, title=ep_text, number=number, url=episode['url'], available=True))
         rows = _rows(rows)
         # 사이트가 이전 회차를 목록에서 빼도 확인된 회차는 선택할 수 있게 한다.
         incomplete = not selected and [row['number'] for row in rows] != list(range(1,len(rows)+1))
@@ -487,6 +526,12 @@ def _extract_episode(url,client):
     if route['site'] == 'tvwiki':
         from app.engine.tvwiki import extract_tvwiki_episode
         return extract_tvwiki_episode(route, client)
+    if route['site'] == 'moeni':
+        from app.engine.moeni import extract_moeni_episode
+        return extract_moeni_episode(route, client)
+    if route['site'] == 'reanime':
+        from app.engine.reanime import extract_reanime_episode
+        return extract_reanime_episode(route, client)
     catalog = load_catalog(url,client)
     if len(catalog['episodes']) != 1 or route['collection'] and route['site'] != 'ohli24':
         raise EpisodeSiteError('작품의 회차 목록에서 내려받을 회차를 선택하세요.')
@@ -579,8 +624,9 @@ def _extract_episode(url,client):
         _,text = client.request(target,data['media'],referer=referer,subdomains=True)
         if not text.lstrip().startswith('WEBVTT') or ' --> ' not in text: raise EpisodeSiteError('정상 VTT 자막을 확인할 수 없습니다.')
         subtitle_info.setdefault(lang,[]).append({'ext':'vtt','data':text})
+    duration = sum(float(value) for value in re.findall(r'^#EXTINF:(\d+(?:\.\d+)?),', manifest, re.M)) or None
     title = episode['title'] if episode['title'].startswith(catalog['title']) else f'{catalog["title"]} · {episode["title"]}'
     return dict(id=episode['id'],title=title,series=catalog['title'],
-                episode=episode['title'],episode_number=episode.get('number'),webpage_url=address,
+                episode=episode['title'],episode_number=episode.get('number'),duration=duration,webpage_url=address,
                 uploader=data['name'],url=final,manifest=manifest,subtitles=subtitle_info,
                 http_headers={'User-Agent':USER_AGENT,'Referer':referer},is_live=False)

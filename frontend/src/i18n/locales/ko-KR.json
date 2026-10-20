@@ -905,6 +905,8 @@
   "platform.ohli365": "애니365",
   "platform.tvwiki": "티비위키",
   "platform.animaru": "애니마루",
+  "platform.moeni": "모에니",
+  "platform.reanime": "Re:ANIME",
   "episodes.start": "선택한 회차 다운로드 ({count})",
   "episodes.partial": "사이트에 표시된 회차만 제공합니다. 일부 이전 회차가 목록에서 빠져 있습니다.",
   "platform.bilibili": "빌리빌리",
