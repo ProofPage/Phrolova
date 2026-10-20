@@ -110,17 +110,31 @@ jobs:
           $asset = "dist/Phrolova-$env:RELEASE_TAG-windows-x64.exe"
           $checksums = "dist/SHA256SUMS.txt"
           $version = $env:RELEASE_TAG.TrimStart('v')
-          if ($env:RELEASE_TAG.Contains("-")) {
-            if ($env:GITHUB_REF_TYPE -eq 'tag') {
-              gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --prerelease --verify-tag
-            } else {
-              gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --prerelease --target $env:GITHUB_SHA
-            }
+          $releaseExists = $false
+          try {
+            gh release view $env:RELEASE_TAG >$null 2>&1
+            if ($LASTEXITCODE -eq 0) { $releaseExists = $true }
+          } catch {
+            $releaseExists = $false
+          }
+
+          if ($releaseExists) {
+            Write-Host "Release $env:RELEASE_TAG already exists. Uploading assets and updating notes..."
+            gh release upload $env:RELEASE_TAG $asset $checksums --clobber
+            gh release edit $env:RELEASE_TAG --notes-file release-notes.md --title "Phrolova $env:RELEASE_TAG" --latest
           } else {
-            if ($env:GITHUB_REF_TYPE -eq 'tag') {
-              gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --latest --verify-tag
+            if ($env:RELEASE_TAG.Contains("-")) {
+              if ($env:GITHUB_REF_TYPE -eq 'tag') {
+                gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --prerelease --verify-tag
+              } else {
+                gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --prerelease --target $env:GITHUB_SHA
+              }
             } else {
-              gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --latest --target $env:GITHUB_SHA
+              if ($env:GITHUB_REF_TYPE -eq 'tag') {
+                gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --latest --verify-tag
+              } else {
+                gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --latest --target $env:GITHUB_SHA
+              }
             }
           }
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
