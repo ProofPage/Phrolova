@@ -141,3 +141,25 @@ async def complete_setup(req: SetupCompleteRequest):
 
     logger.info(f"✅ 초기 설정 완료. .env 생성됨: {_get_env_path()}")
     return {"success": True, "message": "초기 설정이 완료되었습니다."}
+
+
+@router.get("/open-folder")
+@router.post("/open-folder")
+async def open_storage_folder(path: str = "vod"):
+    """Open specified storage folder (vod, live, etc.) in host OS file explorer."""
+    import asyncio
+    from app.core.file_browser import reveal
+
+    settings = get_settings()
+    if path == "vod":
+        target = Path(settings.vod_download_dir or settings.download_dir).resolve()
+    else:
+        target = Path(settings.live_download_dir or settings.download_dir).resolve()
+
+    target.mkdir(parents=True, exist_ok=True)
+    opened = await asyncio.to_thread(reveal, target)
+    return {
+        "success": bool(opened),
+        "path": str(target),
+        "message": "저장 폴더를 열었습니다." if opened else f"저장 위치: {target}",
+    }

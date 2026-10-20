@@ -25,6 +25,7 @@ const STORAGE_HISTORY_KEY = "phrolova_lilac_history";
 export default function AnimeView() {
     const { t } = useLanguage();
     const [activeTab, setActiveTab] = useState<"home" | "schedule" | "catalog" | "library">("home");
+    const [currentSource, setCurrentSource] = useState<string>("ohli24");
 
     // Home data
     const [seasonList, setSeasonList] = useState<AnimeItem[]>([]);
@@ -58,10 +59,10 @@ export default function AnimeView() {
         episodeNumber: number;
     } | null>(null);
 
-    const loadHomeData = async () => {
+    const loadHomeData = async (source: string = currentSource) => {
         setLoadingHome(true);
         try {
-            const res = await fetch("/api/lilac/home");
+            const res = await fetch(`/api/lilac/home?source=${encodeURIComponent(source)}`);
             if (res.ok) {
                 const data = await res.json();
                 setSeasonList(data.season || []);
@@ -75,8 +76,8 @@ export default function AnimeView() {
     };
 
     useEffect(() => {
-        loadHomeData();
-    }, []);
+        loadHomeData(currentSource);
+    }, [currentSource]);
 
     // Save bookmarks to localStorage
     const handleToggleBookmark = (anime: AnimeItem) => {

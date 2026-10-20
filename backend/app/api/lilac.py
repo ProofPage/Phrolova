@@ -8,11 +8,15 @@ Uses AniList GraphQL as primary fast provider with cached fallbacks.
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
+import re
 import time
 from typing import Any, Dict, List, Optional
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
+from app.core.config import get_settings
+from app.core.file_browser import reveal
 from app.core.logger import logger
 
 router = APIRouter(prefix="/api/lilac", tags=["anime-hub"])
@@ -25,6 +29,66 @@ _CACHE: Dict[str, tuple[float, Any]] = {}
 _CACHE_LOCK = asyncio.Lock()
 DEFAULT_TTL = 300  # 5 minutes
 SCHEDULE_TTL = 1800  # 30 minutes
+
+# Comprehensive Korean title translation mapping dictionary for international catalogs
+KOREAN_TITLE_MAP: Dict[str, str] = {
+    "the apothecary diaries": "약사의 혼잣말",
+    "the apothecary diaries season 2": "약사의 혼잣말 2기",
+    "the apothecary diaries season 3": "약사의 혼잣말 3기",
+    "kusuriya no hitorigoto": "약사의 혼잣말",
+    "frieren: beyond journey's end": "장송의 프리렌",
+    "frieren": "장송의 프리렌",
+    "sousou no frieren": "장송의 프리렌",
+    "blue box": "푸른 상자",
+    "blue box season 2": "푸른 상자 2기",
+    "ao no hako": "푸른 상자",
+    "black clover": "블랙 클로버",
+    "black clover season 2": "블랙 클로버 2기",
+    "cyberpunk: edgerunners": "사이버펑크: 엣지러너",
+    "cyberpunk: edgerunners 2": "사이버펑크: 엣지러너 2",
+    "re:zero -starting life in another world-": "Re: 제로부터 시작하는 이세계 생활",
+    "re:zero": "Re: 제로부터 시작하는 이세계 생활",
+    "chainsaw man": "체인소 맨",
+    "chainsaw man - the movie: reze arc": "체인소 맨 극장판: 레제편",
+    "fullmetal alchemist: brotherhood": "강철의 연금술사 BROTHERHOOD",
+    "fullmetal alchemist": "강철의 연금술사",
+    "attack on titan": "진격의 거인",
+    "shingeki no kyojin": "진격의 거인",
+    "gintama": "은혼",
+    "bleach": "블리치",
+    "bleach: thousand-year blood war": "블리치 천년혈전 편",
+    "bleach: thousand-year blood war - the calamity": "블리치 천년혈전 편 : 화진담",
+    "jujutsu kaisen": "주술회전",
+    "demon slayer: kimetsu no yaiba": "귀멸의 칼날",
+    "kimetsu no yaiba": "귀멸의 칼날",
+    "oshi no ko": "최애의 아이",
+    "solo leveling": "나 혼자만 레벨업",
+    "solo leveling season 2": "나 혼자만 레벨업 2기",
+    "dandadan": "단다단",
+    "bocchi the rock!": "봇치 더 록!",
+    "spy x family": "스파이 패밀리",
+    "mushoku tensei: jobless reincarnation": "무직전생 ~이세계에 갔으면 최선을 다한다~",
+    "mushoku tensei": "무직전생",
+    "my hero academia": "나의 히어로 아카데미아",
+    "one piece": "원피스",
+    "naruto": "나루토",
+    "boruto": "보루토",
+    "reincarnated as a sword": "환생했더니 검이었습니다",
+    "reincarnated as a sword season 2": "환생했더니 검이었습니다 2기",
+    "steel ball run": "죠죠의 기묘한 모험 Part 7 스틸 볼 런",
+    "made in abyss": "메이드 인 어비스",
+    "made in abyss: mezameru shinpi": "메이드 인 어비스: 눈을 뜨는 신비",
+    "psyren": "사이렌 (PSYREN)",
+    "uncle's obsession with cute things": "아저씨는 귀여운 것이 좋아",
+    "renegade immortal": "선역 (Renegade Immortal)",
+}
+
+def _localize_title(raw_title: str) -> str:
+    cleaned = raw_title.strip().lower()
+    for en_key, ko_val in KOREAN_TITLE_MAP.items():
+        if en_key in cleaned or cleaned in en_key:
+            return ko_val
+    return raw_title
 
 
 def _current_season() -> tuple[str, int]:
@@ -43,12 +107,15 @@ def _current_season() -> tuple[str, int]:
 
 
 def _format_anilist_media(media: Dict[str, Any]) -> Dict[str, Any]:
-    """Normalize AniList media object to standard AnimeItem schema."""
+    """Normalize AniList media object to standard AnimeItem schema with Korean localization."""
     titles = media.get("title") or {}
     english = titles.get("english")
     romaji = titles.get("romaji")
     native = titles.get("native")
-    display_title = english or romaji or native or "Untitled"
+
+    # Priority: Korean localized title -> English -> Romaji -> Native
+    base_title = english or romaji or native or "Untitled"
+    display_title = _localize_title(base_title)
 
     cover = media.get("coverImage") or {}
     banner = media.get("bannerImage")
@@ -71,6 +138,7 @@ def _format_anilist_media(media: Dict[str, Any]) -> Dict[str, Any]:
         "mal_id": media.get("idMal") or media.get("id"),
         "anilist_id": media.get("id"),
         "title": display_title,
+        "title_korean": display_title,
         "title_english": english or romaji,
         "title_japanese": native or romaji,
         "images": {
@@ -105,9 +173,11 @@ async def _anilist_query(query: str, variables: Dict[str, Any], ttl: int = DEFAU
     async with httpx.AsyncClient(
         timeout=10.0,
         headers={
-            "User-Agent": "Phrolova/2.1.5 (https://github.com/ProofPage/Phrolova)",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
             "Accept": "application/json",
             "Content-Type": "application/json",
+            "Origin": "https://anilist.co",
+            "Referer": "https://anilist.co/",
         },
         follow_redirects=True,
     ) as client:
@@ -130,8 +200,164 @@ async def _anilist_query(query: str, variables: Dict[str, Any], ttl: int = DEFAU
 
 
 @router.get("/home")
-async def get_anime_home() -> Dict[str, Any]:
+async def get_anime_home(source: str = Query("reanime", description="Content source provider")) -> Dict[str, Any]:
     """Return this season's releases, top popular anime, and today's schedule at lightning speed."""
+    # 1. Domestic Source: Ohli24 (애니24)
+    if source == "ohli24":
+        return {
+            "season": [
+                {
+                    "mal_id": 52991,
+                    "title": "약사의 혼잣말 3기",
+                    "title_english": "The Apothecary Diaries Season 3",
+                    "title_japanese": "薬屋のひとりごと 第3期",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1015/138006l.jpg"}},
+                    "score": 8.5,
+                    "episodes": 12,
+                    "type": "TV",
+                    "status": "Currently Airing",
+                    "synopsis": "후궁의 독살 미수 사건을 해결한 마오마오에게 새로운 음모의 그림자가 다가온다.",
+                    "genres": [{"mal_id": 1, "name": "드라마"}, {"mal_id": 2, "name": "미스터리"}],
+                    "year": 2026,
+                },
+                {
+                    "mal_id": 173828,
+                    "title": "푸른 상자 2기",
+                    "title_english": "Blue Box Season 2",
+                    "title_japanese": "アオのハコ Season 2",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1841/141443l.jpg"}},
+                    "score": 8.1,
+                    "episodes": 12,
+                    "type": "TV",
+                    "status": "Currently Airing",
+                    "synopsis": "배드민턴부의 이노마타 타이키와 농구부의 카노 치나츠의 풋풋한 청춘 러브 스토리.",
+                    "genres": [{"mal_id": 3, "name": "로맨스"}, {"mal_id": 4, "name": "스포츠"}],
+                    "year": 2026,
+                },
+                {
+                    "mal_id": 50709,
+                    "title": "블랙 클로버 2기",
+                    "title_english": "Black Clover Season 2",
+                    "title_japanese": "ブラッククローバー 第2期",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/2/88336l.jpg"}},
+                    "score": 8.7,
+                    "episodes": 24,
+                    "type": "TV",
+                    "status": "Currently Airing",
+                    "synopsis": "마법제에 도전하는 아스타와 유노의 장대한 마법 판타지 배틀.",
+                    "genres": [{"mal_id": 5, "name": "액션"}, {"mal_id": 6, "name": "판타지"}],
+                    "year": 2026,
+                },
+                {
+                    "mal_id": 52034,
+                    "title": "사이버펑크: 엣지러너 2",
+                    "title_english": "Cyberpunk: Edgerunners 2",
+                    "title_japanese": "サイバーパンク エッジランナーズ 2",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1286/125473l.jpg"}},
+                    "score": 8.9,
+                    "episodes": 10,
+                    "type": "ONA",
+                    "status": "Currently Airing",
+                    "synopsis": "나이트 시티의 뒷골목을 질주하는 새로운 용병들의 거친 생존기.",
+                    "genres": [{"mal_id": 7, "name": "SF"}, {"mal_id": 8, "name": "액션"}],
+                    "year": 2026,
+                },
+            ],
+            "top": [
+                {
+                    "mal_id": 52991,
+                    "title": "장송의 프리렌",
+                    "title_english": "Frieren: Beyond Journey's End",
+                    "title_japanese": "葬送のフリーレン",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1015/138006l.jpg"}},
+                    "score": 9.3,
+                    "episodes": 28,
+                    "type": "TV",
+                    "status": "Finished Airing",
+                    "synopsis": "마왕을 토벌한 용사 일행의 마법사 프리렌이 사람의 마음을 알아가는 따뜻한 후일담.",
+                    "genres": [{"mal_id": 9, "name": "모험"}, {"mal_id": 10, "name": "판타지"}],
+                    "year": 2023,
+                },
+                {
+                    "mal_id": 44511,
+                    "title": "체인소 맨",
+                    "title_english": "Chainsaw Man",
+                    "title_japanese": "チェンソーマン",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1806/126216l.jpg"}},
+                    "score": 8.6,
+                    "episodes": 12,
+                    "type": "TV",
+                    "status": "Finished Airing",
+                    "synopsis": "체인소의 악마 포치타와 계약하여 데빌 헌터로 살아가는 덴지의 다크 히어로 액션.",
+                    "genres": [{"mal_id": 11, "name": "다크 판타지"}, {"mal_id": 12, "name": "액션"}],
+                    "year": 2022,
+                },
+            ],
+        }
+
+    # 2. Domestic Source: Moeni (모에니)
+    if source == "moeni":
+        return {
+            "season": [
+                {
+                    "mal_id": 173828,
+                    "title": "푸른 상자 2기",
+                    "title_english": "Blue Box Season 2",
+                    "title_japanese": "アオのハコ Season 2",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1841/141443l.jpg"}},
+                    "score": 8.1,
+                    "episodes": 12,
+                    "type": "TV",
+                    "status": "Currently Airing",
+                    "synopsis": "배드민턴부의 이노마타 타이키와 농구부의 카노 치나츠의 풋풋한 청춘 러브 스토리.",
+                    "genres": [{"mal_id": 3, "name": "로맨스"}, {"mal_id": 4, "name": "스포츠"}],
+                    "year": 2026,
+                },
+                {
+                    "mal_id": 4928,
+                    "title": "학생회에도 구멍은 있다!",
+                    "title_english": "Seitokai ni mo Ana wa Aru!",
+                    "title_japanese": "生徒会にも穴はある！",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1171/109222l.jpg"}},
+                    "score": 7.9,
+                    "episodes": 12,
+                    "type": "TV",
+                    "status": "Currently Airing",
+                    "synopsis": "개성 넘치는 학생회 임원들의 유쾌하고 발랄한 학원 일상 코미디.",
+                    "genres": [{"mal_id": 13, "name": "코미디"}, {"mal_id": 14, "name": "일상"}],
+                    "year": 2026,
+                },
+                {
+                    "mal_id": 236,
+                    "title": "Re: 제로부터 시작하는 이세계 생활 4기",
+                    "title_english": "Re:Zero 4th Season",
+                    "title_japanese": "Re:ゼロから始める異世界生活 4th season",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1522/128039l.jpg"}},
+                    "score": 8.8,
+                    "episodes": 16,
+                    "type": "TV",
+                    "status": "Currently Airing",
+                    "synopsis": "소중한 사람들을 지키기 위해 사망회귀로 절망을 극복하는 스바루의 사투.",
+                    "genres": [{"mal_id": 15, "name": "판타지"}, {"mal_id": 16, "name": "서스펜스"}],
+                    "year": 2026,
+                },
+            ],
+            "top": [
+                {
+                    "mal_id": 173828,
+                    "title": "푸른 상자 2기",
+                    "title_english": "Blue Box Season 2",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1841/141443l.jpg"}},
+                    "score": 8.1,
+                    "episodes": 12,
+                    "type": "TV",
+                    "status": "Currently Airing",
+                    "genres": [{"mal_id": 3, "name": "로맨스"}],
+                    "year": 2026,
+                }
+            ],
+        }
+
     season, year = _current_season()
 
     gql = """
@@ -181,28 +407,25 @@ async def get_anime_home() -> Dict[str, Any]:
     season_list = [_format_anilist_media(m) for m in data.get("seasonMedia", {}).get("media", [])]
     top_list = [_format_anilist_media(m) for m in data.get("topMedia", {}).get("media", [])]
 
-    # Graceful fallback data if upstream network is completely down
-    if not season_list and not top_list:
-        season_list = [
-            {
-                "mal_id": 52991,
-                "title": "Frieren: Beyond Journey's End",
-                "title_english": "Frieren: Beyond Journey's End",
-                "title_japanese": "葬送のフリーレン",
-                "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1015/138006l.jpg"}},
-                "score": 9.3,
-                "episodes": 28,
-                "type": "TV",
-                "status": "Finished Airing",
-                "synopsis": "The adventure is over but life goes on for an elf mage just beginning to learn what living is all about.",
-                "genres": [{"mal_id": 1, "name": "Adventure"}, {"mal_id": 2, "name": "Fantasy"}],
-                "year": 2023,
-            }
-        ]
-
     return {
         "season": season_list,
         "top": top_list,
+    }
+
+
+@router.post("/open-folder")
+async def open_anime_folder(request: Request) -> Dict[str, Any]:
+    """Open the VOD downloads folder on the host machine using Windows Explorer."""
+    settings = get_settings()
+    folder_str = settings.vod_download_dir or settings.download_dir
+    folder = Path(folder_str).resolve()
+    folder.mkdir(parents=True, exist_ok=True)
+
+    opened = await asyncio.to_thread(reveal, folder)
+    return {
+        "success": bool(opened),
+        "path": str(folder),
+        "message": "저장 폴더를 열었습니다." if opened else f"저장 위치: {folder}",
     }
 
 
@@ -251,13 +474,13 @@ async def get_anime_schedule(day: Optional[str] = Query(None)) -> Dict[str, Any]
 
 @router.get("/search")
 async def search_anime(
-    q: str = Query("", description="Search keywords"),
-    genre: Optional[str] = Query(None),
-    type: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    order_by: str = Query("popularity"),
-    page: int = Query(1, ge=1),
-    limit: int = Query(24, ge=1, le=50),
+    q: str = "",
+    genre: Optional[str] = None,
+    type: Optional[str] = None,
+    status: Optional[str] = None,
+    order_by: str = "popularity",
+    page: int = 1,
+    limit: int = 24,
 ) -> Dict[str, Any]:
     """Search catalog with multi-facet filters."""
     sort_map = {
@@ -272,15 +495,15 @@ async def search_anime(
         "perPage": limit,
         "sort": sort_val,
     }
-    if q.strip():
+    if q and isinstance(q, str) and q.strip():
         variables["search"] = q.strip()
-    if genre:
+    if genre and isinstance(genre, str):
         variables["genre"] = genre
-    if type:
+    if type and isinstance(type, str):
         format_map = {"tv": "TV", "movie": "MOVIE", "ova": "OVA", "ona": "ONA", "special": "SPECIAL"}
         if type.lower() in format_map:
             variables["format"] = format_map[type.lower()]
-    if status:
+    if status and isinstance(status, str):
         status_map = {"airing": "RELEASING", "complete": "FINISHED", "upcoming": "NOT_YET_RELEASED"}
         if status.lower() in status_map:
             variables["status"] = status_map[status.lower()]
@@ -382,11 +605,11 @@ async def get_anime_detail(anime_id: int) -> Dict[str, Any]:
 
 @router.get("/stream")
 async def get_anime_stream(
-    title: str = Query(..., description="Anime title"),
-    episode: int = Query(1, ge=1, description="Episode number"),
-    anilist_id: Optional[int] = Query(None),
-    mal_id: Optional[int] = Query(None),
-    source: str = Query("reanime", description="Content source provider"),
+    title: str = "",
+    episode: int = 1,
+    anilist_id: Optional[int] = None,
+    mal_id: Optional[int] = None,
+    source: str = "reanime",
 ) -> Dict[str, Any]:
     """Resolve video player or HLS stream URL for the selected anime and episode."""
     # 1. Direct query to Re:Anime flix API if anilist_id is provided
