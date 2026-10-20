@@ -23,12 +23,12 @@ const STORAGE_BOOKMARKS_KEY = "phrolova_lilac_bookmarks";
 const STORAGE_HISTORY_KEY = "phrolova_lilac_history";
 
 const SRC_LABELS = {
+    reanime: "Re:Anime",
+    ohli24: "Ohli24",
+    moeni: "Moeni",
     zzapflix: "짭플릭스 (Zzapflix)",
     aniwolf: "애니울프 (AniWolf)",
     aniweek: "애니위크 (AniWeek)",
-    ohli24: "Ohli24",
-    moeni: "Moeni",
-    reanime: "Re:Anime",
     anilife: "Anilife",
     animaru: "Animaru",
     linkani: "Linkani",
@@ -38,7 +38,7 @@ const SRC_LABELS = {
 export default function AnimeView() {
     const { t } = useLanguage();
     const [activeTab, setActiveTab] = useState<"home" | "schedule" | "catalog" | "library">("home");
-    const [currentSource, setCurrentSource] = useState<string>("ohli24");
+    const [currentSource, setCurrentSource] = useState<string>("reanime");
 
     // Home data
     const [seasonList, setSeasonList] = useState<AnimeItem[]>([]);
@@ -139,6 +139,7 @@ export default function AnimeView() {
         const dummyAnime: AnimeItem = {
             mal_id: item.malId,
             title: item.title,
+            title_korean: item.title,
             images: {
                 jpg: { large_image_url: item.poster },
                 webp: { large_image_url: item.poster },
@@ -154,21 +155,13 @@ export default function AnimeView() {
         <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto lilac-theme">
             {/* Top Navigation Bar for Anime Hub */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8 pb-5 border-b border-white/5">
-                <div className="flex items-center gap-3.5">
-                    <div className="size-11 rounded-2xl bg-lilac-faint border border-lilac-border flex items-center justify-center text-lilac-primary shadow-sm shrink-0">
-                        <Sparkles className="size-5" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-xl sm:text-2xl font-black text-ink tracking-tight">
-                                {t("anime.hubTitle")}
-                            </h1>
-                            <span className="lilac-badge">Phrolova</span>
-                        </div>
-                        <p className="text-xs text-ink-faint mt-0.5">
-                            {t("anime.hubSubtitle")}
-                        </p>
-                    </div>
+                <div>
+                    <h1 className="text-xl sm:text-2xl font-black text-ink tracking-tight">
+                        {t("anime.hubTitle")}
+                    </h1>
+                    <p className="text-xs text-ink-faint mt-0.5">
+                        {t("anime.hubSubtitle")}
+                    </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -182,12 +175,12 @@ export default function AnimeView() {
                                 setCurrentSource(e.target.value);
                             }}
                         >
-                            <option value="aniwolf" className="bg-[#141418] text-white">{SRC_LABELS.aniwolf}</option>
-                            <option value="aniweek" className="bg-[#141418] text-white">{SRC_LABELS.aniweek}</option>
-                            <option value="zzapflix" className="bg-[#141418] text-white">{SRC_LABELS.zzapflix}</option>
+                            <option value="reanime" className="bg-[#141418] text-white">{SRC_LABELS.reanime}</option>
                             <option value="ohli24" className="bg-[#141418] text-white">{SRC_LABELS.ohli24}</option>
                             <option value="moeni" className="bg-[#141418] text-white">{SRC_LABELS.moeni}</option>
-                            <option value="reanime" className="bg-[#141418] text-white">{SRC_LABELS.reanime}</option>
+                            <option value="zzapflix" className="bg-[#141418] text-white">{SRC_LABELS.zzapflix}</option>
+                            <option value="aniwolf" className="bg-[#141418] text-white">{SRC_LABELS.aniwolf}</option>
+                            <option value="aniweek" className="bg-[#141418] text-white">{SRC_LABELS.aniweek}</option>
                             <option value="anilife" className="bg-[#141418] text-white">{SRC_LABELS.anilife}</option>
                             <option value="animaru" className="bg-[#141418] text-white">{SRC_LABELS.animaru}</option>
                             <option value="linkani" className="bg-[#141418] text-white">{SRC_LABELS.linkani}</option>

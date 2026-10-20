@@ -25,7 +25,7 @@ export const AnimeHero: React.FC<AnimeHeroProps> = ({
         anime.images?.webp?.image_url ||
         "";
 
-    const displayTitle = anime.title_english || anime.title;
+    const displayTitle = anime.title_korean || anime.title || anime.title_english || "";
 
     return (
         <section className="lilac-hero mb-8">

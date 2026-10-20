@@ -32,38 +32,52 @@ SCHEDULE_TTL = 1800  # 30 minutes
 
 # Comprehensive Korean title translation mapping dictionary for international catalogs
 KOREAN_TITLE_MAP: Dict[str, str] = {
-    "the apothecary diaries": "약사의 혼잣말",
-    "the apothecary diaries season 2": "약사의 혼잣말 2기",
     "the apothecary diaries season 3": "약사의 혼잣말 3기",
+    "the apothecary diaries season 2": "약사의 혼잣말 2기",
+    "the apothecary diaries": "약사의 혼잣말",
+    "kusuriya no hitorigoto 3": "약사의 혼잣말 3기",
     "kusuriya no hitorigoto": "약사의 혼잣말",
     "frieren: beyond journey's end": "장송의 프리렌",
     "frieren": "장송의 프리렌",
     "sousou no frieren": "장송의 프리렌",
-    "blue box": "푸른 상자",
     "blue box season 2": "푸른 상자 2기",
+    "blue box": "푸른 상자",
+    "ao no hako season 2": "푸른 상자 2기",
     "ao no hako": "푸른 상자",
-    "black clover": "블랙 클로버",
     "black clover season 2": "블랙 클로버 2기",
-    "cyberpunk: edgerunners": "사이버펑크: 엣지러너",
+    "black clover": "블랙 클로버",
     "cyberpunk: edgerunners 2": "사이버펑크: 엣지러너 2",
+    "cyberpunk: edgerunners": "사이버펑크: 엣지러너",
+    "reincarnated as a sword season 2": "환생했더니 검이었습니다 2기",
+    "reincarnated as a sword": "환생했더니 검이었습니다",
+    "steel ball run": "죠죠의 기묘한 모험 Part 7 스틸 볼 런",
+    "made in abyss: mezameru shinpi": "메이드 인 어비스: 눈을 뜨는 신비",
+    "made in abyss": "메이드 인 어비스",
+    "gintama: the very final": "은혼 THE FINAL",
+    "gintama season 3": "은혼 3기",
+    "gintama": "은혼",
     "re:zero -starting life in another world-": "Re: 제로부터 시작하는 이세계 생활",
     "re:zero": "Re: 제로부터 시작하는 이세계 생활",
-    "chainsaw man": "체인소 맨",
     "chainsaw man - the movie: reze arc": "체인소 맨 극장판: 레제편",
+    "chainsaw man": "체인소 맨",
     "fullmetal alchemist: brotherhood": "강철의 연금술사 BROTHERHOOD",
     "fullmetal alchemist": "강철의 연금술사",
+    "attack on titan season 3 part 2": "진격의 거인 3기 파트 2",
     "attack on titan": "진격의 거인",
     "shingeki no kyojin": "진격의 거인",
-    "gintama": "은혼",
-    "bleach": "블리치",
-    "bleach: thousand-year blood war": "블리치 천년혈전 편",
+    "magical sisters luluttolilly part 2": "마법소녀 루루토릴리 2기",
+    "magical sisters luluttolilly": "마법소녀 루루토릴리",
+    "uncle's obsession with cute things": "아저씨는 귀여운 것이 좋아",
     "bleach: thousand-year blood war - the calamity": "블리치 천년혈전 편 : 화진담",
+    "bleach: thousand-year blood war": "블리치 천년혈전 편",
+    "bleach": "블리치",
+    "psyren": "사이렌 (PSYREN)",
     "jujutsu kaisen": "주술회전",
     "demon slayer: kimetsu no yaiba": "귀멸의 칼날",
     "kimetsu no yaiba": "귀멸의 칼날",
     "oshi no ko": "최애의 아이",
-    "solo leveling": "나 혼자만 레벨업",
     "solo leveling season 2": "나 혼자만 레벨업 2기",
+    "solo leveling": "나 혼자만 레벨업",
     "dandadan": "단다단",
     "bocchi the rock!": "봇치 더 록!",
     "spy x family": "스파이 패밀리",
@@ -73,22 +87,46 @@ KOREAN_TITLE_MAP: Dict[str, str] = {
     "one piece": "원피스",
     "naruto": "나루토",
     "boruto": "보루토",
-    "reincarnated as a sword": "환생했더니 검이었습니다",
-    "reincarnated as a sword season 2": "환생했더니 검이었습니다 2기",
-    "steel ball run": "죠죠의 기묘한 모험 Part 7 스틸 볼 런",
-    "made in abyss": "메이드 인 어비스",
-    "made in abyss: mezameru shinpi": "메이드 인 어비스: 눈을 뜨는 신비",
-    "psyren": "사이렌 (PSYREN)",
-    "uncle's obsession with cute things": "아저씨는 귀여운 것이 좋아",
+    "overgeared": "템빨",
+    "dragon ball super: beerus": "드래곤볼 슈퍼: 비루스",
+    "tank chair": "탱크 체어",
     "renegade immortal": "선역 (Renegade Immortal)",
+    "haikyu!! karasuno": "하이큐!! 카라스노",
+    "haikyu!!": "하이큐!!",
 }
+
+# Pre-sort keys by descending length for longest prefix match
+_SORTED_TITLE_KEYS = sorted(KOREAN_TITLE_MAP.keys(), key=len, reverse=True)
 
 def _localize_title(raw_title: str) -> str:
     cleaned = raw_title.strip().lower()
-    for en_key, ko_val in KOREAN_TITLE_MAP.items():
-        if en_key in cleaned or cleaned in en_key:
-            return ko_val
+    for en_key in _SORTED_TITLE_KEYS:
+        if en_key in cleaned:
+            return KOREAN_TITLE_MAP[en_key]
+    for en_key in _SORTED_TITLE_KEYS:
+        if cleaned in en_key and len(cleaned) >= 4:
+            return KOREAN_TITLE_MAP[en_key]
     return raw_title
+
+KOREAN_SYNOPSIS_MAP: Dict[str, str] = {
+    "약사의 혼잣말": "후궁의 독살 미수 사건을 해결한 마오마오에게 새로운 음모의 그림자가 다가온다.",
+    "장송의 프리렌": "마왕을 토벌한 용사 일행의 마법사 프리렌이 사람의 마음을 알아가는 따뜻한 후일담.",
+    "푸른 상자": "배드민턴부의 이노마타 타이키와 농구부의 카노 치나츠의 풋풋한 청춘 러브 스토리.",
+    "블랙 클로버": "마법제에 도전하는 아스타와 유노의 장대한 마법 판타지 배틀.",
+    "사이버펑크": "나이트 시티의 뒷골목을 질주하는 새로운 용병들의 거친 생존기.",
+    "환생했더니 검이었습니다": "지능을 가진 마검으로 전생한 주인공과 수인 소녀 프란의 모험기.",
+    "체인소 맨": "체인소의 악마 포치타와 계약하여 데빌 헌터로 살아가는 덴지의 다크 액션.",
+    "은혼": "해결사 긴토키와 동료들이 펼치는 유쾌하고 감동적인 SF 에도 활극.",
+    "Re: 제로부터 시작하는 이세계 생활": "소중한 사람들을 지키기 위해 사망회귀로 절망을 극복하는 스바루의 사투.",
+    "강철의 연금술사": "잃어버린 몸을 되찾기 위해 현자의 돌을 찾는 엘릭 형제의 장대한 여정.",
+    "진격의 거인": "벽 안의 인류를 위협하는 거인들의 비밀과 자유를 향한 인류의 처절한 싸움.",
+}
+
+def _localize_synopsis(display_title: str, raw_synopsis: str) -> str:
+    for ko_key, ko_syn in KOREAN_SYNOPSIS_MAP.items():
+        if ko_key in display_title:
+            return ko_syn
+    return raw_synopsis or ""
 
 
 def _current_season() -> tuple[str, int]:
@@ -150,7 +188,7 @@ def _format_anilist_media(media: Dict[str, Any]) -> Dict[str, Any]:
         "episodes": media.get("episodes"),
         "type": media.get("format") or "TV",
         "status": "Currently Airing" if media.get("status") == "RELEASING" else "Finished Airing",
-        "synopsis": (media.get("description") or "").replace("<br>", "\n").replace("<i>", "").replace("</i>", ""),
+        "synopsis": _localize_synopsis(display_title, (media.get("description") or "").replace("<br>", "\n").replace("<i>", "").replace("</i>", "")),
         "trailer": {
             "youtube_id": trailer_id,
             "embed_url": embed_url,

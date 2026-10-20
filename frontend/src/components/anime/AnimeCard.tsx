@@ -5,6 +5,7 @@ import { useLanguage } from "../../contexts/LanguageContext";
 export interface AnimeItem {
     mal_id: number;
     title: string;
+    title_korean?: string | null;
     title_english?: string | null;
     title_japanese?: string | null;
     images?: {
@@ -54,7 +55,7 @@ export const AnimeCard: React.FC<AnimeCardProps> = ({
         anime.images?.jpg?.image_url ||
         "";
 
-    const displayTitle = anime.title_english || anime.title;
+    const displayTitle = anime.title_korean || anime.title || anime.title_english || "";
 
     return (
         <div

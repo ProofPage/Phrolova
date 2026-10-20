@@ -46,6 +46,17 @@ interface AnimePlayerModalProps {
     onSelectEpisode?: (anime: AnimeItem, ep: number) => void;
 }
 
+const SUB_TXT = {
+    hide: "자막 숨기기",
+    applied: "선택한 자막 적용됨",
+    sources: "자막 소스",
+    chooseSource: "원하는 자막 소스 선택",
+    fileCount: (n: number) => `${n}개 파일`,
+    refetch: "자막 다시 불러오기",
+    openFile: "자막 파일 열기",
+    supported: "지원 형식: ASS · SSA · SRT · VTT · SMI",
+};
+
 export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
     anime,
     episodeNumber,
@@ -69,6 +80,9 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
     // Subtitle Customization
     const [subtitleSize, setSubtitleSize] = useState<number>(100); // 50% ~ 200%
     const [subtitleSync, setSubtitleSync] = useState<number>(0); // -5s ~ +5s
+    const [selectedSubSource, setSelectedSubSource] = useState<string>("reanime");
+    const [selectedSubFile, setSelectedSubFile] = useState<string | null>("[Official] Episode 01 Dialogue.srt");
+    const [hideSubtitles, setHideSubtitles] = useState<boolean>(false);
 
     // Settings Panel Toggle
     const [showSettings, setShowSettings] = useState<boolean>(false);
@@ -177,7 +191,7 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
             if (onSaveHistory && video.duration > 0) {
                 onSaveHistory({
                     malId: anime.mal_id,
-                    title: anime.title_english || anime.title,
+                    title: anime.title_korean || anime.title || anime.title_english || "",
                     poster:
                         anime.images?.webp?.large_image_url ||
                         anime.images?.jpg?.large_image_url ||
@@ -518,26 +532,27 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                                 {/* Subtitle Hide Switch */}
                                 <div className="p-3 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between">
                                     <span className="text-xs font-semibold text-gray-200">
-                                        Hide Subtitles
+                                        {SUB_TXT.hide}
                                     </span>
                                     <input
                                         type="checkbox"
-                                        defaultChecked={true}
+                                        checked={hideSubtitles}
+                                        onChange={(e) => setHideSubtitles(e.target.checked)}
                                         className="size-4 rounded accent-[#C8A2C8] cursor-pointer"
                                     />
                                 </div>
 
                                 <p className="text-[11px] text-[#C8A2C8] font-medium">
-                                    Track applied
+                                    {SUB_TXT.applied}
                                 </p>
 
                                 {/* Subtitle Sources Grid */}
                                 <div>
                                     <label className="text-gray-300 font-bold block mb-1">
-                                        Subtitle Sources
+                                        {SUB_TXT.sources}
                                     </label>
                                     <p className="text-[10px] text-gray-400 mb-2">
-                                        Choose preferred subtitle source
+                                        {SUB_TXT.chooseSource}
                                     </p>
                                     <div className="grid grid-cols-3 gap-1.5">
                                         {[
@@ -547,20 +562,24 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                                             { id: "anissia", name: "Anissia", sub: "Korean" },
                                             { id: "jimaku", name: "Jimaku", sub: "Japanese" },
                                             { id: "ai", name: "AI Translate", sub: "Korean" },
-                                        ].map((src, i) => (
-                                            <button
-                                                key={src.id}
-                                                type="button"
-                                                className={`p-2 rounded-xl border text-left transition-all ${
-                                                    i === 0
-                                                        ? "border-[#C8A2C8] bg-lilac-faint text-white"
-                                                        : "border-white/10 hover:border-white/20 text-gray-300"
-                                                }`}
-                                            >
-                                                <span className="block text-[11px] font-bold">{src.name}</span>
-                                                <span className="block text-[9px] text-gray-400 mt-0.5">{src.sub}</span>
-                                            </button>
-                                        ))}
+                                        ].map((src) => {
+                                            const isSelected = selectedSubSource === src.id;
+                                            return (
+                                                <button
+                                                    key={src.id}
+                                                    type="button"
+                                                    onClick={() => setSelectedSubSource(src.id)}
+                                                    className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                                                        isSelected
+                                                            ? "border-[#C8A2C8] bg-lilac-faint text-white shadow-sm ring-1 ring-[#C8A2C8]"
+                                                            : "border-white/10 hover:border-white/20 text-gray-300 bg-white/[0.02]"
+                                                    }`}
+                                                >
+                                                    <span className="block text-[11px] font-bold">{src.name}</span>
+                                                    <span className="block text-[9px] text-gray-400 mt-0.5">{src.sub}</span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
@@ -570,7 +589,7 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                                         <span className="text-xs font-bold text-gray-200">
                                             Jimaku Japanese Subtitles
                                         </span>
-                                        <span className="text-[10px] text-gray-400">4 files</span>
+                                        <span className="text-[10px] text-gray-400">{SUB_TXT.fileCount(4)}</span>
                                     </div>
                                     <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                                         {[
@@ -578,44 +597,58 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                                             { name: "[shincaps] Season 2 - 01 (MPEG2 AAC).ass", format: "ASS · 53KB" },
                                             { name: "[Erai-raws] Episode 01 [WEB-DL].ass", format: "ASS · 34KB" },
                                             { name: "[Official] Episode 01 Dialogue.srt", format: "SRT · 22KB" },
-                                        ].map((f, idx) => (
-                                            <button
-                                                key={idx}
-                                                type="button"
-                                                className="w-full p-2 rounded-lg bg-black/40 hover:bg-white/5 border border-white/5 text-left flex items-center justify-between transition-all"
-                                            >
-                                                <span className="text-[11px] text-gray-300 truncate max-w-[190px]">
-                                                    {f.name}
-                                                </span>
-                                                <span className="text-[9px] text-gray-400 shrink-0 ml-1">
-                                                    {f.format}
-                                                </span>
-                                            </button>
-                                        ))}
+                                        ].map((f, idx) => {
+                                            const isSelected = selectedSubFile === f.name;
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => setSelectedSubFile(f.name)}
+                                                    className={`w-full p-2 rounded-lg border text-left flex items-center justify-between transition-all cursor-pointer ${
+                                                        isSelected
+                                                            ? "bg-lilac-faint border-[#C8A2C8] text-white shadow-sm"
+                                                            : "bg-black/40 hover:bg-white/5 border-white/5 text-gray-300"
+                                                    }`}
+                                                >
+                                                    <span className="text-[11px] truncate max-w-[190px]">
+                                                        {f.name}
+                                                    </span>
+                                                    <span className="text-[9px] text-gray-400 shrink-0 ml-1">
+                                                        {f.format}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
                                 {/* When Subtitle Missing */}
                                 <div className="pt-2 border-t border-white/10">
                                     <span className="text-xs font-bold text-gray-200 block mb-2">
-                                        Manual Subtitle Selection
+                                        {SUB_TXT.sources}
                                     </span>
                                     <div className="grid grid-cols-2 gap-2 mb-2">
                                         <button
                                             type="button"
-                                            className="p-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition-all text-center"
+                                            onClick={() => {
+                                                // Trigger refetch
+                                            }}
+                                            className="p-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition-all text-center cursor-pointer"
                                         >
-                                            Refetch Subtitles
+                                            {SUB_TXT.refetch}
                                         </button>
                                         <button
                                             type="button"
-                                            className="p-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition-all text-center"
+                                            onClick={() => {
+                                                // Open file
+                                            }}
+                                            className="p-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition-all text-center cursor-pointer"
                                         >
-                                            Open Subtitle File
+                                            {SUB_TXT.openFile}
                                         </button>
                                     </div>
                                     <p className="text-[10px] text-gray-400 text-center">
-                                        Supported formats: ASS · SSA · SRT · VTT · SMI
+                                        {SUB_TXT.supported}
                                     </p>
                                 </div>
                             </div>

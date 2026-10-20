@@ -95,7 +95,7 @@ export const AnimeDetailModal: React.FC<AnimeDetailModalProps> = ({
         "";
 
     const backdrop = (anime as any).banner_image || poster;
-    const displayTitle = anime.title;
+    const displayTitle = anime.title_korean || anime.title || anime.title_english || "";
     const subTitle = anime.title_japanese || anime.title_english || "";
     const totalEpisodes = anime.episodes || 12;
 
