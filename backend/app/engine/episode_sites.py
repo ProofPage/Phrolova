@@ -46,6 +46,12 @@ SITES = {
     'zzapflix': {'name': '짭플릭스', 'hosts': (NUMBERED_SITE_HOSTS['zzapflix'],),
                  'players': ('ckp2.wiselife.blog', re.compile(r'(?:[a-z0-9-]+\.)*wiselife\.blog')),
                  'media': ('ckp2.wiselife.blog', re.compile(r'(?:[a-z0-9-]+\.)*wiselife\.blog'))},
+    'aniwolf': {'name': '애니울프', 'hosts': ('aniwolf.com', 'www.aniwolf.com'),
+                'players': ('cdndania.com', 'michealcdn.com'),
+                'media': ('cdndania.com', 'michealcdn.com', re.compile(r'.*cloud.*\.xyz'))},
+    'aniweek': {'name': '애니위크', 'hosts': ('aniweek.com', 'www.aniweek.com'),
+                'players': ('michealcdn.com', 'cdndania.com'),
+                'media': ('michealcdn.com', 'cdndania.com', re.compile(r'.*cloud.*\.xyz'))},
 }
 AD_PATH = re.compile(r'/(?:ads?|banner|advert[^/]*|popunder|tracking)/', re.I)
 
@@ -113,6 +119,12 @@ def parse_episode_url(value: str) -> dict:
     if site == 'zzapflix':
         from app.engine.zzapflix import parse_zzapflix_url
         return parse_zzapflix_url(value)
+    if site == 'aniwolf':
+        from app.engine.aniwolf import parse_aniwolf_url
+        return parse_aniwolf_url(value)
+    if site == 'aniweek':
+        from app.engine.aniweek import parse_aniweek_url
+        return parse_aniweek_url(value)
     if site == 'anilife':
         if path.rstrip('/') == '/adult':
             raise EpisodeSiteError('애니라이프 성인 메뉴 주소입니다. 다운로드할 개별 작품 주소(/content/{id})를 입력하세요.')
@@ -311,6 +323,12 @@ def _load_catalog(route, client):
     if route['site'] == 'zzapflix':
         from app.engine.zzapflix import load_zzapflix_catalog
         return load_zzapflix_catalog(route['url'], client)
+    if route['site'] == 'aniwolf':
+        from app.engine.aniwolf import load_aniwolf_catalog
+        return load_aniwolf_catalog(route['url'], client)
+    if route['site'] == 'aniweek':
+        from app.engine.aniweek import load_aniweek_catalog
+        return load_aniweek_catalog(route['url'], client)
     site, work, selected = route['site'], route['work'], route['episode']
     hosts = SITES[site]['hosts']
     rows = []
@@ -544,6 +562,12 @@ def _extract_episode(url,client):
     if route['site'] == 'zzapflix':
         from app.engine.zzapflix import extract_zzapflix_episode
         return extract_zzapflix_episode(route, client)
+    if route['site'] == 'aniwolf':
+        from app.engine.aniwolf import extract_aniwolf_episode
+        return extract_aniwolf_episode(route, client)
+    if route['site'] == 'aniweek':
+        from app.engine.aniweek import extract_aniweek_episode
+        return extract_aniweek_episode(route, client)
     catalog = load_catalog(url,client)
     if len(catalog['episodes']) != 1 or route['collection'] and route['site'] != 'ohli24':
         raise EpisodeSiteError('작품의 회차 목록에서 내려받을 회차를 선택하세요.')

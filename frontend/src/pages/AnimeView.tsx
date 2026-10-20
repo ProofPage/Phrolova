@@ -24,6 +24,8 @@ const STORAGE_HISTORY_KEY = "phrolova_lilac_history";
 
 const SRC_LABELS = {
     zzapflix: "짭플릭스 (Zzapflix)",
+    aniwolf: "애니울프 (AniWolf)",
+    aniweek: "애니위크 (AniWeek)",
     ohli24: "Ohli24",
     moeni: "Moeni",
     reanime: "Re:Anime",
@@ -180,6 +182,8 @@ export default function AnimeView() {
                                 setCurrentSource(e.target.value);
                             }}
                         >
+                            <option value="aniwolf" className="bg-[#141418] text-white">{SRC_LABELS.aniwolf}</option>
+                            <option value="aniweek" className="bg-[#141418] text-white">{SRC_LABELS.aniweek}</option>
                             <option value="zzapflix" className="bg-[#141418] text-white">{SRC_LABELS.zzapflix}</option>
                             <option value="ohli24" className="bg-[#141418] text-white">{SRC_LABELS.ohli24}</option>
                             <option value="moeni" className="bg-[#141418] text-white">{SRC_LABELS.moeni}</option>

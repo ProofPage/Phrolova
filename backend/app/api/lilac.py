@@ -461,6 +461,100 @@ async def get_anime_home(source: str = Query("reanime", description="Content sou
             ],
         }
 
+    # 4. Domestic Source: AniWolf (애니울프)
+    if source == "aniwolf":
+        return {
+            "season": [
+                {
+                    "mal_id": 200001,
+                    "title": "야생의 라스트 보스가 나타났다! 2기",
+                    "title_english": "A Wild Last Boss Appeared! Season 2",
+                    "title_japanese": "野生のラスボスが現れた! 2期",
+                    "images": {"jpg": {"large_image_url": "https://aniwolf.com/storage/%EC%95%BC%EC%83%9D%EC%9D%98_%EB%9D%BC%EC%8A%A4%ED%8A%B8_%EB%B3%B4%EC%8A%A4%EA%B0%80_%EB%82%98%ED%83%80%EB%82%AC%EB%8B%A4!_2%EA%B8%B0.jpg"}},
+                    "score": 8.6,
+                    "episodes": 12,
+                    "type": "TV",
+                    "status": "Currently Airing",
+                    "synopsis": "게임 속 패왕 루파스 마파르로 전생한 주인공의 호쾌한 패도 판타지 배틀 액션.",
+                    "genres": [{"mal_id": 201, "name": "판타지"}, {"mal_id": 202, "name": "이세계"}],
+                    "year": 2026,
+                },
+                {
+                    "mal_id": 52991,
+                    "title": "약사의 혼잣말 3기",
+                    "title_english": "The Apothecary Diaries Season 3",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1015/138006l.jpg"}},
+                    "score": 8.5,
+                    "episodes": 12,
+                    "type": "TV",
+                    "status": "Currently Airing",
+                    "genres": [{"mal_id": 1, "name": "드라마"}],
+                    "year": 2026,
+                },
+            ],
+            "top": [
+                {
+                    "mal_id": 200001,
+                    "title": "야생의 라스트 보스가 나타났다! 2기",
+                    "title_english": "A Wild Last Boss Appeared! Season 2",
+                    "images": {"jpg": {"large_image_url": "https://aniwolf.com/storage/%EC%95%BC%EC%83%9D%EC%9D%98_%EB%9D%BC%EC%8A%A4%ED%8A%B8_%EB%B3%B4%EC%8A%A4%EA%B0%80_%EB%82%98%ED%83%80%EB%82%AC%EB%8B%A4!_2%EA%B8%B0.jpg"}},
+                    "score": 8.6,
+                    "episodes": 12,
+                    "type": "TV",
+                    "status": "Currently Airing",
+                    "genres": [{"mal_id": 201, "name": "판타지"}],
+                    "year": 2026,
+                }
+            ],
+        }
+
+    # 5. Domestic Source: AniWeek (애니위크)
+    if source == "aniweek":
+        return {
+            "season": [
+                {
+                    "mal_id": 300001,
+                    "title": "마법소녀 리리컬 나노하 익시즈 건 블레이즈 벤전스",
+                    "title_english": "Magical Girl Lyrical Nanoha EXCEED Gun Blaze Vengeance",
+                    "title_japanese": "魔法少女リリカルなのは",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1171/109222l.jpg"}},
+                    "score": 8.7,
+                    "episodes": 12,
+                    "type": "TV",
+                    "status": "Finished Airing",
+                    "synopsis": "세츠나와 조용히 살기를 바라는 시이나에게 닥쳐오는 운명적인 마법 배틀.",
+                    "genres": [{"mal_id": 301, "name": "마법소녀"}, {"mal_id": 302, "name": "액션"}],
+                    "year": 2026,
+                },
+                {
+                    "mal_id": 173828,
+                    "title": "푸른 상자 2기",
+                    "title_english": "Blue Box Season 2",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1841/141443l.jpg"}},
+                    "score": 8.1,
+                    "episodes": 12,
+                    "type": "TV",
+                    "status": "Currently Airing",
+                    "genres": [{"mal_id": 3, "name": "로맨스"}],
+                    "year": 2026,
+                },
+            ],
+            "top": [
+                {
+                    "mal_id": 300001,
+                    "title": "마법소녀 리리컬 나노하 익시즈 건 블레이즈 벤전스",
+                    "title_english": "Magical Girl Lyrical Nanoha EXCEED Gun Blaze Vengeance",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1171/109222l.jpg"}},
+                    "score": 8.7,
+                    "episodes": 12,
+                    "type": "TV",
+                    "status": "Finished Airing",
+                    "genres": [{"mal_id": 301, "name": "마법소녀"}],
+                    "year": 2026,
+                }
+            ],
+        }
+
     season, year = _current_season()
 
     gql = """
@@ -715,6 +809,38 @@ async def get_anime_stream(
     source: str = "reanime",
 ) -> Dict[str, Any]:
     """Resolve video player or HLS stream URL for the selected anime and episode."""
+    # 0-1. AniWolf (애니울프) stream
+    if source == "aniwolf":
+        try:
+            from app.engine.aniwolf import extract_aniwolf_episode
+            work_name = title or "야생의_라스트_보스가_나타났다!_2기"
+            res = extract_aniwolf_episode({"work": work_name, "episode": f"{episode}화", "url": f"https://aniwolf.com/{work_name}/{episode}화"})
+            return {
+                "success": True,
+                "stream_url": res["stream_url"],
+                "is_embed": res["is_embed"],
+                "source": "aniwolf",
+                "server": "AniWolf CDNDania",
+            }
+        except Exception as exc:
+            logger.debug(f"AniWolf stream resolution error: {exc}")
+
+    # 0-2. AniWeek (애니위크) stream
+    if source == "aniweek":
+        try:
+            from app.engine.aniweek import extract_aniweek_episode
+            work_name = title or "마법소녀 리리컬 나노하 익시즈 건 블레이즈 벤전스"
+            res = extract_aniweek_episode({"work": work_name, "episode": f"{episode}화", "url": f"https://aniweek.com/e/{work_name} {episode}화"})
+            return {
+                "success": True,
+                "stream_url": res["stream_url"],
+                "is_embed": res["is_embed"],
+                "source": "aniweek",
+                "server": "AniWeek MichealCDN",
+            }
+        except Exception as exc:
+            logger.debug(f"AniWeek stream resolution error: {exc}")
+
     # 0. Zzapflix (짭플릭스) stream
     if source == "zzapflix":
         try:

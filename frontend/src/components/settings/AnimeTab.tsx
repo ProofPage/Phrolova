@@ -60,6 +60,20 @@ export function saveStoredAnimeSettings(settings: AnimeSettings): void {
 
 const SOURCES = [
     {
+        id: "aniwolf",
+        name: "애니울프 (AniWolf)",
+        catalog: "최신 방영작 및 역대 분기 신작 VOD 카탈로그",
+        video: "CDNDania / MichealCDN 고화질 HLS 스트리밍",
+        sub: "영상 자체 한국어 자막 탑재",
+    },
+    {
+        id: "aniweek",
+        name: "애니위크 (AniWeek)",
+        catalog: "Inertia 실시간 고속 카탈로그 및 요일별 방영표",
+        video: "MichealCDN 1080p 고화질 스트리밍",
+        sub: "자체 한글 자막 스트림",
+    },
+    {
         id: "zzapflix",
         name: "짭플릭스 (Zzapflix)",
         catalog: "영화, 드라마, 숏드, 예능, 애니 종합 VOD",

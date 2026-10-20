@@ -20,6 +20,14 @@ def test_lilac_home_endpoint():
     assert "season" in data_zzap
     assert len(data_zzap["season"]) > 0
 
+    res_wolf = client.get("/api/lilac/home?source=aniwolf")
+    assert res_wolf.status_code == 200
+    assert "season" in res_wolf.json()
+
+    res_week = client.get("/api/lilac/home?source=aniweek")
+    assert res_week.status_code == 200
+    assert "season" in res_week.json()
+
 
 def test_lilac_schedule_endpoint():
     res = client.get("/api/lilac/schedule")
