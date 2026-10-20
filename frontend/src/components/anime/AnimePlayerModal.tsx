@@ -283,11 +283,11 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
     return (
         <div
             ref={containerRef}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 select-none"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black select-none overflow-hidden"
         >
             {resolvingStream ? (
                 <div className="flex flex-col items-center justify-center text-center p-8 z-30">
-                    <div className="size-12 border-4 border-lilac-primary border-t-transparent rounded-full animate-spin mb-4" />
+                    <div className="size-12 border-4 border-[#C8A2C8] border-t-transparent rounded-full animate-spin mb-4" />
                     <p className="text-sm font-bold text-white mb-1">
                         Connecting Video Stream...
                     </p>
@@ -296,7 +296,7 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                     </p>
                 </div>
             ) : streamError ? (
-                <div className="flex flex-col items-center justify-center text-center p-8 max-w-md z-30 bg-[#16161c] border border-lilac-border rounded-2xl shadow-2xl">
+                <div className="flex flex-col items-center justify-center text-center p-8 max-w-md z-30 bg-[#16161c] border border-white/10 rounded-2xl shadow-2xl">
                     <div className="size-12 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-3">
                         <Tv className="size-6" />
                     </div>
@@ -317,35 +317,43 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                     </div>
                 </div>
             ) : isEmbed && resolvedUrl ? (
-                <div className="w-full h-full max-h-screen flex items-center justify-center bg-black">
-                    <iframe
-                        src={resolvedUrl}
-                        title="Anime Player"
-                        className="w-full h-full max-h-screen border-none"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                        allowFullScreen
-                    />
+                /* Perfectly Aspect-Ratio Constrained 16:9 Iframe Wrapper */
+                <div className="w-full h-full flex items-center justify-center bg-black p-2 sm:p-4">
+                    <div className="w-full max-w-[94vw] aspect-video max-h-[88vh] bg-black rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center">
+                        <iframe
+                            src={resolvedUrl}
+                            title="Anime Player"
+                            className="w-full h-full border-none"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                            allowFullScreen
+                        />
+                    </div>
                 </div>
             ) : (
-                <video
-                    ref={videoRef}
-                    className={`w-full h-full max-h-screen ${
-                        aspectRatio === "contain"
-                            ? "object-contain"
-                            : aspectRatio === "cover"
-                            ? "object-cover"
-                            : "object-fill"
-                    }`}
-                    onClick={togglePlay}
-                    autoPlay
-                />
+                /* Responsive 16:9 Video Element with aspect preservation */
+                <div className="w-full h-full flex items-center justify-center bg-black p-2 sm:p-4">
+                    <div className="w-full max-w-[94vw] aspect-video max-h-[88vh] bg-black rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center">
+                        <video
+                            ref={videoRef}
+                            className={`w-full h-full object-contain aspect-video ${
+                                aspectRatio === "contain"
+                                    ? "object-contain"
+                                    : aspectRatio === "cover"
+                                    ? "object-cover"
+                                    : "object-fill"
+                            }`}
+                            onClick={togglePlay}
+                            autoPlay
+                        />
+                    </div>
+                </div>
             )}
 
             {/* Top Bar Overlay */}
-            <div className="absolute top-0 inset-x-0 p-5 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between text-white z-40">
+            <div className="absolute top-0 inset-x-0 p-4 sm:p-5 bg-gradient-to-b from-black/90 via-black/40 to-transparent flex items-center justify-between text-white z-40 pointer-events-auto">
                 <div className="flex items-center gap-3">
-                    <span className="lilac-badge">Lilac Player</span>
-                    <h2 className="text-sm sm:text-base font-bold truncate max-w-md">
+                    <span className="lilac-badge">Player</span>
+                    <h2 className="text-sm sm:text-base font-bold truncate max-w-md drop-shadow">
                         {anime.title_english || anime.title} — EP {episodeNumber}
                     </h2>
                 </div>
@@ -356,7 +364,7 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                         onClick={() => setShowSettings(!showSettings)}
                         className={`p-2 rounded-full transition-all ${
                             showSettings
-                                ? "bg-lilac-primary text-gray-950"
+                                ? "bg-[#C8A2C8] text-gray-950"
                                 : "bg-black/60 text-white/80 hover:text-white hover:bg-black/80"
                         }`}
                         title="Player Settings"
@@ -709,105 +717,107 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                 </div>
             )}
 
-            {/* Bottom Controls Overlay */}
-            <div className="absolute bottom-0 inset-x-0 p-4 sm:p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col gap-3 text-white z-40">
-                {/* Progress Slider */}
-                <div className="flex items-center gap-3">
-                    <span className="text-xs font-medium text-gray-300 w-12 text-right">
-                        {formatTime(currentTime)}
-                    </span>
-                    <input
-                        type="range"
-                        min={0}
-                        max={duration || 100}
-                        value={currentTime}
-                        onChange={handleSeek}
-                        className="flex-1 h-1.5 rounded-lg appearance-none bg-white/20 accent-lilac-primary cursor-pointer hover:h-2 transition-all"
-                    />
-                    <span className="text-xs font-medium text-gray-300 w-12">
-                        {formatTime(duration)}
-                    </span>
-                </div>
-
-                {/* Buttons Row */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        {/* Prev Episode */}
-                        {onSelectEpisode && episodeNumber > 1 && (
-                            <button
-                                type="button"
-                                onClick={() => onSelectEpisode(anime, episodeNumber - 1)}
-                                className="p-2 rounded-full hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
-                                title="Previous Episode"
-                                aria-label="Previous Episode"
-                            >
-                                <SkipBack className="size-4 fill-current" />
-                            </button>
-                        )}
-
-                        <button
-                            type="button"
-                            onClick={togglePlay}
-                            className="p-2.5 rounded-full bg-lilac-primary text-gray-950 hover:bg-lilac-hover transition-colors shadow-lg"
-                        >
-                            {isPlaying ? (
-                                <Pause className="size-5 fill-current" />
-                            ) : (
-                                <Play className="size-5 fill-current ml-0.5" />
-                            )}
-                        </button>
-
-                        {/* Next Episode */}
-                        {onSelectEpisode && episodeNumber < totalEps && (
-                            <button
-                                type="button"
-                                onClick={() => onSelectEpisode(anime, episodeNumber + 1)}
-                                className="p-2 rounded-full hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
-                                title="Next Episode"
-                                aria-label="Next Episode"
-                            >
-                                <SkipForward className="size-4 fill-current" />
-                            </button>
-                        )}
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                const v = videoRef.current;
-                                if (!v) return;
-                                v.muted = !v.muted;
-                                setIsMuted(v.muted);
-                            }}
-                            className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                        >
-                            {isMuted ? (
-                                <VolumeX className="size-5 text-rose-400" />
-                            ) : (
-                                <Volume2 className="size-5" />
-                            )}
-                        </button>
-                    </div>
-
+            {/* Bottom Controls Overlay (Only for native video playback to avoid overlapping embed player controls) */}
+            {!isEmbed && (
+                <div className="absolute bottom-0 inset-x-0 p-4 sm:p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col gap-3 text-white z-40">
+                    {/* Progress Slider */}
                     <div className="flex items-center gap-3">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                if (containerRef.current) {
-                                    if (!document.fullscreenElement) {
-                                        containerRef.current.requestFullscreen().catch(() => {});
-                                    } else {
-                                        document.exitFullscreen().catch(() => {});
+                        <span className="text-xs font-medium text-gray-300 w-12 text-right">
+                            {formatTime(currentTime)}
+                        </span>
+                        <input
+                            type="range"
+                            min={0}
+                            max={duration || 100}
+                            value={currentTime}
+                            onChange={handleSeek}
+                            className="flex-1 h-1.5 rounded-lg appearance-none bg-white/20 accent-[#C8A2C8] cursor-pointer hover:h-2 transition-all"
+                        />
+                        <span className="text-xs font-medium text-gray-300 w-12">
+                            {formatTime(duration)}
+                        </span>
+                    </div>
+
+                    {/* Buttons Row */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            {/* Prev Episode */}
+                            {onSelectEpisode && episodeNumber > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={() => onSelectEpisode(anime, episodeNumber - 1)}
+                                    className="p-2 rounded-full hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
+                                    title="Previous Episode"
+                                    aria-label="Previous Episode"
+                                >
+                                    <SkipBack className="size-4 fill-current" />
+                                </button>
+                            )}
+
+                            <button
+                                type="button"
+                                onClick={togglePlay}
+                                className="p-2.5 rounded-full bg-[#C8A2C8] text-gray-950 hover:bg-[#D8B4D8] transition-colors shadow-lg"
+                            >
+                                {isPlaying ? (
+                                    <Pause className="size-5 fill-current" />
+                                ) : (
+                                    <Play className="size-5 fill-current ml-0.5" />
+                                )}
+                            </button>
+
+                            {/* Next Episode */}
+                            {onSelectEpisode && episodeNumber < totalEps && (
+                                <button
+                                    type="button"
+                                    onClick={() => onSelectEpisode(anime, episodeNumber + 1)}
+                                    className="p-2 rounded-full hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
+                                    title="Next Episode"
+                                    aria-label="Next Episode"
+                                >
+                                    <SkipForward className="size-4 fill-current" />
+                                </button>
+                            )}
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const v = videoRef.current;
+                                    if (!v) return;
+                                    v.muted = !v.muted;
+                                    setIsMuted(v.muted);
+                                }}
+                                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                            >
+                                {isMuted ? (
+                                    <VolumeX className="size-5 text-rose-400" />
+                                ) : (
+                                    <Volume2 className="size-5" />
+                                )}
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (containerRef.current) {
+                                        if (!document.fullscreenElement) {
+                                            containerRef.current.requestFullscreen().catch(() => {});
+                                        } else {
+                                            document.exitFullscreen().catch(() => {});
+                                        }
                                     }
-                                }
-                            }}
-                            className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                            aria-label="Fullscreen"
-                        >
-                            <Maximize className="size-5" />
-                        </button>
+                                }}
+                                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                                aria-label="Fullscreen"
+                            >
+                                <Maximize className="size-5" />
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };
