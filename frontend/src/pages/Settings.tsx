@@ -13,17 +13,19 @@ import { AuthTab } from "../components/settings/AuthTab";
 import { DownloadTab } from "../components/settings/DownloadTab";
 import { InfoTab } from "../components/settings/InfoTab";
 import { NotificationsTab } from "../components/settings/NotificationsTab";
+import { AnimeTab } from "../components/settings/AnimeTab";
 import { useConfirm } from "../components/ui/ConfirmModal";
 import { Badge, Button, Card, PageHeader } from "../components/ui/primitives";
 import { useLanguage } from "../contexts/LanguageContext";
 
-type TabId = "download" | "auth" | "notifications" | "appearance" | "info";
+type TabId = "download" | "auth" | "notifications" | "appearance" | "anime" | "info";
 
 const TABS: { id: TabId; label: string }[] = [
     { id: "download", label: "settings.downloads" },
     { id: "auth", label: "settings.authentication" },
     { id: "notifications", label: "settings.notifications" },
     { id: "appearance", label: "settings.appearanceInSettings" },
+    { id: "anime", label: "settings.animeTab" },
     { id: "info", label: "settings.aboutInSettings" },
 ];
 
@@ -32,6 +34,7 @@ const EMPTY_DIRTY: Record<TabId, boolean> = {
     auth: false,
     notifications: false,
     appearance: false,
+    anime: false,
     info: false,
 };
 
@@ -165,6 +168,7 @@ export default function Settings() {
             {activeTab === "auth" && <AuthTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("auth", dirty)} />}
             {activeTab === "notifications" && <NotificationsTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("notifications", dirty)} />}
             {activeTab === "appearance" && <AppearanceTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("appearance", dirty)} />}
+            {activeTab === "anime" && <AnimeTab />}
             {activeTab === "info" && <InfoTab settings={settings} onSaved={loadSettings} onDirtyChange={(dirty) => setTabDirty("info", dirty)} onUpdateAvailabilityChange={setUpdateAvailable} />}
             </div>}
         </div>

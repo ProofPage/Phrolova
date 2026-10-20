@@ -18,6 +18,19 @@ import Hls from "hls.js";
 import { AnimeItem } from "./AnimeCard";
 import { WatchHistoryItem } from "./AnimeHistoryRail";
 
+const P_TXT = {
+    playerSettings: "플레이어 설정",
+    playerSettingsDesc: "재생 · 화질 · 자막",
+    playTab: "재생",
+    subtitleTab: "자막",
+    aspectTab: "자막 모양",
+    speed: "재생 속도",
+    seekStep: "탐색 간격",
+    seconds: "초",
+    autoSkip: "AniSkip 자동 스킵",
+    autoSkipDesc: "오프닝/엔딩 구간을 자동으로 건너뜁니다",
+};
+
 interface SkipInterval {
     type: string;
     startTime: number;
@@ -67,6 +80,7 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
 
     // Stream resolution
     const [resolvedUrl, setResolvedUrl] = useState<string | null>(streamUrl || null);
+    const [isEmbed, setIsEmbed] = useState<boolean>(false);
     const [resolvingStream, setResolvingStream] = useState<boolean>(!streamUrl);
     const [streamError, setStreamError] = useState<string | null>(null);
 
@@ -74,6 +88,7 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
     useEffect(() => {
         if (streamUrl) {
             setResolvedUrl(streamUrl);
+            setIsEmbed(streamUrl.includes("flixcloud.cc/e/"));
             setResolvingStream(false);
             return;
         }
@@ -97,6 +112,7 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
             .then((data) => {
                 if (data.success && data.stream_url) {
                     setResolvedUrl(data.stream_url);
+                    setIsEmbed(Boolean(data.is_embed));
                 } else {
                     setStreamError(data.message || "해당 회차의 스트림을 불러오지 못했습니다.");
                 }
@@ -300,6 +316,16 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                         </button>
                     </div>
                 </div>
+            ) : isEmbed && resolvedUrl ? (
+                <div className="w-full h-full max-h-screen flex items-center justify-center bg-black">
+                    <iframe
+                        src={resolvedUrl}
+                        title="Anime Player"
+                        className="w-full h-full max-h-screen border-none"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                        allowFullScreen
+                    />
+                </div>
             ) : (
                 <video
                     ref={videoRef}
@@ -350,18 +376,26 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                 </div>
             </div>
 
-            {/* In-Player Settings Drawer */}
+            {/* In-Player Settings Drawer (100% Lilac Parity) */}
             {showSettings && (
-                <div className="absolute right-4 top-20 bottom-24 w-80 bg-[#141418]/95 backdrop-blur-md border border-lilac-border rounded-2xl shadow-2xl p-4 flex flex-col z-50 text-white animate-fadeIn">
-                    <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
-                        <h3 className="text-xs font-bold text-ink uppercase tracking-wider flex items-center gap-1.5">
-                            <Sliders className="size-3.5 text-lilac-primary" />
-                            <span>Player Settings</span>
-                        </h3>
+                <div className="absolute right-4 top-16 bottom-20 w-88 bg-[#18181c]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-5 flex flex-col z-50 text-white animate-fadeIn overflow-hidden">
+                    {/* Drawer Header */}
+                    <div className="flex items-center justify-between pb-3.5 border-b border-white/10 mb-3">
+                        <div className="flex items-center gap-2">
+                            <span className="p-1.5 rounded-lg bg-white/5 text-[#C8A2C8]">
+                                <Settings className="size-4" />
+                            </span>
+                            <div>
+                                <h3 className="text-xs font-bold text-white leading-tight">
+                                    {P_TXT.playerSettings}
+                                </h3>
+                                <p className="text-[10px] text-gray-400">{P_TXT.playerSettingsDesc}</p>
+                            </div>
+                        </div>
                         <button
                             type="button"
                             onClick={() => setShowSettings(false)}
-                            className="text-gray-400 hover:text-white p-1"
+                            className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-all"
                         >
                             <X className="size-4" />
                         </button>
@@ -374,42 +408,43 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                             onClick={() => setSettingsTab("play")}
                             className={`flex-1 py-1.5 rounded-lg transition-all ${
                                 settingsTab === "play"
-                                    ? "bg-lilac-primary text-gray-950 font-bold"
+                                    ? "bg-white text-gray-950 font-bold"
                                     : "text-gray-400 hover:text-white"
                             }`}
                         >
-                            Playback
+                            {P_TXT.playTab}
                         </button>
                         <button
                             type="button"
                             onClick={() => setSettingsTab("subtitle")}
                             className={`flex-1 py-1.5 rounded-lg transition-all ${
                                 settingsTab === "subtitle"
-                                    ? "bg-lilac-primary text-gray-950 font-bold"
+                                    ? "bg-white text-gray-950 font-bold"
                                     : "text-gray-400 hover:text-white"
                             }`}
                         >
-                            Subtitles
+                            {P_TXT.subtitleTab}
                         </button>
                         <button
                             type="button"
                             onClick={() => setSettingsTab("aspect")}
                             className={`flex-1 py-1.5 rounded-lg transition-all ${
                                 settingsTab === "aspect"
-                                    ? "bg-lilac-primary text-gray-950 font-bold"
+                                    ? "bg-white text-gray-950 font-bold"
                                     : "text-gray-400 hover:text-white"
                             }`}
                         >
-                            Aspect
+                            {P_TXT.aspectTab}
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto space-y-4 text-xs">
+                    {/* Tab Body */}
+                    <div className="flex-1 overflow-y-auto space-y-4 text-xs pr-1">
                         {settingsTab === "play" && (
                             <>
                                 <div>
                                     <label className="text-gray-300 font-semibold block mb-2">
-                                        Playback Speed
+                                        {P_TXT.speed}
                                     </label>
                                     <div className="grid grid-cols-4 gap-1.5">
                                         {[0.75, 1, 1.25, 1.5, 2].map((r) => (
@@ -417,9 +452,9 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                                                 key={r}
                                                 type="button"
                                                 onClick={() => handleRateChange(r)}
-                                                className={`py-1.5 rounded-lg border text-center font-bold ${
+                                                className={`py-1.5 rounded-lg border text-center font-bold transition-all ${
                                                     playbackRate === r
-                                                        ? "border-lilac-primary bg-lilac-faint text-lilac-hover"
+                                                        ? "border-[#C8A2C8] bg-lilac-faint text-[#C8A2C8]"
                                                         : "border-white/10 hover:border-white/20 text-gray-300"
                                                 }`}
                                             >
@@ -431,7 +466,7 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
 
                                 <div>
                                     <label className="text-gray-300 font-semibold block mb-2">
-                                        Seek Step
+                                        {P_TXT.seekStep}
                                     </label>
                                     <div className="grid grid-cols-4 gap-1.5">
                                         {[5, 10, 15, 30].map((s) => (
@@ -439,13 +474,13 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                                                 key={s}
                                                 type="button"
                                                 onClick={() => setSeekStep(s)}
-                                                className={`py-1.5 rounded-lg border text-center font-bold ${
+                                                className={`py-1.5 rounded-lg border text-center font-bold transition-all ${
                                                     seekStep === s
-                                                        ? "border-lilac-primary bg-lilac-faint text-lilac-hover"
+                                                        ? "border-[#C8A2C8] bg-lilac-faint text-[#C8A2C8]"
                                                         : "border-white/10 hover:border-white/20 text-gray-300"
                                                 }`}
                                             >
-                                                {s}s
+                                                {s}{P_TXT.seconds}
                                             </button>
                                         ))}
                                     </div>
@@ -454,30 +489,138 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                                 <div className="pt-2 border-t border-white/10 flex items-center justify-between">
                                     <div>
                                         <span className="font-semibold block text-white">
-                                            AniSkip Auto-Skip
+                                            {P_TXT.autoSkip}
                                         </span>
                                         <span className="text-[11px] text-gray-400">
-                                            Automatically skip intro and outro intervals
+                                            {P_TXT.autoSkipDesc}
                                         </span>
                                     </div>
                                     <input
                                         type="checkbox"
                                         checked={autoSkip}
                                         onChange={(e) => setAutoSkip(e.target.checked)}
-                                        className="size-4 rounded accent-lilac-primary cursor-pointer"
+                                        className="size-4 rounded accent-[#C8A2C8] cursor-pointer"
                                     />
                                 </div>
                             </>
                         )}
 
                         {settingsTab === "subtitle" && (
-                            <>
+                            <div className="space-y-4">
+                                {/* Subtitle Hide Switch */}
+                                <div className="p-3 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between">
+                                    <span className="text-xs font-semibold text-gray-200">
+                                        Hide Subtitles
+                                    </span>
+                                    <input
+                                        type="checkbox"
+                                        defaultChecked={true}
+                                        className="size-4 rounded accent-[#C8A2C8] cursor-pointer"
+                                    />
+                                </div>
+
+                                <p className="text-[11px] text-[#C8A2C8] font-medium">
+                                    Track applied
+                                </p>
+
+                                {/* Subtitle Sources Grid */}
+                                <div>
+                                    <label className="text-gray-300 font-bold block mb-1">
+                                        Subtitle Sources
+                                    </label>
+                                    <p className="text-[10px] text-gray-400 mb-2">
+                                        Choose preferred subtitle source
+                                    </p>
+                                    <div className="grid grid-cols-3 gap-1.5">
+                                        {[
+                                            { id: "reanime", name: "Re:Anime", sub: "Site Track" },
+                                            { id: "kairan", name: "Kairan", sub: "Korean" },
+                                            { id: "csora", name: "Csora", sub: "Korean" },
+                                            { id: "anissia", name: "Anissia", sub: "Korean" },
+                                            { id: "jimaku", name: "Jimaku", sub: "Japanese" },
+                                            { id: "ai", name: "AI Translate", sub: "Korean" },
+                                        ].map((src, i) => (
+                                            <button
+                                                key={src.id}
+                                                type="button"
+                                                className={`p-2 rounded-xl border text-left transition-all ${
+                                                    i === 0
+                                                        ? "border-[#C8A2C8] bg-lilac-faint text-white"
+                                                        : "border-white/10 hover:border-white/20 text-gray-300"
+                                                }`}
+                                            >
+                                                <span className="block text-[11px] font-bold">{src.name}</span>
+                                                <span className="block text-[9px] text-gray-400 mt-0.5">{src.sub}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Jimaku Japanese Subtitles Sample List */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-bold text-gray-200">
+                                            Jimaku Japanese Subtitles
+                                        </span>
+                                        <span className="text-[10px] text-gray-400">4 files</span>
+                                    </div>
+                                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                                        {[
+                                            { name: "[NanakorAWS] Episode 01 (1080p AAC).ass", format: "ASS · 53KB" },
+                                            { name: "[shincaps] Season 2 - 01 (MPEG2 AAC).ass", format: "ASS · 53KB" },
+                                            { name: "[Erai-raws] Episode 01 [WEB-DL].ass", format: "ASS · 34KB" },
+                                            { name: "[Official] Episode 01 Dialogue.srt", format: "SRT · 22KB" },
+                                        ].map((f, idx) => (
+                                            <button
+                                                key={idx}
+                                                type="button"
+                                                className="w-full p-2 rounded-lg bg-black/40 hover:bg-white/5 border border-white/5 text-left flex items-center justify-between transition-all"
+                                            >
+                                                <span className="text-[11px] text-gray-300 truncate max-w-[190px]">
+                                                    {f.name}
+                                                </span>
+                                                <span className="text-[9px] text-gray-400 shrink-0 ml-1">
+                                                    {f.format}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* When Subtitle Missing */}
+                                <div className="pt-2 border-t border-white/10">
+                                    <span className="text-xs font-bold text-gray-200 block mb-2">
+                                        Manual Subtitle Selection
+                                    </span>
+                                    <div className="grid grid-cols-2 gap-2 mb-2">
+                                        <button
+                                            type="button"
+                                            className="p-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition-all text-center"
+                                        >
+                                            Refetch Subtitles
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="p-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition-all text-center"
+                                        >
+                                            Open Subtitle File
+                                        </button>
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 text-center">
+                                        Supported formats: ASS · SSA · SRT · VTT · SMI
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {settingsTab === "aspect" && (
+                            <div className="space-y-4">
                                 <div>
                                     <div className="flex justify-between items-center mb-1">
                                         <label className="text-gray-300 font-semibold">
                                             Subtitle Size
                                         </label>
-                                        <span className="text-lilac-primary font-bold">
+                                        <span className="text-[#C8A2C8] font-bold">
                                             {subtitleSize}%
                                         </span>
                                     </div>
@@ -488,16 +631,16 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                                         step={5}
                                         value={subtitleSize}
                                         onChange={(e) => setSubtitleSize(Number(e.target.value))}
-                                        className="w-full accent-lilac-primary"
+                                        className="w-full accent-[#C8A2C8]"
                                     />
                                 </div>
 
                                 <div>
                                     <div className="flex justify-between items-center mb-1">
                                         <label className="text-gray-300 font-semibold">
-                                            Subtitle Sync Offset
+                                            Subtitle Sync
                                         </label>
-                                        <span className="text-lilac-primary font-bold">
+                                        <span className="text-[#C8A2C8] font-bold">
                                             {subtitleSync > 0 ? `+${subtitleSync}` : subtitleSync}s
                                         </span>
                                     </div>
@@ -508,35 +651,38 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
                                         step={0.5}
                                         value={subtitleSync}
                                         onChange={(e) => setSubtitleSync(Number(e.target.value))}
-                                        className="w-full accent-lilac-primary"
+                                        className="w-full accent-[#C8A2C8]"
                                     />
                                 </div>
-                            </>
-                        )}
 
-                        {settingsTab === "aspect" && (
-                            <div className="space-y-2">
-                                {[
-                                    { id: "contain", label: "Fit Screen (Contain)" },
-                                    { id: "cover", label: "Crop to Fill (Cover)" },
-                                    { id: "fill", label: "Stretch (Fill)" },
-                                ].map((asp) => (
-                                    <button
-                                        key={asp.id}
-                                        type="button"
-                                        onClick={() => setAspectRatio(asp.id as any)}
-                                        className={`w-full p-2.5 rounded-xl border text-left font-semibold flex items-center justify-between ${
-                                            aspectRatio === asp.id
-                                                ? "border-lilac-primary bg-lilac-faint text-lilac-hover"
-                                                : "border-white/10 hover:border-white/20 text-gray-300"
-                                        }`}
-                                    >
-                                        <span>{asp.label}</span>
-                                        {aspectRatio === asp.id && (
-                                            <Tv className="size-4 text-lilac-primary" />
-                                        )}
-                                    </button>
-                                ))}
+                                <div>
+                                    <label className="text-gray-300 font-semibold block mb-2">
+                                        Aspect Ratio
+                                    </label>
+                                    <div className="space-y-2">
+                                        {[
+                                            { id: "contain", label: "Fit Screen (Contain)" },
+                                            { id: "cover", label: "Crop to Fill (Cover)" },
+                                            { id: "fill", label: "Stretch (Fill)" },
+                                        ].map((asp) => (
+                                            <button
+                                                key={asp.id}
+                                                type="button"
+                                                onClick={() => setAspectRatio(asp.id as any)}
+                                                className={`w-full p-2.5 rounded-xl border text-left font-semibold flex items-center justify-between ${
+                                                    aspectRatio === asp.id
+                                                        ? "border-[#C8A2C8] bg-lilac-faint text-[#C8A2C8]"
+                                                        : "border-white/10 hover:border-white/20 text-gray-300"
+                                                }`}
+                                            >
+                                                <span>{asp.label}</span>
+                                                {aspectRatio === asp.id && (
+                                                    <Tv className="size-4 text-[#C8A2C8]" />
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>

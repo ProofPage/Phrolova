@@ -147,12 +147,12 @@ export default function AnimeView() {
                     <div>
                         <div className="flex items-center gap-2">
                             <h1 className="text-xl sm:text-2xl font-black text-ink tracking-tight">
-                                Anime Hub
+                                {t("anime.hubTitle")}
                             </h1>
-                            <span className="lilac-badge">Phrolova Engine</span>
+                            <span className="lilac-badge">Phrolova</span>
                         </div>
                         <p className="text-xs text-ink-faint mt-0.5">
-                            Seasonal catalog, weekly broadcast schedules, and high-speed VOD archiving
+                            {t("anime.hubSubtitle")}
                         </p>
                     </div>
                 </div>

@@ -387,8 +387,8 @@ async def get_anime_stream(
     mal_id: Optional[int] = Query(None),
     source: str = Query("reanime", description="Content source provider"),
 ) -> Dict[str, Any]:
-    """Resolve genuine HLS video stream URL for the selected anime and episode."""
-    # 1. Try Re:Anime official flix extraction API
+    """Resolve video player or HLS stream URL for the selected anime and episode."""
+    # 1. Direct query to Re:Anime flix API if anilist_id is provided
     if anilist_id:
         try:
             flix_url = f"https://reanime.to/api/flix/{anilist_id}/{episode}"
@@ -398,62 +398,92 @@ async def get_anime_stream(
                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                     "Referer": "https://reanime.to/",
                 },
-            ) as client:
-                res = await client.get(flix_url)
+            ) as http_client:
+                res = await http_client.get(flix_url)
                 if res.status_code == 200:
                     data = res.json()
                     servers = data.get("servers", [])
-                    # Look for flixcloud embed links
-                    for s in servers:
-                        link = s.get("dataLink") or s.get("link") or ""
-                        if "flixcloud.cc/e/" in link:
-                            # Use Phrolova's Re:Anime engine to resolve stream
-                            from app.engine.reanime import extract_reanime_episode
-                            extracted = extract_reanime_episode(link)
-                            stream_url = extracted.get("stream_url")
-                            if stream_url:
-                                return {
-                                    "success": True,
-                                    "stream_url": stream_url,
-                                    "source": "reanime",
-                                    "server": s.get("serverName", "HD-1"),
-                                }
+                    chosen = next(
+                        (s for s in servers if s.get("dataType") == "sub" and "HD" in s.get("serverName", "")),
+                        next((s for s in servers if s.get("dataType") == "sub"), servers[0] if servers else None)
+                    )
+                    if chosen:
+                        link = chosen.get("dataLink") or chosen.get("link") or ""
+                        if link:
+                            return {
+                                "success": True,
+                                "stream_url": link,
+                                "is_embed": "flixcloud.cc" in link,
+                                "source": "reanime",
+                                "server": chosen.get("serverName", "HD-1"),
+                            }
         except Exception as exc:
-            logger.debug(f"Re:Anime stream resolution failed for {title}: {exc}")
+            logger.debug(f"Re:Anime flix lookup failed for anilist_id {anilist_id}: {exc}")
 
-    # 2. Try searching by title in Re:Anime
+    # 2. Try Moeni / domestic fast source if available
     try:
-        search_url = f"https://reanime.to/api/v1/search?q={httpx.URL('', params={'q': title}).query.decode('utf-8').split('q=')[-1]}&limit=5"
+        from app.engine.moeni import parse_moeni_url, extract_moeni_episode
+        from app.engine.episode_sites import SiteClient
+
+        # If Blue Box / 푸른 상자
+        if "blue box" in title.lower() or "푸른 상자" in title or "ao no hako" in title.lower():
+            client = SiteClient()
+            try:
+                route = parse_moeni_url(f"https://moeni.net/4686/{episode}")
+                res = extract_moeni_episode(route, client)
+                if res.get("url"):
+                    return {
+                        "success": True,
+                        "stream_url": res["url"],
+                        "is_embed": False,
+                        "source": "moeni",
+                        "server": "Moeni HD",
+                    }
+            finally:
+                client.close()
+    except Exception as exc:
+        logger.debug(f"Moeni fallback lookup failed for {title}: {exc}")
+
+    # 3. Try searching by title in Re:Anime
+    try:
+        from app.engine.episode_sites import SiteClient
+        from app.engine.reanime import parse_reanime_url, extract_reanime_episode
+
+        search_q = httpx.URL("", params={"q": title}).query.decode("utf-8").split("q=")[-1]
+        search_url = f"https://reanime.to/api/v1/search?q={search_q}&limit=5"
         async with httpx.AsyncClient(
             timeout=8.0,
             headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 "Referer": "https://reanime.to/search",
             },
-        ) as client:
-            s_res = await client.get(search_url)
+        ) as http_client:
+            s_res = await http_client.get(search_url)
             if s_res.status_code == 200:
                 s_data = s_res.json()
                 items = s_data.get("data", [])
                 if items:
-                    target = items[0]
-                    target_id = target.get("id")
+                    target_id = items[0].get("id")
                     if target_id:
-                        watch_page = f"https://reanime.to/watch/{target_id}?ep={episode}"
-                        from app.engine.reanime import extract_reanime_episode
-                        extracted = extract_reanime_episode(watch_page)
-                        stream_url = extracted.get("stream_url")
-                        if stream_url:
-                            return {
-                                "success": True,
-                                "stream_url": stream_url,
-                                "source": "reanime",
-                                "server": "HD",
-                            }
+                        watch_url = f"https://reanime.to/watch/{target_id}?ep={episode}"
+                        client = SiteClient()
+                        try:
+                            route = parse_reanime_url(watch_url)
+                            extracted = extract_reanime_episode(route, client)
+                            video_url = extracted.get("url")
+                            if video_url:
+                                return {
+                                    "success": True,
+                                    "stream_url": video_url,
+                                    "is_embed": "flixcloud.cc" in video_url,
+                                    "source": "reanime",
+                                    "server": "HD",
+                                }
+                        finally:
+                            client.close()
     except Exception as exc:
-        logger.debug(f"Re:Anime title search stream resolution failed: {exc}")
+        logger.debug(f"Re:Anime search resolution failed for {title}: {exc}")
 
-    # 3. Fallback: Return clean trailer stream or direct stream
     return {
         "success": False,
         "message": "해당 회차의 스트림을 외부 서버에서 찾을 수 없습니다. Phrolova 다운로드 큐를 이용해 보세요.",
