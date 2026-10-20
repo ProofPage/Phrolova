@@ -65,6 +65,50 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
     const [skipIntervals, setSkipIntervals] = useState<SkipInterval[]>([]);
     const [activeSkip, setActiveSkip] = useState<SkipInterval | null>(null);
 
+    // Stream resolution
+    const [resolvedUrl, setResolvedUrl] = useState<string | null>(streamUrl || null);
+    const [resolvingStream, setResolvingStream] = useState<boolean>(!streamUrl);
+    const [streamError, setStreamError] = useState<string | null>(null);
+
+    // Fetch actual stream URL
+    useEffect(() => {
+        if (streamUrl) {
+            setResolvedUrl(streamUrl);
+            setResolvingStream(false);
+            return;
+        }
+
+        setResolvingStream(true);
+        setStreamError(null);
+
+        const params = new URLSearchParams({
+            title: anime.title_english || anime.title,
+            episode: String(episodeNumber),
+        });
+        if ((anime as any).anilist_id) {
+            params.append("anilist_id", String((anime as any).anilist_id));
+        }
+        if (anime.mal_id) {
+            params.append("mal_id", String(anime.mal_id));
+        }
+
+        fetch(`/api/lilac/stream?${params.toString()}`)
+            .then((r) => r.json())
+            .then((data) => {
+                if (data.success && data.stream_url) {
+                    setResolvedUrl(data.stream_url);
+                } else {
+                    setStreamError(data.message || "해당 회차의 스트림을 불러오지 못했습니다.");
+                }
+            })
+            .catch((err) => {
+                setStreamError("스트림 서버 연결에 실패했습니다.");
+            })
+            .finally(() => {
+                setResolvingStream(false);
+            });
+    }, [anime, episodeNumber, streamUrl]);
+
     // Fetch AniSkip intervals
     useEffect(() => {
         fetch(`/api/lilac/skip-times/${anime.mal_id}/${episodeNumber}`)
@@ -80,12 +124,10 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
     // Setup Video / HLS
     useEffect(() => {
         const video = videoRef.current;
-        if (!video) return;
+        if (!video || !resolvedUrl) return;
 
         let hls: Hls | null = null;
-        const mediaSource =
-            streamUrl ||
-            "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
+        const mediaSource = resolvedUrl;
 
         if (mediaSource.includes(".m3u8")) {
             if (Hls.isSupported()) {
@@ -227,18 +269,51 @@ export const AnimePlayerModal: React.FC<AnimePlayerModalProps> = ({
             ref={containerRef}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 select-none"
         >
-            <video
-                ref={videoRef}
-                className={`w-full h-full max-h-screen ${
-                    aspectRatio === "contain"
-                        ? "object-contain"
-                        : aspectRatio === "cover"
-                        ? "object-cover"
-                        : "object-fill"
-                }`}
-                onClick={togglePlay}
-                autoPlay
-            />
+            {resolvingStream ? (
+                <div className="flex flex-col items-center justify-center text-center p-8 z-30">
+                    <div className="size-12 border-4 border-lilac-primary border-t-transparent rounded-full animate-spin mb-4" />
+                    <p className="text-sm font-bold text-white mb-1">
+                        Connecting Video Stream...
+                    </p>
+                    <p className="text-xs text-gray-400">
+                        {anime.title_english || anime.title} — Episode {episodeNumber}
+                    </p>
+                </div>
+            ) : streamError ? (
+                <div className="flex flex-col items-center justify-center text-center p-8 max-w-md z-30 bg-[#16161c] border border-lilac-border rounded-2xl shadow-2xl">
+                    <div className="size-12 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-3">
+                        <Tv className="size-6" />
+                    </div>
+                    <h3 className="text-base font-bold text-white mb-2">
+                        Stream Unavailable
+                    </h3>
+                    <p className="text-xs text-gray-300 mb-6 leading-relaxed">
+                        {streamError}
+                    </p>
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 rounded-xl bg-white/10 text-white text-xs font-semibold hover:bg-white/20 transition-all"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <video
+                    ref={videoRef}
+                    className={`w-full h-full max-h-screen ${
+                        aspectRatio === "contain"
+                            ? "object-contain"
+                            : aspectRatio === "cover"
+                            ? "object-cover"
+                            : "object-fill"
+                    }`}
+                    onClick={togglePlay}
+                    autoPlay
+                />
+            )}
 
             {/* Top Bar Overlay */}
             <div className="absolute top-0 inset-x-0 p-5 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between text-white z-40">

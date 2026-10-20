@@ -1,5 +1,6 @@
 import React from "react";
 import { Star, Bookmark, Play } from "lucide-react";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 export interface AnimeItem {
     mal_id: number;
@@ -45,6 +46,7 @@ export const AnimeCard: React.FC<AnimeCardProps> = ({
     onToggleBookmark,
     compact = false,
 }) => {
+    const { t } = useLanguage();
     const poster =
         anime.images?.webp?.large_image_url ||
         anime.images?.jpg?.large_image_url ||
@@ -137,7 +139,7 @@ export const AnimeCard: React.FC<AnimeCardProps> = ({
                         {anime.type || "Anime"}
                     </span>
                     <span>
-                        {anime.episodes ? `EP ${anime.episodes}` : anime.status === "Currently Airing" ? "Airing" : "Complete"}
+                        {anime.episodes ? `EP ${anime.episodes}` : anime.status === "Currently Airing" ? t("anime.airing") : t("anime.completed")}
                     </span>
                 </div>
             </div>

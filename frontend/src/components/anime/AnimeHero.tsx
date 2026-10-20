@@ -1,5 +1,6 @@
 import React from "react";
 import { Sparkles, Info, Bookmark, Star, Play } from "lucide-react";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { AnimeItem } from "./AnimeCard";
 
 interface AnimeHeroProps {
@@ -15,6 +16,7 @@ export const AnimeHero: React.FC<AnimeHeroProps> = ({
     isBookmarked = false,
     onToggleBookmark,
 }) => {
+    const { t } = useLanguage();
     if (!anime) return null;
 
     const bannerImg =
@@ -38,7 +40,7 @@ export const AnimeHero: React.FC<AnimeHeroProps> = ({
                 <div className="flex items-center gap-2 mb-3">
                     <span className="lilac-badge">
                         <Sparkles className="size-3.5" />
-                        <span>Featured Anime</span>
+                        <span>{t("anime.featured")}</span>
                     </span>
                     {typeof anime.score === "number" && anime.score > 0 && (
                         <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-300 bg-black/50 px-2.5 py-1 rounded-full border border-amber-400/20">
@@ -90,7 +92,7 @@ export const AnimeHero: React.FC<AnimeHeroProps> = ({
                         onClick={() => onSelect(anime)}
                     >
                         <Play className="size-4 fill-current" />
-                        <span>Watch Now</span>
+                        <span>{t("anime.watchNow")}</span>
                     </button>
 
                     <button
@@ -99,7 +101,7 @@ export const AnimeHero: React.FC<AnimeHeroProps> = ({
                         onClick={() => onSelect(anime)}
                     >
                         <Info className="size-4" />
-                        <span>Details</span>
+                        <span>{t("anime.details")}</span>
                     </button>
 
                     {onToggleBookmark && (

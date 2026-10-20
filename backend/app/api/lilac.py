@@ -379,6 +379,88 @@ async def get_anime_detail(anime_id: int) -> Dict[str, Any]:
     return {"anime": _format_anilist_media(media) if media else {}}
 
 
+@router.get("/stream")
+async def get_anime_stream(
+    title: str = Query(..., description="Anime title"),
+    episode: int = Query(1, ge=1, description="Episode number"),
+    anilist_id: Optional[int] = Query(None),
+    mal_id: Optional[int] = Query(None),
+    source: str = Query("reanime", description="Content source provider"),
+) -> Dict[str, Any]:
+    """Resolve genuine HLS video stream URL for the selected anime and episode."""
+    # 1. Try Re:Anime official flix extraction API
+    if anilist_id:
+        try:
+            flix_url = f"https://reanime.to/api/flix/{anilist_id}/{episode}"
+            async with httpx.AsyncClient(
+                timeout=8.0,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "Referer": "https://reanime.to/",
+                },
+            ) as client:
+                res = await client.get(flix_url)
+                if res.status_code == 200:
+                    data = res.json()
+                    servers = data.get("servers", [])
+                    # Look for flixcloud embed links
+                    for s in servers:
+                        link = s.get("dataLink") or s.get("link") or ""
+                        if "flixcloud.cc/e/" in link:
+                            # Use Phrolova's Re:Anime engine to resolve stream
+                            from app.engine.reanime import extract_reanime_episode
+                            extracted = extract_reanime_episode(link)
+                            stream_url = extracted.get("stream_url")
+                            if stream_url:
+                                return {
+                                    "success": True,
+                                    "stream_url": stream_url,
+                                    "source": "reanime",
+                                    "server": s.get("serverName", "HD-1"),
+                                }
+        except Exception as exc:
+            logger.debug(f"Re:Anime stream resolution failed for {title}: {exc}")
+
+    # 2. Try searching by title in Re:Anime
+    try:
+        search_url = f"https://reanime.to/api/v1/search?q={httpx.URL('', params={'q': title}).query.decode('utf-8').split('q=')[-1]}&limit=5"
+        async with httpx.AsyncClient(
+            timeout=8.0,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Referer": "https://reanime.to/search",
+            },
+        ) as client:
+            s_res = await client.get(search_url)
+            if s_res.status_code == 200:
+                s_data = s_res.json()
+                items = s_data.get("data", [])
+                if items:
+                    target = items[0]
+                    target_id = target.get("id")
+                    if target_id:
+                        watch_page = f"https://reanime.to/watch/{target_id}?ep={episode}"
+                        from app.engine.reanime import extract_reanime_episode
+                        extracted = extract_reanime_episode(watch_page)
+                        stream_url = extracted.get("stream_url")
+                        if stream_url:
+                            return {
+                                "success": True,
+                                "stream_url": stream_url,
+                                "source": "reanime",
+                                "server": "HD",
+                            }
+    except Exception as exc:
+        logger.debug(f"Re:Anime title search stream resolution failed: {exc}")
+
+    # 3. Fallback: Return clean trailer stream or direct stream
+    return {
+        "success": False,
+        "message": "해당 회차의 스트림을 외부 서버에서 찾을 수 없습니다. Phrolova 다운로드 큐를 이용해 보세요.",
+        "stream_url": None,
+    }
+
+
 @router.get("/skip-times/{mal_id}/{episode}")
 async def get_skip_times(
     mal_id: int,

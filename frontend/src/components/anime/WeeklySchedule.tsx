@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Calendar, RotateCw } from "lucide-react";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { AnimeCard, AnimeItem } from "./AnimeCard";
 
 const DAYS = [
-    { key: "monday", label: "Mon" },
-    { key: "tuesday", label: "Tue" },
-    { key: "wednesday", label: "Wed" },
-    { key: "thursday", label: "Thu" },
-    { key: "friday", label: "Fri" },
-    { key: "saturday", label: "Sat" },
-    { key: "sunday", label: "Sun" },
+    { key: "monday", labelKey: "anime.mon" },
+    { key: "tuesday", labelKey: "anime.tue" },
+    { key: "wednesday", labelKey: "anime.wed" },
+    { key: "thursday", labelKey: "anime.thu" },
+    { key: "friday", labelKey: "anime.fri" },
+    { key: "saturday", labelKey: "anime.sat" },
+    { key: "sunday", labelKey: "anime.sun" },
 ];
 
 function getTodayKey(): string {
@@ -30,6 +31,7 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
     bookmarks = [],
     onToggleBookmark,
 }) => {
+    const { t } = useLanguage();
     const [selectedDay, setSelectedDay] = useState<string>(getTodayKey());
     const [scheduleMap, setScheduleMap] = useState<Record<string, AnimeItem[]>>({});
     const [loading, setLoading] = useState<boolean>(false);
@@ -62,10 +64,10 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
                 <div>
                     <h2 className="text-lg sm:text-xl font-bold text-ink tracking-tight flex items-center gap-2">
                         <Calendar className="size-5 text-lilac-primary" />
-                        <span>Weekly Broadcast Schedule</span>
+                        <span>{t("anime.weeklySchedule")}</span>
                     </h2>
                     <p className="text-xs text-ink-faint mt-0.5">
-                        Daily television and streaming broadcasts
+                        {t("anime.weeklyScheduleDesc")}
                     </p>
                 </div>
 
@@ -75,7 +77,7 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
                         onClick={() => setSelectedDay(getTodayKey())}
                         className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-lilac-border bg-lilac-faint text-lilac-primary hover:bg-lilac-primary hover:text-gray-950 transition-all"
                     >
-                        Today ({DAYS.find((d) => d.key === getTodayKey())?.label})
+                        {t("anime.today")} ({t(DAYS.find((d) => d.key === getTodayKey())?.labelKey || "anime.mon")})
                     </button>
                     <button
                         type="button"
@@ -108,7 +110,7 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
                             onClick={() => setSelectedDay(d.key)}
                             className={`lilac-day-tab relative shrink-0 ${isActive ? "active" : ""}`}
                         >
-                            <span>{d.label}</span>
+                            <span>{t(d.labelKey)}</span>
                             {isToday && (
                                 <span className="absolute -top-1 -right-1 size-2 rounded-full bg-lilac-primary ring-2 ring-background" />
                             )}

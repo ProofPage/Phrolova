@@ -1,5 +1,6 @@
 import React, { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { AnimeCard, AnimeItem } from "./AnimeCard";
 
 interface AnimeRailProps {
@@ -23,6 +24,7 @@ export const AnimeRail: React.FC<AnimeRailProps> = ({
     onToggleBookmark,
     onSeeAll,
 }) => {
+    const { t } = useLanguage();
     const railRef = useRef<HTMLDivElement>(null);
 
     const scroll = (direction: "left" | "right") => {
@@ -48,7 +50,7 @@ export const AnimeRail: React.FC<AnimeRailProps> = ({
                             onClick={onSeeAll}
                             className="text-xs font-semibold text-lilac-primary hover:text-lilac-hover mr-2 transition-colors"
                         >
-                            View All →
+                            {t("anime.viewAll")}
                         </button>
                     )}
                     <button

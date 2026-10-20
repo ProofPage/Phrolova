@@ -7,6 +7,7 @@ import {
     FolderHeart,
     RefreshCw,
 } from "lucide-react";
+import { useLanguage } from "../contexts/LanguageContext";
 import { AnimeHero } from "../components/anime/AnimeHero";
 import { AnimeRail } from "../components/anime/AnimeRail";
 import { WeeklySchedule } from "../components/anime/WeeklySchedule";
@@ -22,6 +23,7 @@ const STORAGE_BOOKMARKS_KEY = "phrolova_lilac_bookmarks";
 const STORAGE_HISTORY_KEY = "phrolova_lilac_history";
 
 export default function AnimeView() {
+    const { t } = useLanguage();
     const [activeTab, setActiveTab] = useState<"home" | "schedule" | "catalog" | "library">("home");
 
     // Home data
@@ -254,8 +256,8 @@ export default function AnimeView() {
 
                     {/* Current Season Releases */}
                     <AnimeRail
-                        title="Current Season"
-                        subtitle="Hot new anime currently airing this season"
+                        title={t("anime.currentSeason")}
+                        subtitle={t("anime.currentSeasonDesc")}
                         items={seasonList}
                         loading={loadingHome}
                         onSelect={setSelectedAnime}
@@ -266,8 +268,8 @@ export default function AnimeView() {
 
                     {/* Top Popular Anime */}
                     <AnimeRail
-                        title="Top Popular"
-                        subtitle="Highest rated and most watched classics worldwide"
+                        title={t("anime.topPopular")}
+                        subtitle={t("anime.topPopularDesc")}
                         items={topList}
                         loading={loadingHome}
                         onSelect={setSelectedAnime}
