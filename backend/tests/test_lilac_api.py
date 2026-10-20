@@ -14,6 +14,12 @@ def test_lilac_home_endpoint():
     assert "top" in data
     assert len(data["season"]) > 0
 
+    res_zzap = client.get("/api/lilac/home?source=zzapflix")
+    assert res_zzap.status_code == 200
+    data_zzap = res_zzap.json()
+    assert "season" in data_zzap
+    assert len(data_zzap["season"]) > 0
+
 
 def test_lilac_schedule_endpoint():
     res = client.get("/api/lilac/schedule")
@@ -44,3 +50,10 @@ def test_lilac_stream_endpoint():
     assert res.status_code == 200
     data = res.json()
     assert "stream_url" in data
+
+    res_zzap = client.get("/api/lilac/stream?source=zzapflix&mal_id=123692&episode=1")
+    assert res_zzap.status_code == 200
+    data_zzap = res_zzap.json()
+    assert data_zzap.get("success") is True
+    assert "stream_url" in data_zzap
+

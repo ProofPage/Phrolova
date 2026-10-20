@@ -358,6 +358,109 @@ async def get_anime_home(source: str = Query("reanime", description="Content sou
             ],
         }
 
+    # 3. Domestic Source: Zzapflix (짭플릭스)
+    if source == "zzapflix":
+        return {
+            "season": [
+                {
+                    "mal_id": 123692,
+                    "title": "템빨",
+                    "title_english": "Overgeared",
+                    "title_japanese": "テムパル〜アイテムの力〜",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1171/109222l.jpg"}},
+                    "score": 8.8,
+                    "episodes": 24,
+                    "type": "ONA",
+                    "status": "Currently Airing",
+                    "synopsis": "전 세계 20억 명이 플레이하는 가상현실 VR 게임 SATISFY에서 신화급 대장장이로 거듭나는 루저의 통쾌한 인생 역전기.",
+                    "genres": [{"mal_id": 100, "name": "애니"}, {"mal_id": 101, "name": "판타지"}],
+                    "year": 2026,
+                },
+                {
+                    "mal_id": 123703,
+                    "title": "블랙클로버 New Chapter",
+                    "title_english": "Black Clover New Chapter",
+                    "title_japanese": "ブラッククローバー",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/2/88336l.jpg"}},
+                    "score": 8.7,
+                    "episodes": 12,
+                    "type": "TV",
+                    "status": "Currently Airing",
+                    "synopsis": "마법제에 도전하는 소년들의 장대한 마법 배틀.",
+                    "genres": [{"mal_id": 100, "name": "애니"}, {"mal_id": 102, "name": "액션"}],
+                    "year": 2026,
+                },
+                {
+                    "mal_id": 123694,
+                    "title": "연애박사",
+                    "title_english": "Love Doctor",
+                    "title_japanese": "恋愛博士",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1841/141443l.jpg"}},
+                    "score": 8.2,
+                    "episodes": 16,
+                    "type": "TV",
+                    "status": "Currently Airing",
+                    "synopsis": "연애에 서툰 이들을 위한 현실 밀착 공감 로맨스 드라마.",
+                    "genres": [{"mal_id": 103, "name": "드라마"}, {"mal_id": 104, "name": "로맨스"}],
+                    "year": 2026,
+                },
+                {
+                    "mal_id": 123696,
+                    "title": "우리들의 발라드 2",
+                    "title_english": "Our Ballad Season 2",
+                    "title_japanese": "私たちのバラード 2",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1015/138006l.jpg"}},
+                    "score": 8.4,
+                    "episodes": 12,
+                    "type": "TV",
+                    "status": "Currently Airing",
+                    "synopsis": "대한민국을 울리는 최고의 보컬리스트들이 선사하는 감동의 발라드 음악 예능.",
+                    "genres": [{"mal_id": 105, "name": "예능"}, {"mal_id": 106, "name": "음악"}],
+                    "year": 2026,
+                },
+                {
+                    "mal_id": 123734,
+                    "title": "드골: 저항의 시작",
+                    "title_english": "De Gaulle",
+                    "title_japanese": "ドゴール",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1286/125473l.jpg"}},
+                    "score": 8.5,
+                    "episodes": 1,
+                    "type": "MOVIE",
+                    "status": "Finished Airing",
+                    "synopsis": "역사를 뒤바꾼 결단의 순간, 자유 프랑스를 이끈 지도자의 뜨거운 서사.",
+                    "genres": [{"mal_id": 107, "name": "영화"}, {"mal_id": 108, "name": "전쟁"}],
+                    "year": 2026,
+                },
+            ],
+            "top": [
+                {
+                    "mal_id": 123692,
+                    "title": "템빨",
+                    "title_english": "Overgeared",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1171/109222l.jpg"}},
+                    "score": 8.8,
+                    "episodes": 24,
+                    "type": "ONA",
+                    "status": "Currently Airing",
+                    "genres": [{"mal_id": 100, "name": "애니"}],
+                    "year": 2026,
+                },
+                {
+                    "mal_id": 123753,
+                    "title": "하이큐!! 카라스노 고교 VS 시라토리자와",
+                    "title_english": "Haikyu!! Karasuno vs Shiratorizawa",
+                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1841/141443l.jpg"}},
+                    "score": 9.0,
+                    "episodes": 10,
+                    "type": "TV",
+                    "status": "Finished Airing",
+                    "genres": [{"mal_id": 100, "name": "애니"}, {"mal_id": 109, "name": "스포츠"}],
+                    "year": 2026,
+                },
+            ],
+        }
+
     season, year = _current_season()
 
     gql = """
@@ -612,6 +715,22 @@ async def get_anime_stream(
     source: str = "reanime",
 ) -> Dict[str, Any]:
     """Resolve video player or HLS stream URL for the selected anime and episode."""
+    # 0. Zzapflix (짭플릭스) stream
+    if source == "zzapflix":
+        try:
+            from app.engine.zzapflix import extract_zzapflix_episode
+            work_id = str(mal_id) if mal_id else "123692"
+            res = extract_zzapflix_episode({"work": work_id, "episode": str(episode - 1)})
+            return {
+                "success": True,
+                "stream_url": res["stream_url"],
+                "is_embed": res["is_embed"],
+                "source": "zzapflix",
+                "server": "Zzapflix Wiselife",
+            }
+        except Exception as exc:
+            logger.debug(f"Zzapflix stream resolution error: {exc}")
+
     # 1. Direct query to Re:Anime flix API if anilist_id is provided
     if anilist_id:
         try:

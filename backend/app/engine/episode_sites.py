@@ -43,6 +43,9 @@ SITES = {
                          *(f'{day}{i}bcloud-starcdn.xyz' for day in ('mon','tue','wed','thu','fri','sat','sun') for i in range(1, 8)),
                          *(f'hol{i}ncloud{generation}-nocdn.xyz' for generation in (1, 2) for i in range(1, 8)),
                          *(f'ohli{i}ncloud{generation}-nocdn.xyz' for generation in range(1, 6) for i in range(1, 8)))},
+    'zzapflix': {'name': '짭플릭스', 'hosts': (NUMBERED_SITE_HOSTS['zzapflix'],),
+                 'players': ('ckp2.wiselife.blog', re.compile(r'(?:[a-z0-9-]+\.)*wiselife\.blog')),
+                 'media': ('ckp2.wiselife.blog', re.compile(r'(?:[a-z0-9-]+\.)*wiselife\.blog'))},
 }
 AD_PATH = re.compile(r'/(?:ads?|banner|advert[^/]*|popunder|tracking)/', re.I)
 
@@ -107,6 +110,9 @@ def parse_episode_url(value: str) -> dict:
     if site == 'reanime':
         from app.engine.reanime import parse_reanime_url
         return parse_reanime_url(value)
+    if site == 'zzapflix':
+        from app.engine.zzapflix import parse_zzapflix_url
+        return parse_zzapflix_url(value)
     if site == 'anilife':
         if path.rstrip('/') == '/adult':
             raise EpisodeSiteError('애니라이프 성인 메뉴 주소입니다. 다운로드할 개별 작품 주소(/content/{id})를 입력하세요.')
@@ -302,6 +308,9 @@ def _load_catalog(route, client):
     if route['site'] == 'reanime':
         from app.engine.reanime import load_reanime_catalog
         return load_reanime_catalog(route, client)
+    if route['site'] == 'zzapflix':
+        from app.engine.zzapflix import load_zzapflix_catalog
+        return load_zzapflix_catalog(route['url'], client)
     site, work, selected = route['site'], route['work'], route['episode']
     hosts = SITES[site]['hosts']
     rows = []
@@ -532,6 +541,9 @@ def _extract_episode(url,client):
     if route['site'] == 'reanime':
         from app.engine.reanime import extract_reanime_episode
         return extract_reanime_episode(route, client)
+    if route['site'] == 'zzapflix':
+        from app.engine.zzapflix import extract_zzapflix_episode
+        return extract_zzapflix_episode(route, client)
     catalog = load_catalog(url,client)
     if len(catalog['episodes']) != 1 or route['collection'] and route['site'] != 'ohli24':
         raise EpisodeSiteError('작품의 회차 목록에서 내려받을 회차를 선택하세요.')

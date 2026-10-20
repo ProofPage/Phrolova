@@ -60,6 +60,13 @@ export function saveStoredAnimeSettings(settings: AnimeSettings): void {
 
 const SOURCES = [
     {
+        id: "zzapflix",
+        name: "짭플릭스 (Zzapflix)",
+        catalog: "영화, 드라마, 숏드, 예능, 애니 종합 VOD",
+        video: "Artplayer HLS 고화질 스트리밍",
+        sub: "자체 한글 자막 및 한국어 오디오",
+    },
+    {
         id: "reanime",
         name: "RE:Anime",
         catalog: "2만여 작품, 한국어 검색",
