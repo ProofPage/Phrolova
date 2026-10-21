@@ -15,7 +15,7 @@ export function parsePlatformChannelInput(platform: Platform, value: string): st
         try {
             const url = new URL(text);
             if (!['https:', 'http:'].includes(url.protocol) || !['rplay.live','www.rplay.live'].includes(url.hostname) || url.username || url.password || url.port) return null;
-            const match = url.pathname.match(/^\/live\/([a-fA-F0-9]{24})\/?$/);
+            const match = url.pathname.match(/^\/(?:live|creatorhome)\/([a-fA-F0-9]{24})\/?$/);
             if (match) return match[1].toLowerCase();
             const handleMatch = url.pathname.match(/^\/c\/([^/?#]+)\/?$/);
             if (handleMatch) return text;

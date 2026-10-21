@@ -63,6 +63,11 @@ def test_live_url_roundtrip(value):
     assert rp.RplayLiveEngine().get_stream_url(value) == PAGE
 
 
+def test_creatorhome_url_resolution():
+    url = 'https://rplay.live/creatorhome/693fc709f840d0aa766127c1?page=contents'
+    assert rp.normalize_rplay_channel_id(url) == '693fc709f840d0aa766127c1'
+
+
 def test_handle_url_resolution(monkeypatch):
     rp._HANDLE_CACHE.clear()
     class MockResponse:

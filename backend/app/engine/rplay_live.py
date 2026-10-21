@@ -54,7 +54,7 @@ def normalize_rplay_channel_id(value: str) -> str:
                 or parts.username is not None or parts.password is not None
                 or parts.port not in (None, 443 if parts.scheme == 'https' else 80)):
             raise ValueError('올바른 알플레이 채널 ID 또는 라이브 링크를 입력하세요.')
-        match = re.fullmatch(r'/live/([a-fA-F0-9]{24})/?', parts.path)
+        match = re.fullmatch(r'/(?:live|creatorhome)/([a-fA-F0-9]{24})/?', parts.path)
         if match:
             raw = match[1]
         else:
