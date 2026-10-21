@@ -36,7 +36,7 @@ def _resolve_handle_creator_id(handle: str) -> str:
             response = client.get(url, headers={'User-Agent': USER_AGENT, 'Referer': ORIGIN + '/'})
         if response.status_code != 200:
             raise ValueError
-        match = re.search(r'https://pb3\.rplay\.live/profilePhoto/([a-fA-F0-9]{24})(?=[-?"/<\s]|$)', response.text)
+        match = re.search(r'https://[a-zA-Z0-9_.-]+\.rplay\.live/profilePhoto/([a-fA-F0-9]{24})(?=[-?"/<\s&]|$)', response.text)
         if not match or match.group(1) == '0' * 24:
             raise ValueError
         cid = match.group(1).lower()
@@ -71,10 +71,14 @@ def normalize_rplay_channel_id(value: str) -> str:
 def media_allowed(value):
     try:
         p = urlsplit(value)
+        h = (p.hostname or '').lower()
         return (p.scheme == 'https' and p.port in (None, 443) and not p.username and not p.password
                 and not p.fragment and not any(c in value for c in '\r\n\\')
-                and (p.hostname == 'livestream.rplay.live' or p.hostname == 'live-video.net'
-                     or (p.hostname or '').endswith('.live-video.net')))
+                and (h == 'livestream.rplay.live' or h == 'live-video.net'
+                     or h.endswith('.live-video.net')
+                     or h.endswith('.bytepluscdn.com')
+                     or h.endswith('.byteplus.com')
+                     or h.endswith('.volces.com')))
     except (TypeError, ValueError):
         return False
 
@@ -183,17 +187,28 @@ class RplayLiveEngine:
 
     async def check_live_status(self, channel_id) -> LiveStatus:
         cid = normalize_rplay_channel_id(channel_id)
-        session = account_session()
+        try:
+            session = account_session()
+        except Exception:
+            session = None
         item = await self._metadata(cid, session)
         creator = item['creatorMetadata']
         live = item.get('streamState') == 'live'
-        if live and item.get('accessible') is not True:
+        requires_auth = bool(live and item.get('accessible') is not True)
+        if requires_auth:
             live = False
-        return LiveStatus(channel_id=cid, is_live=live, channel_name=creator.get('nickname') or cid,
+        status = LiveStatus(channel_id=cid, is_live=live, channel_name=creator.get('nickname') or cid,
             title=item.get('title') or '', category='', viewer_count=0,
             thumbnail_url='', profile_image_url=creator.get('channelImage') or '',
             broadcast_tags=item.get('hashtags') if isinstance(item.get('hashtags'), list) else [],
             live_started_at=item.get('streamStartTime') if live else None)
+        if requires_auth:
+            status.update(
+                status_error='알플레이 성인 인증 또는 시청 권한이 필요한 방송입니다. 설정 → 인증에서 세션 파일을 갱신하세요.',
+                error_detail='accessible=False',
+                status_error_retryable=False,
+            )
+        return status
 
     async def _streams(self, channel_id):
         cid = normalize_rplay_channel_id(channel_id)
