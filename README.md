@@ -1,52 +1,137 @@
-# Phrolova
+<p align="center">
+  <img src="docs/screenshots/live-row-alignment-after.png" width="90" alt="Phrolova Logo">
+</p>
 
-**Record live streams. Download videos. Manage your archive.**
+<h1 align="center">Phrolova</h1>
 
-Phrolova is a self-hosted live-stream recorder and video downloader with a browser dashboard. Monitor channels, preview broadcasts, queue videos and inspect your saved media. Use the packaged Windows app or install from source on Linux, macOS or Android with Termux.
+<p align="center">
+  <b>Modern, self-hosted live-stream recorder & video downloader with an eight-language web dashboard.</b>
+  <br>
+  Continuous channel monitoring, lossless HLS/DASH capture, CHZZK live Time Machine, and universal cookie authentication.
+</p>
 
-[Download for Windows](https://github.com/ProofPage/Phrolova/releases/latest) · [Quick start](#quick-start) · [v2.2.0 release notes](docs/release-notes/v2.2.0.md) · [Changelog](docs/CHANGELOG.md)
+<p align="center">
+  <a href="https://github.com/ProofPage/Phrolova/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/ProofPage/Phrolova?style=flat-square&color=blue"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-green?style=flat-square"></a>
+  <a href="https://github.com/ProofPage/Phrolova/releases/latest"><img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=flat-square"></a>
+  <a href="https://github.com/ProofPage/Phrolova/releases/latest"><img alt="Python" src="https://img.shields.io/badge/python-3.14%2B%20GIL--safe-blue?style=flat-square"></a>
+</p>
 
-**Local-first, not a public web service:** the dashboard/API has no built-in login. Keep the default `127.0.0.1:8000` binding; never expose it publicly without access protection.
+<p align="center">
+  <a href="#quick-start"><b>Download & Quick Start ↓</b></a> ·
+  <a href="#key-highlights"><b>Highlights</b></a> ·
+  <a href="#supported-platforms"><b>Supported Platforms</b></a> ·
+  <a href="docs/release-notes/v2.2.0.md"><b>v2.2.0 Release Notes</b></a>
+</p>
 
-## Features
+---
 
-| Area | What it provides |
-| --- | --- |
-| Live | Automatic/manual recording, channel tags and filters, per-channel preferences, CHZZK live Time Machine and recording conditions |
-| Previews | In-dashboard HLS playback or refreshed frames, with loading states and retry controls; TikTok shares the recording input while recording |
-| Videos | VODs, clips, supported external links, YouTube channel imports, quality selection, queues, speed limits and task controls |
-| Media processing | FFmpeg finalization to MKV/MP4, FFprobe inspection, processing history, source preservation on failure and retry actions |
-| Statistics | Recording duration and size, download totals, channel activity, recent sessions, disk usage and separate live/video paths |
-| Logs | Original files, severity counts and filters, search, live updates, auto-scroll and full-file export |
-| Notifications | In-app alerts, Discord bot/webhook delivery, command access rules and a persistent delivery queue |
-| Settings | Storage, filenames, authentication, appearance, updates, and the status, version and path of Streamlink, yt-dlp, FFmpeg and FFprobe |
+## Key Highlights
 
-The interface supports **Korean, English, Japanese, Spanish, German, Simplified Chinese, Traditional Chinese and Russian**. Korean is the default. Choose a language in **Settings → Appearance**; the browser remembers it and formats dates, numbers and quantities accordingly. Paths, filenames, user content and technical logs retain their original text.
+- **Automatic Live-First Channel Sorting**: Monitored channels that go live automatically float to the top of your dashboard in alphabetical order. Toggle between *Live first*, *Name*, and *Manual drag-and-drop* order with a single click.
+- **Resilient Lossless Recording**: Native Streamlink and custom yt-dlp pipelines capture original HLS/DASH media without re-encoding. Dynamic handling of YouTube 302/307 edge redirects prevents stream interruptions.
+- **CHZZK Time Machine & Akamai CDN**: Rewind live CHZZK broadcasts from the very start or configure offsets, with prioritized Akamai low-latency CDN connectivity.
+- **Universal Cookie Management**:
+  - Full compatibility with Cookie-Editor exports (automatic `#HttpOnly_` stripping).
+  - One-click raw cookie header pasting (`Cookie: ...`) without saving files.
+  - Direct, one-click cookie import from local browsers (Chrome, Edge, Whale, Brave, Firefox).
+  - Real-time login session status verification with clean status badges.
+- **Comprehensive Media Toolbox**: FFmpeg stream remuxing to MKV/MP4, automatic part file preservation, FFprobe stream integrity inspection, and retry management.
+- **Modern Responsive Dashboard**: Built with React, Vite, and Tailwind CSS. Native support for 8 languages (**Korean, English, Japanese, Simplified Chinese, Traditional Chinese, German, Spanish, Russian**).
+- **Persistent Analytics & Discord Alerts**: In-depth storage metrics, clean channel history aggregation, and real-time Discord bot/webhook broadcast notifications.
 
-### Supported sources
+---
 
-Source availability depends on the provider, your connection and your account's viewing rights. The list below describes implemented integrations, not complete production end-to-end verification of every source.
+## Supported Platforms
 
-| Source | Live | Videos | Authentication when required |
-| --- | --- | --- | --- |
-| CHZZK | Monitoring, preview, manual/automatic recording and live Time Machine | VODs, clips and server-authorized AES-128 HLS playback | Naver account cookies for account-required playback and encryption keys |
-| YouTube | Monitoring, preview and manual/automatic recording | Videos and channel imports | Uploaded cookies for authenticated video access |
-| CIME | Monitoring, preview and manual/automatic recording, including granted UHD/4K qualities | VODs and clips | MCO email/password login or account cookies; UHD viewing permission when required |
-| Kick | Streamlink monitoring integration, preview and manual/automatic recording | VODs and clips via yt-dlp | Optional Kick cookies; required for sign-in-only qualities |
-| Twitch | Monitoring, preview and manual/automatic recording; optional TTV-AB, off by default | VODs and individual clips via yt-dlp | Optional Twitch Netscape cookies |
-| TikTok | Monitoring, frame previews and manual/automatic recording via Streamlink | Individual videos and short share links via yt-dlp | Optional TikTok Netscape cookies |
-| Bilibili | Room monitoring, HLS previews and manual/automatic recording via Streamlink | BV/av videos, selected parts and b23.tv share links via yt-dlp | Optional Bilibili Netscape cookies |
-| PandaTV (팬더티비) | Channel monitoring, HLS previews and manual/automatic recording via Streamlink | — | Username/password login or PandaTV Netscape cookies; identity-verified account access where required |
-| PopkonTV (팝콘티비) | Channel monitoring, recording, previews and password-protected rooms | VODs and clips through the existing queue | Username/password login or PopkonTV Netscape cookies; broadcast password when required |
-| RPLAY (알플레이) | Channel monitoring, granted HLS recording and previews | Videos and live archives with granted HLS, DASH or MP4 playback | Email/password login or an imported session file; account viewing permission required |
-| HearHeart | — | Playlist and individual playback links | Account login or platform cookies when required |
-| YamiKorea | — | Individual MP4 videos at ym-05.com; excludes separate preroll ads and thumbnail previews | Public playback only; no account-login or catalog integration |
-| AV19 | — | Individual HLS videos at av19t.com: `/korea/<id>`, `/bj/<id>` and `/nsub/<id>` | Public playback; verified session-v10/v11 player protocols |
-| MissAV | — | Individual HLS videos at missav123.com: `/ko/<slug>`; advertised quality selection | Public playback only; no automatic mirror switching or challenge bypass |
-| Episode-based sites | — | Anilife, Linkani, Moeni, Re:ANIME, Ohli24, TVWiki, Animaru, Ani365, TVRoom, TVHot and Toonday | Site-specific public sessions or account access where supported |
-| External links | — | Links handled by yt-dlp's supported extractors | Provider-specific access requirements |
+Availability depends on stream provider policies and account privileges.
 
-AV19 requires Node.js 22+ for its hash-verified WASM key decoder; Node.js is bundled in the Windows app. Short samples from all three supported categories were downloaded through the actual queue and finalized as H.264 1280×720 video with AAC audio. These checks are not full-length download verification of every video. Older AV19 domain aliases and the historical eight-byte segment-stripping method are not used.
+| Platform | Live Monitoring | VODs & Clips | Authentication & Notes |
+| :--- | :---: | :---: | :--- |
+| **CHZZK (치지직)** | **Full** | **Full** | Naver cookie/session for 1080p+ & adult streams. Supports `chzzk.naver.com` and `m.chzzk.naver.com`. |
+| **YouTube** | **Full** | **Full** | Cookie support for member streams. Supports `/live/<id>`, `/watch?v=<id>`, `/shorts/<id>`, and `@handle`. |
+| **Twitch** | **Full** | **Full** | Netscape cookies for sub-only streams. Optional TTV-AB ad-blocking toggle. |
+| **RPLAY (알플레이)** | **Full** | **Full** | Session import or email login. Supports 24-char OID, `/creatorhome/<id>`, and custom `/c/<handle>`. |
+| **Kick** | **Full** | **Full** | Streamlink live capture; cookie import for sub-only qualities. |
+| **Bilibili** | **Full** | **Full** | Room monitoring, HLS capture, BV/av video downloads with cookie auth. |
+| **TikTok** | **Full** | **Full** | Streamlink live capture, frame previews, and short share link parsing. |
+| **PandaTV (팬더티비)**| **Full** | — | Streamlink live monitoring with username/password or Netscape cookie login. |
+| **PopkonTV (팝콘티비)**| **Full** | **Full** | Live monitoring, password-protected rooms, and VOD queue integration. |
+| **CIME (씨미)** | **Full** | **Full** | MCO email login or cookies; granted UHD/4K quality capture. |
+| **Specialized Video** | — | **Full** | MissAV, AV19 (Node.js WASM decoder), YamiKorea, and episode-based series sites. |
+
+---
+
+## Quick Start
+
+### 1. Windows (Recommended Standalone Executable)
+
+Download the pre-compiled, self-contained single binary from the latest release:
+
+1. Download **`Phrolova-v2.2.0-windows-x64.exe`** from [GitHub Releases](https://github.com/ProofPage/Phrolova/releases/latest).
+2. Run the executable. It automatically unpacks required tools and launches the background service.
+3. Open your browser and navigate to **`http://127.0.0.1:8000`** to access the dashboard.
+
+> **Security Note**: Phrolova is local-first. Keep the default binding on `127.0.0.1:8000`. Do not expose it to public networks without reverse proxy authentication.
+
+---
+
+### 2. Running from Source (Linux / macOS / Windows)
+
+#### Prerequisites
+- **Python 3.14+** (standard GIL)
+- **Node.js 22+** & **npm**
+- **FFmpeg** installed and accessible in `PATH`
+
+#### Clone & Install
+```bash
+# Clone the repository
+git clone https://github.com/ProofPage/Phrolova.git
+cd Phrolova
+
+# Setup Python backend
+cd backend
+python -m venv .venv
+# On Windows: .venv\Scripts\activate | On Linux/macOS: source .venv/bin/activate
+pip install -r requirements.txt
+
+# Build Frontend
+cd ../frontend
+npm install
+npm run build
+
+# Start Phrolova
+cd ../backend
+python run.py
+```
+
+The web dashboard is accessible at `http://127.0.0.1:8000`.
+
+---
+
+## Configuration & Architecture
+
+```
+Phrolova Architecture
+├── Frontend (React 19 + TypeScript + Vite + Tailwind CSS)
+│   ├── Dashboard (Live channel cards, auto reorder, status filters, stream preview)
+│   ├── VOD Downloader (Multi-task queue, speed controls, format selection)
+│   ├── Analytics & Stats (Unified storage & channel duration metrics)
+│   └── Settings (Universal cookie management, FFmpeg/Deno runtime config)
+│
+└── Backend (FastAPI + AsyncIO + Python 3.14)
+    ├── Engine (Live stream monitors, Streamlink / yt-dlp pipelines)
+    ├── Auth (Browser cookie extraction, Netscape parsers, credential vault)
+    ├── Finalizer (FFmpeg remuxer, integrity verifier, disk space monitor)
+    └── Storage (SQLite persistence with auto-migration, event bus)
+```
+
+---
+
+## License
+
+Phrolova is licensed under the [MIT License](LICENSE). Built for personal media archiving and research purposes.
+
 
 For MissAV, paste an individual `/ko/<slug>` video link, not the `/dm270/ko` homepage. The integration uses the observed main-player HLS stream and standard MPEG-TS segments without stripping bytes. A short queued MP4 sample was verified; full-length downloads of every video are not certified. Access challenges, rate limits, and unobserved encryption or advertisement protocols stop with an error instead of triggering mirror or bypass attempts.
 
