@@ -345,7 +345,6 @@ def _run_server(settings, stop_event: threading.Event) -> None:
     from app.main import app
 
     if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
         try:
             from asyncio.proactor_events import _ProactorBasePipeTransport
             _orig = _ProactorBasePipeTransport._call_connection_lost
@@ -398,7 +397,6 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
         try:
             from asyncio.proactor_events import _ProactorBasePipeTransport
             _orig = _ProactorBasePipeTransport._call_connection_lost
