@@ -36,6 +36,22 @@ class AddPlatformChannelRequest(ChannelDownloadOptions):
     auto_record: bool = Field(True, description="방송 시작 시 자동 녹화 여부")
 
 
+class ChzzkCookieTextRequest(BaseModel):
+    text: Optional[str] = None
+    nid_aut: Optional[str] = None
+    nid_ses: Optional[str] = None
+
+
+class ChzzkBrowserCookieRequest(BaseModel):
+    browser: str = "auto"
+
+class PlatformCookieTextRequest(BaseModel):
+    text: str = Field(..., description="쿠키 텍스트 또는 Cookie 헤더")
+
+class PlatformBrowserCookieRequest(BaseModel):
+    browser: str = Field("auto", description="브라우저 이름 (chrome, edge, whale, brave, firefox, auto)")
+
+
 def _validate_room_password(req: ChannelDownloadOptions, platform: Platform) -> None:
     if req.popkontv_password is None:
         return
@@ -328,6 +344,8 @@ async def upload_youtube_cookie(file: UploadFile = File(...)):
         # Browser exporters use 0 for session cookies; CookieJar expects an empty expiry.
         normalized = []
         for line in lines:
+            if line.startswith("#HttpOnly_"):
+                line = line[len("#HttpOnly_"):]
             fields = line.split("\t")
             if len(fields) == 7 and fields[4] == "0":
                 fields[4] = ""
@@ -354,6 +372,53 @@ async def upload_youtube_cookie(file: UploadFile = File(...)):
 @router.delete("/youtube/cookie")
 async def delete_youtube_cookie():
     _save_credential(_COOKIE_SAVE_PATH.with_name("youtube_cookies.txt"), None, "youtube_cookie_file")
+    return await youtube_cookie_status()
+
+
+@router.post("/youtube/cookie/text", summary="유튜브 쿠키 텍스트 등록")
+async def youtube_cookie_text(req: PlatformCookieTextRequest):
+    import tempfile
+    import os
+    from app.engine.platform_auth import convert_text_to_netscape_cookies, read_cookie_jar
+    try:
+        netscape_text = convert_text_to_netscape_cookies(req.text, "youtube")
+    except ValueError as err:
+        raise HTTPException(400, str(err)) from None
+    destination = _COOKIE_SAVE_PATH.with_name("youtube_cookies.txt")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=destination.parent) as directory:
+        temporary = Path(directory) / "cookies.txt"
+        temporary.write_text(netscape_text, encoding="utf-8")
+        try:
+            jar = read_cookie_jar(temporary, "youtube", include_expired=True)
+            if not len(jar):
+                raise ValueError
+            jar.save(str(temporary), ignore_discard=True, ignore_expires=True)
+        except Exception:
+            raise HTTPException(400, "유효한 유튜브 쿠키를 찾을 수 없습니다.") from None
+        os.chmod(temporary, 0o600)
+        _save_credential(destination, temporary.read_bytes(), "youtube_cookie_file")
+    return await youtube_cookie_status()
+
+
+@router.post("/youtube/cookie/browser", summary="브라우저에서 유튜브 쿠키 자동 가져오기")
+async def youtube_cookie_browser(req: PlatformBrowserCookieRequest):
+    import tempfile
+    import os
+    from app.engine.platform_auth import extract_platform_from_browser, read_cookie_jar
+    try:
+        netscape_text = await asyncio.to_thread(extract_platform_from_browser, "youtube", req.browser)
+    except ValueError as err:
+        raise HTTPException(400, str(err)) from None
+    destination = _COOKIE_SAVE_PATH.with_name("youtube_cookies.txt")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=destination.parent) as directory:
+        temporary = Path(directory) / "cookies.txt"
+        temporary.write_text(netscape_text, encoding="utf-8")
+        jar = read_cookie_jar(temporary, "youtube", include_expired=True)
+        jar.save(str(temporary), ignore_discard=True, ignore_expires=True)
+        os.chmod(temporary, 0o600)
+        _save_credential(destination, temporary.read_bytes(), "youtube_cookie_file")
     return await youtube_cookie_status()
 
 
@@ -386,6 +451,48 @@ async def upload_chzzk_cookie(file: UploadFile = File(...)):
         except (OSError, UnicodeError, ValueError):
             raise HTTPException(400, "사용 가능한 치지직 로그인 쿠키가 포함된 Netscape 형식 파일을 선택하세요.") from None
     # Reuse the existing authentication path for Streamlink, live detection and VOD.
+    try:
+        service = get_recorder_service()
+        service.update_cookies(values["NID_AUT"], values["NID_SES"])
+        service.on_credentials_updated("chzzk")
+    except OSError:
+        raise HTTPException(500, "인증 설정을 저장하지 못했습니다. 저장 위치의 권한과 여유 공간을 확인하세요.") from None
+    return await chzzk_cookie_status()
+
+
+@router.post("/chzzk/cookie/text", summary="치지직 쿠키 텍스트 또는 값 직접 등록")
+async def set_chzzk_cookie_text(req: ChzzkCookieTextRequest):
+    from app.engine.platform_auth import parse_chzzk_cookie_text
+    from app.main import get_recorder_service
+    aut = (req.nid_aut or "").strip()
+    ses = (req.nid_ses or "").strip()
+    if not (aut and ses):
+        raw_text = (req.text or "").strip()
+        if not raw_text:
+            raise HTTPException(400, "NID_AUT 및 NID_SES 값이나 쿠키 텍스트를 입력하세요.")
+        try:
+            values = parse_chzzk_cookie_text(raw_text)
+            aut = values["NID_AUT"]
+            ses = values["NID_SES"]
+        except ValueError as err:
+            raise HTTPException(400, str(err)) from None
+    try:
+        service = get_recorder_service()
+        service.update_cookies(aut, ses)
+        service.on_credentials_updated("chzzk")
+    except OSError:
+        raise HTTPException(500, "인증 설정을 저장하지 못했습니다. 저장 위치의 권한과 여유 공간을 확인하세요.") from None
+    return await chzzk_cookie_status()
+
+
+@router.post("/chzzk/cookie/browser", summary="브라우저에서 치지직 쿠키 자동 가져오기")
+async def import_chzzk_cookie_from_browser(req: ChzzkBrowserCookieRequest):
+    from app.engine.platform_auth import extract_chzzk_from_browser
+    from app.main import get_recorder_service
+    try:
+        values = await asyncio.to_thread(extract_chzzk_from_browser, req.browser)
+    except ValueError as err:
+        raise HTTPException(400, str(err)) from None
     try:
         service = get_recorder_service()
         service.update_cookies(values["NID_AUT"], values["NID_SES"])
@@ -590,3 +697,54 @@ async def platform_cookie_delete(platform: str):
     if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'hearheart', 'animaru', 'anilife'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     _save_credential(_COOKIE_SAVE_PATH.with_name(f'{platform}_cookies.txt'), None, f'{platform}_cookie_file')
     return {'configured': False, 'valid': False, 'expired': False, 'message': '쿠키 파일을 제거했습니다.'}
+
+
+@router.post('/{platform}/cookie/text', summary='플랫폼 쿠키 텍스트 등록')
+async def platform_cookie_text(platform: str, req: PlatformCookieTextRequest):
+    import tempfile
+    import os
+    from app.engine.platform_auth import convert_text_to_netscape_cookies, read_cookie_jar
+    if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'hearheart', 'animaru', 'anilife'):
+        raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    try:
+        netscape_text = convert_text_to_netscape_cookies(req.text, platform)
+    except ValueError as err:
+        raise HTTPException(400, str(err)) from None
+    destination = _COOKIE_SAVE_PATH.with_name(f'{platform}_cookies.txt')
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=destination.parent) as directory:
+        temporary = Path(directory) / 'cookies.txt'
+        temporary.write_text(netscape_text, encoding='utf-8')
+        try:
+            jar = read_cookie_jar(temporary, platform, include_expired=True)
+            if not len(jar):
+                raise ValueError
+            jar.save(str(temporary), ignore_discard=True, ignore_expires=True)
+        except Exception:
+            raise HTTPException(400, f'유효한 {platform} 쿠키를 찾을 수 없습니다.') from None
+        os.chmod(temporary, 0o600)
+        _save_credential(destination, temporary.read_bytes(), f'{platform}_cookie_file')
+    return await platform_cookie_status_api(platform)
+
+
+@router.post('/{platform}/cookie/browser', summary='브라우저에서 플랫폼 쿠키 자동 가져오기')
+async def platform_cookie_browser(platform: str, req: PlatformBrowserCookieRequest):
+    import tempfile
+    import os
+    from app.engine.platform_auth import extract_platform_from_browser, read_cookie_jar
+    if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'hearheart', 'animaru', 'anilife'):
+        raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    try:
+        netscape_text = await asyncio.to_thread(extract_platform_from_browser, platform, req.browser)
+    except ValueError as err:
+        raise HTTPException(400, str(err)) from None
+    destination = _COOKIE_SAVE_PATH.with_name(f'{platform}_cookies.txt')
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=destination.parent) as directory:
+        temporary = Path(directory) / 'cookies.txt'
+        temporary.write_text(netscape_text, encoding='utf-8')
+        jar = read_cookie_jar(temporary, platform, include_expired=True)
+        jar.save(str(temporary), ignore_discard=True, ignore_expires=True)
+        os.chmod(temporary, 0o600)
+        _save_credential(destination, temporary.read_bytes(), f'{platform}_cookie_file')
+    return await platform_cookie_status_api(platform)

@@ -1,6 +1,6 @@
 import { translate } from "../../i18n";
 import { useEffect, useRef, useState } from 'react';
-import { RefreshCw, Trash2, Upload } from 'lucide-react';
+import { ClipboardPaste, Globe, RefreshCw, Trash2, Upload } from 'lucide-react';
 import { api, DOWNLOAD_SOURCE_LABELS, PLATFORM_LABELS, type AccountLoginPlatform, type CookiePlatform, type PlatformCookieStatus } from '../../api/client';
 import { getErrorMessage } from '../../utils/error';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -33,6 +33,8 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [method, setMethod] = useState<'account' | 'file'>('account');
+    const [textModalOpen, setTextModalOpen] = useState(false);
+    const [pastedText, setPastedText] = useState('');
     const accountPlatform = platform in ACCOUNT_LOGINS ? platform as AccountLoginPlatform : null;
     const account = accountPlatform ? ACCOUNT_LOGINS[accountPlatform] : null;
     useEffect(() => {
@@ -42,20 +44,35 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
             .catch(() => { if (active && current === revision.current) setError(t("settings.couldNotCheckCookieFileStatusTryAgain")); });
         return () => { active = false; };
     }, [platform]);
-    const change = async (action: 'upload' | 'delete' | 'refresh' | 'login', file?: File) => {
+    const change = async (action: 'upload' | 'delete' | 'refresh' | 'login' | 'text' | 'browser', payload?: File | string) => {
         if (pending.current) return;
         revision.current += 1;
         pending.current = true;
         setBusy(true);
         setError('');
         try {
-            const data = action === 'upload' && file ? await api.uploadPlatformCookie(platform, file)
+            const data = action === 'upload' && payload instanceof File ? await api.uploadPlatformCookie(platform, payload)
+                : action === 'text' && typeof payload === 'string' ? await api.savePlatformCookieText(platform, payload)
+                : action === 'browser' ? await api.importPlatformCookieFromBrowser(platform, typeof payload === 'string' ? payload : 'auto')
                 : action === 'login' && accountPlatform ? await api.loginPlatform(accountPlatform, username.trim(), password)
                 : action === 'delete' ? await api.deletePlatformCookie(platform) : await api.checkPlatformCookies(platform);
             setStatus(data);
             if (action !== 'refresh') {
-                toast.success(t(action === 'login' ? "settings.authLoginSuccess" : action === 'upload' ? "settings.cookieFileRegistered" : "settings.registeredCookiesRemoved"));
+                const successMsg = action === 'login' ? "settings.authLoginSuccess"
+                    : action === 'browser' ? "settings.browserImportSuccess"
+                    : action === 'text' ? "settings.cookieTextRegistered"
+                    : action === 'upload' ? "settings.cookieFileRegistered"
+                    : "settings.registeredCookiesRemoved";
+                toast.success(t(successMsg));
                 onSaved?.();
+            } else {
+                if (data?.valid === true) {
+                    toast.success(data.message || t("settings.loginConfirmed"));
+                } else if (data?.configured && data?.valid === false) {
+                    toast.error(data.message || t("settings.cookieFileNeedsAttention"));
+                } else {
+                    toast.warning(data?.message || t("settings.noRegisteredCookies"));
+                }
             }
         } catch (cause) {
             const message = getErrorMessage(cause, t("settings.couldNotProcessTheCookieFileTryAgain"));
@@ -65,6 +82,7 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
             pending.current = false;
             setBusy(false);
             if (action === 'login') setPassword('');
+            if (action === 'text') { setPastedText(''); setTextModalOpen(false); }
             if (fileInput.current) fileInput.current.value = '';
         }
     };
@@ -73,12 +91,13 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
         if (await confirm({ title: `${name} ${t("settings.removeCookieFile")}`, message: t("settings.removeTheRegisteredCookiesPublicContentRemainsAvailableWithoutCookies"), confirmText: t("common.delete"), variant: 'danger' })) void change('delete');
     };
     const label = !status ? t(error ? "settings.cookieFileNeedsAttention" : "live.checkingStatus") : status.expired ? t("settings.cookieExpired")
+        : status.configured && status.valid === true ? t("settings.loginConfirmed")
         : status.configured && status.valid === false ? t("settings.cookieFileNeedsAttention") : status.configured ? t("settings.cookiesRegistered") : t("settings.noRegisteredCookies");
     return <div className="auth-platform-card" data-cookie-platform={platform} aria-busy={busy}>
         <AuthPlatformCard platform={platform} title={t(name)}
             description={t(account ? "settings.authAccountOrCookie" : "settings.authCookieMethod")}
             onClose={() => setPassword('')}
-            action={<Badge tone={status?.expired || (status?.configured && status.valid === false) ? 'warn' : status?.configured ? 'ok' : undefined}>{label}</Badge>}>
+            action={<Badge tone={status?.expired || (status?.configured && status.valid === false) ? 'warn' : (status?.configured && status.valid === true) ? 'ok' : status?.configured ? 'neutral' : undefined}>{label}</Badge>}>
         <div className="space-y-4">
         {account && <div className="auth-methods" role="group" aria-label={t('settings.authMethod')}>
             <Button disabled={busy} aria-pressed={method === 'account'} onClick={() => { setMethod('account'); setPassword(''); }}>{t('settings.authAccountMethod')}</Button>
@@ -112,7 +131,11 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
         </form>}
         <div className="flex flex-wrap items-center gap-2">
             <input ref={fileInput} type="file" accept=".txt" aria-label={`${name} ${t("settings.cookieFile")}`} className="hidden" disabled={busy} onChange={event => { const file = event.target.files?.[0]; if (file) void change('upload', file); }} />
-            {(!account || method === 'file') && <Button icon={Upload} disabled={busy} onClick={() => fileInput.current?.click()} aria-label={`${name} ${t("settings.selectCookieFile")}`}>{t(status?.configured ? translate("settings.replaceFile") : translate("settings.chooseFile"))}</Button>}
+            {(!account || method === 'file') && <>
+                <Button icon={Upload} disabled={busy} onClick={() => fileInput.current?.click()} aria-label={`${name} ${t("settings.selectCookieFile")}`}>{t(status?.configured ? translate("settings.replaceFile") : translate("settings.chooseFile"))}</Button>
+                <Button icon={ClipboardPaste} disabled={busy} onClick={() => setTextModalOpen(true)}>{t("settings.pasteCookieText")}</Button>
+                <Button icon={Globe} loading={busy} disabled={busy} onClick={() => void change('browser', 'auto')} title={t("settings.importFromBrowser")}>{t("settings.importFromBrowser")}</Button>
+            </>}
             <Button icon={RefreshCw} loading={busy} onClick={() => void change('refresh')} aria-label={`${name} ${t("settings.checkCookieStatus")}`}>{t("settings.checkStatus")}</Button>
             {status?.configured && <Button variant="danger" icon={Trash2} disabled={busy} onClick={() => void remove()} aria-label={`${name} ${t("settings.removeCookieFile")}`}>{t("common.delete")}</Button>}
         </div>
@@ -125,6 +148,28 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
         {status?.expired && <p className="text-xs text-warn">{t("settings.exportCookiesAgainFromASignedInBrowserAndRegisterTheFile")}</p>}
         </div>
         {error && <p role="alert" className="mt-2 text-xs text-danger [overflow-wrap:anywhere]">{t(error)}</p>}
+
+        {textModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+                <div className="w-full max-w-lg rounded-xl border border-line bg-surface-1 p-5 shadow-2xl space-y-4">
+                    <div className="space-y-1">
+                        <h4 className="text-sm font-semibold text-ink">{name} {t("settings.pasteCookieText")}</h4>
+                        <p className="text-xs text-ink-muted">{t("settings.pasteCookieDescription")}</p>
+                    </div>
+                    <textarea
+                        className="ui-input input-focus w-full h-44 font-mono text-xs p-3 leading-relaxed resize-none rounded-lg"
+                        placeholder="NID_AUT=...; NID_SES=...&#10;&#10;또는 Cookie-Editor에서 복사한 Netscape 쿠키 텍스트 전체"
+                        value={pastedText}
+                        disabled={busy}
+                        onChange={e => setPastedText(e.target.value)}
+                    />
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Button variant="secondary" disabled={busy} onClick={() => { setTextModalOpen(false); setPastedText(''); }}>{t("common.cancel")}</Button>
+                        <Button disabled={busy || !pastedText.trim()} loading={busy} onClick={() => void change('text', pastedText.trim())}>{t("common.save")}</Button>
+                    </div>
+                </div>
+            </div>
+        )}
         </AuthPlatformCard>
     </div>;
 }

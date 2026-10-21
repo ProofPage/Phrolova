@@ -676,6 +676,10 @@ export const api = {
         form.append('file', file);
         return (await client.post<PlatformCookieStatus>(`/platforms/${platform}/cookie`, form, { headers: { 'Content-Type': 'multipart/form-data' } })).data;
     },
+    savePlatformCookieText: async (platform: CookiePlatform, text: string): Promise<PlatformCookieStatus> =>
+        (await client.post<PlatformCookieStatus>(`/platforms/${platform}/cookie/text`, { text })).data,
+    importPlatformCookieFromBrowser: async (platform: CookiePlatform, browser = 'auto'): Promise<PlatformCookieStatus> =>
+        (await client.post<PlatformCookieStatus>(`/platforms/${platform}/cookie/browser`, { browser })).data,
     deletePlatformCookie: async (platform: CookiePlatform): Promise<PlatformCookieStatus> =>
         (await client.delete<PlatformCookieStatus>(`/platforms/${platform}/cookie`)).data,
     // Stats

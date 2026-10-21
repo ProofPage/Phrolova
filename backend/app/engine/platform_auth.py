@@ -57,6 +57,8 @@ def read_cookie_jar(path: Path, platform: str, *, include_expired: bool = False)
     lines = path.read_text(encoding='utf-8-sig').splitlines()
     normalized = []
     for line in lines:
+        if line.startswith('#HttpOnly_'):
+            line = line[len('#HttpOnly_'):]
         fields = line.split('\t')
         if len(fields) == 7 and fields[4] == '0':
             fields[4] = ''
@@ -99,6 +101,112 @@ def chzzk_login_values(jar: http.cookiejar.MozillaCookieJar) -> dict[str, str]:
     return pairs[0]
 
 
+def parse_chzzk_cookie_text(text: str) -> dict[str, str]:
+    """텍스트(헤더, 키-값 쌍, Netscape 탭 구분 등)에서 NID_AUT와 NID_SES를 추출한다."""
+    import re
+    pattern_aut = re.search(r'(?:^|[;\s\t\n,])NID_AUT[\s=:\t]+(?:"([^"\r\n;]+)"|\'([^\'\r\n;]+)\'|([^\r\n;\s\t,]+))', text, re.IGNORECASE)
+    pattern_ses = re.search(r'(?:^|[;\s\t\n,])NID_SES[\s=:\t]+(?:"([^"\r\n;]+)"|\'([^\'\r\n;]+)\'|([^\r\n;\s\t,]+))', text, re.IGNORECASE)
+    if pattern_aut and pattern_ses:
+        aut = (pattern_aut.group(1) or pattern_aut.group(2) or pattern_aut.group(3) or '').strip()
+        ses = (pattern_ses.group(1) or pattern_ses.group(2) or pattern_ses.group(3) or '').strip()
+        if aut and ses:
+            return {'NID_AUT': aut, 'NID_SES': ses}
+    if nid_aut_match and nid_ses_match:
+        aut = nid_aut_match.group(1).strip('\'"')
+        ses = nid_ses_match.group(1).strip('\'"')
+        if aut and ses:
+            return {'NID_AUT': aut, 'NID_SES': ses}
+    raise ValueError('NID_AUT 또는 NID_SES 쿠키를 찾을 수 없습니다.')
+
+
+def convert_text_to_netscape_cookies(text: str, platform: str) -> str:
+    """Cookie 헤더 또는 Netscape 쿠키 텍스트(#HttpOnly_ 포함)를 표준 Netscape 포맷으로 변환한다."""
+    lines = text.strip().splitlines()
+    has_tabs = any('\t' in line for line in lines)
+    if has_tabs:
+        # Netscape 형태의 텍스트인 경우 #HttpOnly_ 제거 및 정규화
+        out = ['# Netscape HTTP Cookie File', '# http://curl.haxx.se/rfc/cookie_spec.html', '']
+        for line in lines:
+            clean = line.strip()
+            if clean.startswith('#HttpOnly_'):
+                clean = clean[len('#HttpOnly_'):]
+            if clean.startswith('#') and not clean.startswith('# '):
+                continue
+            out.append(clean)
+        return '\n'.join(out) + '\n'
+
+    # 'Cookie: name=value; name2=value2' 또는 단순 'name=value; name2=value2' 형식 처리
+    clean_text = text.strip()
+    if clean_text.lower().startswith('cookie:'):
+        clean_text = clean_text[7:].strip()
+
+    domain = DOMAINS.get(platform, (f'{platform}.com',))[0]
+    cookie_domain = f'.{domain}' if not domain.startswith('.') else domain
+    expiry = str(int(time.time()) + 365 * 86400)
+
+    out = ['# Netscape HTTP Cookie File', '# http://curl.haxx.se/rfc/cookie_spec.html', '']
+    pairs = [item.strip() for item in clean_text.split(';') if '=' in item]
+    for pair in pairs:
+        name, value = pair.split('=', 1)
+        name = name.strip()
+        value = value.strip()
+        if name and value:
+            out.append(f'{cookie_domain}\tTRUE\t/\tTRUE\t{expiry}\t{name}\t{value}')
+
+    if len(out) <= 3:
+        raise ValueError('유효한 쿠키 텍스트를 찾을 수 없습니다.')
+    return '\n'.join(out) + '\n'
+
+
+def extract_platform_from_browser(platform: str, browser_name: str = 'auto') -> str:
+    """브라우저에서 특정 플랫폼의 쿠키를 추출하여 Netscape 형식 문자열로 반환한다."""
+    import yt_dlp.cookies
+    targets = [browser_name.lower()] if browser_name != 'auto' else ['whale', 'chrome', 'edge', 'brave', 'firefox']
+    platform_domains = DOMAINS.get(platform, (f'{platform}.com',))
+    for b in targets:
+        try:
+            jar = yt_dlp.cookies.extract_cookies_from_browser(b)
+            matched = []
+            for cookie in jar:
+                cdom = (cookie.domain or '').lstrip('.').lower()
+                if any(cdom == d or cdom.endswith('.' + d) for d in platform_domains):
+                    matched.append(cookie)
+            if matched:
+                out = ['# Netscape HTTP Cookie File', '# http://curl.haxx.se/rfc/cookie_spec.html', '']
+                for c in matched:
+                    domain = c.domain or f'.{platform_domains[0]}'
+                    tailmatch = 'TRUE' if domain.startswith('.') else 'FALSE'
+                    path = c.path or '/'
+                    secure = 'TRUE' if c.secure else 'FALSE'
+                    expires = str(c.expires) if c.expires else '0'
+                    out.append(f'{domain}\t{tailmatch}\t{path}\t{secure}\t{expires}\t{c.name}\t{c.value}')
+                return '\n'.join(out) + '\n'
+        except Exception:
+            continue
+    target_label = browser_name if browser_name != 'auto' else '브라우저'
+    name = NAMES.get(platform, platform)
+    raise ValueError(f'{target_label}에서 {name} 로그인 쿠키를 찾지 못했습니다. 해당 브라우저에서 먼저 로그인해 주세요.')
+
+
+def extract_chzzk_from_browser(browser_name: str = 'auto') -> dict[str, str]:
+    """설치된 브라우저에서 네이버 로그인 쿠키를 추출한다."""
+    import yt_dlp.cookies
+    targets = [browser_name.lower()] if browser_name != 'auto' else ['whale', 'chrome', 'edge', 'brave', 'firefox']
+    for b in targets:
+        try:
+            jar = yt_dlp.cookies.extract_cookies_from_browser(b)
+            found = {}
+            for cookie in jar:
+                if 'naver.com' in (cookie.domain or '') and cookie.name in ('NID_AUT', 'NID_SES'):
+                    found[cookie.name] = cookie.value
+            if len(found) == 2 and found.get('NID_AUT') and found.get('NID_SES'):
+                return found
+        except Exception:
+            continue
+    target_label = browser_name if browser_name != 'auto' else '브라우저'
+    raise ValueError(f'{target_label}에서 네이버 로그인 쿠키(NID_AUT, NID_SES)를 찾지 못했습니다. 해당 브라우저에서 네이버에 먼저 로그인해 주세요.')
+
+
 def get_platform_cookies(platform: str, request_url: str) -> dict[str, str]:
     from http.cookies import SimpleCookie
     jar = platform_cookie_jar(platform)
@@ -123,8 +231,31 @@ def cookie_file_status(source: Path | None, platform: str) -> dict:
         all_cookies = read_cookie_jar(source, platform, include_expired=True)
         valid = any(not cookie.is_expired(time.time() + 30) for cookie in all_cookies)
         expired = bool(len(all_cookies)) and not valid
+        
+        # 세션 키 존재 여부 확인
+        SESSION_KEYS = {
+            'youtube': ('SID', '__Secure-1PSID', 'HSID', 'SSID'),
+            'twitch': ('auth-token', 'login'),
+            'kick': ('session_token', 'kick_session'),
+            'tiktok': ('sessionid', 'sessionid_ss'),
+            'bilibili': ('SESSDATA', 'bili_jct'),
+            'pandalive': ('sess_key', 'user_id', 'p_idx'),
+            'popkontv': ('login_id', 'user_code', 'member_no'),
+        }
+        req_keys = SESSION_KEYS.get(platform)
+        has_login_session = True
+        if req_keys and valid:
+            cookie_names = {c.name for c in all_cookies if not c.is_expired(time.time() + 30)}
+            has_login_session = any(k in cookie_names for k in req_keys)
+
+        if valid and not has_login_session:
+            return {
+                'configured': True, 'valid': False, 'expired': False,
+                'message': '로그인 세션이 없는 쿠키 파일입니다. 해당 사이트 로그인 후 쿠키를 다시 등록하세요.'
+            }
+
         return {'configured': True, 'valid': valid, 'expired': expired,
-                'message': '쿠키가 만료되었습니다.' if expired else '쿠키 파일이 등록되었습니다.' if valid else '사용 가능한 쿠키가 없습니다.'}
+                'message': '쿠키가 만료되었습니다. 다시 등록하세요.' if expired else '로그인 세션이 확인되었습니다.' if valid else '사용 가능한 쿠키가 없습니다.'}
     except (OSError, ValueError, UnicodeError, http.cookiejar.LoadError):
         return {'configured': True, 'valid': False, 'expired': False, 'message': '쿠키 파일을 읽지 못했습니다.'}
 
