@@ -104,8 +104,8 @@ Phrolova prefers TS capture and preserves native fMP4/CMAF when TS is unavailabl
 | System | Distribution | Requirements |
 | --- | --- | --- |
 | Windows x64 | Packaged `.exe` | External FFmpeg and FFprobe; Python, Streamlink, the dashboard and Node.js are bundled |
-| Linux x64 / ARM64 | Source | Bash, Git, Python 3.12+, Node.js 22+ with npm, FFmpeg/FFprobe 6+ and `ps` |
-| macOS Apple Silicon / Intel | Source | Homebrew, Git, Python 3.12+, Node.js 22+ and FFmpeg/FFprobe 6+ |
+| Linux x64 / ARM64 | Source | Bash, Git, Python 3.14.8+, Node.js 22+ with npm, FFmpeg/FFprobe 6+ and `ps` |
+| macOS Apple Silicon / Intel | Source | Homebrew, Git, Python 3.14.8+, Node.js 22+ and FFmpeg/FFprobe 6+ |
 | Android / native Termux | Source | Current Termux packages and native build tools; the installer selects the Termux dependency profile |
 | Linux under Termux proot | Source | Linux dependencies inside the guest; set `PHROLOVA_ENVIRONMENT=termux-proot` |
 
@@ -137,7 +137,7 @@ bash scripts/manage.sh install
 bash scripts/manage.sh start
 ```
 
-The manager prepares dependencies, `.venv`, the production dashboard and the `phrolova` command. It supports apt, dnf/yum, pacman and apk. Distributions with an older default Python need a Python 3.12+ interpreter first. An active systemd installation offers optional service registration; otherwise the server runs in the foreground.
+The manager prepares dependencies, `.venv`, the production dashboard and the `phrolova` command. It supports apt, dnf/yum, pacman and apk. Distributions with an older default Python need a Python 3.14.8+ interpreter first. An active systemd installation offers optional service registration; otherwise the server runs in the foreground.
 
 See the [Linux guide](docs/linux-guide.md) for manual installation and service management.
 
@@ -146,7 +146,7 @@ See the [Linux guide](docs/linux-guide.md) for manual installation and service m
 Install [Homebrew](https://brew.sh), then use a regular user terminal:
 
 ```bash
-brew install git python@3.12 node@22 ffmpeg
+brew install git python@3.14 node@22 ffmpeg
 git clone https://github.com/ProofPage/Phrolova.git "$HOME/Phrolova"
 cd "$HOME/Phrolova"
 bash scripts/manage.sh install
@@ -273,16 +273,16 @@ Set `DISCORD_COMMAND_USER_IDS` for a user allowlist and `DISCORD_COMMAND_CHANNEL
 
 The backend uses **Python, FastAPI, Uvicorn and SQLite**. The dashboard uses **React 19, TypeScript, Vite and Tailwind CSS 4**. Streamlink captures live media; yt-dlp handles video extraction/downloads; FFmpeg/FFprobe finalize and inspect files.
 
-With Python 3.12+, Node.js 22+, npm and FFmpeg/FFprobe installed:
+With Python 3.14.8+ (standard GIL), Node.js 22+, npm and FFmpeg/FFprobe installed:
 
 ```bash
-python3.12 -m venv .venv
+python3.14 -m venv .venv
 .venv/bin/python -m pip install -r backend/requirements-dev.txt
 (cd frontend && npm ci && npm run build)
 (cd backend && ../.venv/bin/python run.py)
 ```
 
-On Windows, use `py -3.12 -m venv .venv` and `.venv\Scripts\python.exe`. Native Termux uses `python` and `backend/requirements-termux.txt`; install test tools separately if needed. `ffmpeg-python` does not install FFmpeg/FFprobe. Node.js remains needed for YouTube JavaScript processing after the dashboard is built.
+On Windows, use `py -3.14 -m venv .venv` and `.venv\Scripts\python.exe`. Python 3.9 and older versions are rejected by the baseline. Native Termux uses rolling system `python` and `backend/requirements-termux.txt`; install test tools separately if needed. `ffmpeg-python` does not install FFmpeg/FFprobe. Node.js remains needed for YouTube JavaScript processing after the dashboard is built.
 
 For hot reload, run the backend and `npm run dev` in `frontend/` separately. Vite proxies `/api` and `/health` to port 8000. Production builds go directly into `backend/app/static`, served by FastAPI. Fixture previews test the interface without real recordings/downloads.
 
@@ -297,7 +297,7 @@ bash -n scripts/install-termux.sh
 bash -n scripts/healthcheck.sh
 ```
 
-The [CI configuration](.github/workflows/ci.yml) defines Linux x64/ARM64, Windows x64, macOS Apple Silicon/Intel and Linux ARM64/Python 3.14 with the Termux dependency profile. That profile checks dependencies on Linux; Android compilation and power-management behavior need device testing. Consult workflow runs and release notes for checks completed for a particular release.
+The [CI configuration](.github/workflows/ci.yml) defines Linux x64/ARM64, Windows x64, macOS Apple Silicon/Intel (Python 3.14.8 baseline), Linux ARM64/Python 3.14 with the Termux dependency profile, and experimental Python 3.15 standard support checks (not locally verified until dependency builds pass). That profile checks dependencies on Linux; Android compilation and power-management behavior need device testing. Consult workflow runs and release notes for checks completed for a particular release.
 
 Build the Windows executable after the production dashboard:
 

@@ -171,6 +171,8 @@ def refresh_session_token(session: dict) -> dict[str, str]:
         return updated
     except httpx.HTTPError as err:
         raise ExtractorError(f'알플레이 토큰 갱신 서버 연결에 실패했습니다: {err}', expected=True) from None
+    except ValueError:
+        raise ExtractorError('알플레이 토큰 갱신 응답 형식이 올바르지 않습니다.', expected=True) from None
 
 
 def _persist_session(session: dict[str, str]) -> None:

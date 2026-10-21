@@ -137,6 +137,16 @@ async def test_http_errors_keep_reason(monkeypatch,code,reason):
 
 
 @pytest.mark.asyncio
+async def test_network_transport_failure(monkeypatch):
+    def fail(request):
+        raise httpx.ConnectError("connection refused")
+    mock_http(monkeypatch, fail)
+    with pytest.raises(RuntimeError) as caught:
+        await TikTokLiveEngine().check_live_status('alice')
+    assert '읽지 못했습니다' in str(caught.value)
+
+
+@pytest.mark.asyncio
 async def test_streamlink_real_dimensions_portrait_and_cookie_boundary(monkeypatch,tmp_path):
     import streamlink
     cookies(tmp_path)

@@ -493,3 +493,15 @@ class TestExternalDownloadRetries:
             await engine._download_external(task.task_id, task)
 
         assert seen == [(None, None)]
+
+    @pytest.mark.asyncio
+    async def test_attempt_download_aborts_retry_when_loop_not_running(self, tmp_path, monkeypatch):
+        from unittest.mock import patch
+        engine = VodEngine()
+        task = self._add_task(engine, tmp_path)
+        self._fail_extraction(monkeypatch, self.TIMEOUT_ERROR)
+
+        with patch("asyncio.get_running_loop", side_effect=RuntimeError("no running event loop")):
+            retry = await engine._attempt_download(task.task_id)
+            assert retry is False
+            assert task.state == VodDownloadState.ERROR

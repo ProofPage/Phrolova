@@ -14,6 +14,7 @@ from app.engine.base import Platform, PlatformEngine
 from app.engine.conductor import Conductor
 from app.engine.platform_auth import get_platform_cookies, platform_cookie_file, platform_cookie_status
 from app.engine.platform_media import canonical_platform_video, media_platform
+from app.engine.preview_transport import decode_preview
 from app.engine.recording_errors import RecordingError
 from app.engine.twitch import (TwitchLiveEngine, canonical_twitch_video_url,
     normalize_twitch_channel_id, twitch_access_error, twitch_api_headers)
@@ -114,6 +115,16 @@ async def test_http_errors(monkeypatch, code, expected):
     mock_http(monkeypatch, lambda _: httpx.Response(code))
     with pytest.raises(RecordingError) as caught: await TwitchLiveEngine().check_live_status('alice')
     assert caught.value.code == expected
+
+
+@pytest.mark.asyncio
+async def test_network_transport_failure(monkeypatch):
+    def fail(request):
+        raise httpx.ConnectError("connection refused")
+    mock_http(monkeypatch, fail)
+    with pytest.raises(RuntimeError) as caught:
+        await TwitchLiveEngine().check_live_status('alice')
+    assert '불러오지 못했습니다' in str(caught.value)
 
 
 @pytest.mark.asyncio

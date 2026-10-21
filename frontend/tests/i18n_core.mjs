@@ -46,3 +46,5 @@ assert.equal(i18n.translate('common.missingFixture'), i18n.translate('common.tex
 assert.deepEqual(i18n.getMissingTranslations(), ['ja-JP:common.missingFixture']);
 console.warn = warn;
 console.log('PASS: locale migration, invalid locale fallback, eight-locale numbers/dates, Russian plurals, interpolation, existing-message language switching, untouched paths/URLs/formats');
+
+await import('./api_error.mjs');

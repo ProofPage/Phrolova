@@ -20,10 +20,11 @@ This document describes the current compatibility patch. Older audit documents r
 
 CI backend matrix:
 
-- Linux x64 and ARM64, Python 3.12, standard requirements.
-- Windows x64, Python 3.12, standard requirements.
-- macOS Apple Silicon and Intel, Python 3.12, standard requirements.
+- Linux x64 and ARM64, Python 3.14.8, standard requirements.
+- Windows x64, Python 3.14.8, standard requirements.
+- macOS Apple Silicon and Intel, Python 3.14.8, standard requirements.
 - Linux ARM64, Python 3.14, Termux requirements profile.
+- Linux x64 and Windows x64, Python 3.15, standard requirements (experimental forward-compatibility check; not locally verified until upstream dependency builds pass). Older Python releases such as Python 3.9, 3.12, and 3.13 are rejected by the baseline.
 
 Jobs install FFmpeg/FFprobe, check dependency consistency and run the full backend suite. POSIX jobs check shell syntax. Frontend CI checks eight locale resources, locale formatting, TypeScript and production builds.
 

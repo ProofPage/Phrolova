@@ -24,7 +24,7 @@ SERVICE_NAME="phrolova"
 SYSTEMD_UNIT_DIR="${SYSTEMD_UNIT_DIR:-/etc/systemd/system}"
 SYSTEMD_RUNTIME_DIR="${SYSTEMD_RUNTIME_DIR:-/run/systemd/system}"
 DEFAULT_PORT=8000
-REQUIRED_PYTHON_MINOR=12
+REQUIRED_PYTHON_MINOR=14
 REQUIRED_FFMPEG_MAJOR=6
 REQUIRED_NODE_MAJOR=22
 
@@ -232,25 +232,28 @@ ensure_ffmpeg() {
 
 ensure_python() {
   local cmd prefix=""
-  if [ "$PKG_MANAGER" = brew ]; then prefix="$(brew --prefix python@3.12 2>/dev/null || true)"; fi
-  for cmd in python3.12 python3.13 python3.14 python3 python "${prefix:+$prefix/bin/python3.12}"; do
+  if [ "$PKG_MANAGER" = brew ]; then prefix="$(brew --prefix python@3.14 2>/dev/null || true)"; fi
+
+  for cmd in python3.14 python3.15 python3 python "${prefix:+$prefix/bin/python3.14}"; do
     [ -n "$cmd" ] && has_cmd "$cmd" || continue
-    if "$cmd" -c 'import sys; assert sys.version_info >= (3,12)' >/dev/null 2>&1; then
+    if "$cmd" -c 'import sys; assert sys.version_info >= (3, 14, 8) and getattr(sys, "_is_gil_enabled", lambda: True)()' >/dev/null 2>&1; then
       PYTHON_CMD="$(command -v "$cmd")"; break
     fi
   done
+
   if [ -z "$PYTHON_CMD" ]; then
     case "$PKG_MANAGER" in
-      brew) brew install python@3.12; PYTHON_CMD="$(brew --prefix python@3.12)/bin/python3.12" ;;
-      dnf) pkg_install python3.12; PYTHON_CMD="$(command -v python3.12)" ;;
+      brew) brew install python@3.14; PYTHON_CMD="$(brew --prefix python@3.14)/bin/python3.14" ;;
+      dnf) pkg_install python3.14; PYTHON_CMD="$(command -v python3.14)" ;;
+      # Termux(pkg)는 롤링 시스템 Python 패키지를 제공하며 패치 지정 패키지(예: python3.14.8)는 지원하지 않습니다.
       pkg) pkg_install python; PYTHON_CMD="$(command -v python)" ;;
       apk) pkg_install python3 py3-pip; PYTHON_CMD="$(command -v python3)" ;;
-      apt) pkg_install python3 python3-venv; PYTHON_CMD="$(command -v python3)" ;;
-      yum) pkg_install python3; PYTHON_CMD="$(command -v python3)" ;;
-      *) error "Python 3.12+를 먼저 설치하세요. 배포판에 맞지 않는 PPA를 자동 추가하지 않습니다." ;;
+      apt) pkg_install python3.14 python3.14-venv || pkg_install python3 python3-venv; PYTHON_CMD="$(command -v python3.14 || command -v python3)" ;;
+      yum) pkg_install python3.14 || pkg_install python3; PYTHON_CMD="$(command -v python3.14 || command -v python3)" ;;
+      *) error "Python 3.14.8+를 먼저 설치하세요. 배포판에 맞지 않는 PPA를 자동 추가하지 않습니다." ;;
     esac
   fi
-  "$PYTHON_CMD" -c 'import sys; assert sys.version_info >= (3,12)' || error "Python 3.12+가 필요합니다."
+  "$PYTHON_CMD" -c 'import sys; assert sys.version_info >= (3, 14, 8) and getattr(sys, "_is_gil_enabled", lambda: True)()' || error "Python 3.14.8+ (표준 GIL)가 필요합니다."
   if [ "$PKG_MANAGER" = apt ] && ! "$PYTHON_CMD" -c 'import ensurepip' >/dev/null 2>&1; then
     local minor
     minor="$("$PYTHON_CMD" -c 'import sys; print(sys.version_info.minor)')"
@@ -381,7 +384,7 @@ build_frontend() {
 setup_python_env() {
   step "Python 가상환경"
   local venv="$INSTALL_DIR/.venv" requirements=requirements.txt backup
-  if [ -d "$venv" ] && ! "$venv/bin/python" -c 'import sys,pip; assert sys.version_info >= (3,12)' >/dev/null 2>&1; then
+  if [ -d "$venv" ] && ! "$venv/bin/python" -c 'import sys,pip; assert sys.version_info >= (3, 14, 8) and getattr(sys, "_is_gil_enabled", lambda: True)()' >/dev/null 2>&1; then
     backup="$INSTALL_DIR/.venv-backups/$(date +%Y%m%d-%H%M%S)-$$"
     mkdir -p "$(dirname "$backup")"
     mv "$venv" "$backup"

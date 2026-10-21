@@ -205,3 +205,93 @@ def test_membership_without_cookie_is_actionable_and_never_auto_retried(monkeypa
     failure=classify_recording_error(error.value)
     assert failure.code=='authentication' and not failure.retryable
     session.http.close()
+
+
+def test_ex_nlive_streaming_generates_akamai_probe_candidate():
+    url = 'https://ex-nlive-streaming.navercdn.com/chzzk/lip2_kr/cflexnmss2u0005/test_stream/test_hls_playlist.m3u8?token=test'
+    ll_url = 'https://ex-nlive-streaming.navercdn.com/chzzk/lip2_kr/cflexnmss2u0005/test_stream/test_playlist.m3u8?token=test'
+    items = [media(url, 'HLS'), media(ll_url, 'LLHLS')]
+    paths = source_paths(items)
+    # Domestic sources must remain primary (priority 0); Akamai probe candidates must follow.
+    assert paths[0].url == ll_url and paths[0].cdn == 'korean' and paths[0].mode == 'llhls'
+    assert paths[1].url == url and paths[1].cdn == 'korean' and paths[1].mode == 'hls'
+    candidates = [p for p in paths if p.probe]
+    assert len(candidates) == 2
+    assert all(p.cdn == 'akamai' and 'livecloud.akamaized.net' in p.url for p in candidates)
+    assert {p.mode for p in candidates} == {'hls', 'llhls'}
+
+
+def test_observed_path_token_shape_and_llhls_param_stripping():
+    from app.engine.chzzk_continuity import (
+        ChzzkM3U8Parser,
+        ContinuitySource,
+        cdn_from_url,
+        strip_llhls_params,
+    )
+
+    # Synthetic shape reproducing observed VPN route with path-based hdntl token and LL-HLS polling query.
+    synthetic_url = (
+        'https://livecloud.akamaized.net/chzzk/lip2_kr/cflexnmss2u0007/'
+        'stream_xyz/hdntl=exp=1792613048~acl=*%2fstream_xyz%2f*~data=hdntl~hmac=synthetic_hmac_abc123/'
+        '360p/chunklist.m3u8?_HLS_msn=29737&_HLS_part=1'
+    )
+    # Stripping polling params must keep path signature, encoded ACL (%2f) and delimiters (~) intact.
+    clean_url = strip_llhls_params(synthetic_url)
+    assert '_HLS_msn' not in clean_url and '_HLS_part' not in clean_url
+    assert 'acl=*%2fstream_xyz%2f*' in clean_url
+    assert 'hmac=synthetic_hmac_abc123' in clean_url
+    assert cdn_from_url(clean_url) == 'akamai'
+
+    # Verify M3U8Parser resolves relative map and segment URIs with full signed path intact.
+    m3u8_content = """#EXTM3U
+#EXT-X-VERSION:10
+#EXT-X-TARGETDURATION:10
+#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=3.0
+#EXT-X-PART-INF:PART-TARGET=1.0
+#EXT-X-MEDIA-SEQUENCE:29737
+#EXT-X-MAP:URI="360p_0_0_0.m4s?type=hls"
+#EXT-X-PART:DURATION=1.0,URI="360p_part_0.m4v"
+#EXTINF:2.0,
+360p_seg_0.m4v
+"""
+    parser = ChzzkM3U8Parser(base_uri=clean_url)
+    playlist = parser.parse(m3u8_content)
+    assert len(playlist.segments) == 1
+    seg = playlist.segments[0]
+    assert seg.map is not None
+    assert 'hdntl=exp=1792613048~acl=*%2fstream_xyz%2f*' in seg.map.uri
+    assert seg.map.uri.endswith('/360p/360p_0_0_0.m4s?type=hls')
+    assert 'hdntl=exp=1792613048~acl=*%2fstream_xyz%2f*' in seg.uri
+    assert seg.uri.endswith('/360p/360p_seg_0.m4v')
+    parts = playlist.part_groups.get(29737)
+    assert parts and len(parts) == 1
+    assert 'hdntl=exp=1792613048~acl=*%2fstream_xyz%2f*' in parts[0].uri
+
+
+def test_cdn_403_and_token_expiry_no_infinite_retries(monkeypatch):
+    from app.engine.chzzk_continuity import Unavailable
+    from streamlink.exceptions import StreamError
+
+    session = Streamlink(plugins_builtin=False)
+    # Simulate CDN returning 403 Access Denied / Token Expired on playlist fetch.
+    mock_response = SimpleNamespace(status_code=403, text='<HTML>Access Denied</HTML>')
+    mock_err = StreamError('403 Client Error: Forbidden')
+    mock_err.response = mock_response
+
+    def failing_get(url, **kwargs):
+        raise mock_err
+
+    monkeypatch.setattr(session.http, 'get', failing_get)
+    korean_url = 'https://ex-nlive-streaming.navercdn.com/live/1080p/list.m3u8'
+    stream = ChzzkHLSStream(session, korean_url, 'channel')
+    source = stream.continuity
+    manifest = source.add(korean_url, False, 'hls', 'korean')
+
+    # Calling playlist must raise Unavailable with status=403 and category='http'.
+    with pytest.raises(Unavailable) as exc_info:
+        source.playlist(manifest)
+    assert exc_info.value.status == 403
+    assert exc_info.value.category == 'http'
+    # Manifest lookup must record the failure category without retrying indefinitely.
+    assert manifest.lookup[1] == 'http'
+    session.http.close()

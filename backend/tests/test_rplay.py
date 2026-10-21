@@ -214,6 +214,14 @@ def test_session_auto_refresh_on_expiration(monkeypatch, tmp_path):
     assert reloaded['refreshToken'] == fresh_refresh
 
 
+def test_session_refresh_handles_non_json_response(monkeypatch):
+    def mock_post(self, url, **kwargs):
+        return httpx.Response(200, text="<html>502 Bad Gateway</html>", request=httpx.Request('POST', url))
+    monkeypatch.setattr(httpx.Client, 'post', mock_post)
+    with pytest.raises(ExtractorError, match="형식이 올바르지 않습니다"):
+        rplay.refresh_session_token({**SESSION, 'refreshToken': 'r' * 32})
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize('height', [1080, 720])
 async def test_real_hls_quality_download_inspection_restore(local_hls, monkeypatch, tmp_path, height):

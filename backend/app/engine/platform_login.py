@@ -88,7 +88,10 @@ def _check_response(response):
 
 def _json(response):
     _check_response(response)
-    data = response.json()
+    try:
+        data = response.json()
+    except (ValueError, TypeError):
+        raise PlatformLoginError("changed")
     if not isinstance(data, dict):
         raise PlatformLoginError("changed")
     return data

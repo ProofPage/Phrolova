@@ -1,13 +1,13 @@
 # macOS 설치 및 운영
 
-Apple Silicon과 Intel Mac에서 동일한 소스 설치 방식을 사용합니다. Python 3.12+, Node.js 22+와 npm, FFmpeg/FFprobe 6+가 필요합니다. 브라우저 대시보드 방식이며 `.app`·`.dmg` 패키지는 제공하지 않습니다.
+Apple Silicon과 Intel Mac에서 동일한 소스 설치 방식을 사용합니다. Python 3.14.8+, Node.js 22+와 npm, FFmpeg/FFprobe 6+가 필요합니다. 브라우저 대시보드 방식이며 `.app`·`.dmg` 패키지는 제공하지 않습니다.
 
 ## Homebrew 설치
 
 [Homebrew 공식 안내](https://docs.brew.sh/Installation)에 따라 Homebrew를 설치한 후 일반 사용자 터미널에서 실행하세요.
 
 ```bash
-brew install git python@3.12 node@22 ffmpeg
+brew install git python@3.14 node@22 ffmpeg
 # 저장소 접근 권한이 있는 GitHub 계정의 Git 인증 필요
 git clone https://github.com/ProofPage/Phrolova.git "$HOME/Phrolova"
 cd "$HOME/Phrolova"
@@ -15,7 +15,7 @@ bash scripts/manage.sh install
 bash scripts/manage.sh start
 ```
 
-관리 스크립트는 Apple Silicon의 `/opt/homebrew`와 Intel의 `/usr/local`에서 Homebrew를 찾습니다. PATH에 연결되지 않은 버전별 Node 경로를 활성화하고 Python 3.12+를 확인합니다.
+관리 스크립트는 Apple Silicon의 `/opt/homebrew`와 Intel의 `/usr/local`에서 Homebrew를 찾습니다. PATH에 연결되지 않은 버전별 Node 경로를 활성화하고 Python 3.14.8+를 확인합니다.
 
 <http://127.0.0.1:8000>에서 저장 경로·화질·MKV/MP4 형식을 설정하세요. macOS에서 저장 폴더 쓰기 권한이 필요합니다.
 
@@ -24,7 +24,7 @@ bash scripts/manage.sh start
 ```bash
 cd "$HOME/Phrolova"
 export PATH="$(brew --prefix node@22)/bin:$PATH"
-"$(brew --prefix python@3.12)/bin/python3.12" -m venv .venv
+"$(brew --prefix python@3.14)/bin/python3.14" -m venv .venv
 .venv/bin/python -m pip install -r backend/requirements.txt
 .venv/bin/python -m pip check
 (cd frontend && npm ci && npm run build)

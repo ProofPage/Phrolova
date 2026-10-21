@@ -1,5 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # Native Android/Bionic은 Termux 패키지와 내부 HOME의 가상환경을 사용한다.
+# Termux는 롤링 시스템 Python 패키지('python')를 사용하며 특정 패치 단위 패키지(예: python3.14.8)는 제공되지 않습니다.
 set -euo pipefail
 trap 'echo "[ERROR] Termux installation failed at line $LINENO. See the command output; existing data was retained." >&2' ERR
 [[ "${PHROLOVA_ENVIRONMENT:-}" != termux-proot && ( -n "${TERMUX_VERSION:-}" || "${PREFIX:-}" == /data/data/*/files/usr ) ]] || { echo 'Use this script inside Native Termux.' >&2; exit 1; }

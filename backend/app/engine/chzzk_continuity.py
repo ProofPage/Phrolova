@@ -125,6 +125,15 @@ def cdn_from_url(url):
     return "unknown"
 
 
+def strip_llhls_params(url):
+    parsed = urlparse(url)
+    if not parsed.query or ("_HLS_msn" not in parsed.query and "_HLS_part" not in parsed.query):
+        return url
+    query = [pair for pair in parsed.query.split("&")
+             if pair and pair.split("=", 1)[0] not in {"_HLS_msn", "_HLS_part"}]
+    return urlunparse(parsed._replace(query="&".join(query)))
+
+
 @dataclass(frozen=True)
 class SourcePath:
     url: str = field(repr=False)
@@ -450,6 +459,7 @@ class ContinuitySource:
                   status=status, sequence=sequence, at=at)
 
     def add(self, url, history, mode="hls", cdn=None, probe=False):
+        url = strip_llhls_params(url)
         parsed = urlparse(url)
         key = (parsed.netloc, parsed.path, history, mode)
         with self.lock:
@@ -491,6 +501,8 @@ class ContinuitySource:
                     query.extend([f"_HLS_msn={(previous.media_sequence or 0) + len(previous.segments)}",
                                   f"_HLS_part={len(previous.trailing_parts)}"])
                     url = urlunparse(urlparse(url)._replace(query="&".join(query)))
+                else:
+                    url = strip_llhls_params(url)
                 params = self.request_params()
                 # Blocking reload can normally wait up to three target durations.
                 # Give it that budget, capped below the no-progress deadline.

@@ -1,6 +1,6 @@
 # Linux 설치 및 운영
 
-Linux x86_64/ARM64에서 소스로 실행합니다. Python 3.12+, Node.js 22+와 npm, FFmpeg/FFprobe 6+, Bash, Git, curl, ps가 필요합니다. apt·dnf/yum·pacman·apk를 감지해 해당 배포판 패키지를 사용합니다.
+Linux x86_64/ARM64에서 소스로 실행합니다. Python 3.14.8+, Node.js 22+와 npm, FFmpeg/FFprobe 6+, Bash, Git, curl, ps가 필요합니다. apt·dnf/yum·pacman·apk를 감지해 해당 배포판 패키지를 사용합니다.
 
 ## 설치
 
@@ -16,7 +16,7 @@ bash scripts/manage.sh install
 bash scripts/manage.sh start
 ```
 
-설치 명령은 기존 체크아웃을 재사용하고 의존성 검사, 가상환경 생성, 프론트엔드 빌드와 관리 명령 등록을 수행합니다. Python 기본 버전이 3.12 미만인 배포판에서는 적합한 Python을 먼저 설치해야 합니다. Debian에 Ubuntu PPA를 자동 추가하지 않습니다.
+설치 명령은 기존 체크아웃을 재사용하고 의존성 검사, 가상환경 생성, 프론트엔드 빌드와 관리 명령 등록을 수행합니다. Python 기본 버전이 3.14 미만인 배포판에서는 적합한 Python 3.14.8+ 인터프리터를 먼저 설치해야 합니다 (Python 3.9 등 이전 버전은 거부됩니다). Debian에 Ubuntu PPA를 자동 추가하지 않습니다.
 
 Node는 22 이상을 검사합니다. apt 계열은 NodeSource Debian 설치 방법, dnf/yum은 RPM 설치 방법을 사용하며 Arch/Alpine은 자체 패키지를 사용합니다. FFmpeg와 FFprobe를 각각 검사합니다. GNU/Linux 정적 FFmpeg 대체 설치는 x86_64/ARM64 glibc 환경에서만 사용하며 Alpine에는 적용하지 않습니다.
 

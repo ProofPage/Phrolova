@@ -193,7 +193,7 @@ if [ "${1:-}" = -m ] && [ "${2:-}" = venv ]; then
   mkdir -p "$3/bin"; cp "$0" "$3/bin/python"; chmod +x "$3/bin/python"
 elif [ "${1:-}" = --version ]; then echo 'Python 3.14.0'; fi
 '''
-    scripts = {'python3.12': python, 'python': python, 'pkg': '#!/usr/bin/env bash\nexit 0\n',
+    scripts = {'python3.14': python, 'python': python, 'pkg': '#!/usr/bin/env bash\nexit 0\n',
                'npm': '#!/usr/bin/env bash\nexit 0\n',
                'node': '#!/usr/bin/env bash\nif [ "$1" = -e ]; then printf 24; else echo v24.0.0; fi\n',
                'ffmpeg': '#!/usr/bin/env bash\necho "ffmpeg version 6.1.1"\n',
@@ -220,17 +220,17 @@ def test_homebrew_keg_runtime_and_python_are_resolved(tmp_path):
 mkdir -p "$HOME/brew/node/bin" "$HOME/brew/python/bin"
 printf '#!/usr/bin/env bash\nprintf 24\n' > "$HOME/brew/node/bin/node"
 printf '#!/usr/bin/env bash\nexit 0\n' > "$HOME/brew/node/bin/npm"
-printf '#!/usr/bin/env bash\nexit 0\n' > "$HOME/brew/python/bin/python3.12"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$HOME/brew/python/bin/python3.14"
 chmod +x "$HOME/brew/node/bin/"* "$HOME/brew/python/bin/"*
 uname() { echo Darwin; }
-brew() { case "$*" in '--prefix node@22') echo "$HOME/brew/node" ;; '--prefix python@3.12') echo "$HOME/brew/python" ;; *) return 99 ;; esac; }
+brew() { case "$*" in '--prefix node@22') echo "$HOME/brew/node" ;; '--prefix python@3.14') echo "$HOME/brew/python" ;; *) return 99 ;; esac; }
 PKG_MANAGER=brew
 has_cmd() { case "$1" in python|python3|python3.12|python3.13|python3.14) return 1 ;; *) command -v "$1" >/dev/null ;; esac; }
 activate_runtime_path
 [ "$(command -v node)" = "$HOME/brew/node/bin/node" ]
 ensure_node
 ensure_python
-[ "$PYTHON_CMD" = "$HOME/brew/python/bin/python3.12" ]
+[ "$PYTHON_CMD" = "$HOME/brew/python/bin/python3.14" ]
 ''')
 
 

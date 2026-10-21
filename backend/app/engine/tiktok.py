@@ -123,13 +123,13 @@ class TikTokLiveEngine:
         cached = self._cache.get(cid)
         if cached and time.monotonic() - cached[0] < 8:
             return cached[1]
-        async with httpx.AsyncClient(timeout=12, headers=tiktok_headers(cid), cookies=platform_cookie_jar('tiktok')) as client:
-            response = await client.get('https://www.tiktok.com/api-live/user/room',
-                params={'aid':1988, 'sourceType':54, 'staleTime':600000, 'uniqueId':cid})
         try:
-            response.raise_for_status()
-            payload = response.json()
-        except (httpx.HTTPStatusError, ValueError) as error:
+            async with httpx.AsyncClient(timeout=12, headers=tiktok_headers(cid), cookies=platform_cookie_jar('tiktok')) as client:
+                response = await client.get('https://www.tiktok.com/api-live/user/room',
+                    params={'aid':1988, 'sourceType':54, 'staleTime':600000, 'uniqueId':cid})
+                response.raise_for_status()
+                payload = response.json()
+        except (httpx.HTTPError, ValueError) as error:
             raise tiktok_access_error(error) or RuntimeError('TikTok 방송 정보를 읽지 못했습니다.') from None
         if not isinstance(payload, dict) or payload.get('statusCode') != 0:
             message = str(payload.get('message') or payload.get('statusMsg') or '') if isinstance(payload, dict) else ''

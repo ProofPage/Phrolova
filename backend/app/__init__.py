@@ -1,9 +1,7 @@
-import asyncio
 import sys
 
-# 윈도우에서 subprocess 지원을 위해 가장 먼저 설정
+# 윈도우에서 subprocess 연결 종료 시 무해한 파이프 리셋 예외 억제
 if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
     try:
         from asyncio.proactor_events import _ProactorBasePipeTransport
         _orig_call_connection_lost = _ProactorBasePipeTransport._call_connection_lost

@@ -21,7 +21,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.14.8"
 
       - uses: actions/setup-node@v4
         with:
@@ -61,7 +61,7 @@ jobs:
 
       - name: 릴리스 회귀 테스트
         working-directory: backend
-        run: python -m pytest tests/test_release_metadata.py -q
+        run: python -m pytest -q
 
       - name: Windows 실행 파일 빌드
         run: python -m PyInstaller --clean --noconfirm phrolova.spec

@@ -19,6 +19,13 @@ from app.engine.chzzk_continuity import (
 from app.engine.chzzk_time_machine import LIVE_DETAIL_URL, TIME_MACHINE_URL, _is_trusted_media_url
 
 
+LIVECLOUD_AKAMAI_ORIGINS = {
+    'nvelop-livecloud.pstatic.net',
+    'livecloud.pstatic.net',
+    'ex-nlive-streaming.navercdn.com',
+}
+
+
 def trusted_media_url(url):
     try:
         return isinstance(url, str) and _is_trusted_media_url(url)
@@ -52,7 +59,7 @@ def source_paths(media):
                     paths.append(SourcePath(history, True, 'hls', cdn_from_url(history)))
     for path in list(paths):
         parsed = urlsplit(path.url)
-        if not path.history and parsed.hostname in {'nvelop-livecloud.pstatic.net', 'livecloud.pstatic.net'}:
+        if not path.history and parsed.hostname in LIVECLOUD_AKAMAI_ORIGINS:
             candidate = urlunsplit(parsed._replace(netloc='livecloud.akamaized.net'))
             if not any(p.url == candidate and p.mode == path.mode for p in paths):
                 paths.append(SourcePath(candidate, False, path.mode, 'akamai', probe=True))

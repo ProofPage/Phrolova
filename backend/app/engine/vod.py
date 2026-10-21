@@ -793,8 +793,12 @@ class VodEngine(VodPreparation):
 
                 tb_str = traceback.format_exc()
                 error_msg = self._format_download_error(e)
-                loop = asyncio.get_event_loop()
-                if not loop.is_running():
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop_running = loop.is_running()
+                except RuntimeError:
+                    loop_running = False
+                if not loop_running:
                     logger.info(f"[{task_id}] 이벤트 루프 종료 중, 재시도 중단")
                     task.state = VodDownloadState.ERROR
                     task.error_message = error_msg

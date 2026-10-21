@@ -193,3 +193,25 @@ async def test_update_timeout_cache_and_recovery(update_http):
     update_http(lambda request:httpx.Response(200,json={'tag_name':'v9.0.0'}))
     assert 'check_error' not in await service.check_update_now()
     assert not service.get_cached_info().get('check_error')
+
+
+def test_check_python_version_requires_3148_standard_gil(monkeypatch):
+    import sys
+    spec = importlib.util.spec_from_file_location("console_run_real", Path(__file__).parents[1] / "run.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    monkeypatch.setattr(sys, "version_info", (3, 14, 8, "final", 0))
+    monkeypatch.setattr(sys, "_is_gil_enabled", lambda: True, raising=False)
+    assert module._check_python_version() is True
+
+    # Free-threaded Python 3.14 (GIL disabled) rejected
+    monkeypatch.setattr(sys, "_is_gil_enabled", lambda: False, raising=False)
+    assert module._check_python_version() is False
+
+    # Older Python versions rejected
+    monkeypatch.setattr(sys, "_is_gil_enabled", lambda: True, raising=False)
+    monkeypatch.setattr(sys, "version_info", (3, 12, 10, "final", 0))
+    assert module._check_python_version() is False
+    monkeypatch.setattr(sys, "version_info", (3, 14, 7, "final", 0))
+    assert module._check_python_version() is False

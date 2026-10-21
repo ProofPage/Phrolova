@@ -2,7 +2,7 @@
 Phrolova: 데스크톱 실행 진입점
 
 PyInstaller로 빌드된 .exe 실행 시:
-  1. Python 3.12+ 및 FFmpeg 의존성 자동 감지
+  1. Python 3.14.8+ 및 FFmpeg 의존성 자동 감지
   2. 없으면 CMD 창에서 대화형 설치 안내
   3. 통과 시 서버 시작 → 브라우저 자동 오픈
   4. 시스템 트레이 아이콘 표시 (종료, 브라우저 열기)
@@ -51,8 +51,8 @@ IS_FROZEN = getattr(sys, "frozen", False)
 # ── 의존성 검사 ──────────────────────────────────────────────
 
 def _check_python_version() -> bool:
-    """Python 3.12 이상인지 확인한다."""
-    return sys.version_info >= (3, 12)
+    """Python 3.14.8 이상 (표준 GIL)인지 확인한다."""
+    return sys.version_info >= (3, 14, 8) and getattr(sys, "_is_gil_enabled", lambda: True)()
 
 
 def _find_ytdlp() -> str | None:
@@ -152,7 +152,7 @@ def _run_dependency_check() -> bool:
     warnings = 0
     py_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     python_ok = _check_python_version()
-    print_check("정상" if python_ok else "오류", "Python", py_ver if python_ok else f"{py_ver} · 3.12 이상 필요")
+    print_check("정상" if python_ok else "오류", "Python", py_ver if python_ok else f"{py_ver} · 3.14.8 이상 필요")
     all_ok = python_ok
 
     ffmpeg_health = check_media_tool("ffmpeg")
@@ -201,7 +201,7 @@ def _run_dependency_check() -> bool:
         return True
 
     if sys.platform != "win32" or not sys.stdin.isatty():
-        print("필수 의존성을 설치하세요: Python 3.12+, 시스템 FFmpeg, backend/requirements.txt")
+        print("필수 의존성을 설치하세요: Python 3.14.8+, 시스템 FFmpeg, backend/requirements.txt")
         return False
 
     # ── 의존성 미충족 → 대화형 안내 ─────────────────────────
@@ -210,7 +210,7 @@ def _run_dependency_check() -> bool:
     print()
 
     if not _check_python_version():
-        print("  📌 Python 3.12 설치 방법:")
+        print("  📌 Python 3.14.8 설치 방법:")
         print("     https://www.python.org/downloads/")
         print("     설치 시 'Add Python to PATH' 체크박스를 반드시 선택하세요.")
         print()
@@ -418,7 +418,7 @@ if __name__ == "__main__":
     # PyInstaller 빌드이거나 --desktop 플래그가 있으면 데스크톱 모드
     desktop_mode = (IS_FROZEN or "--desktop" in sys.argv) and sys.platform == "win32"
     if not _check_python_version():
-        sys.exit("Python 3.12 이상이 필요합니다.")
+        sys.exit("Python 3.14.8 이상이 필요합니다.")
 
     if desktop_mode:
         # 의존성 검사 (없으면 안내 후 종료)

@@ -52,7 +52,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
     const [streamlinkOptionsValid, setStreamlinkOptionsValid] = useState(true);
     const [popkontvUsePlaybackResponse, setPopkontvUsePlaybackResponse] = useState(true);
     const [twitchProxyEnabled, setTwitchProxyEnabled] = useState(false);
-    const [twitchTtvAbEnabled, setTwitchTtvAbEnabled] = useState(true);
+    const [twitchTtvAbEnabled, setTwitchTtvAbEnabled] = useState(false);
     const initialized = useRef(false);
     useEffect(() => {
         let active = true;
@@ -91,7 +91,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         setStreamlinkOptions(settings.streamlink_platform_options ?? {});
         setPopkontvUsePlaybackResponse(settings.popkontv_use_playback_response ?? true);
         setTwitchProxyEnabled(settings.twitch_proxy_enabled ?? false);
-        setTwitchTtvAbEnabled(settings.twitch_ttv_ab_enabled ?? true);
+        setTwitchTtvAbEnabled(settings.twitch_ttv_ab_enabled ?? false);
         setVodFilenameTemplate(settings.vod_filename_template || "[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}");
     }, [settings]);
     const liveDirty = !!settings && (
@@ -112,7 +112,7 @@ export function DownloadTab({ settings, onSaved, onDirtyChange }: Props) {
         streamlinkOptionsKey(streamlinkOptions) !== streamlinkOptionsKey(settings.streamlink_platform_options ?? {}) ||
         popkontvUsePlaybackResponse !== (settings.popkontv_use_playback_response ?? true) ||
         twitchProxyEnabled !== (settings.twitch_proxy_enabled ?? false) ||
-        twitchTtvAbEnabled !== (settings.twitch_ttv_ab_enabled ?? true) ||
+        twitchTtvAbEnabled !== (settings.twitch_ttv_ab_enabled ?? false) ||
         liveFilenameTemplate !== (settings.live_filename_template || "[{name}] {title} {live_date_year}-{live_date_month}-{live_date_day} {live_date_hour}-{live_date_minute}-{live_date_second}")
     );
     const vodDirty = !!settings && (

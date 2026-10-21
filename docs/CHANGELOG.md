@@ -8,6 +8,17 @@
 
 ## [Unreleased]
 
+## [2.1.8] - 2026-10-21
+
+### Changed
+- 기본 Python 실행·빌드 기준을 표준 GIL Python 3.14.8 이상으로 통일하고 Python 3.15 실험적 CI 검사를 추가.
+- Twitch TTV-AB 광고 차단 기본값을 OFF로 변경. 기존 저장 설정은 유지.
+
+### Fixed
+- 치지직 `ex-nlive-streaming.navercdn.com`의 Akamai 후보 경로 지원 및 LL-HLS 폴링 매개변수 정리 시 인증 경로 보존.
+- 서버의 구조화된 검증 오류, 비JSON 응답, 연결 실패·타임아웃·취소 처리와 화면 표시 인증 정보 마스킹 보완.
+- Python 이벤트 루프 종료 처리와 Windows 구버전 가상환경 백업의 원본 보존·날짜 형식 호환성 개선.
+
 ## [2.1.7] - 2026-10-21
 
 ### Fixed
@@ -1405,7 +1416,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.7...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.8...HEAD
+[2.1.8]: https://github.com/ProofPage/Phrolova/compare/v2.1.7...v2.1.8
 [2.1.7]: https://github.com/ProofPage/Phrolova/compare/v2.1.6...v2.1.7
 [2.1.6]: https://github.com/ProofPage/Phrolova/compare/v2.1.5...v2.1.6
 [2.1.5]: https://github.com/ProofPage/Phrolova/compare/v2.1.4...v2.1.5

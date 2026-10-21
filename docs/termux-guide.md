@@ -16,7 +16,7 @@ bash scripts/install-termux.sh
 bash scripts/manage.sh start
 ```
 
-설치기는 Python·python-pip·FFmpeg·Node.js LTS·curl·procps·Clang·Rust·make·pkg-config·libxml2·libxslt·OpenSSL·libffi·tmux를 준비합니다. Python 3.12+, Node 22+, FFmpeg/FFprobe 6+를 검사하고 필요한 Python 확장 모듈을 장치에서 빌드합니다.
+설치기는 Python·python-pip·FFmpeg·Node.js LTS·curl·procps·Clang·Rust·make·pkg-config·libxml2·libxslt·OpenSSL·libffi·tmux를 준비합니다. Termux 롤링 시스템 Python(Python 3.14+ 호환; Termux는 패치 지정 패키지 없이 단일 'python' 패키지 제공), Node 22+, FFmpeg/FFprobe 6+를 검사하고 필요한 Python 확장 모듈을 장치에서 빌드합니다.
 
 `requirements-termux.txt`는 순수 Uvicorn을 사용합니다. FastAPI, Streamlink, yt-dlp, aiohttp, pydantic-core, discord.py와 Uvicorn import를 확인하며 제거된 라이브러리를 요구하지 않습니다. Linux/Windows 실행 파일이나 manylinux wheel로 Android 의존성을 대체하지 않고 Termux 관리 대상 pip도 자동 업그레이드하지 않습니다.
 

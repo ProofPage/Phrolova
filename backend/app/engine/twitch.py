@@ -113,14 +113,14 @@ class TwitchLiveEngine:
             stream { id type createdAt viewersCount game { name } }
           }
         }'''
-        async with httpx.AsyncClient(timeout=12) as client:
-            response = await client.post('https://gql.twitch.tv/gql',
-                headers={'Client-ID': TwitchAPI.CLIENT_ID, **twitch_api_headers()},
-                json={'query': query, 'variables': {'login': cid}})
         try:
-            response.raise_for_status()
-            payload = response.json()
-        except (httpx.HTTPStatusError, ValueError) as error:
+            async with httpx.AsyncClient(timeout=12) as client:
+                response = await client.post('https://gql.twitch.tv/gql',
+                    headers={'Client-ID': TwitchAPI.CLIENT_ID, **twitch_api_headers()},
+                    json={'query': query, 'variables': {'login': cid}})
+                response.raise_for_status()
+                payload = response.json()
+        except (httpx.HTTPError, ValueError) as error:
             raise twitch_access_error(error) or RuntimeError('Twitch 방송 정보를 불러오지 못했습니다.') from None
         if not isinstance(payload, dict) or payload.get('errors') or not isinstance(payload.get('data'), dict) or 'user' not in payload['data']:
             raise RuntimeError('Twitch 방송 정보 형식이 변경되었거나 요청이 거부되었습니다.')
