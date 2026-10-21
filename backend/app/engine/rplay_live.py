@@ -188,7 +188,7 @@ class RplayLiveEngine:
     async def check_live_status(self, channel_id) -> LiveStatus:
         cid = normalize_rplay_channel_id(channel_id)
         try:
-            session = account_session()
+            session = await asyncio.to_thread(account_session)
         except Exception:
             session = None
         item = await self._metadata(cid, session)
@@ -212,7 +212,7 @@ class RplayLiveEngine:
 
     async def _streams(self, channel_id):
         cid = normalize_rplay_channel_id(channel_id)
-        session = account_session()
+        session = await asyncio.to_thread(account_session)
         key = (cid, hashlib.sha256((session or {}).get('accessToken', '').encode()).hexdigest())
         cached = self._stream_cache.get(key)
         if cached and time.monotonic() - cached[0] < 3:
@@ -226,7 +226,7 @@ class RplayLiveEngine:
                 '알플레이 방송 시청 권한이 없습니다. 구독·성인 인증·입장권 상태를 확인하세요.')
         byteplus = item.get('useBytePlusStream') is True
         media = item.get('bytePlusPlaybackUrl') if byteplus else (item.get('livestreamUrl') or item.get('playUrl'))
-        fallback_media = item.get('playUrl') or item.get('livestreamUrl')
+        fallback_media = item.get('livestreamUrl') or item.get('playUrl')
         if not media_allowed(media) or not urlsplit(media).path.endswith('.m3u8'):
             if fallback_media and media_allowed(fallback_media) and urlsplit(fallback_media).path.endswith('.m3u8'):
                 media = fallback_media

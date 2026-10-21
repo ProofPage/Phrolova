@@ -43,6 +43,7 @@
   "common.refresh": "Обновить",
   "common.goToLive": "К трансляциям",
   "live.channelAdded": "Канал добавлен.",
+  "live.channelAlreadyRegistered": "Этот канал уже зарегистрирован.",
   "live.chzzkChannelIDOrHttpsChzzkNaverCom": "ID канала CHZZK или https://chzzk.naver.com/...",
   "live.handleUsernameOrChannelID": "Псевдоним (@username) или ID канала",
   "live.cimeChannelIDOrHttpsCiMe": "ID канала CIME или https://ci.me/@...",

@@ -65,7 +65,7 @@ Availability depends on stream provider policies and account privileges.
 
 Download the pre-compiled, self-contained single binary from the latest release:
 
-1. Download **`Phrolova-v2.2.0-windows-x64.exe`** from [GitHub Releases](https://github.com/ProofPage/Phrolova/releases/latest).
+1. Download **`Phrolova-v2.2.1-windows-x64.exe`** from [GitHub Releases](https://github.com/ProofPage/Phrolova/releases/latest).
 2. Run the executable. It automatically unpacks required tools and launches the background service.
 3. Open your browser and navigate to **`http://127.0.0.1:8000`** to access the dashboard.
 

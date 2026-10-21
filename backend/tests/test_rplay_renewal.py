@@ -32,7 +32,7 @@ def test_concurrent_requests_share_one_renewal_even_when_url_is_unchanged(monkey
         return stream.renew(0)
     with ThreadPoolExecutor(max_workers=3) as pool:
         assert list(pool.map(renew, range(3))) == [renewed_url] * 3
-    resolver.assert_awaited_once_with(CID, "720p")
+    resolver.assert_awaited_once_with(CID, "720p", force_refresh=True)
     assert stream.renewal_revision == 1
     stream.session.http.close()
 
@@ -116,7 +116,7 @@ def test_expired_playlist_renews_without_resetting_sequence(monkeypatch):
     assert instance.stream.to_url() == NEW
     assert instance.stream.args["headers"] == {"Origin": "https://rplay.live"}
     assert instance.session.http.get.call_args.args[0] == NEW
-    resolver.assert_awaited_once_with(CID, "720p60")
+    resolver.assert_awaited_once_with(CID, "720p60", force_refresh=True)
     assert instance.session.http.get.call_count == 2
 
 
@@ -127,7 +127,7 @@ def test_500_server_error_playlist_renews_without_breaking_stream(monkeypatch):
     assert instance.stream.url == NEW and instance.sequence == 123
     assert instance.stream.to_url() == NEW
     assert instance.session.http.get.call_args.args[0] == NEW
-    resolver.assert_awaited_once_with(CID, "720p60")
+    resolver.assert_awaited_once_with(CID, "720p60", force_refresh=True)
     assert instance.session.http.get.call_count == 2
 
 

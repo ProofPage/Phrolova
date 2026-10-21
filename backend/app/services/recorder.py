@@ -56,12 +56,14 @@ class RecorderService:
         output_format: Optional[str] = None, output_format_provided: bool = False,
     ) -> dict:
         """멀티 플랫폼 감시 채널을 추가한다."""
-        self._conductor.add_channel(
+        added = self._conductor.add_channel(
             channel_id, auto_record=auto_record, platform=platform,
             download_condition=download_condition, watchalong_tags=watchalong_tags,
             **({'recording_quality': recording_quality} if recording_quality is not None else {}),
             **({'output_format':output_format,'output_format_provided':True} if output_format_provided else {}),
         )
+        if not added:
+            raise ValueError("live.channelAlreadyRegistered")
         composite_key = self._conductor.make_composite_key(platform, channel_id)
         return {
             "composite_key": composite_key,

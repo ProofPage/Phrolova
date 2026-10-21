@@ -5,7 +5,7 @@ import { useListboxKeyboard } from "../../hooks/useListboxKeyboard";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Lock, Plus } from "lucide-react";
 import { PlatformSelectTrigger } from "../ui/PlatformSelectTrigger";
-import { api, PLATFORM_LABELS, type ChannelDownloadOptions, type Platform, type PlatformStatus } from "../../api/client";
+import { api, PLATFORM_LABELS, type Channel, type ChannelDownloadOptions, type Platform, type PlatformStatus } from "../../api/client";
 import { ChannelDownloadModal } from "./ChannelDownloadModal";
 import { useToast } from "../ui/Toast";
 import { Button, Input } from "../ui/primitives";
@@ -27,11 +27,12 @@ const PLATFORM_DOT_STYLES: Record<Platform, string> = {
 };
 
 interface Props {
+    channels: Channel[];
     platformStatus: PlatformStatus | null;
     onAdded: () => void;
 }
 
-export function AddChannelForm({ platformStatus, onAdded }: Props) {
+export function AddChannelForm({ channels, platformStatus, onAdded }: Props) {
     const { t } = useLanguage();
     const toast = useToast();
     const [channelId, setChannelId] = useState("");
@@ -74,6 +75,11 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
             return;
         }
         setInputError(null);
+        if (channels.some(channel => (channel.platform || "chzzk") === selectedPlatform
+            && parsePlatformChannelInput(selectedPlatform, channel.channel_id) === normalizedChannelId)) {
+            setInputError("live.channelAlreadyRegistered");
+            return;
+        }
         setDropdownOpen(false);
         setSettingsOpen(true);
     };

@@ -305,7 +305,7 @@ export default function Dashboard() {
                     </div>
                 )}
                 metaPlacement="below"
-                actions={<AddChannelForm platformStatus={platformStatus} onAdded={fetchChannels} />}
+                actions={<AddChannelForm channels={channels} platformStatus={platformStatus} onAdded={fetchChannels} />}
                 actionsPlacement="below"
                 variant="plain"
             />

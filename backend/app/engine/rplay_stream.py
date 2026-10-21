@@ -145,7 +145,7 @@ class RplayHLSStream(CaptureBoundaryStream, HLSStream):
         with self._renewal_lock:
             if revision == self.renewal_revision:
                 url, _, _ = asyncio.run(
-                    RplayLiveEngine().resolve_stream(self.channel_id, self.quality))
+                    RplayLiveEngine().resolve_stream(self.channel_id, self.quality, force_refresh=True))
                 if not media_allowed(url):
                     raise RecordingError("rplay_stream", "알플레이 갱신 재생 주소가 허용되지 않습니다.")
                 self.args["url"] = url

@@ -43,6 +43,7 @@
   "common.refresh": "刷新",
   "common.goToLive": "前往直播",
   "live.channelAdded": "已添加频道。",
+  "live.channelAlreadyRegistered": "该频道已注册。",
   "live.chzzkChannelIDOrHttpsChzzkNaverCom": "CHZZK 频道 ID 或 https://chzzk.naver.com/...",
   "live.handleUsernameOrChannelID": "账号名称（@username）或频道 ID",
   "live.cimeChannelIDOrHttpsCiMe": "CIME 频道 ID 或 https://ci.me/@...",

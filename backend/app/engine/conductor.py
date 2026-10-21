@@ -223,13 +223,19 @@ class Conductor:
         recording_quality: Optional[str] = None,
         output_format: Optional[str] = None,
         output_format_provided: bool = False,
-    ) -> None:
+    ) -> bool:
         """감시할 채널을 등록한다."""
+        if platform == Platform.CHZZK:
+            from app.core.utils import extract_channel_id
+            channel_id = extract_channel_id(channel_id)
+        elif platform == Platform.YOUTUBE:
+            from app.core.utils import extract_youtube_id
+            channel_id = extract_youtube_id(channel_id)
         composite_key = self.make_composite_key(platform, channel_id)
         logger = get_platform_logger(platform, "live")
-        if composite_key in self._channels:
+        if composite_key in self._channels or (platform == Platform.CHZZK and channel_id in self._channels):
             logger.warning(f"채널 '{composite_key}'은(는) 이미 등록되어 있습니다.")
-            return
+            return False
         task = ChannelTask(
             channel_id=channel_id,
             platform=platform,
@@ -263,6 +269,7 @@ class Conductor:
             task.monitor_task = asyncio.create_task(
                 self._monitor_channel(composite_key)
             )
+        return True
 
     def set_popkontv_room_password(self, channel_id: str, password: str) -> None:
         key = self.make_composite_key(Platform.POPKONTV, channel_id)

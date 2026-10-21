@@ -141,6 +141,18 @@ def session_expired(session: dict) -> bool:
 def refresh_session_token(session: dict) -> dict[str, str]:
     """Exchange refreshToken for a fresh accessToken and atomically update the session file.
     Matches RPLAY web player behavior (POST /rplay/account/refresh-token)."""
+    with _refresh_lock:
+        current = read_session()
+        if current:
+            if current.get('requestorOid') != session.get('requestorOid'):
+                raise ExtractorError('알플레이 계정이 변경되었습니다. 최신 세션으로 다시 시도하세요.', expected=True)
+            if current.get('accessToken') != session.get('accessToken') and not session_expired(current):
+                return current
+            session = current
+        return _refresh_session_token(session)
+
+
+def _refresh_session_token(session: dict) -> dict[str, str]:
     refresh_token = session.get('refreshToken')
     if not refresh_token:
         raise ExtractorError('알플레이 세션이 만료되었습니다. 설정에서 세션 파일을 갱신하세요.', expected=True)
@@ -202,19 +214,10 @@ def read_session(*, auto_refresh: bool = False) -> dict[str, str] | None:
         raise ExtractorError('알플레이 세션 파일을 읽지 못했습니다. 설정에서 다시 등록하세요.', expected=True) from None
 
     if auto_refresh and session.get('refreshToken') and session_needs_refresh(session):
-        with _refresh_lock:
-            # Re-read under lock in case another thread already refreshed
-            try:
-                with Path(source).open('rb') as stream:
-                    current = parse_session(stream.read(16 * 1024 + 1))
-            except (OSError, ValueError):
-                current = session
-            if session_needs_refresh(current):
-                try:
-                    return refresh_session_token(current)
-                except Exception as err:
-                    _log.warning('알플레이 세션 사전 갱신 실패 (기존 토큰 계속 시도): %s', err)
-            return current
+        try:
+            return refresh_session_token(session)
+        except Exception as err:
+            _log.warning('알플레이 세션 사전 갱신 실패 (기존 토큰 계속 시도): %s', err)
 
     return session
 

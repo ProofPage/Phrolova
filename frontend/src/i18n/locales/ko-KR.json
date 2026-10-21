@@ -43,6 +43,7 @@
   "common.refresh": "새로고침",
   "common.goToLive": "라이브로 이동",
   "live.channelAdded": "채널이 추가되었습니다.",
+  "live.channelAlreadyRegistered": "이미 등록된 채널입니다.",
   "live.chzzkChannelIDOrHttpsChzzkNaverCom": "치지직 채널 ID 또는 https://chzzk.naver.com/...",
   "live.handleUsernameOrChannelID": "핸들(@username) 또는 채널 ID",
   "live.cimeChannelIDOrHttpsCiMe": "씨미 채널 ID 또는 https://ci.me/@...",

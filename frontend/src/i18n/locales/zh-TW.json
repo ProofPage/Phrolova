@@ -43,6 +43,7 @@
   "common.refresh": "重新整理",
   "common.goToLive": "前往直播",
   "live.channelAdded": "已新增頻道。",
+  "live.channelAlreadyRegistered": "此頻道已註冊。",
   "live.chzzkChannelIDOrHttpsChzzkNaverCom": "CHZZK 頻道 ID 或 https://chzzk.naver.com/...",
   "live.handleUsernameOrChannelID": "帳號名稱（@username）或頻道 ID",
   "live.cimeChannelIDOrHttpsCiMe": "CIME 頻道 ID 或 https://ci.me/@...",

@@ -158,14 +158,14 @@ export function PlatformCookieAuth({ platform, onSaved }: { platform: CookiePlat
                     </div>
                     <textarea
                         className="ui-input input-focus w-full h-44 font-mono text-xs p-3 leading-relaxed resize-none rounded-lg"
-                        placeholder="NID_AUT=...; NID_SES=...&#10;&#10;또는 Cookie-Editor에서 복사한 Netscape 쿠키 텍스트 전체"
+                        placeholder={t("settings.pasteCookieDescription")}
                         value={pastedText}
                         disabled={busy}
                         onChange={e => setPastedText(e.target.value)}
                     />
                     <div className="flex justify-end gap-2 pt-2">
                         <Button variant="secondary" disabled={busy} onClick={() => { setTextModalOpen(false); setPastedText(''); }}>{t("common.cancel")}</Button>
-                        <Button disabled={busy || !pastedText.trim()} loading={busy} onClick={() => void change('text', pastedText.trim())}>{t("common.save")}</Button>
+                        <Button disabled={busy || !pastedText.trim()} loading={busy} onClick={() => void change('text', pastedText.trim())}>{t("settings.saveChanges")}</Button>
                     </div>
                 </div>
             </div>

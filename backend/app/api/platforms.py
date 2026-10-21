@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
 from app.core.utils import (
+    extract_channel_id,
     extract_youtube_id,
     update_env_file as _update_env_file,
 )
@@ -81,7 +82,9 @@ async def add_platform_channel(req: AddPlatformChannelRequest):
 
     # URL로 입력해도 ID만 추출
     channel_id = req.channel_id
-    if platform == Platform.YOUTUBE:
+    if platform == Platform.CHZZK:
+        channel_id = extract_channel_id(channel_id)
+    elif platform == Platform.YOUTUBE:
         channel_id = extract_youtube_id(channel_id)
     elif platform == Platform.RPLAY:
         from app.engine.rplay_live import normalize_rplay_channel_id
@@ -142,15 +145,18 @@ async def add_platform_channel(req: AddPlatformChannelRequest):
     _validate_room_password(req, platform)
     if platform != Platform.CHZZK and req.download_condition is not None:
         raise HTTPException(status_code=400, detail="같이보기 조건은 치지직에서 지원합니다.")
-    result = service.add_platform_channel(
-        channel_id=channel_id,
-        platform=platform,
-        auto_record=req.auto_record,
-        download_condition=req.download_condition,
-        watchalong_tags=req.watchalong_tags,
-        **({'recording_quality': req.recording_quality} if req.recording_quality is not None else {}),
-            **({'output_format':req.output_format,'output_format_provided':True} if 'output_format' in req.model_fields_set else {}),
-    )
+    try:
+        result = service.add_platform_channel(
+                channel_id=channel_id,
+                platform=platform,
+                auto_record=req.auto_record,
+                download_condition=req.download_condition,
+                watchalong_tags=req.watchalong_tags,
+                **({'recording_quality': req.recording_quality} if req.recording_quality is not None else {}),
+                **({'output_format':req.output_format,'output_format_provided':True} if 'output_format' in req.model_fields_set else {}),
+        )
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from None
     if req.popkontv_password is not None:
         service.set_popkontv_room_password(channel_id, req.popkontv_password.get_secret_value())
     return result

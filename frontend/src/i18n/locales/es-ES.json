@@ -43,6 +43,7 @@
   "common.refresh": "Actualizar",
   "common.goToLive": "Ir a Directos",
   "live.channelAdded": "Canal añadido.",
+  "live.channelAlreadyRegistered": "Este canal ya está registrado.",
   "live.chzzkChannelIDOrHttpsChzzkNaverCom": "ID de canal de CHZZK o https://chzzk.naver.com/...",
   "live.handleUsernameOrChannelID": "Nombre de usuario (@username) o ID de canal",
   "live.cimeChannelIDOrHttpsCiMe": "ID de canal de CIME o https://ci.me/@...",

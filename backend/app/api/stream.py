@@ -54,23 +54,26 @@ async def add_channel(req: AddChannelRequest):
     service = get_recorder_service()
 
     channel_id = extract_channel_id(req.channel_id)
-    return service.add_platform_channel(
-        channel_id,
-        platform=Platform.CHZZK,
-        auto_record=req.auto_record,
-        download_condition=req.download_condition,
-        watchalong_tags=req.watchalong_tags,
-        **(
-            {"recording_quality": req.recording_quality}
-            if req.recording_quality is not None
-            else {}
-        ),
-        **(
-            {"output_format": req.output_format, "output_format_provided": True}
-            if "output_format" in req.model_fields_set
-            else {}
-        ),
-    )
+    try:
+        return service.add_platform_channel(
+                channel_id,
+                platform=Platform.CHZZK,
+                auto_record=req.auto_record,
+                download_condition=req.download_condition,
+                watchalong_tags=req.watchalong_tags,
+                **(
+                    {"recording_quality": req.recording_quality}
+                    if req.recording_quality is not None
+                    else {}
+                ),
+                **(
+                    {"output_format": req.output_format, "output_format_provided": True}
+                    if "output_format" in req.model_fields_set
+                    else {}
+                ),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.put(

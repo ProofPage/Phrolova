@@ -8,6 +8,16 @@
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-10-21
+
+### Fixed
+- 라이브 채널 추가 시 중복 등록 차단 및 안내, 서버 측 중복 요청 409 응답.
+- 알플레이 BytePlus 폴백 시 인증된 `livestreamUrl` 우선 선택 및 재생 주소 갱신 시 캐시 무효화.
+- 알플레이 세션 갱신을 직렬화하고 최신 토큰을 재사용해 다중 채널의 동시 갱신 충돌 방지.
+- 알플레이 인증 조회를 작업 스레드로 분리해 동기 네트워크 요청에 따른 이벤트 루프 지연 방지.
+- 만료된 세션의 최신 refreshToken 사용 및 계정 변경 시 이전 계정 세션 덮어쓰기 방지.
+- 쿠키 직접 입력창의 누락 번역 키와 한국어 고정 안내 문구 수정.
+
 ## [2.2.0] - 2026-10-21
 
 ### Added
@@ -1431,7 +1441,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.2.1...HEAD
+[2.2.1]: https://github.com/ProofPage/Phrolova/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/ProofPage/Phrolova/compare/v2.1.9...v2.2.0
 [2.1.9]: https://github.com/ProofPage/Phrolova/compare/v2.1.8...v2.1.9
 [2.1.8]: https://github.com/ProofPage/Phrolova/compare/v2.1.7...v2.1.8

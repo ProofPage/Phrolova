@@ -43,6 +43,7 @@
   "common.refresh": "再読み込み",
   "common.goToLive": "ライブへ移動",
   "live.channelAdded": "チャンネルを追加しました。",
+  "live.channelAlreadyRegistered": "既に登録されているチャンネルです。",
   "live.chzzkChannelIDOrHttpsChzzkNaverCom": "CHZZKチャンネルIDまたは https://chzzk.naver.com/...",
   "live.handleUsernameOrChannelID": "ハンドル（@username）またはチャンネルID",
   "live.cimeChannelIDOrHttpsCiMe": "CIMEチャンネルIDまたは https://ci.me/@...",
