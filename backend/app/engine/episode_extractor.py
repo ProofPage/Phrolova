@@ -46,6 +46,12 @@ class EpisodeSiteIE(InfoExtractor):
                 f'{item.get("site", "소스")} 임베드 스트림은 다운로드를 지원하지 않습니다.',
                 expected=True,
             )
+        delivery = item.pop('_av19_delivery', None)
+        missav_delivery = item.pop('_missav_delivery', None)
+        if missav_delivery is not None:
+            self._downloader.configure_missav(missav_delivery)
+        if delivery is not None:
+            self._downloader.configure_av19(delivery)
         if 'manifest' not in item:
             # A direct MP4 has already passed the site adapter's bounded probe.
             direct = {key: item.pop(key) for key in ('url', 'ext', 'format_id') if key in item}
@@ -53,6 +59,7 @@ class EpisodeSiteIE(InfoExtractor):
             item['formats'] = [direct]
             return item
         checked_playlists = item.pop('_ohli365_playlists', None)
+        av19_manifest = item.get('manifest') if delivery is not None else None
         formats, manifest_subtitles = self._parse_m3u8_formats_and_subtitles(
             item.pop('manifest'), item['url'], ext='mp4', entry_protocol='m3u8_native',
             m3u8_id='hls', headers=item['http_headers'], video_id=item['id'])
@@ -60,6 +67,12 @@ class EpisodeSiteIE(InfoExtractor):
             raise ExtractorError('회차 영상에서 사용 가능한 화질을 찾지 못했습니다.', expected=True)
         for fmt in formats:
             fmt['http_headers'] = item['http_headers']
+            if missav_delivery is not None:
+                fmt['hls_media_playlist_data'] = missav_delivery['playlists'][fmt['url']]
+            if av19_manifest is not None:
+                # A new manifest request may mint different signed key URLs.
+                # Consume the exact playlist validated with this delivery.
+                fmt['hls_media_playlist_data'] = av19_manifest
             if checked_playlists is not None:
                 body = checked_playlists.get(fmt['url'])
                 if not isinstance(body, str) or '#EXT-X-ENDLIST' not in body:

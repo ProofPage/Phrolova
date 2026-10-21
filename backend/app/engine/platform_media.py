@@ -5,6 +5,7 @@ from app.engine.platform_auth import redact_media_error
 
 def media_platform(url: str) -> str:
     host = (urlsplit(url).hostname or '').lower()
+    if host in ('missav123.com', 'www.missav123.com'): return 'missav'
     numbered = numbered_site_for_host(host)
     if numbered: return numbered
     if host in ('rplay.live', 'www.rplay.live'): return 'rplay'
@@ -21,11 +22,22 @@ def media_platform(url: str) -> str:
     if host in ('ci.me', 'www.ci.me'): return 'cime'
     if host == 'chzzk.naver.com': return 'chzzk'
     if host in ('hearheart.com', 'www.hearheart.com'): return 'hearheart'
+    if host in ('ym-05.com', 'www.ym-05.com'): return 'yamikorea'
+    if host in ('av19t.com', 'www.av19t.com'): return 'av19'
     if host in ('youtu.be', 'youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com'): return 'youtube'
     return 'external'
 
 def canonical_platform_video(url: str) -> str:
     platform = media_platform(url)
+    if platform == 'missav':
+        from app.engine.missav import parse_missav_url
+        return parse_missav_url(url)['url']
+    if platform == 'av19':
+        from app.engine.av19 import parse_av19_url
+        return parse_av19_url(url)['url']
+    if platform == 'yamikorea':
+        from app.engine.yamikorea import parse_yamikorea_url
+        return parse_yamikorea_url(url)['url']
     if platform == 'rplay':
         from app.engine.rplay import canonical_rplay_video_url
         return canonical_rplay_video_url(url)
@@ -78,8 +90,35 @@ class SafeMediaLogger:
 def platform_ydl(url: str, options: dict):
     import yt_dlp
     opts = dict(options)
+    if media_platform(url) == 'missav':
+        from app.engine.missav_downloader import MissAVYoutubeDL
+        from app.engine.episode_extractor import EpisodeSiteIE
+        opts.update(hls_prefer_native=True, allowed_extensions={'jpeg', 'ts', 'm3u8'},
+                    retries=0, fragment_retries=0, extractor_retries=0,
+                    skip_unavailable_fragments=False, external_downloader=None)
+        if opts.get('logger'):
+            opts['logger'] = SafeMediaLogger(opts['logger'])
+        ydl = MissAVYoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(EpisodeSiteIE())
+        ydl.add_default_info_extractors()
+        return ydl
     if opts.get('logger'):
         opts['logger'] = SafeMediaLogger(opts['logger'])
+    if media_platform(url) == 'av19':
+        from app.engine.av19_downloader import AV19YoutubeDL
+        from app.engine.episode_extractor import EpisodeSiteIE
+        from app.engine.av19 import SEGMENT_EXTENSIONS
+        opts.update(hls_prefer_native=True, allowed_extensions={'gif', 'ts', 'm3u8', 'html', *SEGMENT_EXTENSIONS})
+        ydl = AV19YoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(EpisodeSiteIE())
+        ydl.add_default_info_extractors()
+        return ydl
+    if media_platform(url) == 'yamikorea':
+        from app.engine.episode_extractor import EpisodeSiteIE
+        ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(EpisodeSiteIE())
+        ydl.add_default_info_extractors()
+        return ydl
     from app.engine.chzzk_cdn import ChzzkCdnYoutubeDL, is_chzzk_vod_url
     if is_chzzk_vod_url(url):
         return ChzzkCdnYoutubeDL(opts)

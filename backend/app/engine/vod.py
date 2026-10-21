@@ -303,7 +303,7 @@ class VodEngine(VodPreparation):
                 else None
             )
         ]
-        if media_platform(task.source_url) in ("tvhot", "toonday", "tvroom", "cime", "popkontv", "rplay", "kick", "twitch", "tiktok", "bilibili", "anilife", "linkani", "ohli24", "tvwiki", "animaru", "ohli365", "moeni", "reanime"):
+        if media_platform(task.source_url) in ("missav", "tvhot", "toonday", "tvroom", "cime", "popkontv", "rplay", "kick", "twitch", "tiktok", "bilibili", "anilife", "linkani", "ohli24", "tvwiki", "animaru", "ohli365", "moeni", "reanime"):
             opts["hls_prefer_native"] = True
             opts["skip_unavailable_fragments"] = False
             opts["postprocessors"] = [
@@ -803,7 +803,9 @@ class VodEngine(VodPreparation):
                     task.state = VodDownloadState.ERROR
                     task.error_message = error_msg
                     return False
-                if isinstance(e, NonRetryableDownloadError):
+                # Public MissAV access failures require user action, not retries
+                # with fresh fingerprints, sessions, or alternative endpoints.
+                if isinstance(e, NonRetryableDownloadError) or media_platform(task.url) == 'missav':
                     logger.error(f"[{task_id}] 다운로드 불가: {redact_media_error(e)}")
                     task.error_message = error_msg
                     task.state = VodDownloadState.ERROR
@@ -1255,7 +1257,13 @@ class VodEngine(VodPreparation):
         def _download() -> str | None:
             with make_ydl(opts) as ydl:
                 try:
-                    result = ydl.process_ie_result(info, download=True)
+                    if media_platform(task.url) in ('av19', 'missav'):
+                        # Site delivery belongs to the extractor's YDL instance.
+                        # Refresh signed resources in the actual download instance;
+                        # never persist WASM/session material in task metadata.
+                        result = ydl.extract_info(task.url, download=True)
+                    else:
+                        result = ydl.process_ie_result(info, download=True)
                     for item in result.get("requested_downloads") or [result]:
                         inspection_info.update(item)
                         final_path = item.get("filepath")

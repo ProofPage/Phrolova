@@ -14,6 +14,10 @@ from app.core.http import USER_AGENT
 from app.core.episode_domains import NUMBERED_SITE_HOSTS
 
 SITES = {
+    'missav': {'name': 'MissAV', 'hosts': ('missav123.com', 'www.missav123.com')},
+    'av19': {'name': 'AV19', 'hosts': ('av19t.com', 'www.av19t.com')},
+    'yamikorea': {'name': 'YamiKorea', 'hosts': ('ym-05.com', 'www.ym-05.com'),
+                 'media': ('media.ym-05.com',)},
     'toonday': {'name': '툰데이', 'hosts': (NUMBERED_SITE_HOSTS['toonday'],),
                 'players': ('player-v2.bcbc.red.datv.kr',),
                 'media': ('cdn.datv.kr', 'cdn-bm.pongping.top', NUMBERED_SITE_HOSTS['toonday'])},
@@ -76,7 +80,7 @@ def _host_allowed(host, domains, *, subdomains=False):
                else host == domain or subdomains and host.endswith('.'+domain) for domain in domains)
 
 
-def checked_url(value: str, domains, *, subdomains=False) -> str:
+def checked_url(value: str, domains, *, subdomains=False, allow_ad_path=False) -> str:
     try:
         if not isinstance(value, str) or re.search(r'[\s\x00-\x1f\x7f\\]', value):
             raise ValueError
@@ -86,7 +90,7 @@ def checked_url(value: str, domains, *, subdomains=False) -> str:
                 or parts.port not in (None, 443) or not _host_allowed(host, domains, subdomains=subdomains)):
             raise ValueError
         path = unquote(parts.path)
-        if re.search(r'[\x00-\x1f\x7f\\]', path) or AD_PATH.search(path):
+        if re.search(r'[\x00-\x1f\x7f\\]', path) or (not allow_ad_path and AD_PATH.search(path)):
             raise ValueError
         return str(httpx.URL(value))
     except ValueError:
@@ -108,6 +112,15 @@ def parse_episode_url(value: str) -> dict:
     value = checked_url(value, SITES[site]['hosts'])
     parts = urlsplit(value)
     path = parts.path
+    if site == 'missav':
+        from app.engine.missav import parse_missav_url
+        return parse_missav_url(value)
+    if site == 'av19':
+        from app.engine.av19 import parse_av19_url
+        return parse_av19_url(value)
+    if site == 'yamikorea':
+        from app.engine.yamikorea import parse_yamikorea_url
+        return parse_yamikorea_url(value)
     if site == 'tvroom':
         from app.engine.tvroom import parse_tvroom_url
         return parse_tvroom_url(value)
@@ -235,15 +248,19 @@ class SiteClient:
 
     def close(self): self.http.close()
 
-    def request(self, url, domains, *, referer=None, form=None, json_body=None, subdomains=False, headers=None, binary=False, prefix_bytes=None):
+    def request(self, url, domains, *, referer=None, form=None, json_body=None, subdomains=False, headers=None, binary=False, prefix_bytes=None, validator=None, max_bytes=3*1024*1024):
         from app.engine.tls_compat import enable_tls_compat, is_connection_reset
         if prefix_bytes is not None and (not binary or type(prefix_bytes) is not int or not 1 <= prefix_bytes <= 65536):
             raise ValueError('Invalid binary probe size')
+        if type(max_bytes) is not int or not 1 <= max_bytes <= 16*1024*1024:
+            raise ValueError('Invalid response size limit')
         method = 'POST' if form is not None or json_body is not None else 'GET'
         origin = urlsplit(url).netloc
         redirects, retried_hosts = 0, set()
         while redirects < 6:
             url = checked_url(url, domains, subdomains=subdomains)
+            if validator is not None:
+                url = validator(url)
             host = urlsplit(url).hostname
             request_headers = {'Referer': str(httpx.URL(referer or url)), 'Accept': 'text/html,application/json,application/vnd.apple.mpegurl'}
             if method == 'POST': request_headers['X-Requested-With'] = 'XMLHttpRequest'
@@ -270,7 +287,7 @@ class SiteClient:
                     for chunk in response.iter_bytes(chunk_size=prefix_bytes or 65536):
                         data.extend(chunk[:max(0, prefix_bytes-len(data))] if prefix_bytes is not None else chunk)
                         if prefix_bytes is not None and len(data) >= prefix_bytes: break
-                        if len(data) > 3*1024*1024: raise EpisodeSiteError('사이트 응답 크기가 너무 큽니다.')
+                        if len(data) > max_bytes: raise EpisodeSiteError('사이트 응답 크기가 너무 큽니다.')
                     if response.status_code == 202 and not data:
                         raise EpisodeSiteError('사이트 접속 확인이 필요합니다. 브라우저에서 접속 상태와 인증 설정을 확인하세요. (HTTP 202)', status=202)
                     return str(response.url), bytes(data) if binary else bytes(data).decode('utf-8-sig')
@@ -318,6 +335,12 @@ def load_catalog(url, client=None):
 
 
 def _load_catalog(route, client):
+    if route['site'] == 'missav':
+        raise EpisodeSiteError('MissAV는 개별 영상 다운로드만 지원합니다.')
+    if route['site'] == 'av19':
+        raise EpisodeSiteError('AV19는 개별 영상 다운로드만 지원합니다.')
+    if route['site'] == 'yamikorea':
+        raise EpisodeSiteError('YamiKorea는 개별 영상 다운로드만 지원합니다.')
     if route['site'] == 'toonday':
         from app.engine.toonday import load_toonday_catalog
         return load_toonday_catalog(route, client)
@@ -566,6 +589,15 @@ def _anilife_playback(client, address, work, episode):
 
 def _extract_episode(url,client):
     route = parse_episode_url(url)
+    if route['site'] == 'missav':
+        from app.engine.missav import extract_missav_episode
+        return extract_missav_episode(route, client)
+    if route['site'] == 'av19':
+        from app.engine.av19 import extract_av19_episode
+        return extract_av19_episode(route, client)
+    if route['site'] == 'yamikorea':
+        from app.engine.yamikorea import extract_yamikorea_episode
+        return extract_yamikorea_episode(route, client)
     if route['site'] == 'toonday':
         from app.engine.toonday import extract_toonday_episode
         return extract_toonday_episode(route, client)

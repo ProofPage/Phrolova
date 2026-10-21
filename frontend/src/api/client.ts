@@ -12,7 +12,7 @@ export const client = axios.create({
 // ── Types ───────────────────────────────────────────────
 
 export type Platform = "chzzk" | "youtube" | "cime" | "kick" | "twitch" | "tiktok" | "bilibili" | "pandalive" | "popkontv" | "rplay";
-export type DownloadSource = Exclude<Platform, "pandalive"> | 'hearheart' | 'anilife' | 'linkani' | 'ohli24' | 'ohli365' | 'tvwiki' | 'tvroom' | 'tvhot' | 'toonday' | 'animaru' | 'moeni' | 'reanime' | 'external';
+export type DownloadSource = Exclude<Platform, "pandalive"> | 'hearheart' | 'anilife' | 'linkani' | 'ohli24' | 'ohli365' | 'tvwiki' | 'tvroom' | 'tvhot' | 'toonday' | 'animaru' | 'moeni' | 'reanime' | 'yamikorea' | 'av19' | 'missav' | 'external';
 export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
 export interface ChannelDownloadOptions {
     popkontv_password?: string;
@@ -45,6 +45,9 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
 // Live-only providers must also stay out of the fallback video source menu.
 const { pandalive: _liveOnlyPandalive, ...videoPlatformLabels } = PLATFORM_LABELS;
 export const DOWNLOAD_SOURCE_LABELS: Record<DownloadSource, string> = {
+    av19: 'platform.av19',
+    missav: 'platform.missav',
+    yamikorea: 'platform.yamikorea',
     tvroom: 'platform.tvroom',
     tvhot: 'platform.tvhot',
     toonday: 'platform.toonday',

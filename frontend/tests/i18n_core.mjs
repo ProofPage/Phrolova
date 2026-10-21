@@ -48,3 +48,6 @@ console.warn = warn;
 console.log('PASS: locale migration, invalid locale fallback, eight-locale numbers/dates, Russian plurals, interpolation, existing-message language switching, untouched paths/URLs/formats');
 
 await import('./api_error.mjs');
+await import('./yamikorea_urls.mjs');
+await import('./av19_urls.mjs');
+await import('./missav_urls.mjs');

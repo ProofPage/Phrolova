@@ -6,9 +6,15 @@ import { canonicalTwitchVideoUrl, TWITCH_HOSTS } from './twitchUrls';
 import { canonicalTikTokVideoUrl, TIKTOK_HOSTS } from './tiktokUrls';
 import { canonicalBilibiliVideoUrl, BILIBILI_HOSTS } from './bilibiliUrls';
 import { canonicalPopkonTVVideoUrl } from './popkontvUrls';
+import { canonicalYamiKoreaVideoUrl } from './yamikoreaUrls';
+import { canonicalAV19VideoUrl } from './av19Urls';
+import { canonicalMissAVVideoUrl } from './missavUrls';
 
 export type { DownloadSource } from '../api/client';
 export function detectDownloadPlatform(value: string): DownloadSource {
+    if (canonicalMissAVVideoUrl(value)) return 'missav';
+    if (canonicalAV19VideoUrl(value)) return 'av19';
+    if (canonicalYamiKoreaVideoUrl(value)) return 'yamikorea';
     try {
         const host = new URL(value).hostname;
         const episodeSource = episodeSourceForHost(host);
@@ -28,6 +34,14 @@ export function detectDownloadPlatform(value: string): DownloadSource {
 }
 
 export function normalizeDownloadInput(value: string, source: DownloadSource): { url: string; collection: boolean; source: DownloadSource } | null {
+    if (source === 'missav') {
+        const url = canonicalMissAVVideoUrl(value);
+        return url ? { url, collection: false, source: 'missav' } : null;
+    }
+    if (source === 'av19') {
+        const url = canonicalAV19VideoUrl(value);
+        return url ? { url, collection: false, source: 'av19' } : null;
+    }
     let text = value.trim();
     if (source === 'bilibili' && !text.includes('://')) {
         const url = canonicalBilibiliVideoUrl(text);
@@ -41,6 +55,18 @@ export function normalizeDownloadInput(value: string, source: DownloadSource): {
         const parsed = new URL(text);
         if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password || (parsed.port && parsed.port !== '80' && parsed.port !== '443')) return null;
         const host = parsed.hostname.toLowerCase();
+        if (host === 'missav123.com' || host === 'www.missav123.com') {
+            const url = canonicalMissAVVideoUrl(value);
+            return url ? { url, collection: false, source: 'missav' } : null;
+        }
+        if (host === 'av19t.com' || host === 'www.av19t.com') {
+            const url = canonicalAV19VideoUrl(value);
+            return url ? { url, collection: false, source: 'av19' } : null;
+        }
+        if (host === 'ym-05.com' || host === 'www.ym-05.com' || source === 'yamikorea') {
+            const url = canonicalYamiKoreaVideoUrl(text);
+            return url ? { url, collection: false, source: 'yamikorea' } : null;
+        }
         if (episodeSourceForHost(host)) return parseEpisodeInput(text);
         if (['x.com','twitter.com','pscp.tv'].includes(host) || host.endsWith('.pscp.tv')) return null;
         if (host === 'twitcasting.tv' || host.endsWith('.twitcasting.tv')) return null;

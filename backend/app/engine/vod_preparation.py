@@ -60,6 +60,18 @@ def quality_options(info: dict) -> list[dict]:
 def canonical_prepared_url(value: str, source: str = 'chzzk') -> str:
     from app.engine.platform_media import media_platform, canonical_platform_video
     detected = media_platform(value)
+    if detected == 'missav':
+        return canonical_platform_video(value)
+    if source == 'missav':
+        raise ValueError('MissAV 개별 영상 주소(/ko/{slug})를 입력하세요.')
+    if detected == 'av19':
+        return canonical_platform_video(value)
+    if source == 'av19':
+        raise ValueError('AV19 개별 영상 주소(/korea|bj|nsub/{id})를 입력하세요.')
+    if detected == 'yamikorea':
+        return canonical_platform_video(value)
+    if source == 'yamikorea':
+        raise ValueError('YamiKorea 개별 영상 주소(/videos/{slug}/)를 입력하세요.')
     if source == 'bilibili' or detected == 'bilibili':
         from app.engine.bilibili import canonical_bilibili_video_url
         return canonical_bilibili_video_url(value)

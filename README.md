@@ -40,8 +40,15 @@ Source availability depends on the provider, your connection and your account's 
 | PopkonTV (팝콘티비) | Channel monitoring, recording, previews and password-protected rooms | VODs and clips through the existing queue | Username/password login or PopkonTV Netscape cookies; broadcast password when required |
 | RPLAY (알플레이) | Channel monitoring, granted HLS recording and previews | Videos and live archives with granted HLS, DASH or MP4 playback | Email/password login or an imported session file; account viewing permission required |
 | HearHeart | — | Playlist and individual playback links | Account login or platform cookies when required |
+| YamiKorea | — | Individual MP4 videos at ym-05.com; excludes separate preroll ads and thumbnail previews | Public playback only; no account-login or catalog integration |
+| AV19 | — | Individual HLS videos at av19t.com: `/korea/<id>`, `/bj/<id>` and `/nsub/<id>` | Public playback; verified session-v10/v11 player protocols |
+| MissAV | — | Individual HLS videos at missav123.com: `/ko/<slug>`; advertised quality selection | Public playback only; no automatic mirror switching or challenge bypass |
 | Episode-based sites | — | Anilife, Linkani, Moeni, Re:ANIME, Ohli24, TVWiki, Animaru, Ani365, TVRoom, TVHot and Toonday | Site-specific public sessions or account access where supported |
 | External links | — | Links handled by yt-dlp's supported extractors | Provider-specific access requirements |
+
+AV19 requires Node.js 22+ for its hash-verified WASM key decoder; Node.js is bundled in the Windows app. Short samples from all three supported categories were downloaded through the actual queue and finalized as H.264 1280×720 video with AAC audio. These checks are not full-length download verification of every video. Older AV19 domain aliases and the historical eight-byte segment-stripping method are not used.
+
+For MissAV, paste an individual `/ko/<slug>` video link, not the `/dm270/ko` homepage. The integration uses the observed main-player HLS stream and standard MPEG-TS segments without stripping bytes. A short queued MP4 sample was verified; full-length downloads of every video are not certified. Access challenges, rate limits, and unobserved encryption or advertisement protocols stop with an error instead of triggering mirror or bypass attempts.
 
 CIME (MCO), HearHeart, Animaru and Anilife support account sign-in; PandaTV and PopkonTV support username/password sign-in under **Settings → Authentication**, alongside the existing RPLAY login. Passwords are not saved and the input is cleared after each attempt. Only issued, platform-scoped cookies are registered after session verification. Existing cookies remain unchanged if login or storage fails. Social accounts, CAPTCHA and additional verification require official-site sign-in followed by cookie import. See the release notes for the current production-account validation scope.
 

@@ -23,6 +23,9 @@ async def vod_capabilities():
         {'id': 'cime', 'label': '씨미'},
         {'id': 'kick', 'label': 'Kick'}, {'id': 'twitch', 'label': 'Twitch'}, {'id': 'tiktok', 'label': 'TikTok'}, {'id': 'bilibili', 'label': 'Bilibili'}, {'id': 'popkontv', 'label': 'PopkonTV'}, {'id': 'rplay', 'label': 'platform.rplay'},
         {'id': 'hearheart', 'label': 'platform.hearheart'},
+        {'id': 'yamikorea', 'label': 'YamiKorea'},
+        {'id': 'av19', 'label': 'AV19'},
+        {'id': 'missav', 'label': 'MissAV'},
         {'id': 'anilife', 'label': 'platform.anilife'}, {'id': 'linkani', 'label': 'platform.linkani'},
         {'id': 'ohli24', 'label': 'platform.ohli24'},
         {'id': 'ohli365', 'label': 'platform.ohli365'},
@@ -265,7 +268,7 @@ async def cancel_channel_import(import_id: str):
 
 class VodPrepareRequest(BaseModel):
     urls: list[Annotated[str, Field(max_length=2048)]] = Field(..., min_length=1, max_length=100)
-    source: Literal['chzzk', 'youtube', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'popkontv', 'rplay', 'anilife', 'linkani', 'ohli24', 'ohli365', 'tvwiki', 'tvroom', 'tvhot', 'toonday', 'animaru', 'moeni', 'reanime', 'external', 'auto'] = 'auto'
+    source: Literal['chzzk', 'youtube', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'popkontv', 'rplay', 'anilife', 'linkani', 'ohli24', 'ohli365', 'tvwiki', 'tvroom', 'tvhot', 'toonday', 'animaru', 'moeni', 'reanime', 'yamikorea', 'av19', 'missav', 'external', 'auto'] = 'auto'
 
 
 class VodCatalogRequest(BaseModel):
