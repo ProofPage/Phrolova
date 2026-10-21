@@ -18,21 +18,21 @@ CATEGORIES = ('movie', 'kor_movie', 'drama', 'ent', 'sisa', 'world', 'ott_ent',
 PATH = re.compile(r'/(' + '|'.join(CATEGORIES) + r')/([1-9]\d*)(?:/([1-9]\d*))?/?')
 
 
-def parse_tvwiki_url(value):
-    value = checked_url(value, SITES['tvwiki']['hosts'])
+def parse_tvwiki_url(value, *, site='tvwiki'):
+    value = checked_url(value, SITES[site]['hosts'])
     parts = urlsplit(value)
     match = PATH.fullmatch(parts.path)
     if not match:
         raise EpisodeSiteError('티비위키 작품 또는 회차 주소를 입력하세요.')
     category, work, episode = match.groups()
-    return dict(site='tvwiki', category=category, work=work, episode=episode,
+    return dict(site=site, category=category, work=work, episode=episode,
                 url=f'https://{parts.hostname}/{category}/{work}' + (f'/{episode}' if episode else ''),
                 collection=episode is None)
 
 
 def _page(route, client):
-    final, body = client.request(route['url'], SITES['tvwiki']['hosts'])
-    target = parse_tvwiki_url(final)
+    final, body = client.request(route['url'], SITES[route['site']]['hosts'])
+    target = parse_tvwiki_url(final, site=route['site'])
     if any(target[key] != route[key] for key in ('category', 'work', 'episode')):
         raise EpisodeSiteError('이동된 티비위키 작품·회차 ID가 다릅니다.')
     return final, body, Document(body).root
@@ -40,17 +40,17 @@ def _page(route, client):
 
 def _catalog(route, final, body, doc):
     titles = doc.find('title')
-    title = re.sub(r'\s+다시보기\s*-\s*티비위키\s*$', '', titles[0].text).strip() if titles else ''
+    title = re.sub(r'\s+다시보기\s*-\s*(?:티비위키|티비핫)\s*$', '', titles[0].text).strip() if titles else ''
     if not title:
         raise EpisodeSiteError('티비위키 작품 제목을 확인할 수 없습니다.')
     has_player = bool(doc.find('iframe', id='view_iframe'))
     episodes = {}
-    for link in doc.find('a', cls='ep-link', href=None):
+    for link in doc.find('a', cls='title' if route['site'] == 'tvhot' else 'ep-link', href=None):
         label = link.text.strip()
         if not label:
             continue
         address = urljoin(final, link.attrs['href'])
-        episode = parse_tvwiki_url(address)
+        episode = parse_tvwiki_url(address, site=route['site'])
         if any(episode[key] != route[key] for key in ('category', 'work')):
             continue
         if not episode['episode']:
@@ -66,8 +66,8 @@ def _catalog(route, final, body, doc):
         episodes = {key: row for key, row in episodes.items() if key == route['episode']}
         if not episodes:
             raise EpisodeSiteError('티비위키 목록에서 요청한 회차를 찾지 못했습니다.')
-    return dict(source='tvwiki', id=route['category']+'-'+route['work'], title=title,
-                url=parse_tvwiki_url(final)['url'], episodes=_rows(list(episodes.values())),
+    return dict(source=route['site'], id=route['category']+'-'+route['work'], title=title,
+                url=parse_tvwiki_url(final, site=route['site'])['url'], episodes=_rows(list(episodes.values())),
                 incomplete=incomplete if route['collection'] else False)
 
 
@@ -205,7 +205,7 @@ def extract_tvwiki_episode(route, client):
     if not isinstance(session, dict) or session.get('success') is not True:
         raise EpisodeSiteError('티비위키 재생 세션을 발급하지 못했습니다. 다시 조회하세요.')
     player = urljoin(final, session.get('player_url') or '')
-    checked_url(player, SITES['tvwiki']['players'], subdomains=True)
+    checked_url(player, SITES[route['site']]['players'], subdomains=True)
     parts = urlsplit(player)
     if not re.fullmatch(r'/v/[A-Za-z0-9_-]{1,128}', parts.path):
         raise EpisodeSiteError('티비위키 플레이어 경로가 변경되었습니다.')
@@ -216,14 +216,14 @@ def extract_tvwiki_episode(route, client):
             raise EpisodeSiteError('티비위키 플레이어 세션 응답이 올바르지 않습니다.')
         query[field] = str(value)
     player = urlunsplit(parts._replace(query=urlencode(query)))
-    player_final, html = client.request(player, SITES['tvwiki']['players'], referer=final, subdomains=True)
+    player_final, html = client.request(player, SITES[route['site']]['players'], referer=final, subdomains=True)
     if urlsplit(player_final).path != parts.path:
         raise EpisodeSiteError('티비위키 본편 플레이어 주소가 변경되었습니다.')
     media = _player_config(client, player_final, html)
-    media, manifest = validate_hls(client, media, player_final, SITES['tvwiki']['media'])
+    media, manifest = validate_hls(client, media, player_final, SITES[route['site']]['media'])
     key = re.search(r'^#EXT-X-KEY:[^\r\n]*\bURI="([^"]+)"', manifest, re.M)
     if key:
-        _, key_data = client.request(urljoin(media,key[1]), SITES['tvwiki']['media'],
+        _, key_data = client.request(urljoin(media,key[1]), SITES[route['site']]['media'],
                                      referer=player_final, subdomains=True, binary=True)
         if not isinstance(key_data, bytes) or len(key_data) != 16:
             raise EpisodeSiteError('티비위키 재생 서버가 표준 HLS 키를 제공하지 않습니다. 이 재생 형식은 지원되지 않습니다.')
@@ -239,6 +239,6 @@ def extract_tvwiki_episode(route, client):
     return dict(id=catalog['id']+'-'+episode['id'], title=episode['title'], series=catalog['title'],
                 episode=episode['title'], episode_number=episode['number'], webpage_url=final,
                 duration=duration,
-                uploader='티비위키', url=media, manifest=manifest, subtitles={}, is_live=False,
+                uploader=SITES[route['site']]['name'], url=media, manifest=manifest, subtitles={}, is_live=False,
                 _tvwiki_delivery={'origin':'https://'+urlsplit(media).netloc, 'resources':resources},
                 http_headers={'User-Agent':USER_AGENT, 'Referer':player_final, 'Origin':'https://'+urlsplit(player_final).hostname})

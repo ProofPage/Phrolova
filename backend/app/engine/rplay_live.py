@@ -252,10 +252,16 @@ class RplayLiveEngine:
         variants = await self._streams(channel_id)
         return [{k: v for k, v in item.items() if k != 'url'} for item in sorted(variants, key=lambda v: v['height'], reverse=True)]
 
-    async def resolve_stream(self, channel_id, quality='best'):
+    async def resolve_stream(self, channel_id, quality='best', *, force_refresh=False):
+        if force_refresh:
+            cid = normalize_rplay_channel_id(channel_id)
+            for cache in (self._cache, self._stream_cache):
+                for key in list(cache):
+                    if key[0] == cid:
+                        del cache[key]
         variants = await self._streams(channel_id)
         if not variants:
-            raise ValueError('알플레이 채널이 오프라인입니다.')
+            raise RecordingError('broadcast_ended', '알플레이 API에서 방송 종료를 확인했습니다.')
         selected = next((v for v in variants if v['value'] == quality), None)
         if selected is None:
             if quality not in ('best', 'worst'):

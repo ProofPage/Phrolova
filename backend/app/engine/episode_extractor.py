@@ -39,6 +39,13 @@ class EpisodeSiteIE(InfoExtractor):
             raise ExtractorError(str(error), expected=True) from None
         finally:
             client.close()
+        # 임베드 전용 소스(zzapflix, aniwolf, aniweek)는 stream_url/is_embed 형태를
+        # 반환하며 yt-dlp 다운로드 파이프라인을 지원하지 않는다.
+        if item.get('is_embed'):
+            raise ExtractorError(
+                f'{item.get("site", "소스")} 임베드 스트림은 다운로드를 지원하지 않습니다.',
+                expected=True,
+            )
         if 'manifest' not in item:
             # A direct MP4 has already passed the site adapter's bounded probe.
             direct = {key: item.pop(key) for key in ('url', 'ext', 'format_id') if key in item}

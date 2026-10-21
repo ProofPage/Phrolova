@@ -124,6 +124,9 @@ class RecordingFinalizer:
             job["error_message"] = "녹화가 시작되지 않아 변환할 파일이 없습니다."
         job["can_open"] = job["source_available"] or job["output_available"]
         diagnostics = job.get("diagnostics") or {}
+        if job.get("capture_diagnostics"):
+            diagnostics["capture"] = job["capture_diagnostics"]
+            job["diagnostics"] = diagnostics
         if job["state"] == "completed" and diagnostics.get("returncode") == 0 and str(diagnostics.get("stderr") or "").strip():
             if not job.get("warning_message"):
                 job["warning_message"] = "변환 결과 검사를 통과했지만 FFmpeg 경고가 있습니다."
@@ -319,10 +322,17 @@ class RecordingFinalizer:
             file_size_bytes=pipeline.file_size_bytes,
         )
         status = pipeline.get_status()
+        report = getattr(pipeline, "_loss_report", None)
+        if report is not None:
+            job["capture_diagnostics"] = report.snapshot()
+            if report.has_discontinuities():
+                job["continuity_valid"] = False
+                job["keep_source_ts"] = True
+                job["warning_message"] = "수신 구간의 불연속 또는 오류가 기록되었습니다. 파일 검사 통과는 구간 무누락을 보장하지 않습니다."
         if getattr(pipeline, "_sequential_sources", False):
             job["source_layout"] = "sequential"
             job["keep_source_ts"] = True
-            job["warning_message"] = "live.twitchCaptureSplit"
+            job["warning_message"] = "스트림 불연속 경계에서 원본을 구간별로 분리해 보관합니다."
         if status.get('continuity_events'):
             job.setdefault('diagnostics', {})['continuity'] = status['continuity_events']
         if status.get('continuity_source'):

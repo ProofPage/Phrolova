@@ -58,6 +58,12 @@ class RecordingLossReport:
                 "omitted_ranges": self.omitted_ranges, "segment_errors": self.segment_errors,
             }))
 
+    def has_discontinuities(self):
+        with self._lock:
+            return bool(self.time_gaps or self.omitted_ranges or self.segment_errors or any(
+                track["sequence_gaps"] or track["sequence_resets"] for track in self.tracks.values()
+            ))
+
     def write(self, output_path, summary):
         path = Path(output_path).with_suffix(".losscheck")
         temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")

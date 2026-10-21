@@ -3,7 +3,6 @@
 TTV-AB 23.0.2 (GosuDRM/TTV-AB) ad metadata signature patterns are integrated into
 Streamlink's TwitchM3U8Parser for zero-ad capture precision.
 """
-from collections import deque
 from dataclasses import replace
 import re
 import threading
@@ -11,6 +10,7 @@ import time
 
 from streamlink.plugins.twitch import TwitchHLSStream, TwitchM3U8Parser
 from streamlink.exceptions import StreamError
+from app.engine.capture_boundaries import CaptureBoundaryStream, CaptureBoundaryWriter
 
 # TTV-AB 23.0.2 comprehensive ad metadata pattern
 TTV_AB_AD_METADATA_RE = re.compile(
@@ -73,35 +73,13 @@ def _ttv_ab_get_segment(self, uri, **data):
 TwitchM3U8Parser.get_segment = _ttv_ab_get_segment
 
 
-class TwitchCaptureStream(TwitchHLSStream):
+class TwitchCaptureStream(CaptureBoundaryStream, TwitchHLSStream):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ad_active = False
         self.last_activity = time.monotonic()
         self.excluded_ads = 0
-        self._written = 0
-        self._read = 0
         self._latest_sequence = None
-        self._boundaries = deque()
-        self._boundary_lock = threading.Lock()
-
-    def split_capture_data(self, data):
-        """Called by the sole capture reader, after the buffer read completed."""
-        start = self._read
-        self._read += len(data)
-        boundaries = []
-        with self._boundary_lock:
-            while self._boundaries and self._boundaries[0][0] < self._read:
-                boundaries.append(self._boundaries.popleft())
-        offset = 0
-        reason = None
-        for absolute, next_reason in boundaries:
-            cut = absolute - start
-            if cut > offset:
-                yield reason, data[offset:cut]
-            offset, reason = cut, next_reason
-        if offset < len(data):
-            yield reason, data[offset:]
 
 
 _Reader = TwitchHLSStream.__reader__
@@ -138,7 +116,7 @@ def _send_ttv_ad_spoof():
         pass
 
 
-class TwitchCaptureWriter(_Writer):
+class TwitchCaptureWriter(CaptureBoundaryWriter, _Writer):
     def _write_plain(self, segment, response):
         if not super()._write_plain(segment, response):
             raise StreamError("Twitch media segment could not be fully received")
@@ -148,14 +126,6 @@ class TwitchCaptureWriter(_Writer):
         if not super()._write_decrypt(segment, response, key):
             raise StreamError("Twitch encrypted segment could not be fully received")
         return True
-
-    def _write_into_buffer(self, iterator):
-        def counted():
-            for chunk in iterator:
-                # The boundary is published before any new segment bytes.
-                self.stream._written += len(chunk)
-                yield chunk
-        return super()._write_into_buffer(counted())
 
     def write(self, segment, result, *data):
         stream = self.stream

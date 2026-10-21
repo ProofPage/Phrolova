@@ -952,12 +952,12 @@ class YtdlpLivePipeline:
         self._sequential_sources = True
         self._pcr_last = None
         self._ts_tail = b""
-        self.warning_message = "live.twitchCaptureSplit"
+        self.warning_message = "스트림 불연속 경계에서 원본을 구간별로 분리해 보관합니다."
         self.continuity_events.append({"kind": "capture_split", "reason": reason,
                                        "part": number, "at": datetime.now().isoformat()})
         del self.continuity_events[:-64]
         self._loss_report.gap({"reason": reason})
-        self._logger.warning("[%s] Twitch 원본 구간 분리: %s · 구간=%s", self._channel_id, reason, number)
+        self._logger.warning("[%s] 원본 구간 분리: %s · 구간=%s", self._channel_id, reason, number)
         return following
 
     async def _write_losscheck(self):
@@ -1256,9 +1256,18 @@ class YtdlpLivePipeline:
             rplay_channel = None
             if (urlsplit(source_page_url).hostname or "").lower() in ("rplay.live", "www.rplay.live"):
                 from app.engine.rplay_live import normalize_rplay_channel_id
+                from app.engine.rplay_live import media_allowed, normalize_rplay_master
                 from app.engine.rplay_stream import RplayHLSStream
                 stream_type = RplayHLSStream
                 rplay_channel = normalize_rplay_channel_id(source_page_url)
+                def guard_rplay_response(response, *args, **kwargs):
+                    from urllib.parse import urljoin
+                    if not media_allowed(response.url) or (
+                        response.is_redirect and not media_allowed(
+                            urljoin(response.url, response.headers.get("Location", "")))):
+                        raise RecordingError("rplay_stream", "알플레이 CDN 이동 주소가 허용되지 않습니다.")
+                    normalize_rplay_master(response)
+                session.http.hooks["response"].append(guard_rplay_response)
             stream_type = guarded_hls_stream(stream_type)
             def make_stream(uri, **kwargs):
                 stream = (stream_type(session, uri, rplay_channel, quality, **kwargs)

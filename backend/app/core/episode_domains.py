@@ -3,6 +3,9 @@ import re
 
 
 NUMBERED_SITE_HOSTS = {
+    'tvhot': re.compile(r'tvhot[0-9]+\.com'),
+    'toonday': re.compile(r'toonday[0-9]+\.com'),
+    'tvroom': re.compile(r'tvroom[0-9]+\.org'),
     'animaru': re.compile(r'animaru[0-9]+\.com'),
     'tvwiki': re.compile(r'tvwiki[0-9]+\.net'),
     'anilife': re.compile(r'anilife[0-9]+\.tv'),

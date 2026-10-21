@@ -1207,7 +1207,14 @@ class Conductor:
                     )
                 )
                 cookie_str = None
-            elif task.platform in (Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY):
+            elif task.platform == Platform.RPLAY:
+                extra["source_resolver"] = (
+                    lambda selected_quality: engine.resolve_stream(
+                        task.channel_id, selected_quality, force_refresh=True
+                    )
+                )
+                cookie_str = None
+            elif task.platform in (Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV):
                 extra["source_resolver"] = (
                     lambda selected_quality: engine.resolve_stream(
                         task.channel_id, selected_quality
@@ -1239,6 +1246,21 @@ class Conductor:
                     fields={"화질": quality, "플랫폼": task.platform.value},
                 )
         except Exception as e:
+            if task.platform in (Platform.RPLAY, Platform.TWITCH) and getattr(e, "code", None) == "broadcast_ended":
+                task.pipeline = None
+                task.is_live = False
+                task.broadcast_status = "offline"
+                task.broadcast_ended = True
+                task.retry_at = None
+                task.retry_code = None
+                task.retry_count = 0
+                task.retry_blocked = False
+                task.last_error = None
+                task.error_detail = None
+                self._persist_retry(task)
+                logger.info("[%s] 녹화 연결 중 방송 종료 확인 · 다음 방송을 감시합니다.", composite_key)
+                self._broadcast_status()
+                return
             if getattr(e, "code", None) == "auto_record_disabled":
                 task.pipeline = None
                 task.retry_at = None

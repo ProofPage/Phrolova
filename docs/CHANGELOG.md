@@ -8,6 +8,19 @@
 
 ## [Unreleased]
 
+## [2.1.6] - 2026-10-21
+
+### Added
+- 티비룸·툰데이 작품 및 회차 조회와 동영상 다운로드 연결.
+- 티비핫 URL 인식·회차 조회 및 재생 세션 연결. 외부 플레이어 HTTP 403으로 실제 다운로드는 검증되지 않음.
+
+### Fixed
+- 알플레이 동시 인증 갱신 충돌 방지 및 CDN 간 인증 정보 전달 제한.
+- 수신 실패 조각의 성공 집계 방지와 불연속 경계별 원본 분리·보존.
+- 녹화 파일 검사 결과와 수신 누락·불연속 진단을 구분.
+- 알플레이·트위치 녹화 연결 중 API로 방송 종료가 확인되면 오류 대신 감시 대기로 전환.
+- 애니메이션 소스 전달·상세 식별자 조회·시즌 계산 및 플레이어 자막 처리 보완.
+
 ## [2.1.5] - 2026-10-20
 
 ### Added
@@ -1382,7 +1395,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.5...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.6...HEAD
+[2.1.6]: https://github.com/ProofPage/Phrolova/compare/v2.1.5...v2.1.6
 [2.1.5]: https://github.com/ProofPage/Phrolova/compare/v2.1.4...v2.1.5
 [2.1.4]: https://github.com/ProofPage/Phrolova/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/ProofPage/Phrolova/compare/v2.1.2...v2.1.3

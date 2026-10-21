@@ -29,7 +29,7 @@ def canonical_platform_video(url: str) -> str:
     if platform == 'rplay':
         from app.engine.rplay import canonical_rplay_video_url
         return canonical_rplay_video_url(url)
-    if platform in ('anilife', 'linkani', 'ohli24', 'tvwiki', 'animaru', 'ohli365', 'moeni', 'reanime'):
+    if platform in ('tvhot', 'toonday', 'tvroom', 'anilife', 'linkani', 'ohli24', 'tvwiki', 'animaru', 'ohli365', 'moeni', 'reanime'):
         from app.engine.episode_sites import parse_episode_url
         route = parse_episode_url(url)
         if route['collection'] and platform != 'ohli24':
@@ -89,9 +89,11 @@ def platform_ydl(url: str, options: dict):
         ydl.add_info_extractor(RplayIE())
         ydl.add_default_info_extractors()
         return ydl
-    if media_platform(url) in ('anilife', 'linkani', 'ohli24', 'tvwiki', 'animaru', 'ohli365', 'moeni', 'reanime'):
+    if media_platform(url) in ('tvhot', 'toonday', 'tvroom', 'anilife', 'linkani', 'ohli24', 'tvwiki', 'animaru', 'ohli365', 'moeni', 'reanime'):
+        if media_platform(url) in ('tvroom', 'toonday'):
+            opts.update(hls_prefer_native=True, allowed_extensions={'png', 'ts', 'm3u8', 'm4s', 'mp4', 'aac', 'key'})
         from app.engine.episode_extractor import EpisodeSiteIE
-        if media_platform(url) == 'tvwiki':
+        if media_platform(url) in ('tvwiki', 'tvhot'):
             from app.engine.tvwiki_downloader import TVWikiYoutubeDL
             ydl = TVWikiYoutubeDL(opts, auto_init=False)
         else:

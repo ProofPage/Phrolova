@@ -178,9 +178,13 @@ class TwitchLiveEngine:
             finally:
                 session.http.close()
         variants = await asyncio.to_thread(resolve)
-        if not variants and (await self.check_live_status(channel_id))['is_live']:
-            raise RecordingError('twitch_stream_unavailable',
-                'Twitch 방송 중이지만 재생 주소를 가져오지 못했습니다. 시청 권한과 서버 접속 상태를 확인하세요.', retryable=True)
+        if not variants:
+            # The preceding monitor poll may have cached "live" just before
+            # the playlist disappeared. Only a fresh API result can prove EOF.
+            self._cache.pop(normalize_twitch_channel_id(channel_id), None)
+            if (await self.check_live_status(channel_id))['is_live']:
+                raise RecordingError('twitch_stream_unavailable',
+                    'Twitch 방송 중이지만 재생 주소를 가져오지 못했습니다. 시청 권한과 서버 접속 상태를 확인하세요.', retryable=True)
         return variants
 
     async def get_qualities(self, channel_id: str) -> list[dict]:
@@ -190,7 +194,7 @@ class TwitchLiveEngine:
     async def resolve_stream(self, channel_id: str, quality: str = 'best') -> tuple[str, dict, None]:
         variants = await self._streams(channel_id)
         if not variants:
-            raise ValueError('Twitch 채널이 오프라인입니다.')
+            raise RecordingError('broadcast_ended', 'Twitch API에서 방송 종료를 확인했습니다.')
         rank = lambda item: (item['height'], item['fps'])
         selected = next((item for item in variants if item['value'] == quality), None)
         if selected is None:

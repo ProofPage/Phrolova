@@ -63,9 +63,9 @@ def canonical_prepared_url(value: str, source: str = 'chzzk') -> str:
     if source == 'bilibili' or detected == 'bilibili':
         from app.engine.bilibili import canonical_bilibili_video_url
         return canonical_bilibili_video_url(value)
-    if detected in ('cime', 'popkontv', 'rplay', 'kick', 'twitch', 'tiktok', 'anilife', 'linkani', 'ohli24', 'tvwiki', 'animaru', 'ohli365', 'moeni', 'reanime'):
+    if detected in ('tvhot', 'toonday', 'tvroom', 'cime', 'popkontv', 'rplay', 'kick', 'twitch', 'tiktok', 'anilife', 'linkani', 'ohli24', 'tvwiki', 'animaru', 'ohli365', 'moeni', 'reanime'):
         return canonical_platform_video(value)
-    if source in ('cime', 'popkontv', 'rplay', 'kick', 'twitch', 'tiktok', 'anilife', 'linkani', 'ohli24', 'tvwiki', 'animaru', 'ohli365', 'moeni', 'reanime'):
+    if source in ('tvhot', 'toonday', 'tvroom', 'cime', 'popkontv', 'rplay', 'kick', 'twitch', 'tiktok', 'anilife', 'linkani', 'ohli24', 'tvwiki', 'animaru', 'ohli365', 'moeni', 'reanime'):
         raise ValueError('선택한 플랫폼의 다시보기 또는 클립 링크를 입력하세요.')
     if source == 'auto':
         source = detected

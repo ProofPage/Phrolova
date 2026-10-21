@@ -14,6 +14,83 @@ OLD = "https://example.playlist.live-video.net/old.m3u8"
 NEW = "https://example.playlist.live-video.net/new.m3u8"
 
 
+def make_stream(url, channel_id=CID, quality="720p"):
+    from streamlink import Streamlink
+    return rplay_stream.RplayHLSStream(Streamlink(plugins_builtin=False), url, channel_id, quality)
+
+
+@pytest.mark.parametrize("renewed_url", [NEW, OLD])
+def test_concurrent_requests_share_one_renewal_even_when_url_is_unchanged(monkeypatch, renewed_url):
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+    stream = make_stream(OLD)
+    resolver = AsyncMock(return_value=(renewed_url, {}, None))
+    monkeypatch.setattr(rplay_stream.RplayLiveEngine, "resolve_stream", resolver)
+    ready = threading.Barrier(3)
+    def renew(_):
+        ready.wait(timeout=5)
+        return stream.renew(0)
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        assert list(pool.map(renew, range(3))) == [renewed_url] * 3
+    resolver.assert_awaited_once_with(CID, "720p")
+    assert stream.renewal_revision == 1
+    stream.session.http.close()
+
+
+def test_segment_does_not_inherit_grant_on_another_cdn():
+    assert rplay_stream.segment_url(NEW, OLD + "?token=PRIVATE") == NEW + "?token=PRIVATE"
+    other = "https://other.live-video.net/segment.ts"
+    assert rplay_stream.segment_url(other, OLD + "?token=PRIVATE") == other
+
+
+@pytest.mark.parametrize("url", ["https://evil.example/segment.ts",
+                                "http://livestream.rplay.live/segment.ts"])
+def test_untrusted_segment_is_rejected_before_request(url):
+    with pytest.raises(RecordingError):
+        rplay_stream.segment_url(url, OLD + "?token=PRIVATE")
+
+
+def test_loss_diagnostics_distinguish_continuity_from_file_validity():
+    from app.engine.recording_loss import RecordingLossReport
+    report = RecordingLossReport()
+    report.segment("video", 10)
+    report.segment("video", 11)
+    assert not report.has_discontinuities()
+    report.segment("video", 16)
+    assert report.has_discontinuities()
+    assert report.snapshot()["tracks"]["video"]["sequence_gaps"] == [{"first": 12, "last": 15}]
+
+
+def test_sequence_gap_logs_channel_and_range_without_stream_token(monkeypatch, caplog):
+    instance, _ = worker(monkeypatch, [])
+    instance.session._phrolova_platform = "rplay"
+    instance.stream.args["url"] = OLD + "?token=PRIVATE"
+    with caplog.at_level("WARNING"):
+        instance.check_sequence_gap(SimpleNamespace(num=127))
+    record = next(r for r in caplog.records if "HLS sequence gap" in r.message)
+    import logging
+    assert record.levelno == logging.WARNING and record.name == "phrolova.rplay.capture"
+    assert CID in record.message and "first=123" in record.message and "last=126" in record.message
+    assert "segments=4" in record.message and "PRIVATE" not in record.message
+
+
+def test_denied_segment_renewal_keeps_permission_error(monkeypatch):
+    writer = object.__new__(rplay_stream.RplayReader.__writer__)
+    writer.closed = False
+    writer.timeout = 1
+    writer.stream_data = False
+    writer.create_request_params = Mock(return_value={})
+    get = Mock(side_effect=StreamError("403 Forbidden"))
+    writer.session = SimpleNamespace(http=SimpleNamespace(get=get))
+    writer.reader = SimpleNamespace(stream=make_stream(OLD))
+    monkeypatch.setattr(rplay_stream.RplayLiveEngine, "resolve_stream",
+                        AsyncMock(side_effect=RecordingError("rplay_access", "권한 없음")))
+    with pytest.raises(RecordingError) as caught:
+        writer.fetch(SimpleNamespace(uri=OLD, num=1))
+    assert caught.value.code == "rplay_access" and not caught.value.retryable
+    assert get.call_count == 1
+
+
 def worker(monkeypatch, results):
     from streamlink import Streamlink
     from app.engine.streamlink_support import guarded_hls_stream
@@ -126,7 +203,7 @@ def test_segment_inherits_stream_query_parameters():
     mock_get = Mock(return_value=SimpleNamespace())
     writer.session = SimpleNamespace(http=SimpleNamespace(get=mock_get))
     stream_url = "https://livestream.rplay.live/live/123/abr.m3u8?creatorId=abc&token=xyz"
-    writer.reader = SimpleNamespace(stream=SimpleNamespace(url=stream_url, channel_id="123", quality="720p"))
+    writer.reader = SimpleNamespace(stream=make_stream(stream_url, channel_id="123"))
     writer.fetch(SimpleNamespace(uri="https://livestream.rplay.live/live/123/segment_0.ts", num=1))
     called_url = mock_get.call_args.args[0]
     from urllib.parse import parse_qs, urlsplit
@@ -144,7 +221,7 @@ def test_segment_403_renews_token_and_retries_successfully(monkeypatch):
     mock_get = Mock(side_effect=[StreamError("403 Forbidden"), success_response])
     writer.session = SimpleNamespace(http=SimpleNamespace(get=mock_get))
     old_stream = "https://livestream.rplay.live/live/123/abr.m3u8?token=old"
-    stream_obj = SimpleNamespace(url=old_stream, args={"url": old_stream}, channel_id=CID, quality="720p")
+    stream_obj = make_stream(old_stream)
     writer.reader = SimpleNamespace(stream=stream_obj)
     new_stream = "https://livestream.rplay.live/live/123/abr.m3u8?token=fresh_token"
     monkeypatch.setattr(rplay_stream.RplayLiveEngine, "resolve_stream", AsyncMock(return_value=(new_stream, {}, None)))

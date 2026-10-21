@@ -29,6 +29,35 @@ from app.engine.streamlink_support import StreamQueryAuth, configure_streamlink_
 from tests.test_new_platforms import local_hls
 
 
+@pytest.mark.parametrize("method,args,code", [
+    ("_write_plain", (object(), object()), "segment_write"),
+    ("_write_decrypt", (object(), object(), object()), "segment_decrypt"),
+])
+def test_failed_segment_write_cannot_be_counted_as_success(monkeypatch, method, args, code):
+    from app.engine.recording_errors import RecordingError
+    monkeypatch.setattr(HLSStreamWriter, method, lambda *args: False)
+    writer_type = guarded_hls_stream(HLSStream).__reader__.__writer__
+    writer = object.__new__(writer_type)
+    with pytest.raises(RecordingError) as caught:
+        getattr(writer, method)(*args)
+    assert caught.value.code == code and caught.value.retryable
+
+
+def test_initialization_map_is_not_counted_as_a_completed_media_segment(monkeypatch):
+    monkeypatch.setattr(HLSStreamWriter, "write", lambda *args: None)
+    writer_type = guarded_hls_stream(HLSStream).__reader__.__writer__
+    writer = object.__new__(writer_type)
+    report = RecordingLossReport()
+    writer.session = SimpleNamespace(_phrolova_loss_report=report)
+    writer.stream = SimpleNamespace(_phrolova_track_id="video")
+    writer.should_filter_segment = lambda segment: False
+    segment = SimpleNamespace(num=10)
+    writer.write(segment, object(), True)
+    assert report.snapshot()["tracks"] == {}
+    writer.write(segment, object(), False)
+    assert report.snapshot()["tracks"]["video"]["completed_segment_writes"] == 1
+
+
 @pytest.mark.parametrize("order", [
     "import streamlink; import yt_dlp.networking._requests",
     "import yt_dlp.networking._requests; import streamlink",

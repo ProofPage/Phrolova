@@ -30,6 +30,8 @@ interface AnimeLibraryProps {
     downloadTasks?: DownloadTask[];
 }
 
+const EMPTY_DOWNLOAD_TASKS: DownloadTask[] = [];
+
 const LIB_TXT = {
     title: "내 목록",
     desc: "저장한 작품과 오프라인 회차를 관리하세요.",
@@ -57,7 +59,7 @@ export const AnimeLibrary: React.FC<AnimeLibraryProps> = ({
     onSelect,
     onToggleBookmark,
     onExplore,
-    downloadTasks = [],
+    downloadTasks = EMPTY_DOWNLOAD_TASKS,
 }) => {
     const [libTab, setLibTab] = useState<"bookmarks" | "downloads">("bookmarks");
     const [tasks, setTasks] = useState<DownloadTask[]>(downloadTasks);

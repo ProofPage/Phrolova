@@ -8,6 +8,9 @@ const FIXED_EPISODE_HOSTS = new Map<string, DownloadSource>([
     ['v2.ohli365.org', 'ohli365'], ['ohli365.org', 'ohli365'], ['www.ohli365.org', 'ohli365'],
 ]);
 const NUMBERED_EPISODE_HOSTS: [DownloadSource, RegExp][] = [
+    ['tvhot', /^tvhot[0-9]+\.com$/],
+    ['toonday', /^toonday[0-9]+\.com$/],
+    ['tvroom', /^tvroom[0-9]+\.org$/],
     ['animaru', /^animaru[0-9]+\.com$/],
     ['tvwiki', /^tvwiki[0-9]+\.net$/], ['anilife', /^anilife[0-9]+\.tv$/],
 ];
@@ -25,6 +28,13 @@ export function parseEpisodeInput(value: string): { url: string; collection: boo
         const url = new URL(text);
         const source = episodeSourceForHost(url.hostname);
         if (!source || url.protocol !== 'https:' || url.username || url.password || url.port || /[\x00-\x1f\x7f\\]/.test(decodeURIComponent(url.pathname))) return null;
+        if (source === 'tvroom') {
+            const segments = url.pathname.replace(/\/$/, '').split('/').slice(1).map(decodeURIComponent);
+            if (segments.length < 2 || segments.length > 3 || segments[0] !== 'video' ||
+                ['영화', '드라마', 'TV예능', '음악프로', '애니', '시사다큐'].includes(segments[1]) ||
+                segments.slice(1).some(s => s.length > 512 || !/^[^\s/?#\\]+$/.test(s) || s === '.' || s === '..')) return null;
+            return {url:`${url.origin}/${segments.map(encodeURIComponent).join('/')}`, collection:segments.length === 2, source};
+        }
         if (source === 'ohli365') {
             const titles = url.searchParams.getAll('title'), episodes = url.searchParams.getAll('episode');
             const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -42,7 +52,11 @@ export function parseEpisodeInput(value: string): { url: string; collection: boo
             const episode = raw?.includes('.') ? raw.replace(/0+$/, '').replace(/\.$/, '') : raw;
             return {url:`${url.origin}/content/${match[1]}${episode !== undefined ? '/'+episode : ''}`,collection:episode === undefined,source};
         }
-        if (source === 'tvwiki') {
+        if (source === 'toonday') {
+            const match = url.pathname.match(/^\/movie\/([1-9]\d*)(?:\/([1-9]\d*))?\/?$/);
+            return match ? {url:`${url.origin}/movie/${match[1]}${match[2]?'/'+match[2]:''}`,collection:!match[2],source} : null;
+        }
+        if (source === 'tvwiki' || source === 'tvhot') {
             const match = url.pathname.match(/^\/(movie|kor_movie|drama|ent|sisa|world|ott_ent|short_drama|ani_movie|animation|old_ent|old_drama)\/([1-9]\d*)(?:\/([1-9]\d*))?\/?$/);
             return match ? {url:`${url.origin}/${match[1]}/${match[2]}${match[3]?'/'+match[3]:''}`,collection:!match[3],source} : null;
         }
@@ -87,5 +101,6 @@ export function parseEpisodeInput(value: string): { url: string; collection: boo
 }
 
 export function isEpisodeSource(source: DownloadSource) {
+    if (source === 'tvroom' || source === 'tvhot' || source === 'toonday') return true;
     return source === 'anilife' || source === 'linkani' || source === 'ohli24' || source === 'ohli365' || source === 'tvwiki' || source === 'animaru' || source === 'moeni' || source === 'reanime';
 }

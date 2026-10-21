@@ -95,18 +95,9 @@ KOREAN_TITLE_MAP: Dict[str, str] = {
     "haikyu!!": "하이큐!!",
 }
 
-# Pre-sort keys by descending length for longest prefix match
-_SORTED_TITLE_KEYS = sorted(KOREAN_TITLE_MAP.keys(), key=len, reverse=True)
-
 def _localize_title(raw_title: str) -> str:
     cleaned = raw_title.strip().lower()
-    for en_key in _SORTED_TITLE_KEYS:
-        if en_key in cleaned:
-            return KOREAN_TITLE_MAP[en_key]
-    for en_key in _SORTED_TITLE_KEYS:
-        if cleaned in en_key and len(cleaned) >= 4:
-            return KOREAN_TITLE_MAP[en_key]
-    return raw_title
+    return KOREAN_TITLE_MAP.get(cleaned, raw_title)
 
 KOREAN_SYNOPSIS_MAP: Dict[str, str] = {
     "약사의 혼잣말": "후궁의 독살 미수 사건을 해결한 마오마오에게 새로운 음모의 그림자가 다가온다.",
@@ -133,11 +124,11 @@ def _current_season() -> tuple[str, int]:
     now = time.gmtime()
     year = now.tm_year
     month = now.tm_mon
-    if month in (12, 1, 2):
+    if month in (1, 2, 3):
         season = "WINTER"
-    elif month in (3, 4, 5):
+    elif month in (4, 5, 6):
         season = "SPRING"
-    elif month in (6, 7, 8):
+    elif month in (7, 8, 9):
         season = "SUMMER"
     else:
         season = "FALL"
@@ -784,7 +775,7 @@ async def search_anime(
 
 
 @router.get("/anime/{anime_id}")
-async def get_anime_detail(anime_id: int) -> Dict[str, Any]:
+async def get_anime_detail(anime_id: int, id_type: str = "anilist") -> Dict[str, Any]:
     """Full detail metadata of an anime."""
     gql = """
     query ($id: Int) {
@@ -807,9 +798,13 @@ async def get_anime_detail(anime_id: int) -> Dict[str, Any]:
       }
     }
     """
-    data = await _anilist_query(gql, {"id": anime_id}, ttl=1800)
+    if id_type not in ("anilist", "mal"):
+        raise HTTPException(status_code=400, detail="지원하지 않는 작품 ID 형식입니다.")
+    if id_type == "mal":
+        gql = gql.replace("$id: Int", "$idMal: Int").replace("Media(id: $id,", "Media(idMal: $idMal,")
+    data = await _anilist_query(gql, {"idMal" if id_type == "mal" else "id": anime_id}, ttl=1800)
     media = data.get("Media")
-    if not media:
+    if not media and id_type == "anilist":
         # Try idMal if not found
         gql_mal = """
         query ($idMal: Int) {

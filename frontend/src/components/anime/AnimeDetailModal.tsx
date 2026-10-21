@@ -57,15 +57,18 @@ export const AnimeDetailModal: React.FC<AnimeDetailModalProps> = ({
 
     useEffect(() => {
         if (!animeId) return;
+        const controller = new AbortController();
+        setDetail(initialData || null);
         setLoading(true);
-        fetch(`/api/lilac/anime/${animeId}`)
+        fetch(`/api/lilac/anime/${animeId}?id_type=mal`, { signal: controller.signal })
             .then((res) => res.json())
             .then((data) => {
-                if (data.anime) setDetail(data.anime);
+                if (!controller.signal.aborted && data.anime?.title) setDetail(data.anime);
             })
             .catch(() => {})
-            .finally(() => setLoading(false));
-    }, [animeId]);
+            .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+        return () => controller.abort();
+    }, [animeId, initialData]);
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {

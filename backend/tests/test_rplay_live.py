@@ -265,6 +265,8 @@ async def test_real_streamlink_qualities_capture_finalizer_and_frame(local_hls, 
     base, directory = local_hls
     mock_api(monkeypatch, metadata(useBytePlusStream=False, playUrl=base + '/master.m3u8'))
     monkeypatch.setattr(rp, 'media_allowed', lambda u: isinstance(u, str) and u.startswith(base + '/'))
+    from app.engine import rplay_stream
+    monkeypatch.setattr(rplay_stream, 'media_allowed', rp.media_allowed)
     engine = rp.RplayLiveEngine()
     assert [q['height'] for q in await engine.get_qualities(CID)] == [1080, 720, 480]
     frame, width, height = await FramePreviewService().get_frame('rplay:' + CID, 'rplay', CID, engine)

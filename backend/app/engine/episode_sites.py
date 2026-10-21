@@ -14,6 +14,12 @@ from app.core.http import USER_AGENT
 from app.core.episode_domains import NUMBERED_SITE_HOSTS
 
 SITES = {
+    'toonday': {'name': '툰데이', 'hosts': (NUMBERED_SITE_HOSTS['toonday'],),
+                'players': ('player-v2.bcbc.red.datv.kr',),
+                'media': ('cdn.datv.kr', 'cdn-bm.pongping.top', NUMBERED_SITE_HOSTS['toonday'])},
+    'tvroom': {'name': '티비룸', 'hosts': (NUMBERED_SITE_HOSTS['tvroom'],),
+               'players': ('player-v2.pongping.top',),
+               'media': ('player.pongping.top', 'cdn-bm.pongping.top')},
     'ohli365': {'name': '애니365', 'hosts': ('v2.ohli365.org', 'ohli365.org', 'www.ohli365.org'), 'players': ('megaplay.buzz',),
                 'media': ('nexabloom.top', 'qeltrix.top', 'silverorbit.top', 'broforgotsave.online')},
     'animaru': {'name': '애니마루', 'hosts': (NUMBERED_SITE_HOSTS['animaru'],),
@@ -54,6 +60,7 @@ SITES = {
                 'media': ('michealcdn.com', 'cdndania.com', re.compile(r'.*cloud.*\.xyz'))},
 }
 AD_PATH = re.compile(r'/(?:ads?|banner|advert[^/]*|popunder|tracking)/', re.I)
+SITES['tvhot'] = {**SITES['tvwiki'], 'name': '티비핫', 'hosts': (NUMBERED_SITE_HOSTS['tvhot'],)}
 
 
 class EpisodeSiteError(ValueError):
@@ -101,15 +108,21 @@ def parse_episode_url(value: str) -> dict:
     value = checked_url(value, SITES[site]['hosts'])
     parts = urlsplit(value)
     path = parts.path
+    if site == 'tvroom':
+        from app.engine.tvroom import parse_tvroom_url
+        return parse_tvroom_url(value)
     if site == 'ohli365':
         from app.engine.ohli365 import parse_ohli365_url
         return parse_ohli365_url(value)
     if site == 'animaru':
         from app.engine.animaru import parse_animaru_url
         return parse_animaru_url(value)
-    if site == 'tvwiki':
+    if site in ('tvwiki', 'tvhot'):
         from app.engine.tvwiki import parse_tvwiki_url
-        return parse_tvwiki_url(value)
+        return parse_tvwiki_url(value, site=site)
+    if site == 'toonday':
+        from app.engine.toonday import parse_toonday_url
+        return parse_toonday_url(value)
     if site == 'moeni':
         from app.engine.moeni import parse_moeni_url
         return parse_moeni_url(value)
@@ -305,6 +318,15 @@ def load_catalog(url, client=None):
 
 
 def _load_catalog(route, client):
+    if route['site'] == 'toonday':
+        from app.engine.toonday import load_toonday_catalog
+        return load_toonday_catalog(route, client)
+    if route['site'] == 'tvhot':
+        from app.engine.tvwiki import load_tvwiki_catalog
+        return load_tvwiki_catalog(route, client)
+    if route['site'] == 'tvroom':
+        from app.engine.tvroom import load_tvroom_catalog
+        return load_tvroom_catalog(route, client)
     if route['site'] == 'ohli365':
         from app.engine.ohli365 import load_ohli365_catalog
         return load_ohli365_catalog(route, client)
@@ -544,6 +566,15 @@ def _anilife_playback(client, address, work, episode):
 
 def _extract_episode(url,client):
     route = parse_episode_url(url)
+    if route['site'] == 'toonday':
+        from app.engine.toonday import extract_toonday_episode
+        return extract_toonday_episode(route, client)
+    if route['site'] == 'tvhot':
+        from app.engine.tvwiki import extract_tvwiki_episode
+        return extract_tvwiki_episode(route, client)
+    if route['site'] == 'tvroom':
+        from app.engine.tvroom import extract_tvroom_episode
+        return extract_tvroom_episode(route, client)
     if route['site'] == 'ohli365':
         from app.engine.ohli365 import extract_ohli365_episode
         return extract_ohli365_episode(route, client)

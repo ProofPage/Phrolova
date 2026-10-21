@@ -168,6 +168,43 @@ async def test_no_streams_while_live_is_not_offline(monkeypatch):
     assert caught.value.code == 'twitch_stream_unavailable'
 
 
+@pytest.mark.asyncio
+async def test_empty_streams_refresh_cached_live_before_confirming_end(monkeypatch):
+    import streamlink
+    import time
+    session = SimpleNamespace(set_option=Mock(), http=requests.Session(), streams=Mock(return_value={}))
+    monkeypatch.setattr(streamlink, 'Streamlink', lambda: session)
+    calls = []
+    def offline(request):
+        calls.append(request)
+        return httpx.Response(200, json={'data': {'user': {
+            'id': '1', 'displayName': 'Alice', 'stream': None}}})
+    mock_http(monkeypatch, offline)
+    engine = TwitchLiveEngine()
+    engine._cache['alice'] = (time.monotonic(), {'is_live': True})
+    with pytest.raises(RecordingError) as caught:
+        await engine.resolve_stream('Alice')
+    assert caught.value.code == 'broadcast_ended' and not caught.value.retryable
+    assert len(calls) == 1
+    assert engine._cache['alice'][1]['is_live'] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('error', [
+    RuntimeError('status response unavailable'),
+    RecordingError('twitch_access', 'access denied'),
+])
+async def test_failed_status_refresh_is_never_treated_as_broadcast_end(monkeypatch, error):
+    import streamlink
+    session = SimpleNamespace(set_option=Mock(), http=requests.Session(), streams=Mock(return_value={}))
+    monkeypatch.setattr(streamlink, 'Streamlink', lambda: session)
+    engine = TwitchLiveEngine()
+    monkeypatch.setattr(engine, 'check_live_status', AsyncMock(side_effect=error))
+    with pytest.raises(type(error)) as caught:
+        await engine.resolve_stream('alice')
+    assert caught.value is error
+
+
 def test_conductor_and_public_api_support_twitch(monkeypatch, tmp_path):
     import app.main
     from app.api import platforms, vod

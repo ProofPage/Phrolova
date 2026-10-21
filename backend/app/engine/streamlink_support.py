@@ -61,6 +61,7 @@ def configure_streamlink_session(session, platform, media_url=None, loss_report=
     if options.query_parameters:
         session.http.auth = StreamQueryAuth(platform, media_url, options.query_parameters, session.http.auth)
     session._phrolova_loss_report = loss_report
+    session._phrolova_platform = platform
 
 
 def _thread_failure(thread, error):
@@ -84,6 +85,18 @@ def guarded_hls_stream(stream_type):
         def check_sequence_gap(self, segment):
             if type(segment.num) is not int or not 0 <= segment.num < 2**64:
                 raise StreamError("Invalid HLS media sequence number")
+            from streamlink.stream.segmented import SegmentedStreamWorker
+            if base_reader.__worker__.check_sequence_gap is SegmentedStreamWorker.check_sequence_gap:
+                size = segment.num - self.sequence
+                if size > 0:
+                    from app.core.logger import get_platform_logger
+                    get_platform_logger(getattr(self.session, "_phrolova_platform", None), "capture").warning(
+                        "[%s] HLS sequence gap · track=%s · first=%s · last=%s · segments=%s; "
+                        "수신 조각 번호가 불연속적입니다. 파일 검사와 별도로 확인하세요.",
+                        getattr(self.stream, "channel_id", "unknown"),
+                        getattr(self.stream, "_phrolova_track_id", "0"),
+                        self.sequence, segment.num - 1, size)
+                return
             return super().check_sequence_gap(segment)
 
         def run(self):
@@ -94,10 +107,22 @@ def guarded_hls_stream(stream_type):
                 self.writer.close()
 
     class Writer(base_reader.__writer__):
+        def _write_plain(self, segment, response):
+            if not super()._write_plain(segment, response):
+                from app.engine.recording_errors import RecordingError
+                raise RecordingError("segment_write", "영상 조각을 끝까지 기록하지 못했습니다.", retryable=True)
+            return True
+
+        def _write_decrypt(self, segment, response, key):
+            if not super()._write_decrypt(segment, response, key):
+                from app.engine.recording_errors import RecordingError
+                raise RecordingError("segment_decrypt", "암호화 영상 조각을 정상적으로 기록하지 못했습니다.", retryable=True)
+            return True
+
         def write(self, segment, result, *data):
             super().write(segment, result, *data)
             report = self.session._phrolova_loss_report
-            if report is not None and not self.should_filter_segment(segment):
+            if report is not None and not (data and data[0]) and not self.should_filter_segment(segment):
                 report.segment(getattr(self.stream, "_phrolova_track_id", "0"), segment.num)
 
         def run(self):

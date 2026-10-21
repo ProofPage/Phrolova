@@ -341,6 +341,7 @@ export default function AnimeView() {
             {playingEpisode && (
                 <AnimePlayerModal
                     anime={playingEpisode.anime}
+                    source={currentSource}
                     episodeNumber={playingEpisode.episodeNumber}
                     onClose={() => setPlayingEpisode(null)}
                     onSaveHistory={handleSaveHistory}

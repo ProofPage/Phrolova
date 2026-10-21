@@ -56,6 +56,38 @@ async def stopped_job(manager, path, fmt="mp4", keep=True):
 
 
 @pytest.mark.asyncio
+async def test_capture_gap_survives_file_processing_state(tmp_path, monkeypatch):
+    from unittest.mock import AsyncMock
+    manager = RecordingFinalizer()
+    monkeypatch.setattr(manager, "start", AsyncMock())
+    source = tmp_path / "gap.ts"
+    source.write_bytes(b"\x47" * 188)
+    pipe = YtdlpLivePipeline("fixture")
+    pipe._output_path = str(source)
+    pipe._source_files = [str(source)]
+    pipe._closed = True
+    pipe._file_size_bytes = source.stat().st_size
+    pipe._loss_report.segment("0", 100)
+    pipe._loss_report.segment("0", 105)
+    job_id = manager.register_capture(
+        "rplay:fixture", pipe, channel("rplay"),
+        dict(output_format="mkv", keep_source_ts=False))
+    await manager.capture_finished(job_id, pipe)
+    job = manager.get(job_id)
+    assert job["continuity_valid"] is False and job["keep_source_ts"] is True
+    assert job["warning_message"]
+    assert job["diagnostics"]["capture"]["tracks"]["0"]["sequence_gaps"] == [{"first": 101, "last": 104}]
+    # A successful remux/inspection must not erase independent capture evidence.
+    job.update(state="completed", inspection_state="passed",
+               diagnostics={"returncode": 0, "stderr": ""})
+    manager._save(job)
+    restored = manager.get(job_id)
+    assert restored["inspection_state"] == "passed" and restored["continuity_valid"] is False
+    assert restored["diagnostics"]["capture"] == job["capture_diagnostics"]
+    assert source.is_file()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("platform", ["chzzk", "youtube", "cime"])
 @pytest.mark.parametrize("fmt", ["mp4", "mkv"])
 async def test_four_platforms_streamlink_ts_then_real_remux(
