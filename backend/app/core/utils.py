@@ -31,12 +31,14 @@ def extract_channel_id(channel_id: str) -> str:
     """치지직 URL 또는 순수 채널 ID에서 채널 ID만 추출한다.
 
     지원 형식:
+        - https://m.chzzk.naver.com/CHANNEL_ID
+        - https://m.chzzk.naver.com/live/CHANNEL_ID
         - https://chzzk.naver.com/live/CHANNEL_ID
         - https://chzzk.naver.com/CHANNEL_ID
         - CHANNEL_ID (순수 ID)
     """
     channel_id = channel_id.strip()
-    if "chzzk.naver.com/" in channel_id:
+    if "chzzk.naver.com/" in channel_id or "m.chzzk.naver.com/" in channel_id:
         channel_id = channel_id.rstrip("/").split("/")[-1].split("?")[0]
     return channel_id
 

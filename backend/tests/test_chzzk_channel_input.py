@@ -12,6 +12,9 @@ CHANNEL_ID = '19e3b97ca1bca954d1ac84cf6862e0dc'
     f'https://chzzk.naver.com/{CHANNEL_ID}',
     f'https://chzzk.naver.com/live/{CHANNEL_ID}',
     f'https://chzzk.naver.com/{CHANNEL_ID}?source=share',
+    f'https://m.chzzk.naver.com/{CHANNEL_ID}',
+    f'https://m.chzzk.naver.com/live/{CHANNEL_ID}',
+    f'https://m.chzzk.naver.com/{CHANNEL_ID}?source=share',
 ])
 def test_channel_registration_id_and_url_preserve_recording_options(monkeypatch, value):
     service = Mock()

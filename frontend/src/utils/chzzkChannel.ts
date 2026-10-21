@@ -6,7 +6,7 @@ export function parseChzzkChannelInput(input: string): string | null {
     if (CHANNEL_ID.test(value)) return value.toLowerCase();
     try {
         const url = new URL(value);
-        if (!['https:', 'http:'].includes(url.protocol) || url.hostname !== 'chzzk.naver.com'
+        if (!['https:', 'http:'].includes(url.protocol) || !['chzzk.naver.com', 'm.chzzk.naver.com'].includes(url.hostname)
             || url.username || url.password || url.port) return null;
         const match = /^\/(?:live\/)?([0-9a-f]{32})\/?$/i.exec(url.pathname);
         return match ? match[1].toLowerCase() : null;
