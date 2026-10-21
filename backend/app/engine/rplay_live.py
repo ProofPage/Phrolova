@@ -226,15 +226,31 @@ class RplayLiveEngine:
                 '알플레이 방송 시청 권한이 없습니다. 구독·성인 인증·입장권 상태를 확인하세요.')
         byteplus = item.get('useBytePlusStream') is True
         media = item.get('bytePlusPlaybackUrl') if byteplus else (item.get('livestreamUrl') or item.get('playUrl'))
+        fallback_media = item.get('playUrl') or item.get('livestreamUrl')
         if not media_allowed(media) or not urlsplit(media).path.endswith('.m3u8'):
-            raise RecordingError('rplay_stream', '알플레이에서 지원되는 HLS 재생 주소를 제공하지 않았습니다.')
+            if fallback_media and media_allowed(fallback_media) and urlsplit(fallback_media).path.endswith('.m3u8'):
+                media = fallback_media
+                byteplus = False
+            else:
+                raise RecordingError('rplay_stream', '알플레이에서 지원되는 HLS 재생 주소를 제공하지 않았습니다.', retryable=True)
         uhd = True
         if byteplus:
             params = {'creatorId': cid, 'watching': '0'}
             if session:
                 params.update(userId=session['requestorOid'], token=session['accessToken'])
-            if await self._api('/bytedance/auth', params, session) is not True:
-                raise RecordingError('rplay_access', '알플레이에서 라이브 재생을 허용하지 않았습니다.')
+            auth_ok = False
+            for attempt in range(3):
+                if await self._api('/bytedance/auth', params, session) is True:
+                    auth_ok = True
+                    break
+                await asyncio.sleep(2)
+            if not auth_ok:
+                if fallback_media and media_allowed(fallback_media):
+                    media = fallback_media
+                    byteplus = False
+                else:
+                    raise RecordingError('rplay_access', '알플레이에서 라이브 재생을 허용하지 않았습니다.', retryable=True)
+        if byteplus:
             uhd = await self._api('/bytedance/auth', {**params, 'resolution': 'ud'}, session, optional_permission=True) is True
             # Only the official RPLAY delivery host receives the viewer token used by its web player.
             if urlsplit(media).hostname != 'livestream.rplay.live':
