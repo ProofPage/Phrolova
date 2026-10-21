@@ -418,7 +418,8 @@ def test_platform_registration_cookie_crud_and_capabilities(monkeypatch, tmp_pat
         )
         assert (
             result.status_code == 200
-            and result.json()["valid"]
+            and result.json()["configured"]
+            and not result.json()["valid"]
             and "SECRET" not in result.text
         )
         assert all("popkontv.com" in c.domain for c in platform_cookie_jar("popkontv"))

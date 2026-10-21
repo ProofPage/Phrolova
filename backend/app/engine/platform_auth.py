@@ -240,8 +240,8 @@ def cookie_file_status(source: Path | None, platform: str) -> dict:
             'kick': ('session_token', 'kick_session'),
             'tiktok': ('sessionid', 'sessionid_ss'),
             'bilibili': ('SESSDATA', 'bili_jct'),
-            'pandalive': ('sess_key', 'user_id', 'p_idx'),
-            'popkontv': ('login_id', 'user_code', 'member_no'),
+            'pandalive': ('sessKey', 'sess_key', 'user_id', 'p_idx'),
+            'popkontv': ('user', 'auth-tk', 'login_id', 'user_code', 'member_no'),
             'twitcasting': ('user_session', 'tc_session', 'session', 'twitcasting_session'),
         }
         req_keys = SESSION_KEYS.get(platform)

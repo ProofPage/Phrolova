@@ -152,7 +152,7 @@ def test_registration_persistence_cookie_isolation_and_live_only_capabilities(mo
         assert 'pandalive' not in {s['id'] for s in client.get('/api/vod/capabilities').json()['sources']}
         cookies=b'# Netscape HTTP Cookie File\n.pandalive.co.kr\tTRUE\t/\tTRUE\t0\tsession\tfixture-secret\n.evil.example\tTRUE\t/\tTRUE\t0\tsession\tother-secret\n'
         response=client.post('/api/platforms/pandalive/cookie',files={'file':('cookies.txt',cookies)})
-        assert response.status_code==200 and response.json()['valid'] and 'fixture-secret' not in response.text
+        assert response.status_code==200 and response.json()['configured'] and not response.json()['valid'] and 'fixture-secret' not in response.text
         session=requests.Session();session.cookies.update(platform_cookie_jar('pandalive'))
         assert 'fixture-secret' in session.prepare_request(requests.Request('GET','https://api.pandalive.co.kr/')).headers['Cookie']
         for host in ('https://a.playback.live-video.net/','https://pandalive.co.kr.evil/','https://evil.example/'):

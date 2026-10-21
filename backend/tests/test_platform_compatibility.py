@@ -22,7 +22,7 @@ def test_unsupported_saved_channel_is_ignored_without_deletion():
 
     conductor = Conductor(channel_repo=repo)
 
-    assert set(conductor._channels) == {"chzzk:legacy", "youtube:legacy"}
+    assert set(conductor._channels) == {"chzzk:legacy", "youtube:legacy", "twitcasting:legacy"}
     assert repo.list_all() == before
     conductor.add_channel("new", platform=Platform.CHZZK)
     assert any(record["platform"] == "twitcasting" for record in repo.list_all())
@@ -34,13 +34,13 @@ def test_removed_platform_requests_are_rejected():
     client = TestClient(app)
 
     response = client.post("/api/platforms/channels", json={
-        "platform": "twitcasting", "channel_id": "legacy", "auto_record": False,
+        "platform": "x_spaces", "channel_id": "legacy", "auto_record": False,
     })
     assert response.status_code == 400
-    assert client.put("/api/platforms/settings/twitcasting", json={}).status_code == 404
+    assert client.put("/api/platforms/settings/x_spaces", json={}).status_code == 404
     assert client.get("/api/archive/twitcasting/legacy").status_code == 404
     with pytest.raises(ValueError):
-        Platform("twitcasting")
+        Platform("x_spaces")
 
 
 def test_old_environment_keys_are_ignored(tmp_path):
@@ -50,7 +50,9 @@ def test_old_environment_keys_are_ignored(tmp_path):
 
     settings = Settings(_env_file=path)
 
-    assert not any("twitcasting" in key for key in settings.model_dump())
+    assert settings.twitcasting_cookie_file == "old.txt"
+    assert "twitcasting_client_id" not in settings.model_dump()
+    assert "twitcasting_client_secret" not in settings.model_dump()
     assert path.read_text(encoding="utf-8") == content
 
 
