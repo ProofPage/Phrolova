@@ -86,26 +86,31 @@ def test_installer_old_venv_successful_backup_and_locale_date(tmp_path, date_for
     stubs = tmp_path / f'stubs_{safe_name}'
     stubs.mkdir(parents=True, exist_ok=True)
     (stubs / 'pip').mkdir(parents=True, exist_ok=True)
+    (stubs / 'pip/__init__.py').write_text('', encoding='utf-8')
     (stubs / 'pip/__main__.py').write_text('raise SystemExit(0)\n', encoding='utf-8')
-    sys_exe = str(Path(sys.executable).resolve())
-    (stubs / 'python.cmd').write_text(
-        '@echo off\n'
-        'if "%1"=="-c" exit /b 0\n'
-        'if "%1"=="-m" if "%2"=="venv" (\n'
-        '    mkdir "%~3\\Scripts" 2>nul\n'
-        f'    copy /y "{sys_exe}" "%~3\\Scripts\\python.exe" >nul\n'
-        '    exit /b 0\n'
-        ')\n'
-        'exit /b 0\n',
-        encoding='utf-8'
+    # Exercise launcher discovery even on hosts without py.exe. Build a real
+    # venv without pip so only our regular pip package can handle installation.
+    bootstrap = stubs / 'bootstrap.py'
+    bootstrap.write_text(
+        'import subprocess, sys\n'
+        'args = sys.argv[1:]\n'
+        'if args[0] in ("-3.14", "-3"): args.pop(0)\n'
+        'if args[:2] == ["-m", "venv"]: args.insert(2, "--without-pip")\n'
+        'raise SystemExit(subprocess.call([sys.executable, *args]))\n',
+        encoding='utf-8',
     )
+    for name in ('py', 'python3.14', 'python'):
+        (stubs / f'{name}.cmd').write_text(
+            f'@echo off\n"{sys.executable}" "{bootstrap}" %*\nexit /b %errorlevel%\n',
+            encoding='utf-8',
+        )
     (stubs / 'npm.cmd').write_text('@echo off\nexit /b 0\n', encoding='utf-8')
 
     env = {
         **os.environ,
         'DATE': date_format,
         'PYTHONPATH': str(stubs),
-        'PATH': str(stubs) + os.pathsep + os.environ.get('PATH', ''),
+        'PATH': str(stubs) + os.pathsep + str(Path(os.environ['SystemRoot']) / 'System32'),
     }
 
     result = subprocess.run([os.environ['COMSPEC'], '/d', '/c', str(script), 'install'],
@@ -118,3 +123,5 @@ def test_installer_old_venv_successful_backup_and_locale_date(tmp_path, date_for
     backups = list(backup_dir.glob('.venv-*'))
     assert len(backups) == 1, f"Expected exactly 1 backup directory, found: {backups}"
     assert (backups[0] / 'sentinel.txt').read_text(encoding='utf-8') == 'old-env-sentinel'
+    assert (venv / 'pyvenv.cfg').is_file()
+    subprocess.run([str(venv_scripts / 'python.exe'), '-c', 'import venv'], check=True, env=env)

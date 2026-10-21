@@ -215,7 +215,8 @@ grep -q 'requirements-termux.txt' "$HOME/python-calls"
 
 
 @pytest.mark.skipif(BASH is None, reason='Bash unavailable')
-def test_homebrew_keg_runtime_and_python_are_resolved(tmp_path):
+@pytest.mark.parametrize('system_python', ['python3.14', 'python3.15'])
+def test_homebrew_keg_runtime_and_python_are_resolved(tmp_path, system_python):
     shell(tmp_path, '''
 mkdir -p "$HOME/brew/node/bin" "$HOME/brew/python/bin"
 printf '#!/usr/bin/env bash\nprintf 24\n' > "$HOME/brew/node/bin/node"
@@ -225,13 +226,15 @@ chmod +x "$HOME/brew/node/bin/"* "$HOME/brew/python/bin/"*
 uname() { echo Darwin; }
 brew() { case "$*" in '--prefix node@22') echo "$HOME/brew/node" ;; '--prefix python@3.14') echo "$HOME/brew/python" ;; *) return 99 ;; esac; }
 PKG_MANAGER=brew
-has_cmd() { case "$1" in python|python3|python3.12|python3.13|python3.14) return 1 ;; *) command -v "$1" >/dev/null ;; esac; }
+@SYSTEM_PYTHON@() { echo 'Unexpected system Python execution' >&2; return 99; }
+[ "$(command -v @SYSTEM_PYTHON@)" = @SYSTEM_PYTHON@ ]
+has_cmd() { case "$1" in python|python3|python3.*) return 1 ;; *) command -v "$1" >/dev/null ;; esac; }
 activate_runtime_path
 [ "$(command -v node)" = "$HOME/brew/node/bin/node" ]
 ensure_node
 ensure_python
 [ "$PYTHON_CMD" = "$HOME/brew/python/bin/python3.14" ]
-''')
+'''.replace('@SYSTEM_PYTHON@', system_python))
 
 
 @pytest.mark.skipif(BASH is None, reason='Bash unavailable')
