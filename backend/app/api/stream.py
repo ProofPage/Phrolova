@@ -25,7 +25,7 @@ def _to_composite_key(raw: str) -> str:
     - chzzk URL 형식도 extract_channel_id로 ID만 추출 후 chzzk 키로 변환
     """
     # 알려진 플랫폼 접두사가 있으면 composite_key로 간주
-    for prefix in ("chzzk:", "youtube:", "cime:", "kick:", "twitch:", "tiktok:", "bilibili:", "pandalive:", "popkontv:", "rplay:"):
+    for prefix in ("chzzk:", "youtube:", "cime:", "kick:", "twitch:", "tiktok:", "bilibili:", "pandalive:", "popkontv:", "rplay:", "twitcasting:"):
         if raw.startswith(prefix):
             return raw
     # 레거시: 순수 chzzk ID 또는 chzzk URL

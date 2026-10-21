@@ -8,7 +8,7 @@ from app.engine.download_condition import DownloadCondition, parse_watchalong_ta
 
 class ChannelDownloadOptions(BaseModel):
     auto_record: bool = True
-    recording_quality: str | None = Field(None, max_length=30)
+    recording_quality: str | None = Field(None, max_length=100)
     output_format: Literal['mp4','mkv'] | None = None
     download_condition: DownloadCondition | None = None
     watchalong_tags: str | None = Field(None, max_length=500)
@@ -18,9 +18,10 @@ class ChannelDownloadOptions(BaseModel):
     @classmethod
     def validate_quality(cls, value):
         import re
-        # Bilibili의 qn은 픽셀 높이가 아니므로 가짜 해상도로 변환하지 않고 보존한다.
-        if value is not None and value not in ('best', 'worst') and not re.fullmatch(r'(?:\d{2,4}p(?:\d{1,3}(?:\.\d+)?)?|qn_[1-9]\d{0,4})', value):
-            raise ValueError('올바른 녹화 화질을 선택하세요.')
+        if value is not None and value not in ('best', 'worst'):
+            # Standard resolution/qn or custom per-channel format override
+            if not re.fullmatch(r'[A-Za-z0-9_\[\]<>=+/*.,: -]{1,80}', value):
+                raise ValueError('올바른 녹화 화질 또는 포맷을 입력하세요.')
         return value
 
     @field_validator("watchalong_tags")

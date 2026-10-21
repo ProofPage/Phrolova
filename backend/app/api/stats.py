@@ -93,6 +93,12 @@ async def get_stats():
         elif plat == "chzzk":
             from app.core.utils import extract_channel_id
             clean_cid = extract_channel_id(cid)
+        elif plat == "twitcasting":
+            from app.engine.twitcasting import normalize_twitcasting_channel_id
+            try:
+                clean_cid = normalize_twitcasting_channel_id(cid)
+            except Exception:
+                clean_cid = cid
         else:
             clean_cid = cid
 

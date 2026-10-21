@@ -1545,6 +1545,7 @@ class YtdlpLivePipeline:
         import json as _json
 
         extractor = youtube_extractor_command() if is_youtube_url(page_url) else [get_settings().resolve_ytdlp_path()]
+        has_custom_format = any(c in quality for c in ("+", "/", "[", "]")) or (quality.isdigit() and len(quality) <= 4)
         height = re.match(r"(\d+)p", quality)
         fmt = (
             f"best[protocol^=m3u8][height<={height[1]}]/best[protocol^=m3u8]"
@@ -1552,7 +1553,9 @@ class YtdlpLivePipeline:
             else "best[protocol^=m3u8]"
         )
         youtube = is_youtube_url(page_url)
-        if youtube and dash:
+        if has_custom_format:
+            fmt = quality
+        elif youtube and dash:
             preference = "worst" if quality == "worst" else "best"
             limit = f"[height<={height[1]}]" if height else ""
             fmt = f"{preference}video{limit}+bestaudio"

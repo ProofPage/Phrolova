@@ -23,6 +23,7 @@ export function detectDownloadPlatform(value: string): DownloadSource {
         if (['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(host)) return 'youtube';
         if (TIKTOK_HOSTS.has(host)) return 'tiktok';
         if (host === 'rplay.live' || host === 'www.rplay.live') return 'rplay';
+        if (host === 'twitcasting.tv' || host === 'www.twitcasting.tv') return 'twitcasting';
         if (host === 'popkontv.com' || host === 'www.popkontv.com') return 'popkontv';
         if (host === 'hearheart.com' || host === 'www.hearheart.com') return 'hearheart';
         if (BILIBILI_HOSTS.has(host)) return 'bilibili';

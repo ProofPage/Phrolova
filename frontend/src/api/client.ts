@@ -11,7 +11,7 @@ export const client = axios.create({
 
 // ── Types ───────────────────────────────────────────────
 
-export type Platform = "chzzk" | "youtube" | "cime" | "kick" | "twitch" | "tiktok" | "bilibili" | "pandalive" | "popkontv" | "rplay";
+export type Platform = "chzzk" | "youtube" | "cime" | "kick" | "twitch" | "tiktok" | "bilibili" | "pandalive" | "popkontv" | "rplay" | "twitcasting";
 export type DownloadSource = Exclude<Platform, "pandalive"> | 'hearheart' | 'anilife' | 'linkani' | 'ohli24' | 'ohli365' | 'tvwiki' | 'tvroom' | 'tvhot' | 'toonday' | 'animaru' | 'moeni' | 'reanime' | 'yamikorea' | 'av19' | 'missav' | 'external';
 export type DownloadCondition = "all" | "watchalong" | "exclude_watchalong";
 export interface ChannelDownloadOptions {
@@ -40,6 +40,7 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
     pandalive: "platform.pandalive",
     popkontv: "platform.popkontv",
     rplay: "platform.rplay",
+    twitcasting: "platform.twitcasting",
 };
 
 // Live-only providers must also stay out of the fallback video source menu.
@@ -261,9 +262,10 @@ export interface PlatformStatus {
     popkontv?: { enabled: boolean; authenticated: boolean };
     hearheart?: { enabled: boolean; authenticated: boolean };
     rplay?: { enabled: boolean; authenticated: boolean };
+    twitcasting?: { enabled: boolean; authenticated: boolean };
 }
 
-export type CookiePlatform = 'chzzk' | 'youtube' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'hearheart' | 'animaru' | 'anilife';
+export type CookiePlatform = 'chzzk' | 'youtube' | 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'hearheart' | 'animaru' | 'anilife' | 'twitcasting';
 export type AccountLoginPlatform = 'cime' | 'pandalive' | 'popkontv' | 'hearheart' | 'animaru' | 'anilife';
 
 export interface PlatformCookieStatus {
@@ -655,7 +657,7 @@ export const api = {
     },
     getLivePreviewFrame: async (channelKey: string, signal?: AbortSignal, force = false): Promise<Blob> =>
         (await client.get(`/stream/preview-frame/${encodeURIComponent(channelKey)}`, { responseType: 'blob', signal, params: force ? { force: true } : undefined, timeout: 60000 })).data,
-    getPlatformQualities: async (platform: 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'rplay', channel_id: string, signal?: AbortSignal) =>
+    getPlatformQualities: async (platform: 'cime' | 'kick' | 'twitch' | 'tiktok' | 'bilibili' | 'pandalive' | 'popkontv' | 'rplay' | 'twitcasting', channel_id: string, signal?: AbortSignal) =>
         (await client.get<{ qualities: LiveQuality[]; live?: boolean; message?: string }>(`/platforms/${platform}/${encodeURIComponent(channel_id)}/qualities`, { signal })).data,
     getRplaySessionStatus: async (): Promise<PlatformCookieStatus> => (await client.get('/platforms/rplay/session')).data,
     uploadRplaySession: async (file: File): Promise<PlatformCookieStatus> => {

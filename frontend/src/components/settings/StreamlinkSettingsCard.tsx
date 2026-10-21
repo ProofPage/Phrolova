@@ -4,7 +4,7 @@ import type { Platform, StreamlinkOptionsByPlatform } from '../../api/client';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Card, CardHeader, Field, Input, Select } from '../ui/primitives';
 
-const platforms: Platform[] = ['chzzk', 'youtube', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'rplay'];
+const platforms: Platform[] = ['chzzk', 'youtube', 'cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'rplay', 'twitcasting'];
 
 export function streamlinkOptionsKey(value: StreamlinkOptionsByPlatform): string {
     return JSON.stringify(platforms.flatMap(platform => {

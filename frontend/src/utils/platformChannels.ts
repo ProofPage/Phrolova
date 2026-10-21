@@ -24,6 +24,18 @@ export function parsePlatformChannelInput(platform: Platform, value: string): st
     }
     if (platform === 'popkontv') return parsePopkonTVChannelInput(text);
     if (platform === 'pandalive') return parsePandaliveChannelInput(text);
+    if (platform === 'twitcasting') {
+        if (/^[A-Za-z0-9_.-]{1,60}$/.test(text)) return text.toLowerCase();
+        try {
+            const url = new URL(text.startsWith('http') ? text : `https://${text}`);
+            if (!['twitcasting.tv', 'www.twitcasting.tv'].includes(url.hostname)) return null;
+            const pathParts = url.pathname.split('/').filter(p => p && p !== 'live' && p !== 'show' && p !== 'broadcaster');
+            if (pathParts.length > 0 && /^[A-Za-z0-9_.-]{1,60}$/.test(pathParts[0])) {
+                return pathParts[0].toLowerCase();
+            }
+            return null;
+        } catch { return null; }
+    }
     if (platform === 'tiktok') return parseTikTokChannelInput(text);
     if (platform === 'bilibili') return parseBilibiliChannelInput(text);
     if (platform === 'twitch') return parseTwitchChannelInput(text);

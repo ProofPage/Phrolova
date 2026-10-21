@@ -121,7 +121,7 @@ class Conductor:
 
                 self._youtube_engine = YoutubeLiveEngine()
             return self._youtube_engine
-        elif platform in (Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY):
+        elif platform in (Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY, Platform.TWITCASTING):
             if platform not in self._extra_engines:
                 from app.engine.cime import CimeLiveEngine
                 from app.engine.kick import KickLiveEngine
@@ -131,9 +131,10 @@ class Conductor:
                 from app.engine.pandalive import PandaliveLiveEngine
                 from app.engine.popkontv import PopkonTVLiveEngine
                 from app.engine.rplay_live import RplayLiveEngine
+                from app.engine.twitcasting import TwitcastingLiveEngine
 
                 self._extra_engines[platform] = (
-                    {Platform.CIME: CimeLiveEngine, Platform.KICK: KickLiveEngine, Platform.TWITCH: TwitchLiveEngine, Platform.TIKTOK: TikTokLiveEngine, Platform.BILIBILI: BilibiliLiveEngine, Platform.PANDALIVE: PandaliveLiveEngine, Platform.POPKONTV: PopkonTVLiveEngine, Platform.RPLAY: RplayLiveEngine}[platform]
+                    {Platform.CIME: CimeLiveEngine, Platform.KICK: KickLiveEngine, Platform.TWITCH: TwitchLiveEngine, Platform.TIKTOK: TikTokLiveEngine, Platform.BILIBILI: BilibiliLiveEngine, Platform.PANDALIVE: PandaliveLiveEngine, Platform.POPKONTV: PopkonTVLiveEngine, Platform.RPLAY: RplayLiveEngine, Platform.TWITCASTING: TwitcastingLiveEngine}[platform]
                 )()
             return self._extra_engines[platform]
         else:
@@ -164,7 +165,7 @@ class Conductor:
                         return url
                     await asyncio.sleep(0.2)
                 raise
-        if task.platform in (Platform.CHZZK, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY):
+        if task.platform in (Platform.CHZZK, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY, Platform.TWITCASTING):
             return await engine.get_preview_url(task.channel_id)
         pipeline = getattr(task, 'pipeline', None)
         if task.platform == Platform.YOUTUBE and pipeline:
@@ -1225,7 +1226,7 @@ class Conductor:
                     )
                 )
                 cookie_str = None
-            elif task.platform in (Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV):
+            elif task.platform in (Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.TWITCASTING):
                 extra["source_resolver"] = (
                     lambda selected_quality: engine.resolve_stream(
                         task.channel_id, selected_quality
@@ -1376,7 +1377,7 @@ class Conductor:
                 ),
                 "channel_url": (
                     self._get_engine(task.platform).get_stream_url(task.channel_id)
-                    if task.platform in (Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY)
+                    if task.platform in (Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY, Platform.TWITCASTING)
                     else None
                 ),
                 "is_live": task.is_live,

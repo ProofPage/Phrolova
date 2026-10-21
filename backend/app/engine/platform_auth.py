@@ -17,8 +17,9 @@ from app.core.config import get_settings
 DOMAINS = {'cime': ('ci.me',), 'kick': ('kick.com',), 'twitch': ('twitch.tv',), 'tiktok': ('tiktok.com',), 'bilibili': ('bilibili.com',), 'pandalive': ('pandalive.co.kr',), 'popkontv': ('popkontv.com',),
            'chzzk': ('naver.com',), 'youtube': ('youtube.com', 'google.com'), 'hearheart': ('hearheart.com',),
            'animaru': ('animaru1.com', 'storagewebtoon.store'),
-           'anilife': ('anilife01.tv', 'anilife02.tv', 'anilife03.tv', 'anilife04.tv', 'anilife05.tv', 'anilife.tv')}
-NAMES = {'cime': '씨미', 'kick': '킥', 'twitch': '트위치', 'tiktok': '틱톡', 'bilibili': '빌리빌리', 'pandalive': '팬더티비', 'popkontv': '팝콘티비', 'hearheart': '히어하트', 'animaru': '애니마루', 'anilife': '애니라이프'}
+           'anilife': ('anilife01.tv', 'anilife02.tv', 'anilife03.tv', 'anilife04.tv', 'anilife05.tv', 'anilife.tv'),
+           'twitcasting': ('twitcasting.tv',)}
+NAMES = {'cime': '씨미', 'kick': '킥', 'twitch': '트위치', 'tiktok': '틱톡', 'bilibili': '빌리빌리', 'pandalive': '팬더티비', 'popkontv': '팝콘티비', 'hearheart': '히어하트', 'animaru': '애니마루', 'anilife': '애니라이프', 'twitcasting': '트윗캐스팅'}
 T = TypeVar('T')
 
 
@@ -241,6 +242,7 @@ def cookie_file_status(source: Path | None, platform: str) -> dict:
             'bilibili': ('SESSDATA', 'bili_jct'),
             'pandalive': ('sess_key', 'user_id', 'p_idx'),
             'popkontv': ('login_id', 'user_code', 'member_no'),
+            'twitcasting': ('user_session', 'tc_session', 'session', 'twitcasting_session'),
         }
         req_keys = SESSION_KEYS.get(platform)
         has_login_session = True

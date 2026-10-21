@@ -23,6 +23,7 @@ const PLATFORM_DOT_STYLES: Record<Platform, string> = {
     pandalive: "bg-pandalive",
     popkontv: "bg-popkontv",
     rplay: "bg-rplay",
+    twitcasting: "bg-[#00a4e4]",
 };
 
 interface Props {
@@ -104,6 +105,7 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
         : selectedPlatform === "twitch" ? "live.twitchChannelIDOrHttpsTwitchTv"
         : selectedPlatform === "tiktok" ? "live.tiktokChannelIDOrHttpsTiktokCom"
         : selectedPlatform === "rplay" ? "live.rplayChannelIDOrUrl"
+        : selectedPlatform === "twitcasting" ? "live.twitcastingChannelIDOrUrl"
         : selectedPlatform === "popkontv" ? "live.popkontvChannelOrUrl"
         : selectedPlatform === "pandalive" ? "live.pandaliveChannelIDOrUrl"
         : selectedPlatform === "bilibili" ? "live.bilibiliRoomIDOrHttpsLiveBilibiliCom"

@@ -48,6 +48,7 @@ Availability depends on stream provider policies and account privileges.
 | **YouTube** | **Full** | **Full** | Cookie support for member streams. Supports `/live/<id>`, `/watch?v=<id>`, `/shorts/<id>`, and `@handle`. |
 | **Twitch** | **Full** | **Full** | Netscape cookies for sub-only streams. Optional TTV-AB ad-blocking toggle. |
 | **RPLAY (알플레이)** | **Full** | **Full** | Session import or email login. Supports 24-char OID, `/creatorhome/<id>`, and custom `/c/<handle>`. |
+| **TwitCasting (ツイキャス)** | **Full** | **Full** | Low-latency stream monitoring, HLS capture, login-wall dummy detection, and browser cookie auth. |
 | **Kick** | **Full** | **Full** | Streamlink live capture; cookie import for sub-only qualities. |
 | **Bilibili** | **Full** | **Full** | Room monitoring, HLS capture, BV/av video downloads with cookie auth. |
 | **TikTok** | **Full** | **Full** | Streamlink live capture, frame previews, and short share link parsing. |
@@ -72,7 +73,24 @@ Download the pre-compiled, self-contained single binary from the latest release:
 
 ---
 
-### 2. Running from Source (Linux / macOS / Windows)
+### 2. Docker / Docker Compose (Recommended for NAS & Linux Servers)
+
+Run Phrolova effortlessly in a containerized environment with all dependencies (FFmpeg, Node.js WASM decoder, Python 3.14) bundled:
+
+```bash
+# Clone the repository
+git clone https://github.com/ProofPage/Phrolova.git
+cd Phrolova
+
+# Start with Docker Compose
+docker compose up -d
+```
+
+The web dashboard will be available at `http://localhost:8000`. Recorded streams and database states are persisted in `./downloads` and `./data`.
+
+---
+
+### 3. Running from Source (Linux / macOS / Windows)
 
 #### Prerequisites
 - **Python 3.14+** (standard GIL)

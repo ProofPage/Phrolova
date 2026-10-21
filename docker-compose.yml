@@ -1,0 +1,17 @@
+services:
+  phrolova:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: phrolova:latest
+    container_name: phrolova
+    restart: unless-stopped
+    ports:
+      - "${PHROLOVA_PORT:-8000}:8000"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Asia/Seoul}
+    volumes:
+      - "${DATA_DIR:-./data}:/app/data"
+      - "${DOWNLOADS_DIR:-./downloads}:/app/downloads"

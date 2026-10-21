@@ -1,6 +1,7 @@
 {
   "치지직": "platform.chzzk",
   "유튜브": "platform.youtube",
+  "트윗캐스팅": "platform.twitcasting",
   "씨미": "platform.cime",
   "킥": "platform.kick",
   "빌리빌리": "platform.bilibili",
@@ -25,6 +26,7 @@
   "드래그하거나 방향키를 눌러 채널 순서 변경": "live.dragOrUseTheArrowKeysToReorderChannels",
   "순서 변경": "live.reorder",
   "채널 정렬": "live.sortOrder",
+  "사용자 지정 포맷 (Format Override)": "live.customFormat",
   "라이브 우선 (이름순)": "live.liveFirstAndNameOrder",
   "이름순": "live.nameOrder",
   "위로 이동": "live.moveUp",

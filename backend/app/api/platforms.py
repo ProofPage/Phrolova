@@ -31,7 +31,7 @@ router = APIRouter(prefix="/api/platforms", tags=["Platforms"])
 class AddPlatformChannelRequest(ChannelDownloadOptions):
     """멀티 플랫폼 채널 추가 요청."""
 
-    platform: str = Field(..., description="플랫폼 (chzzk, youtube, cime, kick, twitch, tiktok, bilibili, pandalive, popkontv, rplay)")
+    platform: str = Field(..., description="플랫폼 (chzzk, youtube, cime, kick, twitch, tiktok, bilibili, pandalive, popkontv, rplay, twitcasting)")
     channel_id: str = Field(..., description="채널 ID (플랫폼별 사용자 ID)")
     auto_record: bool = Field(True, description="방송 시작 시 자동 녹화 여부")
 
@@ -76,7 +76,7 @@ async def add_platform_channel(req: AddPlatformChannelRequest):
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="지원하지 않는 플랫폼입니다. 사용 가능: chzzk, youtube, cime, kick, twitch, tiktok, bilibili, pandalive, popkontv, rplay",
+            detail="지원하지 않는 플랫폼입니다. 사용 가능: chzzk, youtube, cime, kick, twitch, tiktok, bilibili, pandalive, popkontv, rplay, twitcasting",
         )
 
     # URL로 입력해도 ID만 추출
@@ -87,6 +87,12 @@ async def add_platform_channel(req: AddPlatformChannelRequest):
         from app.engine.rplay_live import normalize_rplay_channel_id
         try:
             channel_id = await asyncio.to_thread(normalize_rplay_channel_id, channel_id)
+        except ValueError as error:
+            raise HTTPException(400, str(error)) from None
+    elif platform == Platform.TWITCASTING:
+        from app.engine.twitcasting import normalize_twitcasting_channel_id
+        try:
+            channel_id = normalize_twitcasting_channel_id(channel_id)
         except ValueError as error:
             raise HTTPException(400, str(error)) from None
     elif platform == Platform.POPKONTV:
@@ -532,7 +538,7 @@ async def delete_chzzk_cookie():
 async def platform_qualities(platform: str, channel_id: str):
     from urllib.parse import unquote
     from app.main import get_recorder_service
-    if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'rplay'):
+    if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'rplay', 'twitcasting'):
         raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     channel_id = unquote(channel_id).strip()
     if not channel_id:
@@ -556,7 +562,7 @@ async def platform_qualities(platform: str, channel_id: str):
 @router.get('/{platform}/cookie', summary='플랫폼 쿠키 파일 상태')
 async def platform_cookie_status_api(platform: str):
     from app.engine.platform_auth import platform_cookie_status
-    if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'hearheart', 'animaru', 'anilife'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'hearheart', 'animaru', 'anilife', 'twitcasting'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     return platform_cookie_status(platform)
 
 
@@ -674,7 +680,7 @@ async def platform_cookie_upload(platform: str, file: UploadFile = File(...)):
     import tempfile
     import os
     from app.engine.platform_auth import read_cookie_jar
-    if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'hearheart', 'animaru', 'anilife'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'hearheart', 'animaru', 'anilife', 'twitcasting'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     content = await file.read(1024 * 1024 + 1)
     if len(content) > 1024 * 1024: raise HTTPException(400, '쿠키 파일은 1MB 이하여야 합니다.')
     destination = _COOKIE_SAVE_PATH.with_name(f'{platform}_cookies.txt')
@@ -694,7 +700,7 @@ async def platform_cookie_upload(platform: str, file: UploadFile = File(...)):
 
 @router.delete('/{platform}/cookie', summary='플랫폼 쿠키 파일 제거')
 async def platform_cookie_delete(platform: str):
-    if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'hearheart', 'animaru', 'anilife'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'hearheart', 'animaru', 'anilife', 'twitcasting'): raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     _save_credential(_COOKIE_SAVE_PATH.with_name(f'{platform}_cookies.txt'), None, f'{platform}_cookie_file')
     return {'configured': False, 'valid': False, 'expired': False, 'message': '쿠키 파일을 제거했습니다.'}
 
@@ -704,7 +710,7 @@ async def platform_cookie_text(platform: str, req: PlatformCookieTextRequest):
     import tempfile
     import os
     from app.engine.platform_auth import convert_text_to_netscape_cookies, read_cookie_jar
-    if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'hearheart', 'animaru', 'anilife'):
+    if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'hearheart', 'animaru', 'anilife', 'twitcasting'):
         raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     try:
         netscape_text = convert_text_to_netscape_cookies(req.text, platform)
@@ -732,7 +738,7 @@ async def platform_cookie_browser(platform: str, req: PlatformBrowserCookieReque
     import tempfile
     import os
     from app.engine.platform_auth import extract_platform_from_browser, read_cookie_jar
-    if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'hearheart', 'animaru', 'anilife'):
+    if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'hearheart', 'animaru', 'anilife', 'twitcasting'):
         raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
     try:
         netscape_text = await asyncio.to_thread(extract_platform_from_browser, platform, req.browser)
