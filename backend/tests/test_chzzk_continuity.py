@@ -528,6 +528,17 @@ class DeliveryTests(unittest.TestCase):
         self.assertLess(time.monotonic() - before, 0.5)
         self.assertTrue(stream.continuity.ended)
 
+    def test_broadcast_end_preserves_pending_earlier_media(self):
+        self.cdn.playlist("primary")
+        self.cdn.delays['/primary/1080p/0.m4v'] = 0.2
+        self.cdn.statuses['/primary/1080p/1.m4v'] = 403
+        self.session.set_option("stream-segment-timeout", 2)
+        stream = self.stream()
+        stream.continuity.provider = lambda: None
+        with patch.object(continuity, "RECOVERY_TIMEOUT", 3):
+            self.assertEqual(self.read(stream), INITIALIZATION + MEDIA[0])
+        self.assertTrue(stream.continuity.ended)
+
     def test_short_history_even_when_time_machine_flag_is_false(self):
         self.cdn.playlist("primary", indices=(3,))
         self.cdn.playlist("history")

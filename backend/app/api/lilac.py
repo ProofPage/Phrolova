@@ -178,7 +178,9 @@ def _format_anilist_media(media: Dict[str, Any]) -> Dict[str, Any]:
         "score": normalized_score,
         "episodes": media.get("episodes"),
         "type": media.get("format") or "TV",
-        "status": "Currently Airing" if media.get("status") == "RELEASING" else "Finished Airing",
+        "status": {"RELEASING": "Currently Airing", "NOT_YET_RELEASED": "Not yet aired",
+                   "FINISHED": "Finished Airing", "CANCELLED": "Cancelled",
+                   "HIATUS": "On hiatus"}.get(media.get("status"), "Unknown"),
         "synopsis": _localize_synopsis(display_title, (media.get("description") or "").replace("<br>", "\n").replace("<i>", "").replace("</i>", "")),
         "trailer": {
             "youtube_id": trailer_id,
@@ -231,358 +233,8 @@ async def _anilist_query(query: str, variables: Dict[str, Any], ttl: int = DEFAU
 @router.get("/home")
 async def get_anime_home(source: str = Query("reanime", description="Content source provider")) -> Dict[str, Any]:
     """Return this season's releases, top popular anime, and today's schedule at lightning speed."""
-    # 1. Domestic Source: Ohli24 (애니24)
-    if source == "ohli24":
-        return {
-            "season": [
-                {
-                    "mal_id": 52991,
-                    "title": "약사의 혼잣말 3기",
-                    "title_english": "The Apothecary Diaries Season 3",
-                    "title_japanese": "薬屋のひとりごと 第3期",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1015/138006l.jpg"}},
-                    "score": 8.5,
-                    "episodes": 12,
-                    "type": "TV",
-                    "status": "Currently Airing",
-                    "synopsis": "후궁의 독살 미수 사건을 해결한 마오마오에게 새로운 음모의 그림자가 다가온다.",
-                    "genres": [{"mal_id": 1, "name": "드라마"}, {"mal_id": 2, "name": "미스터리"}],
-                    "year": 2026,
-                },
-                {
-                    "mal_id": 173828,
-                    "title": "푸른 상자 2기",
-                    "title_english": "Blue Box Season 2",
-                    "title_japanese": "アオのハコ Season 2",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1841/141443l.jpg"}},
-                    "score": 8.1,
-                    "episodes": 12,
-                    "type": "TV",
-                    "status": "Currently Airing",
-                    "synopsis": "배드민턴부의 이노마타 타이키와 농구부의 카노 치나츠의 풋풋한 청춘 러브 스토리.",
-                    "genres": [{"mal_id": 3, "name": "로맨스"}, {"mal_id": 4, "name": "스포츠"}],
-                    "year": 2026,
-                },
-                {
-                    "mal_id": 50709,
-                    "title": "블랙 클로버 2기",
-                    "title_english": "Black Clover Season 2",
-                    "title_japanese": "ブラッククローバー 第2期",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/2/88336l.jpg"}},
-                    "score": 8.7,
-                    "episodes": 24,
-                    "type": "TV",
-                    "status": "Currently Airing",
-                    "synopsis": "마법제에 도전하는 아스타와 유노의 장대한 마법 판타지 배틀.",
-                    "genres": [{"mal_id": 5, "name": "액션"}, {"mal_id": 6, "name": "판타지"}],
-                    "year": 2026,
-                },
-                {
-                    "mal_id": 52034,
-                    "title": "사이버펑크: 엣지러너 2",
-                    "title_english": "Cyberpunk: Edgerunners 2",
-                    "title_japanese": "サイバーパンク エッジランナーズ 2",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1286/125473l.jpg"}},
-                    "score": 8.9,
-                    "episodes": 10,
-                    "type": "ONA",
-                    "status": "Currently Airing",
-                    "synopsis": "나이트 시티의 뒷골목을 질주하는 새로운 용병들의 거친 생존기.",
-                    "genres": [{"mal_id": 7, "name": "SF"}, {"mal_id": 8, "name": "액션"}],
-                    "year": 2026,
-                },
-            ],
-            "top": [
-                {
-                    "mal_id": 52991,
-                    "title": "장송의 프리렌",
-                    "title_english": "Frieren: Beyond Journey's End",
-                    "title_japanese": "葬送のフリーレン",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1015/138006l.jpg"}},
-                    "score": 9.3,
-                    "episodes": 28,
-                    "type": "TV",
-                    "status": "Finished Airing",
-                    "synopsis": "마왕을 토벌한 용사 일행의 마법사 프리렌이 사람의 마음을 알아가는 따뜻한 후일담.",
-                    "genres": [{"mal_id": 9, "name": "모험"}, {"mal_id": 10, "name": "판타지"}],
-                    "year": 2023,
-                },
-                {
-                    "mal_id": 44511,
-                    "title": "체인소 맨",
-                    "title_english": "Chainsaw Man",
-                    "title_japanese": "チェンソーマン",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1806/126216l.jpg"}},
-                    "score": 8.6,
-                    "episodes": 12,
-                    "type": "TV",
-                    "status": "Finished Airing",
-                    "synopsis": "체인소의 악마 포치타와 계약하여 데빌 헌터로 살아가는 덴지의 다크 히어로 액션.",
-                    "genres": [{"mal_id": 11, "name": "다크 판타지"}, {"mal_id": 12, "name": "액션"}],
-                    "year": 2022,
-                },
-            ],
-        }
-
-    # 2. Domestic Source: Moeni (모에니)
-    if source == "moeni":
-        return {
-            "season": [
-                {
-                    "mal_id": 173828,
-                    "title": "푸른 상자 2기",
-                    "title_english": "Blue Box Season 2",
-                    "title_japanese": "アオのハコ Season 2",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1841/141443l.jpg"}},
-                    "score": 8.1,
-                    "episodes": 12,
-                    "type": "TV",
-                    "status": "Currently Airing",
-                    "synopsis": "배드민턴부의 이노마타 타이키와 농구부의 카노 치나츠의 풋풋한 청춘 러브 스토리.",
-                    "genres": [{"mal_id": 3, "name": "로맨스"}, {"mal_id": 4, "name": "스포츠"}],
-                    "year": 2026,
-                },
-                {
-                    "mal_id": 4928,
-                    "title": "학생회에도 구멍은 있다!",
-                    "title_english": "Seitokai ni mo Ana wa Aru!",
-                    "title_japanese": "生徒会にも穴はある！",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1171/109222l.jpg"}},
-                    "score": 7.9,
-                    "episodes": 12,
-                    "type": "TV",
-                    "status": "Currently Airing",
-                    "synopsis": "개성 넘치는 학생회 임원들의 유쾌하고 발랄한 학원 일상 코미디.",
-                    "genres": [{"mal_id": 13, "name": "코미디"}, {"mal_id": 14, "name": "일상"}],
-                    "year": 2026,
-                },
-                {
-                    "mal_id": 236,
-                    "title": "Re: 제로부터 시작하는 이세계 생활 4기",
-                    "title_english": "Re:Zero 4th Season",
-                    "title_japanese": "Re:ゼロから始める異世界生活 4th season",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1522/128039l.jpg"}},
-                    "score": 8.8,
-                    "episodes": 16,
-                    "type": "TV",
-                    "status": "Currently Airing",
-                    "synopsis": "소중한 사람들을 지키기 위해 사망회귀로 절망을 극복하는 스바루의 사투.",
-                    "genres": [{"mal_id": 15, "name": "판타지"}, {"mal_id": 16, "name": "서스펜스"}],
-                    "year": 2026,
-                },
-            ],
-            "top": [
-                {
-                    "mal_id": 173828,
-                    "title": "푸른 상자 2기",
-                    "title_english": "Blue Box Season 2",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1841/141443l.jpg"}},
-                    "score": 8.1,
-                    "episodes": 12,
-                    "type": "TV",
-                    "status": "Currently Airing",
-                    "genres": [{"mal_id": 3, "name": "로맨스"}],
-                    "year": 2026,
-                }
-            ],
-        }
-
-    # 3. Domestic Source: Zzapflix (짭플릭스)
-    if source == "zzapflix":
-        return {
-            "season": [
-                {
-                    "mal_id": 123692,
-                    "title": "템빨",
-                    "title_english": "Overgeared",
-                    "title_japanese": "テムパル〜アイテムの力〜",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1171/109222l.jpg"}},
-                    "score": 8.8,
-                    "episodes": 24,
-                    "type": "ONA",
-                    "status": "Currently Airing",
-                    "synopsis": "전 세계 20억 명이 플레이하는 가상현실 VR 게임 SATISFY에서 신화급 대장장이로 거듭나는 루저의 통쾌한 인생 역전기.",
-                    "genres": [{"mal_id": 100, "name": "애니"}, {"mal_id": 101, "name": "판타지"}],
-                    "year": 2026,
-                },
-                {
-                    "mal_id": 123703,
-                    "title": "블랙클로버 New Chapter",
-                    "title_english": "Black Clover New Chapter",
-                    "title_japanese": "ブラッククローバー",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/2/88336l.jpg"}},
-                    "score": 8.7,
-                    "episodes": 12,
-                    "type": "TV",
-                    "status": "Currently Airing",
-                    "synopsis": "마법제에 도전하는 소년들의 장대한 마법 배틀.",
-                    "genres": [{"mal_id": 100, "name": "애니"}, {"mal_id": 102, "name": "액션"}],
-                    "year": 2026,
-                },
-                {
-                    "mal_id": 123694,
-                    "title": "연애박사",
-                    "title_english": "Love Doctor",
-                    "title_japanese": "恋愛博士",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1841/141443l.jpg"}},
-                    "score": 8.2,
-                    "episodes": 16,
-                    "type": "TV",
-                    "status": "Currently Airing",
-                    "synopsis": "연애에 서툰 이들을 위한 현실 밀착 공감 로맨스 드라마.",
-                    "genres": [{"mal_id": 103, "name": "드라마"}, {"mal_id": 104, "name": "로맨스"}],
-                    "year": 2026,
-                },
-                {
-                    "mal_id": 123696,
-                    "title": "우리들의 발라드 2",
-                    "title_english": "Our Ballad Season 2",
-                    "title_japanese": "私たちのバラード 2",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1015/138006l.jpg"}},
-                    "score": 8.4,
-                    "episodes": 12,
-                    "type": "TV",
-                    "status": "Currently Airing",
-                    "synopsis": "대한민국을 울리는 최고의 보컬리스트들이 선사하는 감동의 발라드 음악 예능.",
-                    "genres": [{"mal_id": 105, "name": "예능"}, {"mal_id": 106, "name": "음악"}],
-                    "year": 2026,
-                },
-                {
-                    "mal_id": 123734,
-                    "title": "드골: 저항의 시작",
-                    "title_english": "De Gaulle",
-                    "title_japanese": "ドゴール",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1286/125473l.jpg"}},
-                    "score": 8.5,
-                    "episodes": 1,
-                    "type": "MOVIE",
-                    "status": "Finished Airing",
-                    "synopsis": "역사를 뒤바꾼 결단의 순간, 자유 프랑스를 이끈 지도자의 뜨거운 서사.",
-                    "genres": [{"mal_id": 107, "name": "영화"}, {"mal_id": 108, "name": "전쟁"}],
-                    "year": 2026,
-                },
-            ],
-            "top": [
-                {
-                    "mal_id": 123692,
-                    "title": "템빨",
-                    "title_english": "Overgeared",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1171/109222l.jpg"}},
-                    "score": 8.8,
-                    "episodes": 24,
-                    "type": "ONA",
-                    "status": "Currently Airing",
-                    "genres": [{"mal_id": 100, "name": "애니"}],
-                    "year": 2026,
-                },
-                {
-                    "mal_id": 123753,
-                    "title": "하이큐!! 카라스노 고교 VS 시라토리자와",
-                    "title_english": "Haikyu!! Karasuno vs Shiratorizawa",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1841/141443l.jpg"}},
-                    "score": 9.0,
-                    "episodes": 10,
-                    "type": "TV",
-                    "status": "Finished Airing",
-                    "genres": [{"mal_id": 100, "name": "애니"}, {"mal_id": 109, "name": "스포츠"}],
-                    "year": 2026,
-                },
-            ],
-        }
-
-    # 4. Domestic Source: AniWolf (애니울프)
-    if source == "aniwolf":
-        return {
-            "season": [
-                {
-                    "mal_id": 200001,
-                    "title": "야생의 라스트 보스가 나타났다! 2기",
-                    "title_english": "A Wild Last Boss Appeared! Season 2",
-                    "title_japanese": "野生のラスボスが現れた! 2期",
-                    "images": {"jpg": {"large_image_url": "https://aniwolf.com/storage/%EC%95%BC%EC%83%9D%EC%9D%98_%EB%9D%BC%EC%8A%A4%ED%8A%B8_%EB%B3%B4%EC%8A%A4%EA%B0%80_%EB%82%98%ED%83%80%EB%82%AC%EB%8B%A4!_2%EA%B8%B0.jpg"}},
-                    "score": 8.6,
-                    "episodes": 12,
-                    "type": "TV",
-                    "status": "Currently Airing",
-                    "synopsis": "게임 속 패왕 루파스 마파르로 전생한 주인공의 호쾌한 패도 판타지 배틀 액션.",
-                    "genres": [{"mal_id": 201, "name": "판타지"}, {"mal_id": 202, "name": "이세계"}],
-                    "year": 2026,
-                },
-                {
-                    "mal_id": 52991,
-                    "title": "약사의 혼잣말 3기",
-                    "title_english": "The Apothecary Diaries Season 3",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1015/138006l.jpg"}},
-                    "score": 8.5,
-                    "episodes": 12,
-                    "type": "TV",
-                    "status": "Currently Airing",
-                    "genres": [{"mal_id": 1, "name": "드라마"}],
-                    "year": 2026,
-                },
-            ],
-            "top": [
-                {
-                    "mal_id": 200001,
-                    "title": "야생의 라스트 보스가 나타났다! 2기",
-                    "title_english": "A Wild Last Boss Appeared! Season 2",
-                    "images": {"jpg": {"large_image_url": "https://aniwolf.com/storage/%EC%95%BC%EC%83%9D%EC%9D%98_%EB%9D%BC%EC%8A%A4%ED%8A%B8_%EB%B3%B4%EC%8A%A4%EA%B0%80_%EB%82%98%ED%83%80%EB%82%AC%EB%8B%A4!_2%EA%B8%B0.jpg"}},
-                    "score": 8.6,
-                    "episodes": 12,
-                    "type": "TV",
-                    "status": "Currently Airing",
-                    "genres": [{"mal_id": 201, "name": "판타지"}],
-                    "year": 2026,
-                }
-            ],
-        }
-
-    # 5. Domestic Source: AniWeek (애니위크)
-    if source == "aniweek":
-        return {
-            "season": [
-                {
-                    "mal_id": 300001,
-                    "title": "마법소녀 리리컬 나노하 익시즈 건 블레이즈 벤전스",
-                    "title_english": "Magical Girl Lyrical Nanoha EXCEED Gun Blaze Vengeance",
-                    "title_japanese": "魔法少女リリカルなのは",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1171/109222l.jpg"}},
-                    "score": 8.7,
-                    "episodes": 12,
-                    "type": "TV",
-                    "status": "Finished Airing",
-                    "synopsis": "세츠나와 조용히 살기를 바라는 시이나에게 닥쳐오는 운명적인 마법 배틀.",
-                    "genres": [{"mal_id": 301, "name": "마법소녀"}, {"mal_id": 302, "name": "액션"}],
-                    "year": 2026,
-                },
-                {
-                    "mal_id": 173828,
-                    "title": "푸른 상자 2기",
-                    "title_english": "Blue Box Season 2",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1841/141443l.jpg"}},
-                    "score": 8.1,
-                    "episodes": 12,
-                    "type": "TV",
-                    "status": "Currently Airing",
-                    "genres": [{"mal_id": 3, "name": "로맨스"}],
-                    "year": 2026,
-                },
-            ],
-            "top": [
-                {
-                    "mal_id": 300001,
-                    "title": "마법소녀 리리컬 나노하 익시즈 건 블레이즈 벤전스",
-                    "title_english": "Magical Girl Lyrical Nanoha EXCEED Gun Blaze Vengeance",
-                    "images": {"jpg": {"large_image_url": "https://cdn.myanimelist.net/images/anime/1171/109222l.jpg"}},
-                    "score": 8.7,
-                    "episodes": 12,
-                    "type": "TV",
-                    "status": "Finished Airing",
-                    "genres": [{"mal_id": 301, "name": "마법소녀"}],
-                    "year": 2026,
-                }
-            ],
-        }
+    # Metadata is independent from a playback provider. Never fabricate site
+    # catalogs, scores or provider IDs and present them as MAL identifiers.
 
     season, year = _current_season()
 
@@ -636,6 +288,8 @@ async def get_anime_home(source: str = Query("reanime", description="Content sou
     return {
         "season": season_list,
         "top": top_list,
+        "catalog_source": "anilist",
+        "availability_verified": False,
     }
 
 
@@ -840,55 +494,27 @@ async def get_anime_stream(
     anilist_id: Optional[int] = None,
     mal_id: Optional[int] = None,
     source: str = "reanime",
+    source_url: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Resolve video player or HLS stream URL for the selected anime and episode."""
-    # 0-1. AniWolf (애니울프) stream
-    if source == "aniwolf":
+    if source_url:
         try:
-            from app.engine.aniwolf import extract_aniwolf_episode
-            work_name = title or "야생의_라스트_보스가_나타났다!_2기"
-            res = extract_aniwolf_episode({"work": work_name, "episode": f"{episode}화", "url": f"https://aniwolf.com/{work_name}/{episode}화"})
-            return {
-                "success": True,
-                "stream_url": res["stream_url"],
-                "is_embed": res["is_embed"],
-                "source": "aniwolf",
-                "server": "AniWolf CDNDania",
-            }
-        except Exception as exc:
-            logger.debug(f"AniWolf stream resolution error: {exc}")
-
-    # 0-2. AniWeek (애니위크) stream
-    if source == "aniweek":
-        try:
-            from app.engine.aniweek import extract_aniweek_episode
-            work_name = title or "마법소녀 리리컬 나노하 익시즈 건 블레이즈 벤전스"
-            res = extract_aniweek_episode({"work": work_name, "episode": f"{episode}화", "url": f"https://aniweek.com/e/{work_name} {episode}화"})
-            return {
-                "success": True,
-                "stream_url": res["stream_url"],
-                "is_embed": res["is_embed"],
-                "source": "aniweek",
-                "server": "AniWeek MichealCDN",
-            }
-        except Exception as exc:
-            logger.debug(f"AniWeek stream resolution error: {exc}")
-
-    # 0. Zzapflix (짭플릭스) stream
-    if source == "zzapflix":
-        try:
-            from app.engine.zzapflix import extract_zzapflix_episode
-            work_id = str(mal_id) if mal_id else "123692"
-            res = extract_zzapflix_episode({"work": work_id, "episode": str(episode - 1)})
-            return {
-                "success": True,
-                "stream_url": res["stream_url"],
-                "is_embed": res["is_embed"],
-                "source": "zzapflix",
-                "server": "Zzapflix Wiselife",
-            }
-        except Exception as exc:
-            logger.debug(f"Zzapflix stream resolution error: {exc}")
+            from app.engine.episode_sites import parse_episode_url, extract_episode, EpisodeSiteError
+            route = parse_episode_url(source_url)
+            if route["site"] != source or route["collection"]:
+                raise EpisodeSiteError("선택한 소스의 실제 회차 주소가 필요합니다.")
+            res = await asyncio.to_thread(extract_episode, route["url"])
+            link = res.get("stream_url") or res.get("url")
+            if link:
+                return {"success": True, "stream_url": link, "is_embed": bool(res.get("is_embed")),
+                        "source": source, "server": source}
+        except (ValueError, httpx.HTTPError):
+            pass
+        return {"success": False, "stream_url": None, "source": source,
+                "message": "선택한 소스의 실제 회차를 확인할 수 없습니다."}
+    if source != "reanime":
+        return {"success": False, "stream_url": None, "source": source,
+                "message": "작품 ID만으로 해당 소스의 회차를 확인할 수 없습니다. 실제 회차 주소를 사용하세요."}
 
     # 1. Direct query to Re:Anime flix API if anilist_id is provided
     if anilist_id:
@@ -922,30 +548,6 @@ async def get_anime_stream(
         except Exception as exc:
             logger.debug(f"Re:Anime flix lookup failed for anilist_id {anilist_id}: {exc}")
 
-    # 2. Try Moeni / domestic fast source if available
-    try:
-        from app.engine.moeni import parse_moeni_url, extract_moeni_episode
-        from app.engine.episode_sites import SiteClient
-
-        # If Blue Box / 푸른 상자
-        if "blue box" in title.lower() or "푸른 상자" in title or "ao no hako" in title.lower():
-            client = SiteClient()
-            try:
-                route = parse_moeni_url(f"https://moeni.net/4686/{episode}")
-                res = extract_moeni_episode(route, client)
-                if res.get("url"):
-                    return {
-                        "success": True,
-                        "stream_url": res["url"],
-                        "is_embed": False,
-                        "source": "moeni",
-                        "server": "Moeni HD",
-                    }
-            finally:
-                client.close()
-    except Exception as exc:
-        logger.debug(f"Moeni fallback lookup failed for {title}: {exc}")
-
     # 3. Try searching by title in Re:Anime
     try:
         from app.engine.episode_sites import SiteClient
@@ -964,8 +566,10 @@ async def get_anime_stream(
             if s_res.status_code == 200:
                 s_data = s_res.json()
                 items = s_data.get("data", [])
-                if items:
-                    target_id = items[0].get("id")
+                matching = [item for item in items if isinstance(item.get("title"), str)
+                            and item["title"].strip().casefold() == title.strip().casefold()]
+                if len(matching) == 1:
+                    target_id = matching[0].get("id")
                     if target_id:
                         watch_url = f"https://reanime.to/watch/{target_id}?ep={episode}"
                         client = SiteClient()

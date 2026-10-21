@@ -7,7 +7,12 @@ from app.main import app
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    media = {"id": 101, "idMal": 202, "title": {"english": "Live catalog fixture"}}
+    monkeypatch.setattr("app.api.lilac._anilist_query", AsyncMock(return_value={
+        "seasonMedia": {"media": [media]}, "topMedia": {"media": [media]},
+        "Page": {"media": [media], "airingSchedules": [{"media": media}]},
+    }))
     return TestClient(app)
 
 

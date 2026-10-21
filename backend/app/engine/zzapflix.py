@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import re
 from typing import Any, Dict, List, Optional
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlsplit, urljoin
 
 from app.core.http import USER_AGENT
 from app.core.logger import get_media_logger
-from app.engine.episode_sites import EpisodeSiteError, SITES, checked_url
+from app.engine.episode_sites import Document, EpisodeSiteError, SITES, SiteClient, checked_url
 
 logger = get_media_logger('zzapflix')
 
@@ -71,44 +71,58 @@ def parse_zzapflix_url(value: str) -> dict:
 def load_zzapflix_catalog(url: str, client=None) -> dict:
     """Load episode list for a zzapflix title."""
     route = parse_zzapflix_url(url)
-    work_id = route['work']
-
-    # Standard episode schema
-    episodes = [
-        {
-            'id': f'{work_id}_0',
-            'number': 1,
-            'name': '1화',
-            'url': f'https://zzap208.com/vodview.php?id={work_id}&idd=0',
-            'available': True,
-        }
-    ]
-
-    return {
-        'id': work_id,
-        'title': f'짭플릭스 작품 #{work_id}',
-        'episodes': episodes,
-    }
+    own = client is None
+    client = client or SiteClient()
+    try:
+        final, body = client.request(route['url'], SITES['zzapflix']['hosts'])
+        target = parse_zzapflix_url(final)
+        if target['work'] != route['work']:
+            raise EpisodeSiteError('이동된 짭플릭스 작품 ID가 다릅니다.')
+        doc = Document(body).root
+        titles = doc.find('title')
+        episodes = {}
+        for link in doc.find('a', href=None):
+            try:
+                ep = parse_zzapflix_url(urljoin(final, link.attrs['href']))
+            except EpisodeSiteError:
+                continue
+            if ep['work'] == route['work'] and not ep['collection'] and link.text.strip():
+                episodes[ep['episode']] = dict(id=ep['episode'], number=None,
+                    name=link.text.strip(), title=link.text.strip(), url=ep['url'], available=True)
+        if not titles or not titles[0].text.strip() or not episodes:
+            raise EpisodeSiteError('짭플릭스의 실제 작품·회차 목록을 확인할 수 없습니다.')
+        return dict(id=route['work'], title=titles[0].text.strip(), episodes=list(episodes.values()))
+    finally:
+        if own:
+            client.close()
 
 
 def extract_zzapflix_episode(route: dict, client=None) -> dict:
     """Extract playback URL from zzapflix episode page."""
-    work_id = route['work']
-    idd = route.get('episode') or '0'
-    view_url = f'https://zzap208.com/vodview.php?id={work_id}&idd={idd}'
-
-    # Wiselife blog embed player
-    player_url = f'https://ckp2.wiselife.blog/player.php?id={work_id}&idd={idd}'
-
-    return {
-        'site': 'zzapflix',
-        'work': work_id,
-        'episode': idd,
-        'stream_url': player_url,
-        'is_embed': True,
-        'referer': view_url,
-        'headers': {
-            'User-Agent': USER_AGENT,
-            'Referer': 'https://zzap208.com/',
-        },
-    }
+    view_url = route.get('url')
+    if not view_url:
+        raise EpisodeSiteError('실제 짭플릭스 회차 주소가 필요합니다.')
+    parsed = parse_zzapflix_url(view_url)
+    if parsed['collection'] or parsed['work'] != route['work'] or parsed['episode'] != route.get('episode'):
+        raise EpisodeSiteError('짭플릭스 작품·회차 주소가 일치하지 않습니다.')
+    own = client is None
+    client = client or SiteClient()
+    try:
+        final, body = client.request(view_url, SITES['zzapflix']['hosts'])
+        target = parse_zzapflix_url(final)
+        if target['work'] != parsed['work'] or target['episode'] != parsed['episode']:
+            raise EpisodeSiteError('이동된 짭플릭스 작품·회차가 다릅니다.')
+        players = []
+        for frame in Document(body).root.find('iframe', src=None):
+            try:
+                players.append(checked_url(urljoin(final, frame.attrs['src']), SITES['zzapflix']['players']))
+            except EpisodeSiteError:
+                continue
+        if len(players) != 1:
+            raise EpisodeSiteError('짭플릭스의 실제 본편 플레이어를 확인할 수 없습니다.')
+        return dict(site='zzapflix', work=parsed['work'], episode=parsed['episode'],
+            stream_url=players[0], is_embed=True, referer=final,
+            headers={'User-Agent': USER_AGENT, 'Referer': final})
+    finally:
+        if own:
+            client.close()

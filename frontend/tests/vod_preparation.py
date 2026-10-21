@@ -14,6 +14,7 @@ async def check(browser,width):
  async def api(route):
   path=urlparse(route.request.url).path;data=route.request.post_data_json if route.request.post_data else {};method=route.request.method
   requests.append((path,method,data))
+  if path=='/api/vod/capabilities':return await mock(route)
   if path=='/api/vod/status':return await route.fulfill(json={'tasks':tasks,'active_count':sum(t['state']=='downloading' for t in tasks),'imports':[]})
   if path=='/api/vod/prepare':
    results=[]
@@ -100,7 +101,7 @@ async def check(browser,width):
  assert await page.evaluate('document.documentElement.scrollWidth<=innerWidth'),width
  assert not errors,errors
  await page.screenshot(path=str(OUT/f'vod-{width}.png'),full_page=True)
- for lang,label in [('en','Add to list'),('ja','リストに追加')]:
+ for lang,label in [('en','Add to list'),('ja','一覧に追加')]:
   await page.evaluate('([lang])=>localStorage.setItem("phrolova-language",lang)',[lang]);await page.reload()
   await panel.get_by_role('button',name=label,exact=True).wait_for()
  await context.close();print('VOD preparation browser PASS',width)

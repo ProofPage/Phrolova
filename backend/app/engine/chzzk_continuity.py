@@ -1699,7 +1699,15 @@ class ChzzkContinuityWriter(HLSStreamWriter):
                 # Retry the known media URL until the recovery deadline. A
                 # fragment absent from fresh playlists can still be fetchable.
                 self.source.stop.wait(max(0, min(1, deadline - time.monotonic())))
-            except (BroadcastEnded, BroadcastChanged):
+            except BroadcastEnded:
+                # A later prefetched segment can confirm EOF before this
+                # earlier request finishes. Drain that bounded request rather
+                # than discarding media which still belongs to this capture.
+                try:
+                    return primary.result(timeout=max(0, deadline - time.monotonic()))
+                except (Unavailable, ValueError, TimeoutError, CancelledError):
+                    raise BroadcastEnded("Broadcast ended") from None
+            except BroadcastChanged:
                 raise
             except (StreamError, ValueError, TimeoutError, CancelledError):
                 # A transient API/manifest failure is not proof of a gap.

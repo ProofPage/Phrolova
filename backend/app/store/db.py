@@ -70,16 +70,19 @@ class Database:
                 isolation_level=None,  # 트랜잭션을 명시적으로 제어한다
                 timeout=10.0,
             )
-            conn.row_factory = sqlite3.Row
-            conn.execute("PRAGMA journal_mode = WAL")
-            conn.execute("PRAGMA synchronous = NORMAL")
-            conn.execute("PRAGMA foreign_keys = ON")
-            # 다른 스레드가 쓰기 중이면 즉시 실패하지 않고 대기한다.
-            conn.execute("PRAGMA busy_timeout = 10000")
-
+            try:
+                conn.row_factory = sqlite3.Row
+                conn.execute("PRAGMA journal_mode = WAL")
+                conn.execute("PRAGMA synchronous = NORMAL")
+                conn.execute("PRAGMA foreign_keys = ON")
+                # 다른 스레드가 쓰기 중이면 즉시 실패하지 않고 대기한다.
+                conn.execute("PRAGMA busy_timeout = 10000")
+                applied = apply_migrations(conn)
+            except BaseException:
+                conn.close()
+                raise
+            # 초기화가 실패한 연결을 다음 호출에서 정상 연결로 재사용하지 않는다.
             self._conn = conn
-
-            applied = apply_migrations(conn)
             if applied:
                 logger.info(
                     f"DB 스키마 마이그레이션 적용: {applied}건 (v{LATEST_VERSION})"

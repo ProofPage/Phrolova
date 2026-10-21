@@ -1,5 +1,6 @@
 """Exercise the real player with local subtitle input, without external media."""
 import asyncio
+import os
 from playwright.async_api import async_playwright, expect
 
 HTML = """<html><body><div id="root"></div><script type="module">
@@ -30,7 +31,7 @@ async def main():
         await page.route("**/api/**", lambda r: r.fulfill(json={"found": False, "results": []}))
         await page.route("**/test-media.mp4", lambda r: r.fulfill(status=204))
         try:
-            await page.goto("http://127.0.0.1:3000/player-audit")
+            await page.goto(os.environ.get("PHROLOVA_TEST_URL", "http://127.0.0.1:3000").rstrip("/") + "/player-audit")
             await page.get_by_role("button", name="Settings", exact=True).click()
             await page.get_by_role("button", name="자막", exact=True).click()
             await expect(page.get_by_text("[Official] Episode 01 Dialogue.srt")).to_have_count(0)

@@ -12,6 +12,10 @@ async def mock(route):
     path=pathname[5:]
     data={}
     if path=='setup/status': data={'needs_setup':False}
+    elif path=='vod/capabilities':
+        sources=('chzzk','youtube','cime','kick','twitch','tiktok','bilibili','popkontv','rplay','hearheart','anilife','linkani','ohli24','ohli365','tvwiki','tvroom','tvhot','toonday','animaru','external')
+        data={'sources':[{'id':source,'label':'platform.'+source} for source in sources],
+              'prepare':True,'pause':True,'file_open':True}
     elif path=='settings': data=FIX['settings']
     elif path=='vod/status': data={'tasks':FIX['tasks'],'active_count':1,'imports':FIX.get('imports',[])}
     elif path=='platforms/channels': data=FIX['channels']

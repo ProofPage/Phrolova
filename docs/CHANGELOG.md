@@ -8,6 +8,16 @@
 
 ## [Unreleased]
 
+## [2.1.7] - 2026-10-21
+
+### Fixed
+- 치지직 뒤쪽 조각이 방종을 먼저 감지해도 수신 중인 앞쪽 정상 조각을 보존.
+- DB 초기화·마이그레이션 실패 시 연결을 닫고 다음 호출에서 초기화 재시도.
+- 애니메이션 고정 카탈로그·잘못된 작품 ID 제거, 실제 메타데이터로 통일.
+- 소스 간 임의 대체·기본 작품 재생 방지 및 실제 회차 주소 검증.
+- 짭플릭스의 가상 회차·조합한 플레이어 주소 성공 응답 제거.
+- 미방영 작품의 완료 상태 오표시와 UI 회귀 검사의 모의 API 계약 보완.
+
 ## [2.1.6] - 2026-10-21
 
 ### Added
@@ -1395,7 +1405,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.6...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.7...HEAD
+[2.1.7]: https://github.com/ProofPage/Phrolova/compare/v2.1.6...v2.1.7
 [2.1.6]: https://github.com/ProofPage/Phrolova/compare/v2.1.5...v2.1.6
 [2.1.5]: https://github.com/ProofPage/Phrolova/compare/v2.1.4...v2.1.5
 [2.1.4]: https://github.com/ProofPage/Phrolova/compare/v2.1.3...v2.1.4

@@ -1,4 +1,6 @@
 import pytest
+from unittest.mock import Mock
+from app.engine.episode_sites import EpisodeSiteError
 from app.core.episode_domains import numbered_site_for_host
 from app.engine.episode_sites import parse_episode_url, site_for_url
 from app.engine.zzapflix import (
@@ -38,12 +40,31 @@ def test_zzapflix_url_parsing():
 
 
 def test_zzapflix_catalog_and_stream_resolution():
-    catalog = load_zzapflix_catalog("https://zzap208.com/vodview.php?id=123692")
+    url = "https://zzap208.com/vodview.php?id=123692"
+    episode_url = url + "&idd=1"
+    client = Mock()
+    client.request.return_value = (url, f'<title>Actual work</title><a href="{episode_url}">2화</a>')
+    catalog = load_zzapflix_catalog(url, client)
     assert catalog["id"] == "123692"
     assert len(catalog["episodes"]) > 0
 
     route = parse_zzapflix_url("https://zzap208.com/vodview.php?id=123692&idd=1")
-    stream = extract_zzapflix_episode(route)
+    client.request.return_value = (episode_url,
+        '<iframe src="https://ckp2.wiselife.blog/player.php?id=123692&idd=1"></iframe>')
+    stream = extract_zzapflix_episode(route, client)
     assert stream["site"] == "zzapflix"
     assert "wiselife.blog" in stream["stream_url"]
     assert stream["is_embed"] is True
+
+
+def test_missing_page_never_produces_invented_episode_or_player():
+    url = "https://zzap208.com/vodview.php?id=123692&idd=1"
+    client = Mock()
+    client.request.return_value = (url, "<title>Unavailable</title>")
+    with pytest.raises(EpisodeSiteError):
+        load_zzapflix_catalog(url, client)
+    with pytest.raises(EpisodeSiteError):
+        extract_zzapflix_episode(parse_zzapflix_url(url), client)
+    client.request.side_effect = EpisodeSiteError("blocked", status=403)
+    with pytest.raises(EpisodeSiteError):
+        extract_zzapflix_episode(parse_zzapflix_url(url), client)

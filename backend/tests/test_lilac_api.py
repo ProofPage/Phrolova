@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import AsyncMock
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -6,7 +7,11 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_lilac_home_endpoint():
+def test_lilac_home_endpoint(monkeypatch):
+    from app.api import lilac
+    media = {"id": 101, "idMal": 202, "title": {"english": "Live metadata"}}
+    query = AsyncMock(return_value={"seasonMedia": {"media": [media]}, "topMedia": {"media": [media]}})
+    monkeypatch.setattr(lilac, "_anilist_query", query)
     res = client.get("/api/lilac/home?source=ohli24")
     assert res.status_code == 200
     data = res.json()
@@ -27,6 +32,10 @@ def test_lilac_home_endpoint():
     res_week = client.get("/api/lilac/home?source=aniweek")
     assert res_week.status_code == 200
     assert "season" in res_week.json()
+    assert query.await_count == 4
+    for response in (res, res_zzap, res_wolf, res_week):
+        assert response.json()["season"][0]["mal_id"] == 202
+        assert response.json()["availability_verified"] is False
 
 
 def test_lilac_schedule_endpoint():
@@ -62,6 +71,6 @@ def test_lilac_stream_endpoint():
     res_zzap = client.get("/api/lilac/stream?source=zzapflix&mal_id=123692&episode=1")
     assert res_zzap.status_code == 200
     data_zzap = res_zzap.json()
-    assert data_zzap.get("success") is True
+    assert data_zzap.get("success") is False
     assert "stream_url" in data_zzap
 
