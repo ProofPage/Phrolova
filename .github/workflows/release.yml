@@ -120,6 +120,7 @@ jobs:
 
           if ($releaseExists) {
             Write-Host "Release $env:RELEASE_TAG already exists. Uploading assets and updating notes..."
+            gh release edit $env:RELEASE_TAG --draft=false
             gh release upload $env:RELEASE_TAG $asset $checksums --clobber
             gh release edit $env:RELEASE_TAG --notes-file release-notes.md --title "Phrolova $env:RELEASE_TAG" --latest
           } else {
