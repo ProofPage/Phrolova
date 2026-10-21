@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="docs/screenshots/live-row-alignment-after.png" width="90" alt="Phrolova Logo">
-</p>
-
 <h1 align="center">Phrolova</h1>
 
 <p align="center">
