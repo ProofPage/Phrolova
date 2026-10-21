@@ -44,11 +44,11 @@ Availability depends on stream provider policies and account privileges.
 
 | Platform | Live Monitoring | VODs & Clips | Authentication & Notes |
 | :--- | :---: | :---: | :--- |
-| **CHZZK (치지직)** | **Full** | **Full** | Naver cookie/session for 1080p+ & adult streams. Supports `chzzk.naver.com` and `m.chzzk.naver.com`. |
-| **YouTube** | **Full** | **Full** | Cookie support for member streams. Supports `/live/<id>`, `/watch?v=<id>`, `/shorts/<id>`, and `@handle`. |
-| **Twitch** | **Full** | **Full** | Netscape cookies for sub-only streams. Optional TTV-AB ad-blocking toggle. |
-| **RPLAY (알플레이)** | **Full** | **Full** | Session import or email login. Supports 24-char OID, `/creatorhome/<id>`, and custom `/c/<handle>`. |
-| **TwitCasting (ツイキャス)** | **Full** | **Full** | Low-latency stream monitoring, HLS capture, login-wall dummy detection, and browser cookie auth. |
+| **Chzzk (치지직)** | **Full** | **Full** | Naver cookie/session for 1080p+ & adult streams. Supports `chzzk.naver.com` and `m.chzzk.naver.com`. |
+| **YouTube (유튜브)** | **Full** | **Full** | Cookie support for member streams. Supports `/live/<id>`, `/watch?v=<id>`, `/shorts/<id>`, and `@handle`. |
+| **Twitch (트위치)** | **Full** | **Full** | Netscape cookies for sub-only streams. Optional TTV-AB ad-blocking toggle. |
+| **Rplay (알플레이)** | **Full** | **Full** | Session import or email login. Supports 24-char OID, `/creatorhome/<id>`, and custom `/c/<handle>`. |
+| **TwitCast (트위캐스)** | **Full** | **Full** | Low-latency stream monitoring, HLS capture, login-wall dummy detection, and browser cookie auth. |
 | **Kick** | **Full** | **Full** | Streamlink live capture; cookie import for sub-only qualities. |
 | **Bilibili** | **Full** | **Full** | Room monitoring, HLS capture, BV/av video downloads with cookie auth. |
 | **TikTok** | **Full** | **Full** | Streamlink live capture, frame previews, and short share link parsing. |
