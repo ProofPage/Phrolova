@@ -2,9 +2,11 @@
 
 **Record live streams. Download videos. Manage your archive.**
 
-Phrolova is a self-hosted recorder and video downloader for **CHZZK, YouTube, CIME, Kick, Twitch, TikTok, Bilibili, PandaTV, PopkonTV and RPLAY**. Monitor channels, preview broadcasts, manage downloads and verify saved media in one web dashboard. Run the packaged app on Windows, or install from source on Linux, macOS or Android with Termux.
+Phrolova is a self-hosted live-stream recorder and video downloader with a browser dashboard. Monitor channels, preview broadcasts, queue videos and inspect your saved media. Use the packaged Windows app or install from source on Linux, macOS or Android with Termux.
 
-[Download](https://github.com/ProofPage/Phrolova/releases/latest) · [Release notes](docs/release-notes/README.md) · [Changelog](docs/CHANGELOG.md)
+[Download for Windows](https://github.com/ProofPage/Phrolova/releases/latest) · [Quick start](#quick-start) · [v2.1.8 release notes](docs/release-notes/v2.1.8.md) · [Changelog](docs/CHANGELOG.md)
+
+**Local-first, not a public web service:** the dashboard/API has no built-in login. Keep the default `127.0.0.1:8000` binding; never expose it publicly without access protection.
 
 ## Features
 
@@ -23,7 +25,7 @@ The interface supports **Korean, English, Japanese, Spanish, German, Simplified 
 
 ### Supported sources
 
-The dashboard provides **10 live platforms** and **19 video source choices**, including supported external links. PandaTV is live-only; PopkonTV supports live broadcasts, VODs and clips.
+Source availability depends on the provider, your connection and your account's viewing rights. The list below describes implemented integrations, not complete production end-to-end verification of every source.
 
 | Source | Live | Videos | Authentication when required |
 | --- | --- | --- | --- |
@@ -31,40 +33,25 @@ The dashboard provides **10 live platforms** and **19 video source choices**, in
 | YouTube | Monitoring, preview and manual/automatic recording | Videos and channel imports | Uploaded cookies for authenticated video access |
 | CIME | Monitoring, preview and manual/automatic recording, including granted UHD/4K qualities | VODs and clips | MCO email/password login or account cookies; UHD viewing permission when required |
 | Kick | Streamlink monitoring integration, preview and manual/automatic recording | VODs and clips via yt-dlp | Optional Kick cookies; required for sign-in-only qualities |
-| Twitch | Monitoring, preview, manual/automatic recording and built-in TTV-AB ad-block engine | VODs and individual clips via yt-dlp | Optional Twitch Netscape cookies |
+| Twitch | Monitoring, preview and manual/automatic recording; optional TTV-AB, off by default | VODs and individual clips via yt-dlp | Optional Twitch Netscape cookies |
 | TikTok | Monitoring, frame previews and manual/automatic recording via Streamlink | Individual videos and short share links via yt-dlp | Optional TikTok Netscape cookies |
 | Bilibili | Room monitoring, HLS previews and manual/automatic recording via Streamlink | BV/av videos, selected parts and b23.tv share links via yt-dlp | Optional Bilibili Netscape cookies |
 | PandaTV (팬더티비) | Channel monitoring, HLS previews and manual/automatic recording via Streamlink | — | Username/password login or PandaTV Netscape cookies; identity-verified account access where required |
 | PopkonTV (팝콘티비) | Channel monitoring, recording, previews and password-protected rooms | VODs and clips through the existing queue | Username/password login or PopkonTV Netscape cookies; broadcast password when required |
 | RPLAY (알플레이) | Channel monitoring, granted HLS recording and previews | Videos and live archives with granted HLS, DASH or MP4 playback | Email/password login or an imported session file; account viewing permission required |
-| Anilife (애니라이프) | — | Work/episode links, adult catalog/playback, HLS videos and VTT subtitles at anilife01.tv | Username/password login or Netscape cookies for adult-restricted content |
-| Linkani | — | Work/episode links, normalized titles and HLS videos at linkani.tv | Normal site playback session |
-| Moeni (모에니) | — | Work/episode links, dynamic AES-256-CBC decryption, HLS videos and subtitles at moeni.net | Public catalog and playback API |
-| Re:ANIME | — | Work/episode links, SvelteKit SSR catalog, multi-server HD HLS at reanime.to | Public reader/player API |
-| Ohli24 (애니24) | — | Work/episode selection, Inertia.js SPA parsing and multi-CDN HLS at ohli24.com | Normal site playback session |
-| TVWiki (티비위키) | — | Work/episode selection and HLS videos at tvwiki54.net | Normal guest playback session |
-| Animaru (애니마루) | — | Work/episode selection, adult catalog/playback, HLS videos and VTT subtitles at animaru1.com | Username/password login or Netscape cookies for adult-restricted content |
-| Ani365 (애니365) | — | Work/episode selection, HLS quality variants and provided VTT subtitles at v2.ohli365.org | Public catalog/playback API and MegaPlay delivery |
+| HearHeart | — | Playlist and individual playback links | Account login or platform cookies when required |
+| Episode-based sites | — | Anilife, Linkani, Moeni, Re:ANIME, Ohli24, TVWiki, Animaru, Ani365, TVRoom, TVHot and Toonday | Site-specific public sessions or account access where supported |
+| External links | — | Links handled by yt-dlp's supported extractors | Provider-specific access requirements |
 
 CIME (MCO), HearHeart, Animaru and Anilife support account sign-in; PandaTV and PopkonTV support username/password sign-in under **Settings → Authentication**, alongside the existing RPLAY login. Passwords are not saved and the input is cleared after each attempt. Only issued, platform-scoped cookies are registered after session verification. Existing cookies remain unchanged if login or storage fails. Social accounts, CAPTCHA and additional verification require official-site sign-in followed by cookie import. See the release notes for the current production-account validation scope.
 
-Bilibili live rooms accept a numeric room ID or `https://live.bilibili.com/<room>`. The recorder prefers MPEG-TS HLS, tries alternate CDNs and preserves native fMP4 HLS when needed. Available native quality IDs are retained; a stream with no advertised quality ID is shown as Original rather than an inferred resolution. Bilibili's popularity metric is identified separately from viewer counts. Videos accept BV/av IDs and `b23.tv` links; `?p=2` selects a single part. Separate DASH video and audio tracks are merged into the configured container. Cropped videos display both the provider's quality tier and actual pixel dimensions. Register a Netscape cookie file under **Settings → Authentication → Bilibili** when account access or additional qualities are needed. Cookies remain scoped to `bilibili.com`.
-
-PandaTV live channels accept a channel ID or `https://www.pandalive.co.kr/play/<channel>`. Available HLS qualities are read from the broadcast rather than guessed. Public broadcasts work without a cookie file; identity- or sign-in-required broadcasts report an authentication error. Register the site's authenticated Netscape cookies under **Settings → Authentication → PandaTV** when required; signing in to a browser alone does not authenticate the server. Cookies remain scoped to `pandalive.co.kr`. See [PandaTV support](docs/pandalive-support.md) for implementation and validation details.
-
-RPLAY live links (`https://rplay.live/live/<creator-id>`) are available in **Live → RPLAY**, and video links (`https://rplay.live/play/<video-id>`) are available in **Videos → RPLAY**. Public videos use the site's guest playback grant. For account-required content, sign in with email and password under **Settings → Authentication → RPLAY**, or import a session JSON file. The export-code button remains available for an existing browser session. Ordinary Netscape cookie files do not contain RPLAY's IndexedDB session, and browser sign-in alone does not authenticate Phrolova. Only server-granted, non-DRM media is downloaded; see [RPLAY authentication and validation](docs/rplay-support.md).
-
-PopkonTV live channels accept the full `https://www.popkontv.com/live/view?castId=<channel>&partnerCode=<partner>` link or `channel@P-00117`. The partner code is preserved; a bare channel ID uses the site's default `P-00001`. Paste `/vod/<id>` or `/clip/<id>` links into **Videos → PopkonTV**. **Record according to the server playback response** is enabled by default: Phrolova requests playback rather than rejecting a broadcast type locally, while server denials remain errors. New connections reload broadcast/account state, and expired sessions use the official refresh-token API. Enter a room password in that channel's recording settings; it is kept only until the app exits and must be entered again after restarting. Register account cookies under **Settings → Authentication → PopkonTV** when required. API authorization is not forwarded to the media CDN. See [PopkonTV support](docs/popkontv-support.md).
-
-For episode-based sources, paste a work link in **Videos** and select up to 100 episodes. These sources use the existing queue, quality controls and media inspection. See [episode source adapters](docs/video-site-adapters.md) for URL formats and validation details.
-
-External links use yt-dlp's supported extractors. Available formats and access follow the source platform. YouTube imports skip live/upcoming entries and videos already queued in a non-error state. Authenticated YouTube video downloads/imports are separate from automatic live recording; authenticated automatic YouTube live recording is not established by cookie registration.
-
-YouTube uses the same Python yt-dlp dependency for video metadata, downloads and isolated live-extraction workers. Public requests start without account cookies, even if a saved cookie path has become stale. Node.js/EJS options are applied to metadata as well as downloads. Private, members-only and age-restricted content still uses explicit account authentication.
-
-A server-side bot challenge or HTTP 429 is reported separately from content permissions. These restrictions can affect public videos; the app reports them as connection or rate-limit errors instead of a successful download. Check the server connection and any VPN/proxy, wait before retrying, and reduce simultaneous requests. See [YouTube extractor guidance](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#youtube) and the [official client update](https://github.com/yt-dlp/yt-dlp/pull/17805).
-
-YouTube protocol, codec, Time Machine and PO Token Provider preferences are exposed in settings. The native live recorder still requires a supported HLS input; settings do not establish support for SABR-only or DASH-only live capture.
+- **Episode sources:** paste a work link in **Videos**, then select up to 100 listed episodes. Available qualities and subtitles follow the source; unavailable episodes are not guessed. See [episode adapters](docs/video-site-adapters.md) for source-specific details and validation limits.
+- **Bilibili:** live rooms accept a numeric ID or `live.bilibili.com/<room>`; videos accept BV/av IDs and `b23.tv` links. `?p=2` selects one part. Advertised quality IDs are retained, and popularity is not presented as a viewer count.
+- **PandaTV:** public broadcasts can work without cookies; identity- or account-required broadcasts need the appropriate account. See [PandaTV support](docs/pandalive-support.md).
+- **PopkonTV:** use the full live link to retain its partner code, or `channel@partner`. Room passwords are held only until exit. Server playback denials remain errors. See [PopkonTV support](docs/popkontv-support.md).
+- **RPLAY:** import session JSON or use the account login form for restricted content. Netscape cookies do not contain the site's IndexedDB session. Only server-granted, non-DRM media is downloaded. See [RPLAY support](docs/rplay-support.md).
+- **YouTube:** public video extraction starts without cookies and retries recognized authentication failures with registered cookies. Channel imports skip live/upcoming entries and already queued non-error tasks. Video authentication does not establish authenticated automatic live recording. Native live capture needs supported HLS; SABR/DASH preferences do not add SABR-only or DASH-only live capture. Bot challenges and HTTP 429 can affect public content too; reduce requests and check the server connection. See [YouTube access guidance](docs/youtube-public-access.md).
+- **Kick:** account cookies can expose sign-in-only qualities, but only advertised formats are offered; account authorization is not forwarded to unrelated media CDNs. See [Kick support](docs/kick-support.md).
 
 ### CHZZK live Time Machine
 
@@ -73,11 +60,9 @@ Time Machine records an **ongoing live broadcast**, not a separate VOD. Phrolova
 - Where CHZZK provides a full window, up to **3,600 seconds** of earlier live media can be available. A newer broadcast can be saved from its beginning if the server still exposes that first segment.
 - Use **Settings → Downloads → recording mode** to select standard playback, prefer Time Machine with standard fallback, or require Time Machine. The default is `force-timemachine`.
 - The start offset is measured from the beginning of the available Time Machine window. `0` selects its earliest available segment; it does not promise a segment the platform no longer serves.
-- Available history is channel-dependent. An investigated broadcast with Time Machine disabled exposed only **600 seconds**, even though the broadcast was younger than an hour.
+- Available history is channel-dependent and may be shorter than an hour.
 - CHZZK live recording has **no fixed MB/s cap or artificial replay-speed limit**. Shared in-flight requests, bounded prefetch/recovery work and independent recording readers avoid redundant transfers and shared-thread starvation. Catch-up can temporarily use substantial bandwidth; simultaneous recordings still require sufficient network and disk capacity.
 - Recovery preserves segment order. Discontinuities or initialization changes create a file boundary rather than appending incompatible bytes to an existing original.
-
-For the v2.0.82 validation, one real 1080p live recording received the complete one-hour backlog and reached the live edge in about 72 seconds. Two channels then continued recording together for another two minutes and stopped cleanly, with no missing or duplicate segment checkpoints. This is a measured test result, not a guaranteed catch-up time.
 
 ### CHZZK encrypted playback and CIME UHD
 
@@ -99,26 +84,31 @@ Channel monitoring → Streamlink capture → source file
 
 Phrolova prefers TS capture and preserves native fMP4/CMAF when TS is unavailable. Finalization starts after capture stops. MKV is the default final container; MP4 is also available. Source retention is configurable, and failed processing preserves recoverable source data. Download completion and media inspection have separate statuses, so a failed inspection does not delete a completed download.
 
-## Installation
+## Quick start
 
 | System | Distribution | Requirements |
 | --- | --- | --- |
-| Windows x64 | Packaged `.exe` | External FFmpeg and FFprobe; Python, Streamlink, the dashboard and Node.js are bundled |
-| Linux x64 / ARM64 | Source | Bash, Git, Python 3.14.8+, Node.js 22+ with npm, FFmpeg/FFprobe 6+ and `ps` |
-| macOS Apple Silicon / Intel | Source | Homebrew, Git, Python 3.14.8+, Node.js 22+ and FFmpeg/FFprobe 6+ |
+| Windows x64 | PyInstaller `.exe` | No separate Python installation; bundled runtime, dashboard, Streamlink and Node.js; external FFmpeg/FFprobe |
+| Windows x64 | Source | Standard-GIL Python 3.14.8+, Node.js 22+ with npm, FFmpeg/FFprobe 6+ |
+| Linux x64 / ARM64 | Source | Bash, Git, standard-GIL Python 3.14.8+, Node.js 22+ with npm, FFmpeg/FFprobe 6+ and `ps` |
+| macOS Apple Silicon / Intel | Source | Homebrew, Git, standard-GIL Python 3.14.8+, Node.js 22+ and FFmpeg/FFprobe 6+ |
 | Android / native Termux | Source | Current Termux packages and native build tools; the installer selects the Termux dependency profile |
 | Linux under Termux proot | Source | Linux dependencies inside the guest; set `PHROLOVA_ENVIRONMENT=termux-proot` |
 
 The repository distributes a Windows executable and source archives. It does not ship macOS application bundles, Android APKs or Docker images. See [platform support](docs/native-platform-support.md) for implementation and validation scope.
 
+**Python baseline:** standard-GIL Python **3.14.8** is the supported baseline; older versions and free-threaded execution are not supported. Python **3.15 is experimental**, even though its Linux/Windows checks passed for v2.1.8. This does not guarantee future dependency compatibility. The Termux profile is checked on Linux ARM64, not on an Android device.
+
 The repository and published release files are public. You can clone the source or download the Windows app without signing in to GitHub.
 
-### Windows
+### Windows packaged app
 
 1. Download `Phrolova-v<version>-windows-x64.exe` and `SHA256SUMS.txt` from [the latest release](https://github.com/ProofPage/Phrolova/releases/latest).
 2. Place the executable in a writable folder. Install **both** `ffmpeg.exe` and `ffprobe.exe` on `PATH`, or place them in a `bin` folder beside the app.
 3. Launch Phrolova. Startup checks dependencies and attempts to download `yt-dlp.exe` into `bin` if it is missing. You can place that executable there manually instead.
 4. Open <http://127.0.0.1:8000> and complete setup. The tray menu opens the dashboard or exits the app.
+
+Keep the app in that writable folder: its configuration, data, logs and tools live beside it. The packaged app does **not** need a separately installed Python. For a Windows source checkout, use the [development setup](#development) instead.
 
 Verify the downloaded file in PowerShell, using its actual filename, and compare the result with `SHA256SUMS.txt`:
 
@@ -210,19 +200,15 @@ Source installations read root `.env`, with `backend/.env` as a legacy fallback.
 Use absolute media paths. Relative paths follow the working directory; the source manager starts from `backend/`. Enter actual paths in `.env` rather than relying on shell-variable expansion. Saved preferences are preserved when defaults change in a later release.
 
 
-Animaru, TVWiki and Anilife also accept changing numeric domain suffixes (`animaru[0-9]+.com`, `tvwiki[0-9]+.net`, `anilife[0-9]+.tv`). Paste the current work/episode address; its hostname is preserved throughout selection and downloading. Website redirects stay within the same domain family, and cookies remain scoped to each original domain.
+### Authentication and security
 
-CHZZK account cookies use `NID_AUT` and `NID_SES`. YouTube, CIME, Kick, Twitch, TikTok and Bilibili use their corresponding `*_COOKIE_FILE` settings. Kick uses registered cookies for both live quality resolution and VOD extraction so sign-in-only qualities can appear. Register a Netscape cookie file under Settings → Authentication → Kick, then refresh the quality list or retry video metadata. Only advertised qualities are offered; explicitly requested 1080p is never silently replaced with 720p. Kick cookies and API authorization stay scoped to Kick and are not forwarded to unrelated media CDNs.
+Browser sign-in does not authenticate the Phrolova server. Upload platform-scoped cookies or use a supported login form in **Settings → Authentication**. Keep cookies, session files, `.env` and backups private. Account, regional, subscription and identity restrictions remain the provider's decision; Phrolova does not bypass DRM, expired authorization or HTTP 403.
 
-Twitch accepts channel IDs and channel URLs for live monitoring, `/videos/<id>` URLs for VODs, and `clips.twitch.tv/<slug>` or channel clip URLs for clips. Register an optional cookie file under Settings → Authentication → Twitch when account access is needed. The `auth-token` cookie is passed through Streamlink's Twitch API option; OAuth headers are not forwarded to media CDNs. The recorder uses the Twitch-specific HLS reader for stream transitions. Deleted, unavailable or restricted videos remain errors. See the [Streamlink Twitch documentation](https://streamlink.github.io/cli/plugins/twitch.html) for authentication and client-integrity requirements.
+Twitch's **TTV-AB ad blocking** and **third-party quality proxy** are separate options, both off by default for new settings. Existing saved choices are preserved. Direct Twitch authentication uses the registered `auth-token`; OAuth headers are not forwarded to media CDNs.
 
-Settings → Downloads → Twitch offers an optional quality proxy, adapted from the [ReYohoho userscript protocol](https://github.com/reyohoho/twitch_quality_proxy/blob/userscript/twitch.user.js). It is **off by default**. Enabling it sends the channel, IP address and registered `auth-token` as a URL query parameter to `proxy4.rte.net.ru`, `proxy7.rte.net.ru`, `proxy5.rte.net.ru` or `proxy6.rte.net.ru`. These operators can retain the login token; application log masking cannot prevent that. Enable it only if you trust them. No cookie means anonymous proxy access. The setting affects the next live quality lookup, recording or preview, not an already-running recording or VOD/clip downloads. Proxy redirects are not followed, account tokens are not returned to the browser or media CDN, and unusable proxy responses fall back to direct access.
+**Quality-proxy privacy:** enabling the optional [ReYohoho-based proxy](https://github.com/reyohoho/twitch_quality_proxy/blob/userscript/twitch.user.js) sends the channel, your server's IP address and any registered Twitch `auth-token` to `proxy4.rte.net.ru`, `proxy7.rte.net.ru`, `proxy5.rte.net.ru` or `proxy6.rte.net.ru`. The token is included as `auth=` in the URL and can be retained by those operators; log masking cannot prevent this disclosure. Enable it only if you trust them. Without a cookie, proxy access is anonymous. It affects subsequent live quality lookups, previews and recordings—not running recordings or VOD/clip downloads. Unusable proxy responses fall back to direct access.
 
-TikTok live URLs use `https://www.tiktok.com/@username/live`. The Streamlink plugin supplies FLV inputs, which the recorder remuxes to TS with FFmpeg using stream copy; it does not re-encode the video or audio. FFmpeg reads local pipes rather than upstream URLs. Live previews use refreshed images because the input is FLV. During recording, previews reuse a bounded in-memory keyframe buffer so opening the preview does not create a competing CDN connection or read a growing recording file. Complete FLV packets are preserved, and connection interruptions are reported separately from decoder errors. Video downloads accept `@username/video/<id>`, `vm.tiktok.com`, `vt.tiktok.com` and `tiktok.com/t/` links. Live share links are rejected from the video queue. TikTok is separate from Douyin. Register cookies under Settings → Authentication → TikTok when access requires an account.
-
-YouTube video extraction first tries public access and retries recognized authentication failures with registered cookies.
-
-The dashboard/API has no built-in login. Keep the default loopback binding for local use. For remote administration, use an SSH tunnel or an authenticated proxy/private network:
+The dashboard/API has no built-in login. Keep the default loopback binding. For remote administration, use an SSH tunnel or protect access with an authenticated proxy/private network; do not expose an unprotected public endpoint:
 
 ```bash
 ssh -N -L 8000:127.0.0.1:8000 user@server
@@ -282,7 +268,7 @@ python3.14 -m venv .venv
 (cd backend && ../.venv/bin/python run.py)
 ```
 
-On Windows, use `py -3.14 -m venv .venv` and `.venv\Scripts\python.exe`. Python 3.9 and older versions are rejected by the baseline. Native Termux uses rolling system `python` and `backend/requirements-termux.txt`; install test tools separately if needed. `ffmpeg-python` does not install FFmpeg/FFprobe. Node.js remains needed for YouTube JavaScript processing after the dashboard is built.
+On Windows, use a standard-GIL Python 3.14.8+ interpreter with `py -3.14 -m venv .venv`, then `.venv\Scripts\python.exe` for pip and the backend. Run `npm ci` and `npm run build` inside `frontend/` before starting `backend/run.py` from `backend/`. Older Python versions are rejected. Native Termux uses rolling system `python` and `backend/requirements-termux.txt`; install test tools separately if needed. `ffmpeg-python` does not install FFmpeg/FFprobe. Node.js remains needed for YouTube JavaScript processing after the dashboard is built.
 
 For hot reload, run the backend and `npm run dev` in `frontend/` separately. Vite proxies `/api` and `/health` to port 8000. Production builds go directly into `backend/app/static`, served by FastAPI. Fixture previews test the interface without real recordings/downloads.
 
@@ -297,7 +283,7 @@ bash -n scripts/install-termux.sh
 bash -n scripts/healthcheck.sh
 ```
 
-The [CI configuration](.github/workflows/ci.yml) defines Linux x64/ARM64, Windows x64, macOS Apple Silicon/Intel (Python 3.14.8 baseline), Linux ARM64/Python 3.14 with the Termux dependency profile, and experimental Python 3.15 standard support checks (not locally verified until dependency builds pass). That profile checks dependencies on Linux; Android compilation and power-management behavior need device testing. Consult workflow runs and release notes for checks completed for a particular release.
+For v2.1.8, [all nine CI jobs passed](https://github.com/ProofPage/Phrolova/actions/runs/39541641103): Python 3.14.8 on Linux x64/ARM64, Windows x64 and macOS Apple Silicon/Intel; the Termux requirements profile on Linux ARM64/Python 3.14; experimental Python 3.15 on Linux and Windows; and frontend checks/build. These checks are not complete live-source certification. The Termux profile is not Android ABI or device validation. See the [release notes](docs/release-notes/v2.1.8.md) for release-build verification.
 
 Build the Windows executable after the production dashboard:
 
@@ -327,6 +313,8 @@ The build produces `dist/Phrolova.exe`, bundles Node.js and application icons, a
 
 ## Documentation
 
-[Linux](docs/linux-guide.md) · [macOS](docs/macos-guide.md) · [Termux](docs/termux-guide.md) · [Platform support](docs/native-platform-support.md)
+[Linux](docs/linux-guide.md) · [macOS](docs/macos-guide.md) · [Termux](docs/termux-guide.md) · [Platform support](docs/native-platform-support.md) · [Release history](docs/release-notes/README.md)
+
+When following platform-specific instructions, use the Python baseline and validation scope documented above. The repository and release downloads are public.
 
 FFmpeg/FFprobe are installed separately and follow their own licenses.
