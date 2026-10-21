@@ -370,6 +370,8 @@ export interface RecordingOutputSettings { output_format: 'mp4'|'mkv'|'ts'; keep
 export interface ChannelLiveStat {
     channel_id: string;
     channel_name: string;
+    composite_key?: string;
+    platform?: Platform;
     session_count: number;
     total_duration_seconds: number;
     total_size_bytes: number;

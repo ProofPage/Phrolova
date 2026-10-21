@@ -12,7 +12,8 @@ import {
     RefreshCw,
     Video,
 } from "lucide-react";
-import { api, type ChannelLiveStat, type LiveSession, type StatsResponse } from "../api/client";
+import { api, type ChannelLiveStat, type LiveSession, type Platform, type StatsResponse } from "../api/client";
+import { PlatformBadge } from "../components/ui/PlatformBadge";
 import { Button, Card, EmptyState, LoadingState, MetricCard, PageHeader } from "../components/ui/primitives";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useToast } from "../components/ui/Toast";
@@ -177,7 +178,7 @@ export default function Stats() {
                                     <EmptyState compact icon={Database} title={t("stats.noRecordingsToReportYet")} description={t("stats.channelStatisticsWillAppearAfterTheFirstRecordingCompletes")} />
                                 ) : (
                                     <div>
-                                    <div className="stats-history-list divide-y divide-line">{live.by_channel.map(channel => <div key={channel.channel_id} className="px-4 py-3"><p className="break-all text-sm max-w-64 break-words font-medium text-ink">{channel.channel_name}</p><p className="mt-0.5 break-all text-xs text-ink-faint">{channel.channel_id}</p><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted"><span>{t("live.recordings")}: {formatCount(channel.session_count, language, "session")}</span><span>{t("stats.liveDetections")} {translatePlural("stats.count.day", channel.live_detected_count)}</span><span>{formatDuration(channel.total_duration_seconds, language)}</span><span>{formatBytes(channel.total_size_bytes)}</span></div></div>)}</div>
+                                    <div className="stats-history-list divide-y divide-line">{live.by_channel.map(channel => <div key={channel.composite_key || channel.channel_id} className="px-4 py-3"><div className="flex items-center gap-2"><p className="break-all text-sm max-w-64 break-words font-medium text-ink">{channel.channel_name}</p>{channel.platform && <PlatformBadge platform={channel.platform} />}</div><p className="mt-0.5 break-all text-xs text-ink-faint">{channel.channel_id}</p><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted"><span>{t("live.recordings")}: {formatCount(channel.session_count, language, "session")}</span><span>{t("stats.liveDetections")} {translatePlural("stats.count.day", channel.live_detected_count)}</span><span>{formatDuration(channel.total_duration_seconds, language)}</span><span>{formatBytes(channel.total_size_bytes)}</span></div></div>)}</div>
                                     <div className="stats-history-table">
                                         <table className="w-full min-w-[680px] text-sm">
                                             <thead>
@@ -191,9 +192,12 @@ export default function Stats() {
                                             </thead>
                                             <tbody className="divide-y divide-line/70">
                                                 {live.by_channel.map((channel: ChannelLiveStat) => (
-                                                    <tr key={channel.channel_id} className="hover:bg-surface-3/50 transition-colors">
+                                                    <tr key={channel.composite_key || channel.channel_id} className="hover:bg-surface-3/50 transition-colors">
                                                         <td className="px-5 py-3.5">
-                                                            <p className="max-w-64 break-words font-medium text-ink">{channel.channel_name}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="max-w-64 break-words font-medium text-ink">{channel.channel_name}</p>
+                                                                {channel.platform && <PlatformBadge platform={channel.platform} />}
+                                                            </div>
                                                             <p className="text-[11px] text-ink-faint font-mono mt-0.5 break-all">{channel.channel_id}</p>
                                                         </td>
                                                         <td className="px-4 py-3.5 text-right text-ink-muted font-mono">{formatCount(channel.session_count, language, "session")}</td>

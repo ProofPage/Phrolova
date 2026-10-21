@@ -74,41 +74,90 @@ async def get_stats():
         except Exception:
             live_history = []
 
+    def _normalize_stat_key(raw_key: str, raw_platform: str | None = None) -> tuple[str, str, str]:
+        from app.core.utils import extract_youtube_id
+        if ":" in raw_key:
+            plat, cid = raw_key.split(":", 1)
+        else:
+            plat = raw_platform or "chzzk"
+            cid = raw_key
+
+        if plat == "youtube":
+            clean_cid = extract_youtube_id(cid)
+        elif plat == "rplay":
+            from app.engine.rplay_live import normalize_rplay_channel_id
+            try:
+                clean_cid = normalize_rplay_channel_id(cid)
+            except Exception:
+                clean_cid = cid
+        elif plat == "chzzk":
+            from app.core.utils import extract_channel_id
+            clean_cid = extract_channel_id(cid)
+        else:
+            clean_cid = cid
+
+        norm_comp_key = f"{plat}:{clean_cid}" if plat != "chzzk" else clean_cid
+        return norm_comp_key, plat, clean_cid
+
+    registered_channels: dict[str, dict] = {}
+    if conductor is not None:
+        for st in conductor.get_all_status():
+            k = st.get("composite_key") or st.get("channel_id")
+            norm_k, _, _ = _normalize_stat_key(k, st.get("platform"))
+            registered_channels[norm_k] = st
+
     # 채널별 집계
     channel_live: dict[str, dict] = {}
     for entry in live_history:
-        cid = entry.get("channel_id", "unknown")
-        if cid not in channel_live:
-            channel_live[cid] = {
-                "channel_id": cid,
-                "channel_name": entry.get("channel_name", cid),
+        entry_key = entry.get("composite_key") or entry.get("channel_id", "unknown")
+        norm_key, plat, clean_cid = _normalize_stat_key(entry_key, entry.get("platform"))
+        reg_info = registered_channels.get(norm_key) or {}
+        ch_name = entry.get("channel_name") or reg_info.get("channel_name") or clean_cid
+        if ch_name.startswith(f"{plat}:"):
+            ch_name = reg_info.get("channel_name") or clean_cid
+
+        if norm_key not in channel_live:
+            channel_live[norm_key] = {
+                "channel_id": clean_cid,
+                "composite_key": norm_key,
+                "platform": plat,
+                "channel_name": ch_name,
                 "session_count": 0,
                 "total_duration_seconds": 0,
                 "total_size_bytes": 0,
+                "live_detected_count": 0,
             }
-        channel_live[cid]["session_count"] += 1
-        channel_live[cid]["total_duration_seconds"] += entry.get("duration_seconds", 0)
-        channel_live[cid]["total_size_bytes"] += entry.get("file_size_bytes", 0)
+        elif channel_live[norm_key]["channel_name"] == clean_cid and ch_name != clean_cid:
+            channel_live[norm_key]["channel_name"] = ch_name
+
+        channel_live[norm_key]["session_count"] += 1
+        channel_live[norm_key]["total_duration_seconds"] += entry.get("duration_seconds", 0)
+        channel_live[norm_key]["total_size_bytes"] += entry.get("file_size_bytes", 0)
 
     # 라이브 감지 횟수 (최근 30일, 하루 1회) 병합
     live_detections: dict[str, int] = {}
     if conductor is not None:
         live_detections = conductor.get_live_detections()
 
-    for cid, ch in channel_live.items():
-        ch["live_detected_count"] = live_detections.get(cid, 0)
-
-    # 라이브 채널 목록에 없지만 감지 기록이 있는 채널도 포함
-    for cid, count in live_detections.items():
-        if cid not in channel_live:
-            channel_live[cid] = {
-                "channel_id": cid,
-                "channel_name": cid,
+    for raw_k, count in live_detections.items():
+        norm_key, plat, clean_cid = _normalize_stat_key(raw_k)
+        reg_info = registered_channels.get(norm_key) or {}
+        ch_name = reg_info.get("channel_name") or clean_cid
+        if norm_key not in channel_live:
+            channel_live[norm_key] = {
+                "channel_id": clean_cid,
+                "composite_key": norm_key,
+                "platform": plat,
+                "channel_name": ch_name,
                 "session_count": 0,
                 "total_duration_seconds": 0,
                 "total_size_bytes": 0,
                 "live_detected_count": count,
             }
+        else:
+            channel_live[norm_key]["live_detected_count"] += count
+            if channel_live[norm_key]["channel_name"] == clean_cid and ch_name != clean_cid:
+                channel_live[norm_key]["channel_name"] = ch_name
 
     # 세션 수 기준 내림차순 정렬
     by_channel = sorted(
