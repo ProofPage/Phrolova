@@ -30,18 +30,29 @@ export function parsePlatformChannelInput(platform: Platform, value: string): st
     if (platform === 'kick') return parseKickChannelInput(text);
     if (platform === 'chzzk') return parseChzzkChannelInput(text);
     if (platform === 'youtube') {
-        if (!text) return null;
-        if (text.startsWith('@') && !text.startsWith('@http')) return text;
-        if (/^UC[A-Za-z0-9_-]{22}$/.test(text)) return text;
+        let val = text.trim();
+        if (!val) return null;
+        if (val.startsWith('@http')) val = val.slice(1);
+        if (val.startsWith('@') && !val.startsWith('@http')) return val;
+        if (/^UC[A-Za-z0-9_-]{22}$/.test(val)) return val;
+        if (/^[A-Za-z0-9_-]{11}$/.test(val)) return val;
         try {
-            const url = new URL(text.startsWith('http') ? text : `https://${text}`);
-            if (!['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be'].includes(url.hostname)) return text;
+            const url = new URL(val.startsWith('http') ? val : `https://${val}`);
+            if (!['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be'].includes(url.hostname)) return val;
             const handle = url.pathname.match(/^\/@([A-Za-z0-9_.-]+)(?:\/live)?\/?$/);
             if (handle) return `@${handle[1]}`;
             const channel = url.pathname.match(/^\/channel\/(UC[A-Za-z0-9_-]{22})(?:\/live)?\/?$/);
             if (channel) return channel[1];
-            return text;
-        } catch { return text; }
+            const liveVid = url.pathname.match(/^\/live\/([A-Za-z0-9_-]{11})\/?$/);
+            if (liveVid) return liveVid[1];
+            const watchVid = url.searchParams.get('v');
+            if (watchVid && /^[A-Za-z0-9_-]{11}$/.test(watchVid)) return watchVid;
+            if (url.hostname === 'youtu.be') {
+                const shortVid = url.pathname.slice(1).split('/')[0];
+                if (/^[A-Za-z0-9_-]{11}$/.test(shortVid)) return shortVid;
+            }
+            return val;
+        } catch { return val; }
     }
     if (platform !== 'cime') return text || null;
     const validId = (id: string) => /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,99}$/.test(id) ? id : null;

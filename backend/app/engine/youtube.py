@@ -31,7 +31,9 @@ class YoutubeLiveEngine:
         raw = channel_id.strip()
         if raw.startswith("@http"):
             raw = raw[1:]
-        if "://" in raw or "youtube.com" in raw or "youtu.be" in raw:
+        if re.fullmatch(r"[A-Za-z0-9_-]{11}", raw):
+            url = f"https://www.youtube.com/watch?v={raw}"
+        elif "://" in raw or "youtube.com" in raw or "youtu.be" in raw:
             url = raw if "://" in raw else f"https://{raw}"
         elif raw.startswith("UC"):
             url = f"https://www.youtube.com/channel/{raw}/live"
@@ -258,6 +260,8 @@ class YoutubeLiveEngine:
         raw = channel_id.strip()
         if raw.startswith("@http"):
             raw = raw[1:]
+        if re.fullmatch(r"[A-Za-z0-9_-]{11}", raw):
+            return f"https://www.youtube.com/watch?v={raw}"
         if "://" in raw or "youtube.com" in raw or "youtu.be" in raw:
             return raw if "://" in raw else f"https://{raw}"
         if raw.startswith("UC"):

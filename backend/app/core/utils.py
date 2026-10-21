@@ -51,6 +51,9 @@ def extract_youtube_id(value: str) -> str:
     """유튜브 URL 또는 순수 채널 ID/핸들에서 고유 식별자만 추출한다.
 
     지원 형식:
+        - https://www.youtube.com/live/VIDEO_ID
+        - https://www.youtube.com/watch?v=VIDEO_ID
+        - https://youtu.be/VIDEO_ID
         - https://www.youtube.com/@username
         - https://www.youtube.com/@username/live
         - https://www.youtube.com/channel/UC-9-kyTE8y5JhEl5xWd-R4A
@@ -58,6 +61,8 @@ def extract_youtube_id(value: str) -> str:
         - UC-9-kyTE8y5JhEl5xWd-R4A
     """
     value = value.strip().rstrip("/")
+    if value.startswith("@http"):
+        value = value[1:]
     
     # 1) channel/UC... 형식 주소 파싱
     if "youtube.com/channel/" in value:
@@ -67,10 +72,31 @@ def extract_youtube_id(value: str) -> str:
     elif "youtube.com/@" in value:
         path = value.split("youtube.com/@", 1)[1]
         value = "@" + path.split("/")[0].split("?")[0]
+    # 3) youtube.com/live/VIDEO_ID 형식 주소 파싱
+    elif "youtube.com/live/" in value:
+        path = value.split("youtube.com/live/", 1)[1]
+        value = path.split("/")[0].split("?")[0]
+    # 4) youtu.be/VIDEO_ID 형식 주소 파싱
+    elif "youtu.be/" in value:
+        path = value.split("youtu.be/", 1)[1]
+        value = path.split("/")[0].split("?")[0]
+    # 5) youtube.com/watch?v=VIDEO_ID 형식 주소 파싱
+    elif "youtube.com/watch" in value and "v=" in value:
+        from urllib.parse import parse_qs, urlparse
+        parsed = urlparse(value)
+        qs = parse_qs(parsed.query)
+        if "v" in qs and qs["v"]:
+            value = qs["v"][0]
     # 3) @username 핸들이나 UC... 채널 ID가 직접 들어온 경우
     elif value.startswith("@"):
         pass
     elif value.startswith("UC") and len(value) == 24:
+        pass
+    # 11자리 비디오 ID가 직접 들어온 경우
+    elif re.fullmatch(r"[A-Za-z0-9_-]{11}", value):
+        pass
+    # 이미 URL인 경우 @를 붙이지 않는다
+    elif "://" in value:
         pass
     # @가 없는데 일반 핸들 이름으로 추정되는 경우 자동으로 @ 붙여주기
     elif not value.startswith("UC"):

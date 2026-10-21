@@ -54,14 +54,22 @@ class DashReader:
         self.stream = SimpleNamespace()
 
     def head(self):
-        with self.session.head(self.url, timeout=5, allow_redirects=False) as response:
-            response.raise_for_status()
-            if response.is_redirect:
-                raise RecordingError("invalid_stream", "유튜브 CDN 주소가 변경되었습니다.")
-            value = response.headers.get("X-Head-Seqnum")
-            if value is None or not value.isdecimal():
-                raise RecordingError("invalid_stream", "DASH 라이브 위치를 확인하지 못했습니다.")
-            return int(value)
+        target = self.url
+        for _ in range(3):
+            with self.session.head(target, timeout=5, allow_redirects=False) as response:
+                if response.is_redirect:
+                    loc = response.headers.get("location")
+                    if loc:
+                        target = media_url(loc)
+                        self.url = target
+                        continue
+                    raise RecordingError("invalid_stream", "유튜브 CDN 주소가 변경되었습니다.")
+                response.raise_for_status()
+                value = response.headers.get("X-Head-Seqnum")
+                if value is None or not value.isdecimal():
+                    raise RecordingError("invalid_stream", "DASH 라이브 위치를 확인하지 못했습니다.")
+                return int(value)
+        raise RecordingError("invalid_stream", "유튜브 CDN 리디렉션 횟수를 초과했습니다.")
 
     def read(self, size):
         if not self.buffer and self.pending_sequence is not None:
@@ -81,16 +89,24 @@ class DashReader:
             # Download a complete fragment before exposing any of it to the writer.
             chunks = []
             total = 0
-            with self.session.get(sequence_url(self.url, self.next_sequence),
-                                  timeout=5, stream=True, allow_redirects=False) as response:
-                response.raise_for_status()
-                if response.is_redirect:
-                    raise RecordingError("invalid_stream", "유튜브 CDN 주소가 변경되었습니다.")
-                for chunk in response.iter_content(128 * 1024):
-                    total += len(chunk)
-                    if total > self.MAX_FRAGMENT_BYTES:
-                        raise RecordingError("invalid_stream", "DASH 구간 크기가 허용 범위를 초과했습니다.")
-                    chunks.append(chunk)
+            cur_url = sequence_url(self.url, self.next_sequence)
+            for _ in range(3):
+                with self.session.get(cur_url,
+                                      timeout=5, stream=True, allow_redirects=False) as response:
+                    if response.is_redirect:
+                        loc = response.headers.get("location")
+                        if loc:
+                            self.url = media_url(loc)
+                            cur_url = sequence_url(self.url, self.next_sequence)
+                            continue
+                        raise RecordingError("invalid_stream", "유튜브 CDN 주소가 변경되었습니다.")
+                    response.raise_for_status()
+                    for chunk in response.iter_content(128 * 1024):
+                        total += len(chunk)
+                        if total > self.MAX_FRAGMENT_BYTES:
+                            raise RecordingError("invalid_stream", "DASH 구간 크기가 허용 범위를 초과했습니다.")
+                        chunks.append(chunk)
+                    break
             if not total:
                 raise RuntimeError("YouTube DASH returned an empty segment")
             self.buffer = b"".join(chunks)

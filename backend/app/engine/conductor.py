@@ -554,9 +554,20 @@ class Conductor:
                     "지원하지 않는 플랫폼의 저장 채널을 감시 목록에서 제외합니다."
                 )
                 continue
-            composite_key = self.make_composite_key(platform, record["channel_id"])
+            channel_id = record["channel_id"]
+            if platform == Platform.YOUTUBE and channel_id.startswith("@http"):
+                from app.core.utils import extract_youtube_id
+                clean_id = extract_youtube_id(channel_id)
+                if clean_id != channel_id:
+                    old_key = self.make_composite_key(platform, channel_id)
+                    channel_id = clean_id
+                    try:
+                        self.finalizer.db.execute("DELETE FROM channels WHERE composite_key=?", (old_key,))
+                    except Exception:
+                        pass
+            composite_key = self.make_composite_key(platform, channel_id)
             task = ChannelTask(
-                channel_id=record["channel_id"],
+                channel_id=channel_id,
                 platform=platform,
                 auto_record=record["auto_record"],
                 tags=list(record["tags"]),
