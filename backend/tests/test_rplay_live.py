@@ -63,6 +63,31 @@ def test_live_url_roundtrip(value):
     assert rp.RplayLiveEngine().get_stream_url(value) == PAGE
 
 
+def test_handle_url_resolution(monkeypatch):
+    rp._HANDLE_CACHE.clear()
+    class MockResponse:
+        def __init__(self, status_code, text):
+            self.status_code = status_code
+            self.text = text
+    def mock_get(url, **kwargs):
+        if '/c/hitsu' in url:
+            return MockResponse(200, '<meta property="og:image" content="https://pb3.rplay.live/profilePhoto/68c13a59130df63bab93c23c-small?t=1">')
+        if '/c/seldea' in url:
+            return MockResponse(200, '<script type="application/ld+json">{"image":"https://pb3.rplay.live/profilePhoto/64d483add2c96306099ef734-small"}</script>')
+        return MockResponse(404, 'Not Found')
+
+    monkeypatch.setattr('httpx.Client.get', lambda self, url, **kwargs: mock_get(url, **kwargs))
+
+    assert rp.normalize_rplay_channel_id('https://rplay.live/c/hitsu') == '68c13a59130df63bab93c23c'
+    assert rp.normalize_rplay_channel_id('https://rplay.live/c/seldea?page=creator-home#main') == '64d483add2c96306099ef734'
+    # Cached lookup works without client.get
+    monkeypatch.setattr('httpx.Client.get', lambda self, url, **kwargs: MockResponse(500, 'Error'))
+    assert rp.normalize_rplay_channel_id('https://rplay.live/c/hitsu') == '68c13a59130df63bab93c23c'
+
+    with pytest.raises(ValueError, match='알플레이 크리에이터 또는 채널을 찾을 수 없습니다'):
+        rp.normalize_rplay_channel_id('https://rplay.live/c/unknown_handle')
+
+
 @pytest.mark.parametrize('value', [PAGE + '/extra', PAGE.replace('/live/', '/play/'), PAGE.replace('.live/', '.live.evil/'),
     PAGE.replace('rplay.live', 'u:p@rplay.live'), PAGE.replace('.live/', '.live:8443/'), CID[:-1], CID + '\nX', ''])
 def test_bad_live_url(value):

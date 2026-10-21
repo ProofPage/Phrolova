@@ -4,7 +4,7 @@
 
 Phrolova is a self-hosted live-stream recorder and video downloader with a browser dashboard. Monitor channels, preview broadcasts, queue videos and inspect your saved media. Use the packaged Windows app or install from source on Linux, macOS or Android with Termux.
 
-[Download for Windows](https://github.com/ProofPage/Phrolova/releases/latest) · [Quick start](#quick-start) · [v2.1.9 release notes](docs/release-notes/v2.1.9.md) · [Changelog](docs/CHANGELOG.md)
+[Download for Windows](https://github.com/ProofPage/Phrolova/releases/latest) · [Quick start](#quick-start) · [v2.2.0 release notes](docs/release-notes/v2.2.0.md) · [Changelog](docs/CHANGELOG.md)
 
 **Local-first, not a public web service:** the dashboard/API has no built-in login. Keep the default `127.0.0.1:8000` binding; never expose it publicly without access protection.
 

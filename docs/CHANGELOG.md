@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-21
+
+### Added
+- **알플레이 (RPLAY) 크리에이터 커스텀 링크 지원**: 라이브 채널 추가 시 `https://rplay.live/c/<handle>` (예: hitsu, tsuki, seldea 등) 및 쿼리 파라미터가 포함된 주소를 입력하면 크리에이터의 24자리 고유 OID를 자동 해석 및 캐싱하여 정상 등록되도록 개선.
+
 ## [2.1.9] - 2026-10-21
 
 ### Added
@@ -1426,7 +1431,8 @@
 
 ---
 
-[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.1.9...HEAD
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/ProofPage/Phrolova/compare/v2.1.9...v2.2.0
 [2.1.9]: https://github.com/ProofPage/Phrolova/compare/v2.1.8...v2.1.9
 [2.1.8]: https://github.com/ProofPage/Phrolova/compare/v2.1.7...v2.1.8
 [2.1.7]: https://github.com/ProofPage/Phrolova/compare/v2.1.6...v2.1.7

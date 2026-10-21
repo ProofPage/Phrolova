@@ -23,24 +23,49 @@ if not any(isinstance(f, SafeMediaLogFilter) for f in _http_logger.filters):
     _http_logger.addFilter(SafeMediaLogFilter())
 
 API = 'https://api.rplay.live/live'
+_HANDLE_CACHE: dict[str, str] = {}
+
+
+def _resolve_handle_creator_id(handle: str) -> str:
+    handle_clean = handle.strip().lower()
+    if handle_clean in _HANDLE_CACHE:
+        return _HANDLE_CACHE[handle_clean]
+    try:
+        url = f'{ORIGIN}/c/{handle.strip()}'
+        with httpx.Client(timeout=8, follow_redirects=True) as client:
+            response = client.get(url, headers={'User-Agent': USER_AGENT, 'Referer': ORIGIN + '/'})
+        if response.status_code != 200:
+            raise ValueError
+        match = re.search(r'profilePhoto/([a-fA-F0-9]{24})', response.text)
+        if not match:
+            raise ValueError
+        cid = match.group(1).lower()
+        _HANDLE_CACHE[handle_clean] = cid
+        return cid
+    except Exception:
+        raise ValueError('알플레이 크리에이터 또는 채널을 찾을 수 없습니다.') from None
 
 
 def normalize_rplay_channel_id(value: str) -> str:
-    try:
-        raw = value.strip()
-        if '://' in raw:
-            parts = urlsplit(raw)
-            match = re.fullmatch(r'/live/([a-fA-F0-9]{24})/?', parts.path)
-            if (parts.scheme not in ('http', 'https') or parts.hostname not in HOSTS
-                    or parts.username is not None or parts.password is not None
-                    or parts.port not in (None, 443 if parts.scheme == 'https' else 80) or not match):
-                raise ValueError
+    raw = value.strip()
+    if '://' in raw:
+        parts = urlsplit(raw)
+        if (parts.scheme not in ('http', 'https') or parts.hostname not in HOSTS
+                or parts.username is not None or parts.password is not None
+                or parts.port not in (None, 443 if parts.scheme == 'https' else 80)):
+            raise ValueError('올바른 알플레이 채널 ID 또는 라이브 링크를 입력하세요.')
+        match = re.fullmatch(r'/live/([a-fA-F0-9]{24})/?', parts.path)
+        if match:
             raw = match[1]
-        if not re.fullmatch(r'[a-fA-F0-9]{24}', raw):
-            raise ValueError
-        return raw.lower()
-    except (ValueError, AttributeError):
-        raise ValueError('올바른 알플레이 채널 ID 또는 라이브 링크를 입력하세요.') from None
+        else:
+            handle_match = re.fullmatch(r'/c/([^/?#]+)/?', parts.path)
+            if handle_match:
+                raw = _resolve_handle_creator_id(handle_match[1])
+            else:
+                raise ValueError('올바른 알플레이 채널 ID 또는 라이브 링크를 입력하세요.')
+    if not re.fullmatch(r'[a-fA-F0-9]{24}', raw):
+        raise ValueError('올바른 알플레이 채널 ID 또는 라이브 링크를 입력하세요.')
+    return raw.lower()
 
 
 def media_allowed(value):
