@@ -87,6 +87,10 @@ def extract_youtube_id(value: str) -> str:
         qs = parse_qs(parsed.query)
         if "v" in qs and qs["v"]:
             value = qs["v"][0]
+    # 6) youtube.com/shorts/VIDEO_ID 형식 주소 파싱
+    elif "youtube.com/shorts/" in value:
+        path = value.split("youtube.com/shorts/", 1)[1]
+        value = path.split("/")[0].split("?")[0]
     # 3) @username 핸들이나 UC... 채널 ID가 직접 들어온 경우
     elif value.startswith("@"):
         pass

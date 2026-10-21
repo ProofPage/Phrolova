@@ -45,6 +45,8 @@ export function parsePlatformChannelInput(platform: Platform, value: string): st
             if (channel) return channel[1];
             const liveVid = url.pathname.match(/^\/live\/([A-Za-z0-9_-]{11})\/?$/);
             if (liveVid) return liveVid[1];
+            const shortsVid = url.pathname.match(/^\/shorts\/([A-Za-z0-9_-]{11})\/?$/);
+            if (shortsVid) return shortsVid[1];
             const watchVid = url.searchParams.get('v');
             if (watchVid && /^[A-Za-z0-9_-]{11}$/.test(watchVid)) return watchVid;
             if (url.hostname === 'youtu.be') {

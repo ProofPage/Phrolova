@@ -8,6 +8,9 @@ def test_extract_youtube_id_variants():
     assert extract_youtube_id("https://www.youtube.com/watch?v=BQJSlMSIrPk") == "BQJSlMSIrPk"
     # 3) youtu.be 형식
     assert extract_youtube_id("https://youtu.be/BQJSlMSIrPk") == "BQJSlMSIrPk"
+    # 3-1) shorts 형식
+    assert extract_youtube_id("https://www.youtube.com/shorts/BQJSlMSIrPk") == "BQJSlMSIrPk"
+    assert extract_youtube_id("https://www.youtube.com/shorts/BQJSlMSIrPk?feature=share") == "BQJSlMSIrPk"
     # 4) @username 형식
     assert extract_youtube_id("https://www.youtube.com/@malwangtv") == "@malwangtv"
     assert extract_youtube_id("@malwangtv") == "@malwangtv"

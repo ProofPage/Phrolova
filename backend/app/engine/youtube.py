@@ -72,6 +72,11 @@ class YoutubeLiveEngine:
                 is_live = (
                     details.get("isLive") is True or live.get("isLiveNow") is True
                 ) and player.get("playabilityStatus", {}).get("status") == "OK"
+
+                # 등록된 채널 ID(UC...)가 있는데 추천 피드의 다른 채널 영상이 잡힌 경우 방어
+                found_cid = details.get("channelId")
+                if is_live and raw.startswith("UC") and len(raw) == 24 and found_cid and found_cid != raw:
+                    is_live = False
         except httpx.RequestError as e:
             logger.error(f"[YouTube:{channel_id}] HTML 스크래핑 요청 실패: {e}")
 
@@ -238,6 +243,9 @@ class YoutubeLiveEngine:
                 "video unavailable", "this video is private", "private video",
                 "live stream recording is not available", "removed by the uploader",
                 "this video has been removed", "is not a live stream", "video is unavailable",
+                "the channel is not currently live", "does not have a live stream",
+                "not currently live", "this live event will begin", "premieres in",
+                "is offline", "offline",
                 "비공개", "사용할 수 없는", "삭제된"
             )):
                 self._metadata_errors.pop(url, None)
