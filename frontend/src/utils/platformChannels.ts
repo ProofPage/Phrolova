@@ -16,7 +16,10 @@ export function parsePlatformChannelInput(platform: Platform, value: string): st
             const url = new URL(text);
             if (!['https:', 'http:'].includes(url.protocol) || !['rplay.live','www.rplay.live'].includes(url.hostname) || url.username || url.password || url.port) return null;
             const match = url.pathname.match(/^\/live\/([a-fA-F0-9]{24})\/?$/);
-            return match ? match[1].toLowerCase() : null;
+            if (match) return match[1].toLowerCase();
+            const handleMatch = url.pathname.match(/^\/c\/([^/?#]+)\/?$/);
+            if (handleMatch) return text;
+            return null;
         } catch { return null; }
     }
     if (platform === 'popkontv') return parsePopkonTVChannelInput(text);

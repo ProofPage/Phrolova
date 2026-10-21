@@ -157,8 +157,8 @@ export function AddChannelForm({ platformStatus, onAdded }: Props) {
                     <Button type="submit" variant="primary" icon={Plus} loading={loading} disabled={!channelId.trim()} aria-label={translate("live.openChannelSetup")} title={translate("live.openChannelSetup")} className="shrink-0 px-3 sm:px-4">
                 {translate("live.addChannel")}</Button>
             </div>
-            {inputError && <p id={`${inputId}-error`} role="alert" className="text-xs text-danger">{t(inputError)}</p>}
             </div>
+            {inputError && <p id={`${inputId}-error`} role="alert" className="text-xs text-danger font-medium mt-1">{t(inputError)}</p>}
             <p className="text-[11px] text-ink-faint leading-relaxed">{translate("live.afterAddingAChannelChooseAutomaticRecordingAndItsConditions")}</p>
         </form>
         {settingsOpen && <ChannelDownloadModal platform={selectedPlatform} name={normalizedChannelId || channelId.trim()} channelId={normalizedChannelId || channelId.trim()} onClose={() => setSettingsOpen(false)} onSave={handleAdd} />}
