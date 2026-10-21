@@ -69,6 +69,27 @@ def test_creatorhome_url_resolution():
     assert rp.normalize_rplay_channel_id(url) == '693fc709f840d0aa766127c1'
 
 
+def test_rplay_qualities_api_with_encoded_url(monkeypatch):
+    from unittest.mock import Mock, AsyncMock
+    from fastapi.testclient import TestClient
+    from app.main import app
+    import urllib.parse
+
+    mock_service = Mock()
+    mock_engine = Mock()
+    mock_engine.check_live_status = AsyncMock(return_value={'is_live': False})
+    mock_service._conductor._get_engine.return_value = mock_engine
+    monkeypatch.setattr('app.main.get_recorder_service', lambda: mock_service)
+
+    url = 'https://rplay.live/creatorhome/693fc709f840d0aa766127c1?page=contents'
+    encoded = urllib.parse.quote(url, safe='')
+    client = TestClient(app)
+    res = client.get(f'/api/platforms/rplay/{encoded}/qualities')
+    assert res.status_code == 200
+    assert 'qualities' in res.json()
+    mock_engine.check_live_status.assert_awaited_once_with('693fc709f840d0aa766127c1')
+
+
 def test_handle_url_resolution(monkeypatch):
     rp._HANDLE_CACHE.clear()
     class MockResponse:

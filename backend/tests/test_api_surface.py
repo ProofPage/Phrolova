@@ -32,7 +32,7 @@ EXPECTED_API_ROUTES = {
     ('GET','/api/recordings/settings'),('PUT','/api/recordings/settings'),('GET','/api/recordings/jobs'),
     ('POST','/api/recordings/{job_id}/retry'),('POST','/api/recordings/{job_id}/inspect'),
     ('GET','/api/recordings/{job_id}/file'),('POST','/api/recordings/{job_id}/open-location'),
-    ('GET', '/api/platforms/{platform}/{channel_id}/qualities'),
+    ('GET', '/api/platforms/{platform}/{channel_id:path}/qualities'),
     ('GET', '/api/platforms/{platform}/cookie'),
     ('POST', '/api/platforms/{platform}/login'),
     ('POST', '/api/platforms/{platform}/cookie'),

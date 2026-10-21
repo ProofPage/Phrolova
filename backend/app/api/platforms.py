@@ -421,11 +421,21 @@ async def delete_chzzk_cookie():
         raise HTTPException(500, "인증 설정을 저장하지 못했습니다. 저장 위치의 권한과 여유 공간을 확인하세요.") from None
     return await chzzk_cookie_status()
 
-@router.get('/{platform}/{channel_id}/qualities', summary='현재 라이브 화질 조회')
+@router.get('/{platform}/{channel_id:path}/qualities', summary='현재 라이브 화질 조회')
 async def platform_qualities(platform: str, channel_id: str):
+    from urllib.parse import unquote
     from app.main import get_recorder_service
     if platform not in ('cime', 'kick', 'twitch', 'tiktok', 'bilibili', 'pandalive', 'popkontv', 'rplay'):
         raise HTTPException(400, '지원하지 않는 플랫폼입니다.')
+    channel_id = unquote(channel_id).strip()
+    if not channel_id:
+        raise HTTPException(400, '채널 ID를 입력하세요.')
+    if platform == 'rplay':
+        from app.engine.rplay_live import normalize_rplay_channel_id
+        try:
+            channel_id = await asyncio.to_thread(normalize_rplay_channel_id, channel_id)
+        except ValueError as err:
+            return {'qualities': [], 'live': False, 'message': str(err)}
     try:
         engine = get_recorder_service()._conductor._get_engine(Platform(platform))
         status = await engine.check_live_status(channel_id)
