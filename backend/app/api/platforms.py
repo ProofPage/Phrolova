@@ -8,6 +8,7 @@ Phrolova: Platforms API Router
 
 from __future__ import annotations
 
+import asyncio
 from typing import Optional
 
 from pathlib import Path
@@ -69,7 +70,7 @@ async def add_platform_channel(req: AddPlatformChannelRequest):
     elif platform == Platform.RPLAY:
         from app.engine.rplay_live import normalize_rplay_channel_id
         try:
-            channel_id = normalize_rplay_channel_id(channel_id)
+            channel_id = await asyncio.to_thread(normalize_rplay_channel_id, channel_id)
         except ValueError as error:
             raise HTTPException(400, str(error)) from None
     elif platform == Platform.POPKONTV:

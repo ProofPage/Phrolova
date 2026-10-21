@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import type { Channel } from "../api/client";
 import { getChannelKey } from "../utils/channel";
+import { sortChannels, type ChannelSortMode } from "../utils/channelSort";
 
 const STORAGE_KEY = "dashboardChannelOrder";
+const SORT_MODE_STORAGE_KEY = "dashboardChannelSortMode";
 
 /** 채널 카드·행에 그대로 펼쳐 넣는 재정렬 props. 훅과 컴포넌트가 이 타입 하나를 공유한다. */
 export interface ReorderProps {
     canMoveUp: boolean;
     canMoveDown: boolean;
+    manualOrder: boolean;
     onMoveChannel: (direction: number) => void;
     isDragging: boolean;
     isDropTarget: boolean;
@@ -32,22 +35,45 @@ function writeStoredOrder(order: string[]): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
 }
 
+function readStoredSortMode(): ChannelSortMode {
+    try {
+        const value = localStorage.getItem(SORT_MODE_STORAGE_KEY);
+        if (value === "name" || value === "manual" || value === "live-first-name") {
+            return value;
+        }
+    } catch {
+        /* ignore */
+    }
+    return "live-first-name";
+}
+
+function writeStoredSortMode(mode: ChannelSortMode): void {
+    try {
+        localStorage.setItem(SORT_MODE_STORAGE_KEY, mode);
+    } catch {
+        /* ignore */
+    }
+}
+
 /**
  * 대시보드 채널의 표시 순서를 관리한다.
  *
- * 순서는 서버가 아니라 이 브라우저에만 남는다. 감시 목록은 여러 기기에서 공유되지만
- * "내가 먼저 보고 싶은 채널"은 보는 사람마다 다르기 때문이다.
- *
- * 포인터 이벤트와 마우스 이벤트를 둘 다 받는다. 포인터 캡처가 걸리지 않는 환경에서도
- * 드래그가 끝까지 따라오게 하려는 것이고, 그립에 방향키를 눌러도 옮길 수 있어
- * 마우스를 못 쓰는 경우에도 순서를 바꿀 수 있다.
+ * 기본 모드는 라이브 우선 · 이름순('live-first-name')이며,
+ * 라이브가 켜진 채널이 상단에 이름순으로 먼저 배치되고 오프라인 채널도 이름순으로 정렬된다.
+ * 수동 정렬 모드('manual')에서는 사용자가 드래그 또는 버튼으로 직접 지정한 순서가 적용된다.
  */
 export function useChannelReorder(channels: Channel[]) {
     const [order, setOrder] = useState<string[]>(readStoredOrder);
+    const [sortMode, setSortModeState] = useState<ChannelSortMode>(readStoredSortMode);
     const [draggedKey, setDraggedKey] = useState<string | null>(null);
     const [dropTargetKey, setDropTargetKey] = useState<string | null>(null);
     const dragSourceRef = useRef<string | null>(null);
     const dropTargetRef = useRef<string | null>(null);
+
+    const setSortMode = (mode: ChannelSortMode) => {
+        setSortModeState(mode);
+        writeStoredSortMode(mode);
+    };
 
     useEffect(() => {
         // 초기 스트림 연결 전의 빈 배열로 저장된 사용자 순서를 지우지 않는다.
@@ -87,6 +113,7 @@ export function useChannelReorder(channels: Channel[]) {
     // 드래그 중에는 렌더보다 이벤트가 훨씬 자주 온다. 최신 값은 ref로 읽고,
     // 실제로 대상이 바뀔 때만 state를 건드려 불필요한 렌더를 막는다.
     const updateDropTarget = (clientX: number, clientY: number) => {
+        if (sortMode !== "manual") return;
         const sourceKey = dragSourceRef.current;
         if (!sourceKey) return;
         const hovered = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>("[data-channel-key]");
@@ -98,13 +125,16 @@ export function useChannelReorder(channels: Channel[]) {
     };
 
     const finishDrag = () => {
-        const sourceKey = dragSourceRef.current;
-        const targetKey = dropTargetRef.current;
-        if (sourceKey && targetKey) moveChannel(sourceKey, targetKey);
+        if (sortMode === "manual") {
+            const sourceKey = dragSourceRef.current;
+            const targetKey = dropTargetRef.current;
+            if (sourceKey && targetKey) moveChannel(sourceKey, targetKey);
+        }
         clearDragState();
     };
 
     const handlePointerDown = (event: PointerEvent<HTMLElement>, channelKey: string) => {
+        if (sortMode !== "manual") return;
         if (event.button !== 0) return;
         event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -115,7 +145,7 @@ export function useChannelReorder(channels: Channel[]) {
     };
 
     const handlePointerMove = (event: PointerEvent<HTMLElement>) => {
-        if (!dragSourceRef.current) return;
+        if (sortMode !== "manual" || !dragSourceRef.current) return;
         event.preventDefault();
         updateDropTarget(event.clientX, event.clientY);
     };
@@ -128,12 +158,13 @@ export function useChannelReorder(channels: Channel[]) {
     };
 
     const handleMouseMove = (event: MouseEvent<HTMLElement>) => {
-        if (!dragSourceRef.current) return;
+        if (sortMode !== "manual" || !dragSourceRef.current) return;
         event.preventDefault();
         updateDropTarget(event.clientX, event.clientY);
     };
 
     const moveBy = (channelKey: string, direction: number, visibleKeys?: string[]) => {
+        if (sortMode !== "manual") return;
         setOrder((previous) => {
             const currentIndex = previous.indexOf(channelKey);
             // 숨긴 채널의 위치는 유지하고 현재 보이는 이웃끼리만 교환한다.
@@ -150,6 +181,7 @@ export function useChannelReorder(channels: Channel[]) {
     };
 
     const handleKeyDown = (event: KeyboardEvent<HTMLElement>, channelKey: string, visibleKeys?: string[]) => {
+        if (sortMode !== "manual") return;
         const direction = event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1
             : event.key === "ArrowRight" || event.key === "ArrowDown" ? 1
             : 0;
@@ -158,16 +190,14 @@ export function useChannelReorder(channels: Channel[]) {
         moveBy(channelKey, direction, visibleKeys);
     };
 
-    // 저장된 순서에 없는 채널(방금 추가된 것)은 뒤로 보낸다.
     const orderIndex = new Map(order.map((key, index) => [key, index]));
-    const orderedChannels = [...channels].sort((left, right) => (
-        (orderIndex.get(getChannelKey(left)) ?? Number.MAX_SAFE_INTEGER)
-        - (orderIndex.get(getChannelKey(right)) ?? Number.MAX_SAFE_INTEGER)
-    ));
+    const orderedChannels = sortChannels(channels, sortMode, orderIndex);
 
+    const isManual = sortMode === "manual";
     const getReorderProps = (channelKey: string, visibleKeys = orderedChannels.map(getChannelKey)): ReorderProps => ({
-        canMoveUp: visibleKeys.indexOf(channelKey) > 0,
-        canMoveDown: visibleKeys.indexOf(channelKey) >= 0 && visibleKeys.indexOf(channelKey) < visibleKeys.length - 1,
+        canMoveUp: isManual && visibleKeys.indexOf(channelKey) > 0,
+        canMoveDown: isManual && visibleKeys.indexOf(channelKey) >= 0 && visibleKeys.indexOf(channelKey) < visibleKeys.length - 1,
+        manualOrder: isManual,
         onMoveChannel: (direction) => moveBy(channelKey, direction, visibleKeys),
         isDragging: draggedKey === channelKey,
         isDropTarget: dropTargetKey === channelKey,
@@ -179,5 +209,5 @@ export function useChannelReorder(channels: Channel[]) {
         onReorderKeyDown: (event) => handleKeyDown(event, channelKey, visibleKeys),
     });
 
-    return { orderedChannels, getReorderProps };
+    return { orderedChannels, sortMode, setSortMode, getReorderProps };
 }

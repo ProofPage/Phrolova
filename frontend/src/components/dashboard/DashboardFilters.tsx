@@ -1,8 +1,9 @@
 import { ChevronDown, LayoutGrid, List, RefreshCw, SlidersHorizontal, Square } from "lucide-react";
 import type { ReactNode } from "react";
 import { TagManager } from "../ui/TagManager";
-import { Button } from "../ui/primitives";
+import { Button, Select } from "../ui/primitives";
 import { useLanguage } from "../../contexts/LanguageContext";
+import type { ChannelSortMode } from "../../utils/channelSort";
 
 export type StatusFilter = "all" | "recording" | "live" | "offline";
 export type ViewMode = "grid" | "list";
@@ -18,6 +19,8 @@ interface Props {
     children?: ReactNode;
     filter: StatusFilter;
     onFilterChange: (filter: StatusFilter) => void;
+    sortMode: ChannelSortMode;
+    onSortModeChange: (mode: ChannelSortMode) => void;
     globalTags: string[];
     selectedTags: string[];
     onSelectedTagsChange: (tags: string[]) => void;
@@ -37,6 +40,8 @@ export function DashboardFilters({
     children,
     filter,
     onFilterChange,
+    sortMode,
+    onSortModeChange,
     globalTags,
     selectedTags,
     onSelectedTagsChange,
@@ -77,6 +82,17 @@ export function DashboardFilters({
                 <div className="dashboard-toolbar-actions">
                     <Button icon={RefreshCw} onClick={onScanNow} title={t("live.checkTheLiveStatusOfRegisteredChannelsAgain")} aria-label={t("live.checkLiveStatus")} className="dashboard-scan px-3 py-2 whitespace-nowrap shrink-0"><span>{t("live.checkLiveStatus")}</span></Button>
                     <Button variant="danger" icon={Square} onClick={onStopAll} disabled={recordingCount === 0} aria-label={t("live.stopAllRecordings")} className="px-3 py-2 whitespace-nowrap shrink-0"><span className="hidden sm:inline">{t("live.stopAllRecordings")}</span><span className="sm:hidden">{t("live.stopAll")}</span></Button>
+                    <Select
+                        aria-label={t("live.sortOrder")}
+                        value={sortMode}
+                        onChange={(e) => onSortModeChange(e.target.value as ChannelSortMode)}
+                        options={[
+                            { value: "live-first-name", label: t("live.liveFirstAndNameOrder") },
+                            { value: "name", label: t("live.nameOrder") },
+                            { value: "manual", label: t("live.manualOrder") },
+                        ]}
+                        className="dashboard-sort-select min-w-[130px] text-[12px] h-9 sm:h-8"
+                    />
                     <div role="group" aria-label={t("live.channelView")} className="dashboard-view-toggle flex bg-surface-3/80 rounded-[var(--radius-control)] p-1">
                         <button
                             type="button"

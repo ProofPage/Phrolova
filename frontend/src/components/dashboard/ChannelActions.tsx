@@ -13,7 +13,27 @@ export function ChannelActions(props: ChannelItemProps & { detailsId: string; ta
         <button type="button" className="icon-button recording-detail-action" onClick={props.onSelect} aria-expanded={!!props.isSelected} aria-controls={props.detailsId} aria-label={`${t(label)}: ${name}`} title={t(label)}><ChevronDown className={clsx('size-4', props.isSelected && 'rotate-180')} /><span>{t(label)}</span></button>
         {props.tagControl}
         <div className="recording-direct-actions">
-            <button type="button" className="channel-drag-handle icon-button cursor-grab touch-none select-none active:cursor-grabbing" onPointerDown={props.onReorderPointerDown} onPointerMove={props.onReorderPointerMove} onPointerUp={props.onReorderPointerUp} onPointerCancel={props.onReorderPointerUp} onLostPointerCapture={props.onReorderPointerUp} onMouseMove={props.onReorderMouseMove} onMouseUp={props.onReorderMouseUp} onKeyDown={props.onReorderKeyDown} title={t("live.dragOrUseTheArrowKeysToReorderChannels")} aria-label={`${t("live.reorder")}: ${name}`} aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown"><GripVertical className="size-4 pointer-events-none" /></button>
+            <button
+                type="button"
+                className={clsx(
+                    "channel-drag-handle icon-button touch-none select-none",
+                    props.manualOrder ? "cursor-grab active:cursor-grabbing" : "opacity-40 cursor-not-allowed"
+                )}
+                disabled={!props.manualOrder}
+                onPointerDown={props.onReorderPointerDown}
+                onPointerMove={props.onReorderPointerMove}
+                onPointerUp={props.onReorderPointerUp}
+                onPointerCancel={props.onReorderPointerUp}
+                onLostPointerCapture={props.onReorderPointerUp}
+                onMouseMove={props.onReorderMouseMove}
+                onMouseUp={props.onReorderMouseUp}
+                onKeyDown={props.onReorderKeyDown}
+                title={t(props.manualOrder ? "live.dragOrUseTheArrowKeysToReorderChannels" : "live.reorderingIsAvailableInManualSortMode")}
+                aria-label={`${t("live.reorder")}: ${name}`}
+                aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown"
+            >
+                <GripVertical className="size-4 pointer-events-none" />
+            </button>
             <button type="button" className="channel-move-up icon-button" disabled={!props.canMoveUp} onClick={() => props.onMoveChannel(-1)} title={t("live.moveUp")} aria-label={`${t("live.moveUp")}: ${name}`}><ArrowUp className="size-4" /></button>
             <button type="button" className="channel-move-down icon-button" disabled={!props.canMoveDown} onClick={() => props.onMoveChannel(1)} title={t("live.moveDown")} aria-label={`${t("live.moveDown")}: ${name}`}><ArrowDown className="size-4" /></button>
             <button type="button" className="icon-button hover:text-danger" disabled={props.isActionLoading} onClick={() => props.onRemove(props.channel)} aria-label={`${t("live.removeChannel")}: ${name}`} title={t("live.removeChannel")}><Trash2 className="size-4" /></button>

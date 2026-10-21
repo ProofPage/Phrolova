@@ -31,19 +31,19 @@ def _resolve_handle_creator_id(handle: str) -> str:
     if handle_clean in _HANDLE_CACHE:
         return _HANDLE_CACHE[handle_clean]
     try:
-        url = f'{ORIGIN}/c/{handle.strip()}'
+        url = f'{ORIGIN}/c/{handle_clean}'
         with httpx.Client(timeout=8, follow_redirects=True) as client:
             response = client.get(url, headers={'User-Agent': USER_AGENT, 'Referer': ORIGIN + '/'})
         if response.status_code != 200:
             raise ValueError
-        match = re.search(r'profilePhoto/([a-fA-F0-9]{24})', response.text)
-        if not match:
+        match = re.search(r'https://pb3\.rplay\.live/profilePhoto/([a-fA-F0-9]{24})(?=[-?"/<\s]|$)', response.text)
+        if not match or match.group(1) == '0' * 24:
             raise ValueError
         cid = match.group(1).lower()
         _HANDLE_CACHE[handle_clean] = cid
         return cid
-    except Exception:
-        raise ValueError('알플레이 크리에이터 또는 채널을 찾을 수 없습니다.') from None
+    except (httpx.HTTPError, ValueError):
+        raise ValueError('알플레이 크리에이터를 찾을 수 없습니다.') from None
 
 
 def normalize_rplay_channel_id(value: str) -> str:

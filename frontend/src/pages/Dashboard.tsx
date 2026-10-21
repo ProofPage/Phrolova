@@ -21,7 +21,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 export default function Dashboard() {
     const { t } = useLanguage();
     const { channels, initialLoading, connectionError, fetchChannels } = useChannelStream();
-    const { orderedChannels, getReorderProps } = useChannelReorder(channels);
+    const { orderedChannels, sortMode, setSortMode, getReorderProps } = useChannelReorder(channels);
     const [platformStatus, setPlatformStatus] = useState<PlatformStatus | null>(null);
     const [expandedChannelKeys, setExpandedChannelKeys] = useState<Set<string>>(() => new Set());
     const [filter, setFilter] = useState<StatusFilter>("all");
@@ -321,6 +321,8 @@ export default function Dashboard() {
                 <DashboardFilters
                     filter={filter}
                     onFilterChange={setFilter}
+                    sortMode={sortMode}
+                    onSortModeChange={setSortMode}
                     globalTags={globalTags}
                     selectedTags={selectedFilterTags}
                     onSelectedTagsChange={setSelectedFilterTags}

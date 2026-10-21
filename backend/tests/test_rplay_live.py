@@ -55,6 +55,7 @@ def mock_streamlink(monkeypatch):
 @pytest.fixture(autouse=True)
 def isolated_rplay_account(monkeypatch):
     monkeypatch.setattr(get_settings(), 'rplay_session_file', None)
+    monkeypatch.setattr(rp, '_HANDLE_CACHE', {})
 
 
 @pytest.mark.parametrize('value', [CID, CID.upper(), PAGE, PAGE + '/?share=1#top', PAGE.replace('https://', 'http://www.')])
@@ -89,8 +90,61 @@ def test_handle_url_resolution(monkeypatch):
     monkeypatch.setattr('httpx.Client.get', lambda self, url, **kwargs: MockResponse(500, 'Error'))
     assert rp.normalize_rplay_channel_id('https://rplay.live/c/hitsu') == '68c13a59130df63bab93c23c'
 
-    with pytest.raises(ValueError, match='알플레이 크리에이터 또는 채널을 찾을 수 없습니다'):
+    with pytest.raises(ValueError, match='알플레이 크리에이터를 찾을 수 없습니다'):
         rp.normalize_rplay_channel_id('https://rplay.live/c/unknown_handle')
+
+
+@pytest.mark.parametrize('handle,oid,image', [
+    ('hitsu', '68c13a59130df63bab93c23c', '<meta property="og:image" content="{url}">'),
+    ('tsuki', '66b75dca92d223b99ea5c47c', '<script type="application/ld+json">{{"image": "{url}"}}</script>'),
+    ('seldea?page=creator-home', '64d483add2c96306099ef734', '<script type="application/ld+json">{{"image":"{url}"}}</script>'),
+])
+def test_handle_synthetic_html_and_case_insensitive_cache(monkeypatch, handle, oid, image):
+    requests = []
+    original = httpx.Client
+    def route(request):
+        requests.append(request)
+        assert request.headers['User-Agent'] == rp.USER_AGENT
+        assert request.headers['Referer'] == 'https://rplay.live/'
+        assert request.url.path == '/c/' + handle.split('?')[0]
+        assert not request.url.query
+        assert request.extensions['timeout']['read'] == 8
+        return httpx.Response(200, text=image.format(url=f'https://pb3.rplay.live/profilePhoto/{oid.upper()}-small?t=1'))
+    monkeypatch.setattr(httpx, 'Client', lambda **kw: original(transport=httpx.MockTransport(route), **kw))
+    assert rp.normalize_rplay_channel_id('https://rplay.live/c/' + handle.upper()) == oid
+    assert rp.normalize_rplay_channel_id('https://rplay.live/c/' + handle) == oid
+    assert len(requests) == 1
+
+
+@pytest.mark.parametrize('html', [
+    '<html>Creator not found</html>',
+    '<img src="https://pb3.rplay.live/profilePhoto/default-small">',
+    '<img src="https://pb3.rplay.live/profilePhoto/000000000000000000000000-small">',
+    f'<img src="https://evil.example/profilePhoto/{CID}-small">',
+    f'<img src="https://pb3.rplay.live/profilePhoto/{CID}a-small">',
+])
+def test_invalid_handle_html_not_cached(monkeypatch, html):
+    monkeypatch.setattr(httpx.Client, 'get', lambda *a, **kw: httpx.Response(200, text=html))
+    with pytest.raises(ValueError, match=r'^알플레이 크리에이터를 찾을 수 없습니다\.$'):
+        rp.normalize_rplay_channel_id('https://rplay.live/c/nonexistent')
+    assert not rp._HANDLE_CACHE
+
+
+@pytest.mark.parametrize('status', [404, 500])
+def test_handle_http_errors(monkeypatch, status):
+    monkeypatch.setattr(httpx.Client, 'get', lambda *a, **kw: httpx.Response(status))
+    with pytest.raises(ValueError, match='알플레이 크리에이터를 찾을 수 없습니다'):
+        rp.normalize_rplay_channel_id('https://rplay.live/c/missing')
+    assert not rp._HANDLE_CACHE
+
+
+def test_handle_timeout(monkeypatch):
+    def timeout(*a, **kw):
+        raise httpx.ReadTimeout('timed out')
+    monkeypatch.setattr(httpx.Client, 'get', timeout)
+    with pytest.raises(ValueError, match='알플레이 크리에이터를 찾을 수 없습니다'):
+        rp.normalize_rplay_channel_id('https://rplay.live/c/missing')
+    assert not rp._HANDLE_CACHE
 
 
 @pytest.mark.parametrize('value', [PAGE + '/extra', PAGE.replace('/live/', '/play/'), PAGE.replace('.live/', '.live.evil/'),
@@ -270,19 +324,35 @@ def test_master_repair_does_not_change_other_servers_or_media():
         assert response.content == body
 
 
-def test_api_channel_registration_status_and_key(monkeypatch):
+@pytest.mark.parametrize('channel', [PAGE, 'https://rplay.live/c/tsuki?page=creator-home'])
+def test_api_channel_registration_status_and_key(monkeypatch, channel):
     import app.main
     from app.api import platforms, stream
     service = SimpleNamespace(add_platform_channel=Mock(return_value={'status': 'added'}))
     monkeypatch.setattr(app.main, 'get_recorder_service', lambda: service)
+    original = httpx.Client
+    transport = httpx.MockTransport(lambda request: httpx.Response(
+        200, text=f'<meta property="og:image" content="https://pb3.rplay.live/profilePhoto/{CID}-small">'))
+    monkeypatch.setattr(httpx, 'Client', lambda **kw: original(transport=transport, **kw))
     app = FastAPI(); app.include_router(platforms.router)
     with TestClient(app) as client:
-        result = client.post('/api/platforms/channels', json={'platform': 'rplay', 'channel_id': PAGE, 'recording_quality': '720p'})
+        result = client.post('/api/platforms/channels', json={'platform': 'rplay', 'channel_id': channel, 'recording_quality': '720p'})
         assert result.status_code == 200 and service.add_platform_channel.call_args.kwargs['channel_id'] == CID
         assert client.get('/api/platforms/status').json()['rplay'] == {'enabled': True, 'authenticated': False}
     assert stream._to_composite_key('rplay:' + CID) == 'rplay:' + CID
     assert isinstance(Conductor()._get_engine(Platform.RPLAY), rp.RplayLiveEngine)
     assert isinstance(rp.RplayLiveEngine(), PlatformEngine)
+
+
+def test_api_invalid_handle_returns_400(monkeypatch):
+    from app.api import platforms
+    monkeypatch.setattr(httpx.Client, 'get', lambda *a, **kw: httpx.Response(404))
+    app = FastAPI(); app.include_router(platforms.router)
+    with TestClient(app) as client:
+        result = client.post('/api/platforms/channels', json={
+            'platform': 'rplay', 'channel_id': 'https://rplay.live/c/missing'})
+    assert result.status_code == 400
+    assert result.json()['detail'] == '알플레이 크리에이터를 찾을 수 없습니다.'
 
 
 @pytest.mark.asyncio
