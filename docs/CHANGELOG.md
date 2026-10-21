@@ -15,6 +15,9 @@
 - **AV19**: `av19t.com`의 `/korea/`, `/bj/`, `/nsub/` 개별 영상 다운로드 지원. 해시 고정된 순수 WASM 브리지를 통해 세션 키(v10/v11)를 복호화하고 표준 AES-128 HLS MPEG-TS 스트림 추출.
 - **MissAV**: `missav123.com`의 `/ko/<slug>` 개별 영상 다운로드 지원. 본편 HLS 재생목록 분석 및 화질별 표준 MPEG-TS 다운로드.
 
+### Fixed
+- `backend/run.py`에서 Python 3.14+ `asyncio.WindowsProactorEventLoopPolicy` 및 `set_event_loop_policy` 폐기 경고 호출 제거.
+
 ## [2.1.8] - 2026-10-21
 
 ### Changed
