@@ -1,0 +1,132 @@
+/* A translucent control layer above an opaque, readable content layer. */
+:root {
+  --radius-card: 18px;
+  --radius-control: 10px;
+  --glass-line: #ffffff26;
+  --shadow-pop: 0 24px 72px #0007, inset 0 1px 0 #ffffff24;
+}
+
+.app-main {
+  background: radial-gradient(ellipse at 4% 0%, color-mix(in srgb, var(--primary) 11%, transparent), transparent 48%),
+    radial-gradient(ellipse at 100% 75%, #70bc9707, transparent 50%), var(--color-surface-0);
+}
+.app-sidebar {
+  background: color-mix(in srgb, var(--color-surface-1) 90%, transparent);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  border-right-color: var(--glass-line);
+}
+.app-topbar {
+  background: color-mix(in srgb, var(--color-surface-0) 85%, transparent);
+  backdrop-filter: blur(20px) saturate(1.35);
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  border-bottom-color: #ffffff12;
+}
+.sidebar-nav-link { border-radius: 12px; }
+.sidebar-nav-link-active {
+  background: var(--color-surface-3);
+  box-shadow: inset 0 0 0 1px #ffffff12;
+}
+.ui-panel { border-color: #ffffff17; box-shadow: inset 0 1px 0 #ffffff06; }
+:is(.ui-button, .icon-button, .top-search, .dashboard-filter, .settings-tabs button, .ui-chip) {
+  --glass-x: 50%;
+  --glass-y: 0%;
+  border-radius: 12px;
+  background-image: radial-gradient(ellipse at var(--glass-x) var(--glass-y), #ffffff08, transparent 72%);
+  transition: background-color 160ms, border-color 160ms, box-shadow 160ms, color 160ms;
+  transition-timing-function: cubic-bezier(.2,.7,.2,1);
+}
+.ui-button:not(.btn-ghost), .dashboard-filter, .settings-tabs button {
+  border-color: var(--glass-line);
+  box-shadow: none;
+}
+.btn-secondary {
+  color: var(--color-ink);
+  background-color: color-mix(in srgb, var(--color-surface-2) 88%, transparent);
+}
+.btn-primary { border-color: color-mix(in srgb, var(--primary) 65%, #ffffff); }
+.btn-danger { background-color: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface-1)); color: var(--color-danger); }
+:is(.ui-button, .icon-button, .dashboard-filter, .settings-tabs button):hover:not(:disabled) {
+  border-color: #ffffff38;
+  box-shadow: inset 0 1px 0 #ffffff14;
+  background-image: radial-gradient(ellipse at var(--glass-x) var(--glass-y), #ffffff18, transparent 72%);
+}
+.ui-button:active:not(:disabled), .icon-button:active:not(:disabled) {
+  filter: none;
+  box-shadow: inset 0 1px 3px #0004;
+}
+.ui-button:disabled { opacity: .5; box-shadow: none; background-image: none; }
+.icon-button:disabled { box-shadow: none; background-image: none; }
+.btn-ghost { box-shadow: none; background-image: none; }
+.ui-button:focus-visible, .icon-button:focus-visible, .sidebar-nav-link:focus-visible,
+.settings-tabs button:focus-visible, .auth-close:focus-visible {
+  outline: 2px solid var(--primary); outline-offset: 3px;
+}
+.settings-tabs, .auth-methods {
+  padding: 5px;
+  border: 1px solid var(--glass-line);
+  border-radius: 18px;
+  background: linear-gradient(145deg, #ffffff0c, #ffffff03), var(--color-surface-1);
+  box-shadow: inset 0 1px 0 #ffffff14;
+}
+.auth-methods { border-radius: 14px; }
+.auth-methods .ui-button { border-radius: 10px; }
+.auth-methods .ui-button:not([aria-pressed="true"]),
+.settings-tabs button:not([aria-selected="true"]):not([aria-pressed="true"]) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.auth-methods [aria-pressed="true"], .settings-tabs button[aria-selected="true"],
+.settings-tabs button[aria-pressed="true"], .dashboard-filter.is-selected {
+  color: var(--color-ink);
+  background: var(--color-surface-3);
+  border-color: #ffffff18;
+  box-shadow: none;
+}
+.ui-input {
+  border-radius: 10px;
+  background: var(--color-surface-2);
+  box-shadow: inset 0 1px 3px #0002;
+}
+.ui-input:focus { border-color: var(--primary); }
+.ui-switch-track { box-shadow: inset 0 1px 3px #0005, 0 1px 0 #ffffff0d; }
+.ui-switch-thumb { background: linear-gradient(#fff, #d7dce5); box-shadow: 0 1px 4px #0006; }
+.auth-selector { border-radius: 16px; }
+.auth-selector-active { background: linear-gradient(140deg, var(--primary-dim), transparent), var(--color-surface-1); }
+.auth-detail { border-radius: 22px; }
+.auth-detail-heading { padding-bottom: 16px; border-bottom: 1px solid #ffffff12; }
+.auth-close { border-radius: 10px; }
+.auth-tools .ui-button { min-height: 44px; }
+.ui-dialog, .ui-popover {
+  border-color: #ffffff30;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #ffffff08, transparent 65%), color-mix(in srgb, var(--color-surface-2) 96%, transparent);
+  box-shadow: var(--shadow-pop);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+}
+/* Do not blur data cards, video, inputs, or nested scrolling content. */
+@media (hover: hover) and (pointer: fine) {
+  .ui-button:not(.btn-ghost):hover:not(:disabled) { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+}
+@media (max-width: 600px) {
+  .auth-tools { align-items: stretch; }
+  .auth-tools .ui-button { height: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.ui-button, .icon-button, .top-search, .dashboard-filter, .settings-tabs button, .ui-chip, .sidebar-nav-link, .ui-switch-track, .ui-switch-thumb) { transition: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .app-sidebar, .app-topbar, .ui-dialog, .ui-popover { background: var(--color-surface-1); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .ui-button { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  .btn-secondary { background-color: var(--color-surface-2); }
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .app-sidebar, .app-topbar, .ui-dialog, .ui-popover { background: var(--color-surface-1); }
+}
+@media (forced-colors: active) {
+  .ui-button, .settings-tabs button, .auth-methods, .sidebar-nav-link-active { background: Canvas; color: ButtonText; border: 1px solid ButtonText; box-shadow: none; }
+  .ui-button:hover:not(:disabled), .settings-tabs button:hover:not(:disabled) { background: Highlight; color: HighlightText; }
+  .auth-methods [aria-pressed="true"], .sidebar-nav-link-active { outline: 2px solid Highlight; }
+}

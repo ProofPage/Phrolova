@@ -1,0 +1,96 @@
+"""치지직 쿠키와 인증 상태."""
+
+from __future__ import annotations
+
+
+from fastapi import APIRouter, HTTPException
+
+from pydantic import BaseModel, Field
+
+from app.api.settings._shared import SETTINGS_PREFIX, SETTINGS_TAGS
+
+
+# ── 요청 스키마 ──────────────────────────────────────────
+
+router = APIRouter(prefix=SETTINGS_PREFIX, tags=SETTINGS_TAGS)
+
+
+class CookieUpdateRequest(BaseModel):
+    """인증 쿠키 업데이트 요청."""
+
+    nid_aut: str = Field(..., description="NID_AUT 쿠키 값")
+    nid_ses: str = Field(..., description="NID_SES 쿠키 값")
+
+
+@router.put("/cookies", summary="인증 쿠키 업데이트")
+async def update_cookies(req: CookieUpdateRequest):
+    """치지직 인증 쿠키(NID_AUT, NID_SES)를 업데이트합니다."""
+    from app.main import get_recorder_service
+
+    service = get_recorder_service()
+    try:
+        result = service.update_cookies(req.nid_aut, req.nid_ses)
+        service.on_credentials_updated("chzzk")
+        return result
+    except OSError:
+        raise HTTPException(500, "인증 설정을 저장하지 못했습니다. 저장 위치의 권한과 여유 공간을 확인하세요.") from None
+
+
+@router.post("/cookies/test", summary="쿠키 유효성 검증")
+async def test_cookies():
+    """현재 설정된 쿠키로 치지직 API에 접근하여 유효성을 검증합니다."""
+    import httpx
+
+    from app.main import get_recorder_service
+
+    service = get_recorder_service()
+    auth_status = service.get_auth_status()
+
+    if not auth_status["authenticated"]:
+        raise HTTPException(
+            status_code=400,
+            detail="쿠키가 설정되지 않았습니다. 먼저 쿠키를 입력해주세요.",
+        )
+
+    try:
+        from app.engine.auth import AuthManager
+
+        auth = AuthManager()
+        headers = auth.get_http_headers()
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "https://comm-api.game.naver.com/nng_main/v1/user/getUserStatus",
+                headers=headers,
+                timeout=10.0,
+            )
+            data = resp.json()
+
+        if data.get("code") == 200:
+            content = data.get("content") or {}
+            from app.core.logger import logger as _logger
+            _logger.debug(f"getUserStatus content keys: {list(content.keys()) if content else 'empty'}")
+            return {
+                "valid": True,
+                "message": "쿠키 검증 성공! 로그인 상태가 확인되었습니다.",
+                "user_status": content,
+            }
+        else:
+            return {
+                "valid": False,
+                "message": "쿠키가 만료되었거나 유효하지 않습니다.",
+            }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"쿠키 검증 중 오류 발생: {e}",
+        )
+
+
+@router.get("/auth", summary="인증 상태 확인")
+async def get_auth_status():
+    """현재 인증 상태를 확인합니다."""
+    from app.main import get_recorder_service
+
+    service = get_recorder_service()
+    return service.get_auth_status()

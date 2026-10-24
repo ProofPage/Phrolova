@@ -1,0 +1,94 @@
+2026-10-09 15:22:56 | INFO     | phrolova | ✅ yt-dlp DASH MPD 파서 멍키패치 적용 완료
+2026-10-09 15:22:56 | INFO     | uvicorn.error | Started server process [69]
+2026-10-09 15:22:56 | INFO     | uvicorn.error | Waiting for application startup.
+2026-10-09 15:22:56 | INFO     | phrolova | 🚀 Phrolova 시작 중...
+2026-10-09 15:22:56 | INFO     | phrolova | ✅ FFmpeg 확인: /usr/bin/ffmpeg
+2026-10-09 15:22:56 | INFO     | phrolova | ✅ yt-dlp 확인: /workspace/scratch/07f5ff7bb558/Phrolova/.venv/bin/yt-dlp
+2026-10-09 15:22:56 | INFO     | phrolova | ✅ Streamlink 확인: 8.6.2
+2026-10-09 15:22:56 | INFO     | phrolova | 🗃️ DB 스키마 마이그레이션 적용: 3건 (v3)
+2026-10-09 15:22:56 | INFO     | phrolova | 🗃️ 저장소 연결: /tmp/phrolova-audit-9d8d0rdb/backend/data/rookery.db
+2026-10-09 15:22:56 | INFO     | phrolova | 🔓 비로그인 모드로 동작합니다.
+2026-10-09 15:22:56 | INFO     | phrolova | 📨 알림 서비스 시작.
+2026-10-09 15:22:56 | INFO     | phrolova | Discord Bot 토큰이 설정되지 않았습니다. Bot을 건너뜁니다.
+2026-10-09 15:22:56 | INFO     | phrolova | 자동 업데이트 체커 시작됨.
+2026-10-09 15:22:56 | INFO     | phrolova | ✅ Phrolova Engine Started!
+2026-10-09 15:22:56 | INFO     | phrolova | Conductor 시작. 감시 채널 수: 0
+2026-10-09 15:22:56 | INFO     | uvicorn.error | Application startup complete.
+2026-10-09 15:22:56 | INFO     | uvicorn.error | Uvicorn running on http://127.0.0.1:18080 (Press CTRL+C to quit)
+2026-10-09 15:22:56 | INFO     | uvicorn.access | 127.0.0.1:47830 - "GET /health HTTP/1.1" 200
+2026-10-09 15:22:56 | INFO     | uvicorn.access | 127.0.0.1:47844 - "GET /health HTTP/1.1" 200
+2026-10-09 15:22:56 | INFO     | uvicorn.access | 127.0.0.1:47852 - "GET / HTTP/1.1" 200
+2026-10-09 15:22:56 | INFO     | uvicorn.access | 127.0.0.1:47868 - "GET /openapi.json HTTP/1.1" 200
+2026-10-09 15:22:56 | INFO     | uvicorn.access | 127.0.0.1:47878 - "GET /api/events HTTP/1.1" 200
+2026-10-09 15:22:56 | INFO     | uvicorn.access | 127.0.0.1:47892 - "POST /api/tags HTTP/1.1" 200
+2026-10-09 15:22:56 | INFO     | phrolova | [Service] VOD 다운로드 요청: http://127.0.0.1:36425/sample.mp4
+2026-10-09 15:22:56 | INFO     | phrolova.external | [561c3b37-add2-4956-aa6d-a21a4a1bbd69] 다운로드 작업 추가: http://127.0.0.1:36425/sample.mp4 (화질: best)
+2026-10-09 15:22:56 | INFO     | uvicorn.access | 127.0.0.1:47908 - "POST /api/vod/download HTTP/1.1" 200
+2026-10-09 15:22:56 | INFO     | phrolova.external | [561c3b37-add2-4956-aa6d-a21a4a1bbd69] 다운로드 시작: http://127.0.0.1:36425/sample.mp4
+2026-10-09 15:22:56 | INFO     | uvicorn.access | 127.0.0.1:47924 - "GET /api/vod/status/561c3b37-add2-4956-aa6d-a21a4a1bbd69 HTTP/1.1" 200
+2026-10-09 15:22:56 | INFO     | uvicorn.access | 127.0.0.1:47940 - "GET /api/vod/status/561c3b37-add2-4956-aa6d-a21a4a1bbd69 HTTP/1.1" 200
+2026-10-09 15:22:56 | INFO     | uvicorn.access | 127.0.0.1:47954 - "GET /api/vod/status/561c3b37-add2-4956-aa6d-a21a4a1bbd69 HTTP/1.1" 200
+2026-10-09 15:22:56 | INFO     | uvicorn.access | 127.0.0.1:47964 - "GET /api/vod/status/561c3b37-add2-4956-aa6d-a21a4a1bbd69 HTTP/1.1" 200
+2026-10-09 15:22:56 | INFO     | uvicorn.access | 127.0.0.1:47978 - "GET /api/vod/status/561c3b37-add2-4956-aa6d-a21a4a1bbd69 HTTP/1.1" 200
+2026-10-09 15:22:57 | INFO     | phrolova.external | [561c3b37-add2-4956-aa6d-a21a4a1bbd69] 미디어 정보: [Unknown Channel] sample
+2026-10-09 15:22:57 | WARNING  | phrolova.external | Overwriting params from "color" with "no_color"
+2026-10-09 15:22:57 | INFO     | uvicorn.access | 127.0.0.1:47988 - "GET /api/vod/status/561c3b37-add2-4956-aa6d-a21a4a1bbd69 HTTP/1.1" 200
+2026-10-09 15:22:57 | INFO     | phrolova.external | [561c3b37-add2-4956-aa6d-a21a4a1bbd69] 다운로드 완료: /tmp/phrolova-audit-9d8d0rdb/recordings/[Unknown] sample 2026-10-09 15-22-56.mp4
+2026-10-09 15:22:57 | INFO     | uvicorn.access | 127.0.0.1:47992 - "GET /api/vod/status/561c3b37-add2-4956-aa6d-a21a4a1bbd69 HTTP/1.1" 200
+2026-10-09 15:22:57 | INFO     | phrolova | [Service] VOD 다운로드 요청: http://127.0.0.1:36425/slow.mp4
+2026-10-09 15:22:57 | INFO     | phrolova.external | [df9813e4-53cc-4f8b-b298-1f1913e214ce] 다운로드 작업 추가: http://127.0.0.1:36425/slow.mp4 (화질: best)
+2026-10-09 15:22:57 | INFO     | uvicorn.access | 127.0.0.1:47998 - "POST /api/vod/download HTTP/1.1" 200
+2026-10-09 15:22:57 | INFO     | phrolova.external | [df9813e4-53cc-4f8b-b298-1f1913e214ce] 다운로드 시작: http://127.0.0.1:36425/slow.mp4
+2026-10-09 15:22:57 | INFO     | uvicorn.access | 127.0.0.1:48008 - "GET /api/vod/status/df9813e4-53cc-4f8b-b298-1f1913e214ce HTTP/1.1" 200
+2026-10-09 15:22:57 | INFO     | phrolova | [Service] VOD 다운로드 취소 요청: df9813e4-53cc-4f8b-b298-1f1913e214ce
+2026-10-09 15:22:57 | INFO     | phrolova.external | [df9813e4-53cc-4f8b-b298-1f1913e214ce] 다운로드 취소 요청...
+2026-10-09 15:22:57 | INFO     | uvicorn.access | 127.0.0.1:48010 - "POST /api/vod/df9813e4-53cc-4f8b-b298-1f1913e214ce/cancel HTTP/1.1" 200
+2026-10-09 15:22:57 | INFO     | uvicorn.access | 127.0.0.1:48020 - "GET /api/vod/status/df9813e4-53cc-4f8b-b298-1f1913e214ce HTTP/1.1" 200
+2026-10-09 15:22:57 | INFO     | phrolova.external | [df9813e4-53cc-4f8b-b298-1f1913e214ce] 미디어 정보: [Unknown Channel] slow
+2026-10-09 15:22:57 | WARNING  | phrolova.external | Overwriting params from "color" with "no_color"
+2026-10-09 15:22:57 | INFO     | uvicorn.access | 127.0.0.1:48034 - "GET /api/vod/status/df9813e4-53cc-4f8b-b298-1f1913e214ce HTTP/1.1" 200
+2026-10-09 15:22:57 | INFO     | phrolova.external | [df9813e4-53cc-4f8b-b298-1f1913e214ce] 다운로드 취소됨: http://127.0.0.1:36425/slow.mp4
+2026-10-09 15:22:57 | INFO     | uvicorn.access | 127.0.0.1:48038 - "GET /api/vod/status/df9813e4-53cc-4f8b-b298-1f1913e214ce HTTP/1.1" 200
+2026-10-09 15:22:57 | INFO     | uvicorn.access | 127.0.0.1:48052 - "PUT /api/settings/vod HTTP/1.1" 200
+2026-10-09 15:22:57 | INFO     | uvicorn.error | Shutting down
+2026-10-09 15:22:57 | INFO     | uvicorn.error | Waiting for connections to close. (CTRL+C to force quit)
+2026-10-09 15:22:58 | INFO     | uvicorn.error | Waiting for application shutdown.
+2026-10-09 15:22:58 | INFO     | phrolova | 🛑 Phrolova 종료 중...
+2026-10-09 15:22:58 | INFO     | phrolova | 자동 업데이트 체커 종료됨.
+2026-10-09 15:22:58 | INFO     | phrolova | Conductor 종료 요청...
+2026-10-09 15:22:58 | INFO     | phrolova | Conductor 종료 완료.
+2026-10-09 15:22:58 | INFO     | phrolova | 🗃️ 저장소 연결 종료.
+2026-10-09 15:22:58 | INFO     | phrolova | 👋 Goodbye!
+2026-10-09 15:22:58 | INFO     | uvicorn.error | Application shutdown complete.
+2026-10-09 15:22:58 | INFO     | uvicorn.error | Finished server process [69]
+2026-10-09 15:22:59 | INFO     | phrolova | ✅ yt-dlp DASH MPD 파서 멍키패치 적용 완료
+2026-10-09 15:22:59 | INFO     | uvicorn.error | Started server process [79]
+2026-10-09 15:22:59 | INFO     | uvicorn.error | Waiting for application startup.
+2026-10-09 15:22:59 | INFO     | phrolova | 🚀 Phrolova 시작 중...
+2026-10-09 15:22:59 | INFO     | phrolova | ✅ FFmpeg 확인: /usr/bin/ffmpeg
+2026-10-09 15:22:59 | INFO     | phrolova | ✅ yt-dlp 확인: /workspace/scratch/07f5ff7bb558/Phrolova/.venv/bin/yt-dlp
+2026-10-09 15:22:59 | INFO     | phrolova | ✅ Streamlink 확인: 8.6.2
+2026-10-09 15:22:59 | INFO     | phrolova | 🗃️ 저장소 연결: /tmp/phrolova-audit-9d8d0rdb/backend/data/rookery.db
+2026-10-09 15:22:59 | INFO     | phrolova | 다운로드 이력 로드 완료: 2개
+2026-10-09 15:22:59 | INFO     | phrolova | 🔓 비로그인 모드로 동작합니다.
+2026-10-09 15:22:59 | INFO     | phrolova | 📨 알림 서비스 시작.
+2026-10-09 15:22:59 | INFO     | phrolova | Discord Bot 토큰이 설정되지 않았습니다. Bot을 건너뜁니다.
+2026-10-09 15:22:59 | INFO     | phrolova | 자동 업데이트 체커 시작됨.
+2026-10-09 15:22:59 | INFO     | phrolova | ✅ Phrolova Engine Started!
+2026-10-09 15:22:59 | INFO     | phrolova | Conductor 시작. 감시 채널 수: 0
+2026-10-09 15:22:59 | INFO     | uvicorn.error | Application startup complete.
+2026-10-09 15:22:59 | INFO     | uvicorn.error | Uvicorn running on http://127.0.0.1:18080 (Press CTRL+C to quit)
+2026-10-09 15:22:59 | INFO     | uvicorn.access | 127.0.0.1:48168 - "GET /health HTTP/1.1" 200
+2026-10-09 15:22:59 | INFO     | uvicorn.access | 127.0.0.1:48178 - "GET /api/tags HTTP/1.1" 200
+2026-10-09 15:22:59 | INFO     | uvicorn.access | 127.0.0.1:48182 - "GET /api/vod/status/561c3b37-add2-4956-aa6d-a21a4a1bbd69 HTTP/1.1" 200
+2026-10-09 15:22:59 | INFO     | uvicorn.access | 127.0.0.1:48194 - "GET /api/settings HTTP/1.1" 200
+2026-10-09 15:22:59 | INFO     | uvicorn.error | Shutting down
+2026-10-09 15:22:59 | INFO     | uvicorn.error | Waiting for application shutdown.
+2026-10-09 15:22:59 | INFO     | phrolova | 🛑 Phrolova 종료 중...
+2026-10-09 15:22:59 | INFO     | phrolova | 자동 업데이트 체커 종료됨.
+2026-10-09 15:22:59 | INFO     | phrolova | Conductor 종료 요청...
+2026-10-09 15:22:59 | INFO     | phrolova | Conductor 종료 완료.
+2026-10-09 15:22:59 | INFO     | phrolova | 🗃️ 저장소 연결 종료.
+2026-10-09 15:22:59 | INFO     | phrolova | 👋 Goodbye!
+2026-10-09 15:22:59 | INFO     | uvicorn.error | Application shutdown complete.
+2026-10-09 15:22:59 | INFO     | uvicorn.error | Finished server process [79]

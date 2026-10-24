@@ -1,0 +1,151 @@
+import { useLanguage } from "../../contexts/LanguageContext";
+import { translate } from "../../i18n";
+import { useDialogKeyboard } from "../../hooks/useDialogKeyboard";
+import { useRef, createContext, useContext, useState, useCallback } from "react";
+import { AlertTriangle } from "lucide-react";
+import { Button, Input } from "./primitives";
+
+// ── Types ────────────────────────────────────────────
+
+interface ConfirmOptions {
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: "danger" | "default";
+    requireTyping?: string;
+}
+
+interface ConfirmContextValue {
+    confirm: (options: ConfirmOptions) => Promise<boolean>;
+}
+
+// ── Context ──────────────────────────────────────────
+
+const ConfirmContext = createContext<ConfirmContextValue | null>(null);
+
+export function useConfirm(): (options: ConfirmOptions) => Promise<boolean> {
+    const ctx = useContext(ConfirmContext);
+    if (!ctx) throw new Error("useConfirm must be used within ConfirmProvider");
+    return ctx.confirm;
+}
+
+// ── Provider ─────────────────────────────────────────
+
+interface PendingConfirm {
+    options: ConfirmOptions;
+    resolve: (value: boolean) => void;
+}
+
+export function ConfirmProvider({ children }: { children: React.ReactNode }) {
+    useLanguage();
+    const [pending, setPending] = useState<PendingConfirm | null>(null);
+
+    const handleConfirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
+        return new Promise<boolean>((resolve) => {
+            setPending({ options, resolve });
+        });
+    }, []);
+
+    const handleResult = useCallback(
+        (result: boolean) => {
+            pending?.resolve(result);
+            setPending(null);
+        },
+        [pending],
+    );
+
+    return (
+        <ConfirmContext.Provider value={{ confirm: handleConfirm }}>
+            {children}
+            {pending && (
+                <ConfirmModal
+                    {...pending.options}
+                    onConfirm={() => handleResult(true)}
+                    onCancel={() => handleResult(false)}
+                />
+            )}
+        </ConfirmContext.Provider>
+    );
+}
+
+// ── Modal Component ──────────────────────────────────
+
+interface ConfirmModalProps extends ConfirmOptions {
+    onConfirm: () => void;
+    onCancel: () => void;
+}
+
+function ConfirmModal({
+    title,
+    message,
+    confirmText = "common.confirm",
+    cancelText = "common.cancel",
+    variant = "default",
+    requireTyping,
+    onConfirm,
+    onCancel,
+}: ConfirmModalProps) {
+    useLanguage();
+    const dialogRootRef = useRef<HTMLDivElement>(null);
+    useDialogKeyboard(dialogRootRef, onCancel);
+    const [inputValue, setInputValue] = useState("");
+
+    const isDanger = variant === "danger";
+    const expectedTyping = requireTyping && /^(live|common)\./.test(requireTyping) ? translate(requireTyping) : requireTyping;
+    const isMatch = expectedTyping ? inputValue === expectedTyping : true;
+
+    return (
+        <div
+            className="ui-overlay fixed inset-0 z-[9998] flex items-center justify-center animate-backdrop"
+            onClick={onCancel}
+        >
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/60 " />
+
+            {/* Modal */}
+            <div
+                ref={dialogRootRef} role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message" tabIndex={-1} className="relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-[var(--shadow-pop)] max-h-[90dvh] overflow-y-auto p-5 w-full max-w-sm mx-4 animate-modal-in surface-raise ui-dialog"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex items-start gap-4 mb-5">
+                    {isDanger && (
+                        <div className="shrink-0 w-10 h-10 rounded-[var(--radius-control)] bg-danger/10 border border-danger/20 flex items-center justify-center">
+                            <AlertTriangle className="w-5 h-5 text-danger" />
+                        </div>
+                    )}
+                    <div className="min-w-0 [overflow-wrap:anywhere]">
+                        <h3 id="confirm-title" className="text-ink font-semibold text-base">{translate(title)}</h3>
+                        <p id="confirm-message" className="text-ink-muted text-[13px] mt-2 whitespace-pre-line break-words">{translate(message)}</p>
+                    </div>
+                </div>
+
+                {requireTyping && (
+                    <div className="mb-5">
+                        <label htmlFor="confirm-typing" className="block text-xs text-ink-muted mb-2">
+                            {translate("common.confirmTyping", { value: expectedTyping || "" })}</label>
+                        <Input
+                            id="confirm-typing" type="text"
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            className="text-sm"
+                            placeholder={expectedTyping}
+                            data-dialog-initial-focus
+                        />
+                    </div>
+                )}
+
+                <div className="dialog-actions flex flex-wrap gap-3 justify-end">
+                    <Button data-dialog-initial-focus={!requireTyping || undefined} onClick={onCancel}>{cancelText}</Button>
+                    <Button
+                        onClick={onConfirm}
+                        disabled={!isMatch}
+                        variant={isDanger ? "danger" : "primary"}
+                    >
+                        {confirmText}
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}

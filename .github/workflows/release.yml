@@ -1,0 +1,118 @@
+name: 빌드 및 릴리스
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*.*.*"
+      - "v*.*.*-*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows x64 빌드 및 GitHub Release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14.8"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Resolve release tag
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME -replace '^release/', ''
+          if ($tag -notmatch '^v[0-9]+[.][0-9]+[.][0-9]+(-[a-zA-Z0-9.]+)?$') { throw 'Invalid release version' }
+          "RELEASE_TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: 프론트엔드 의존성 설치
+        run: npm ci
+        working-directory: frontend
+
+      - name: 다국어 리소스와 포맷 검사
+        working-directory: frontend
+        run: |
+          npm run i18n:check
+          npm run i18n:test
+          node tests/recording_status.mjs
+
+      - name: 프론트엔드 빌드
+        run: npm run build
+        working-directory: frontend
+
+      - name: Python 의존성과 PyInstaller 설치
+        run: python -m pip install -r backend/requirements-dev.txt pyinstaller pillow pystray
+
+      - name: Windows 영상 도구 설치
+        shell: pwsh
+        run: |
+          choco install ffmpeg -y --no-progress
+          ffmpeg -version
+
+      - name: 릴리스 회귀 테스트
+        working-directory: backend
+        run: python -m pytest -q
+
+      - name: Windows 실행 파일 빌드
+        run: python -m PyInstaller --clean --noconfirm phrolova.spec
+
+      # 기존 다운로드 링크 호환을 위해 버전 이름과 고정 이름을 함께 유지한다.
+      - name: 릴리스 파일 이름 설정
+        shell: pwsh
+        run: |
+          $asset = "dist/Phrolova-$env:RELEASE_TAG-windows-x64.exe"
+          Move-Item dist/Phrolova.exe $asset
+          $hash = (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash.ToLowerInvariant()
+          @(
+            "$hash  $(Split-Path -Leaf $asset)"
+          ) | Set-Content -LiteralPath dist/SHA256SUMS.txt -Encoding ascii
+
+      - name: GitHub Release 생성 및 Latest 갱신
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notesPath = "docs/release-notes/$env:RELEASE_TAG.md"
+          if (-not (Test-Path -LiteralPath $notesPath)) { throw "Release notes not found: $notesPath" }
+          Get-Content -LiteralPath $notesPath -Raw -Encoding utf8 | Set-Content -Path release-notes.md -Encoding utf8
+          $asset = "dist/Phrolova-$env:RELEASE_TAG-windows-x64.exe"
+          $checksums = "dist/SHA256SUMS.txt"
+          $version = $env:RELEASE_TAG.TrimStart('v')
+          $releaseExists = $false
+          try {
+            gh release view $env:RELEASE_TAG >$null 2>&1
+            if ($LASTEXITCODE -eq 0) { $releaseExists = $true }
+          } catch {
+            $releaseExists = $false
+          }
+
+          if ($releaseExists) {
+            Write-Host "Release $env:RELEASE_TAG already exists. Uploading assets and updating notes..."
+            gh release edit $env:RELEASE_TAG --draft=false
+            gh release upload $env:RELEASE_TAG $asset $checksums --clobber
+            gh release edit $env:RELEASE_TAG --notes-file release-notes.md --title "Phrolova $env:RELEASE_TAG" --latest
+          } else {
+            if ($env:RELEASE_TAG.Contains("-")) {
+              if ($env:GITHUB_REF_TYPE -eq 'tag') {
+                gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --prerelease --verify-tag
+              } else {
+                gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --prerelease --target $env:GITHUB_SHA
+              }
+            } else {
+              if ($env:GITHUB_REF_TYPE -eq 'tag') {
+                gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --latest --verify-tag
+              } else {
+                gh release create $env:RELEASE_TAG $asset $checksums --title "Version $version" --notes-file release-notes.md --latest --target $env:GITHUB_SHA
+              }
+            }
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

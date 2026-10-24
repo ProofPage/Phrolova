@@ -1,0 +1,254 @@
+import { useDialogKeyboard } from "../../hooks/useDialogKeyboard";
+import { useRef, useState, useEffect, useLayoutEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { Folder, FolderOpen, HardDrive, ArrowLeft, ChevronRight, X, Loader2 } from "lucide-react";
+import { api, BrowseDirsResponse, DirEntry } from "../../api/client";
+import { Button, Input } from "./primitives";
+import { useLanguage } from "../../contexts/LanguageContext";
+
+// ── DirBrowserModal ──────────────────────────────────────
+
+interface DirBrowserModalProps {
+    initialPath?: string;
+    onSelect: (path: string) => void;
+    onClose: () => void;
+}
+
+function DirBrowserModal({ initialPath, onSelect, onClose }: DirBrowserModalProps) {
+    const dialogRootRef = useRef<HTMLDivElement>(null);
+    useDialogKeyboard(dialogRootRef, onClose);
+    const { t } = useLanguage();
+    const [data, setData] = useState<BrowseDirsResponse | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const navigate = useCallback(async (path?: string) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await api.browseDirs(path);
+            setData(res);
+        } catch {
+            setError(t("common.couldNotLoadFolders"));
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        navigate(initialPath || undefined);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, [onClose]);
+
+    const isDrive = (path: string) => /^[A-Z]:\\$/.test(path);
+
+    return (
+        <div
+            className="ui-overlay fixed inset-0 z-[9999] flex items-center justify-center"
+            onClick={onClose}
+        >
+            <div className="absolute inset-0 bg-black/60 " />
+
+            <div
+                ref={dialogRootRef} role="dialog" aria-modal="true" aria-label={t("common.chooseAFolder")} tabIndex={-1} className="dir-browser ui-dialog relative bg-surface-2 border border-line-strong rounded-[var(--radius-card)] shadow-2xl surface-raise animate-modal-in
+                           w-full max-w-lg mx-4 flex flex-col max-h-[70dvh]"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between gap-2 shrink-0 px-4 py-3 border-b border-line">
+                    <h3 className="text-ink font-semibold text-base flex items-center gap-2">
+                        <Folder className="w-4 h-4 text-[var(--primary)]" />
+                        {t("common.chooseAFolder")}
+                    </h3>
+                    <div className="flex items-center gap-1">
+                        {/* 드라이브 리스트로 이동 버튼 */}
+                        <button
+                            onClick={() => navigate(undefined)}
+                            title={t("common.showDrives")} aria-label={t("common.showDrives")}
+                            className="icon-button rounded-lg text-ink-faint hover:text-[var(--primary)] hover:bg-surface-3 transition-colors"
+                        >
+                            <HardDrive className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={onClose}
+                            aria-label={t("common.close")}
+                            className="icon-button rounded-lg text-ink-faint hover:text-ink hover:bg-surface-3 transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Current Path */}
+                <div className="px-4 py-2 max-h-20 shrink-0 overflow-y-auto bg-surface-1 border-b border-line">
+                    <p className="text-xs text-ink-faint font-mono break-all">
+                        {data?.current || t("common.selectADrive")}
+                    </p>
+                </div>
+
+                {/* Dir List */}
+                <div className="flex-1 overflow-y-auto py-1 min-h-0">
+                    {loading && (
+                        <div className="flex items-center justify-center py-10">
+                            <Loader2 className="w-5 h-5 animate-spin text-[var(--primary)]" />
+                        </div>
+                    )}
+
+                    {error && (
+                        <p className="text-danger text-sm text-center py-8">{error}</p>
+                    )}
+
+                    {!loading && !error && data && (
+                        <>
+                            {/* 상위 폴더로 */}
+                            {data.parent !== null && (
+                                <button
+                                    onClick={() => navigate(data.parent ?? undefined)}
+                                    className="w-full flex items-center gap-3 px-5 py-2.5 text-left
+                                               text-ink-faint hover:bg-surface-3 hover:text-ink
+                                               transition-colors text-sm"
+                                >
+                                    <ArrowLeft className="w-4 h-4 shrink-0" />
+                                    <span className="font-mono">..</span>
+                                </button>
+                            )}
+
+                            {data.dirs.length === 0 && (
+                                <p className="text-ink-faint text-sm text-center py-8">
+                                    {t("common.noSubfolders")}
+                                </p>
+                            )}
+
+                            {data.dirs.map((dir: DirEntry) => (
+                                <button
+                                    key={dir.path}
+                                    onClick={() => navigate(dir.path)}
+                                    className="w-full flex items-center gap-3 px-5 py-2.5 text-left
+                                               text-ink-muted hover:bg-surface-3 hover:text-ink
+                                               transition-colors text-sm group"
+                                >
+                                    {isDrive(dir.path) ? (
+                                        <HardDrive className="w-4 h-4 shrink-0 text-ink-faint group-hover:text-[var(--primary)] transition-colors" />
+                                    ) : (
+                                        <Folder className="w-4 h-4 shrink-0 text-ink-faint group-hover:text-[var(--primary)] transition-colors" />
+                                    )}
+                                    <span className="flex-1 truncate">{dir.name}</span>
+                                    <ChevronRight className="w-3 h-3 text-ink-faint group-hover:text-ink-muted shrink-0" />
+                                </button>
+                            ))}
+                        </>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="dialog-actions shrink-0 px-4 py-3 border-t border-line flex flex-wrap gap-3">
+                    <Button onClick={onClose} className="flex-1">{t("common.cancel")}</Button>
+                    <Button
+                        onClick={() => {
+                            if (data?.current) {
+                                onSelect(data.current);
+                                onClose();
+                            }
+                        }}
+                        disabled={!data?.current}
+                        variant="primary"
+                        className="flex-1"
+                    >
+                        {t("common.selectThisFolder")}
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ── DirInput ─────────────────────────────────────────────
+
+interface DirInputProps {
+    id?: string;
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    focusBorderColor?: string;
+    multiline?: boolean;
+    required?: boolean;
+    describedBy?: string;
+}
+
+export function DirInput({
+    id,
+    value,
+    onChange,
+    placeholder = "common.enterAPath",
+    focusBorderColor = "",
+    multiline = false,
+    required = false,
+    describedBy,
+}: DirInputProps) {
+    const { t } = useLanguage();
+    const [showBrowser, setShowBrowser] = useState(false);
+    const pathRef = useRef<HTMLTextAreaElement>(null);
+
+    useLayoutEffect(() => {
+        const field = pathRef.current;
+        if (!field) return;
+        const resize = () => {
+            field.style.height = "auto";
+            const minimum = parseFloat(getComputedStyle(field).minHeight) || 34;
+            field.style.height = Math.min(144, Math.max(minimum, field.scrollHeight + 2)) + "px";
+        };
+        resize();
+        const observer = new ResizeObserver(resize);
+        if (field.parentElement) observer.observe(field.parentElement);
+        return () => observer.disconnect();
+    }, [multiline, value]);
+
+    return (
+        <>
+            <div className={multiline ? "dir-input-row" : "flex gap-2"}>
+                {multiline ? <textarea
+                    ref={pathRef}
+                    id={id}
+                    rows={1}
+                    value={value}
+                    required={required}
+                    aria-describedby={describedBy}
+                    spellCheck={false}
+                    wrap="soft"
+                    onChange={(event) => onChange(event.target.value.replace(/[\r\n]/g, ""))}
+                    className={`ui-input input-focus dir-input-multiline font-mono ${focusBorderColor}`}
+                    placeholder={t(placeholder)}
+                /> : <Input
+                    id={id}
+                    type="text"
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className={`flex-1 font-mono text-sm ${focusBorderColor}`}
+                    placeholder={t(placeholder)}
+                    required={required}
+                    aria-describedby={describedBy}
+                    title={value}
+                />}
+                <Button type="button" icon={FolderOpen} onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setShowBrowser(true); }} className={multiline ? "dir-input-browse px-3 shrink-0" : "px-3 shrink-0"} title={t("common.browseFolders")} aria-label={t("common.browseFolders")}>
+                    <span className={multiline ? "dir-input-browse-label" : "hidden sm:inline"}>{t("common.browse")}</span>
+                </Button>
+            </div>
+
+            {/* 스크롤되는 설정 창 안에서도 폴더 선택 창이 잘리지 않게 한다. */}
+            {showBrowser && createPortal(
+                <DirBrowserModal
+                    initialPath={value || undefined}
+                    onSelect={onChange}
+                    onClose={() => setShowBrowser(false)}
+                />, document.body
+            )}
+        </>
+    );
+}

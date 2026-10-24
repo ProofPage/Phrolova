@@ -1,0 +1,209 @@
+import os
+import shutil
+import sys
+import tempfile
+import http.cookiejar
+import warnings
+from contextlib import ExitStack, contextmanager
+from pathlib import Path
+from urllib.parse import urlsplit
+
+from app.core.config import get_settings
+
+
+def is_youtube_url(url):
+    host = (urlsplit(url).hostname or "").lower()
+    return host == "youtu.be" or host == "youtube.com" or host.endswith(".youtube.com")
+
+
+def runtime_options():
+    from app.engine.youtube_tools import youtube_tools, deno_executable
+    runtimes = {}
+    for name in ("deno", "node"):
+        executable = shutil.which(name)
+        for folder in (
+            *([deno_executable().parent] if name == "deno" else []),
+            *([youtube_tools.bundle] if youtube_tools.bundle else []),
+            Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent)) / "bin",
+            Path(sys.executable).parent / "bin",
+            Path(sys.executable).parent,
+            Path(__file__).resolve().parents[3] / "bin",
+            Path(os.environ.get("PREFIX", str(Path(sys.executable).parent))) / "bin",
+            # Homebrew의 버전별 Node는 기본 PATH에 연결되지 않을 수 있다.
+            *(Path(prefix) / "opt/node@22/bin" for prefix in ("/opt/homebrew", "/usr/local") if sys.platform == 'darwin'),
+        ):
+            candidate = folder / (name + (".exe" if sys.platform == "win32" else ""))
+            if candidate.is_file() and (sys.platform == 'win32' or os.access(candidate, os.X_OK)):
+                executable = str(candidate)
+                break
+        if executable:
+            runtimes[name] = {"path": executable}
+    return {"js_runtimes": runtimes} if runtimes else {}
+
+
+def runtime_cli_options():
+    args = []
+    for name, options in runtime_options().get("js_runtimes", {}).items():
+        args.extend(["--js-runtimes", f"{name}:{options['path']}"])
+    return args
+
+
+def youtube_extractor_command():
+    try:
+        return [get_settings().resolve_ytdlp_path()]
+    except Exception:
+        if getattr(sys, 'frozen', False):
+            return [sys.executable, '--youtube-worker']
+        return [sys.executable, str(Path(__file__).with_name('youtube_worker.py'))]
+
+
+def youtube_options():
+    from app.engine.youtube_tools import youtube_tools, LOCAL_URL
+    provider = get_settings().youtube_po_token_provider_url or (LOCAL_URL if youtube_tools.status == 'ready' else None)
+    return {**runtime_options(),
+            **({'extractor_args': {'youtubepot-bgutilhttp': {'base_url': [provider]}}} if provider else {}),
+            'sleep_interval_requests': 1,
+            'sleep_interval': 5, 'max_sleep_interval': 10}
+
+
+def require_runtime_cli_options():
+    args = runtime_cli_options()
+    settings = get_settings()
+    from app.engine.youtube_tools import youtube_tools, LOCAL_URL
+    if youtube_tools.bundle:
+        args.extend(["--plugin-dirs", str(youtube_tools.bundle / "plugins")])
+    if settings.youtube_po_token_provider_url or youtube_tools.status == 'ready':
+        provider = (settings.youtube_po_token_provider_url or LOCAL_URL).strip()
+        if provider:
+            args.extend(["--extractor-args", f"youtubepot-bgutilhttp:base_url={provider}"])
+    return args
+
+
+@contextmanager
+def youtube_cookies():
+    source = get_settings().youtube_cookie_file
+    if not source:
+        yield None
+        return
+    if not Path(source).is_file():
+        raise ValueError(
+            "유튜브 쿠키 파일이 없습니다. 설정 → 인증에서 다시 등록해 주세요."
+        )
+    with tempfile.TemporaryDirectory(prefix="phrolova-youtube-") as folder:
+        copy = Path(folder) / "cookies.txt"
+        shutil.copyfile(source, copy)
+        yield str(copy)
+
+
+class YouTubeAuthenticationError(ValueError):
+    """A user-facing authentication failure without upstream credentials."""
+
+
+class YouTubeAccessError(YouTubeAuthenticationError):
+    def __init__(self, code, message):
+        super().__init__(message)
+        self.code = code
+
+
+def youtube_access_error(error):
+    if isinstance(error, YouTubeAccessError):
+        return error
+    text = str(error).lower()
+    if 'not a bot' in text:
+        return YouTubeAccessError('youtube_bot_check', '유튜브가 이 서버의 접속에 봇 확인을 요청했습니다. 잠시 후 다시 시도하거나 서버 네트워크·VPN·프록시 상태를 확인하세요.')
+    if 'too many requests' in text or 'http error 429' in text:
+        return YouTubeAccessError('youtube_rate_limit', '유튜브 요청 한도에 도달했습니다. 잠시 후 다시 시도하고 동시 다운로드 수를 줄여 주세요.')
+    return None
+
+
+def youtube_auth_message(error, *, has_cookies=False):
+    text = str(error).lower()
+    if youtube_access_error(error):
+        return None
+    if "private video" in text:
+        return (
+            "등록된 유튜브 계정에 이 비공개 영상의 시청 권한이 있는지 확인해 주세요."
+            if has_cookies
+            else "비공개 영상입니다. 시청 권한이 있는 계정의 유튜브 쿠키를 설정 → 인증 → 유튜브에 등록한 뒤 다시 시도해 주세요."
+        )
+    if any(
+        marker in text
+        for marker in (
+            "members-only",
+            "members only",
+            "available to members",
+            "join this channel",
+        )
+    ):
+        return (
+            "등록된 유튜브 계정에 이 영상의 멤버십 시청 권한이 있는지 확인해 주세요."
+            if has_cookies
+            else "멤버십 전용 영상입니다. 시청 권한이 있는 계정의 유튜브 쿠키를 설정 → 인증 → 유튜브에 등록한 뒤 다시 시도해 주세요."
+        )
+    if any(
+        marker in text
+        for marker in (
+            "not a bot",
+            "sign in to confirm",
+            "login required",
+            "login_required",
+            "age-restricted",
+            "age restricted",
+            "account required",
+            "sign in to view",
+            "sign in to watch",
+            "the page needs to be reloaded",
+            "page needs to be reloaded",
+        )
+    ):
+        return (
+            "유튜브 로그인을 확인하지 못했습니다. 설정 → 인증 → 유튜브에서 쿠키를 다시 등록하고 계정의 시청 권한을 확인해 주세요."
+            if has_cookies
+            else "이 영상은 유튜브 로그인 확인이 필요합니다. 설정 → 인증 → 유튜브에서 쿠키를 등록한 뒤 다시 시도해 주세요."
+        )
+    return None
+
+
+@contextmanager
+def youtube_cookie_fallback(error):
+    """Borrow explicit user cookies only after a confirmed authentication error."""
+    access_error = youtube_access_error(error)
+    if access_error and (isinstance(error, YouTubeAccessError) or not get_settings().youtube_cookie_file):
+        raise access_error from None
+    message = youtube_auth_message(error) or (str(access_error) if access_error else None)
+    if message is None:
+        raise error
+    with ExitStack() as stack:
+        try:
+            cookie_file = stack.enter_context(youtube_cookies())
+            if cookie_file:
+                # Validate before yt-dlp can log a malformed cookie line.
+                with warnings.catch_warnings(record=True):
+                    jar = http.cookiejar.MozillaCookieJar(cookie_file)
+                    jar.load(ignore_discard=True, ignore_expires=True)
+        except (OSError, ValueError, UnicodeError):
+            raise YouTubeAuthenticationError(
+                "등록된 유튜브 쿠키 파일을 읽을 수 없거나 형식이 올바르지 않습니다. 설정 → 인증 → 유튜브에서 다시 등록해 주세요."
+            ) from None
+        if cookie_file is None:
+            raise YouTubeAuthenticationError(message) from None
+        yield cookie_file
+
+
+async def with_youtube_cookie_fallback(operation):
+    from app.engine.youtube_tools import youtube_tools
+    await youtube_tools.ready()
+    try:
+        return await operation(None)
+    except Exception as error:
+        with youtube_cookie_fallback(error) as cookie_file:
+            try:
+                return await operation(cookie_file)
+            except Exception as authenticated_error:
+                access_error = youtube_access_error(authenticated_error)
+                if access_error:
+                    raise access_error from None
+                message = youtube_auth_message(authenticated_error, has_cookies=True)
+                if message:
+                    raise YouTubeAuthenticationError(message) from None
+                raise

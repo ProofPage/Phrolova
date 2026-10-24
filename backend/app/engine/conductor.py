@@ -1,0 +1,1582 @@
+"""
+Phrolova: Conductor (비동기 오케스트레이터)
+다중 채널 감시 루프를 관리하고, 방송 시작 시 자동 녹화를 트리거한다.
+CHZZK, YouTube, CIME, Kick, Twitch를 단일 Conductor로 통합 관리한다.
+"""
+
+from __future__ import annotations
+import asyncio
+from datetime import datetime
+from pathlib import Path
+import json
+from datetime import timedelta
+from typing import TYPE_CHECKING, Optional
+from app.core.config import get_settings
+from app.core.logger import logger, get_platform_logger
+from app.engine.auth import AuthManager
+from app.engine.base import Platform
+from app.engine.channel import ChannelTask
+from app.engine.downloader import ChzzkLiveEngine
+from app.engine.download_condition import matches_download_condition
+from app.engine.monitor_schedule import is_active as schedule_is_active, next_check_at, parse_schedule
+from app.engine.events import EventBus
+from app.engine.pipeline import YtdlpLivePipeline, RecordingState
+from app.services.notifications import NotificationKind
+from app.store.repositories import ChannelRepository, LiveHistoryRepository
+from app.engine.recording_errors import classify_recording_error
+
+if TYPE_CHECKING:
+    from app.services.notifications import NotificationService
+    from app.engine.youtube import YoutubeLiveEngine
+
+
+class Conductor:
+    """비동기 오케스트레이터.
+
+    Python asyncio를 활용하여 단일 스레드로 수십 개의 채널을 동시 감시한다.
+    CHZZK, YouTube, CIME, Kick, Twitch를 통합 관리한다.
+
+    채널 키 형식: "platform:channel_id" (예: "chzzk:abc123", "youtube:someuser")
+    기존 Chzzk 전용 키("abc123")는 자동으로 "chzzk:abc123"으로 마이그레이션된다.
+
+    주요 기능:
+        - 채널 등록/제거 (플랫폼 포함)
+        - 주기적 라이브 상태 확인
+        - 방송 시작 감지 시 자동 녹화 트리거
+        - 방송 종료 감지 시 녹화 중지
+    """
+
+    def __init__(
+        self,
+        auth: Optional[AuthManager] = None,
+        notifier: Optional[NotificationService] = None,
+        channel_repo: Optional[ChannelRepository] = None,
+        history_repo: Optional[LiveHistoryRepository] = None,
+    ) -> None:
+        settings = get_settings()
+        self._auth = auth or AuthManager()
+        self._chzzk_engine = ChzzkLiveEngine(auth=self._auth)
+        self._youtube_engine: Optional[YoutubeLiveEngine] = None
+        self._extra_engines: dict[Platform, object] = {}
+        self._channels: dict[str, ChannelTask] = {}
+        self._running = False
+        self._channel_repo = channel_repo or ChannelRepository()
+        self._history_repo = history_repo or LiveHistoryRepository()
+        self._notifier = notifier
+        self._events = EventBus()
+        self._scan_events: dict[str, asyncio.Event] = {}
+        self._stats_broadcast_task: Optional[asyncio.Task] = None
+        from app.engine.recording_finalizer import RecordingFinalizer
+
+        self.finalizer = RecordingFinalizer(
+            self._broadcast_status, self._notify_finalized
+        )
+        self._load_persistence()
+
+    def _notify(
+        self,
+        kind: NotificationKind,
+        title: str,
+        description: str = "",
+        color: str = "green",
+        fields: Optional[dict[str, str]] = None,
+    ) -> None:
+        """알림을 큐에 넣는다. 논블로킹이며 실패해도 감시 루프를 막지 않는다.
+
+        기존에는 감시 루프 안에서 Discord 응답을 await 했기 때문에
+        레이트 리밋이 걸리면 라이브 감지와 녹화 시작까지 함께 지연됐다.
+        """
+        if self._notifier is None:
+            return
+        self._notifier.notify(
+            kind=kind, title=title, description=description, color=color, fields=fields
+        )
+
+    def _notify_finalized(self, job):
+        success = job["state"] == "completed"
+        try:
+            self._notify(
+                (
+                    NotificationKind.RECORDING_COMPLETED
+                    if success
+                    else NotificationKind.RECORDING_FAILED
+                ),
+                title="녹화 파일 처리 완료" if success else "녹화 파일 변환 실패",
+                description=f"채널: {job['channel_name']}\n형식: {job['target_format'].upper()}",
+                color="green" if success else "red",
+                fields={
+                    "파일": job.get("output_path") or job["source_paths"][0],
+                    "상태": "파일 검사 완료" if success else "원본 TS 보관",
+                },
+            )
+        except Exception as error:
+            logger.warning(f"파일 처리 알림 등록 실패: {error}")
+
+    def _get_engine(self, platform: Platform):
+        """플랫폼에 맞는 엔진 인스턴스를 반환한다."""
+        if platform == Platform.CHZZK:
+            return self._chzzk_engine
+        elif platform == Platform.SPOON:
+            if platform not in self._extra_engines:
+                from app.engine.spoon import SpoonLiveEngine
+                self._extra_engines[platform] = SpoonLiveEngine()
+            return self._extra_engines[platform]
+        elif platform == Platform.BERRIZ:
+            if platform not in self._extra_engines:
+                from app.engine.berriz import BerrizLiveEngine
+                self._extra_engines[platform] = BerrizLiveEngine()
+            return self._extra_engines[platform]
+        elif platform == Platform.SOOP:
+            if platform not in self._extra_engines:
+                from app.engine.soop import SoopLiveEngine
+                self._extra_engines[platform] = SoopLiveEngine()
+            return self._extra_engines[platform]
+        elif platform == Platform.YOUTUBE:
+            if self._youtube_engine is None:
+                from app.engine.youtube import YoutubeLiveEngine
+
+                self._youtube_engine = YoutubeLiveEngine()
+            return self._youtube_engine
+        elif platform in (Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY, Platform.TWITCASTING):
+            if platform not in self._extra_engines:
+                from app.engine.cime import CimeLiveEngine
+                from app.engine.kick import KickLiveEngine
+                from app.engine.twitch import TwitchLiveEngine
+                from app.engine.tiktok import TikTokLiveEngine
+                from app.engine.bilibili import BilibiliLiveEngine
+                from app.engine.pandalive import PandaliveLiveEngine
+                from app.engine.popkontv import PopkonTVLiveEngine
+                from app.engine.rplay_live import RplayLiveEngine
+                from app.engine.twitcasting import TwitcastingLiveEngine
+
+                self._extra_engines[platform] = (
+                    {Platform.CIME: CimeLiveEngine, Platform.KICK: KickLiveEngine, Platform.TWITCH: TwitchLiveEngine, Platform.TIKTOK: TikTokLiveEngine, Platform.BILIBILI: BilibiliLiveEngine, Platform.PANDALIVE: PandaliveLiveEngine, Platform.POPKONTV: PopkonTVLiveEngine, Platform.RPLAY: RplayLiveEngine, Platform.TWITCASTING: TwitcastingLiveEngine}[platform]
+                )()
+            return self._extra_engines[platform]
+        else:
+            raise ValueError(f"지원하지 않는 플랫폼: {platform}")
+
+    async def get_live_preview_url(self, composite_key: str) -> str:
+        """Prefer standard playback, reusing a receiving CHZZK source if omitted."""
+        task = self._channels.get(composite_key)
+        if task is None:
+            raise KeyError(composite_key)
+        if not task.is_live:
+            raise ValueError("오프라인")
+        engine = self._get_engine(task.platform)
+        if task.platform == Platform.CHZZK:
+            from app.engine.chzzk_time_machine import TimeMachineUnavailableError
+            try:
+                return await engine.get_preview_url(task.channel_id)
+            except TimeMachineUnavailableError:
+                # Some live-detail responses omit ordinary playback even while
+                # the recording's advertised time-machine source is receiving.
+                # Allow a brief grace period for a starting pipeline to begin receiving.
+                for _ in range(25):
+                    if self._channels.get(composite_key) is not task or not task.is_live:
+                        raise ValueError("오프라인") from None
+                    pipeline = task.pipeline
+                    url = getattr(pipeline, 'preview_source_url', None)
+                    if getattr(pipeline, 'channel_id', None) == task.channel_id and isinstance(url, str) and url:
+                        return url
+                    await asyncio.sleep(0.2)
+                raise
+        if task.platform in (Platform.CHZZK, Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY, Platform.TWITCASTING, Platform.SPOON, Platform.BERRIZ, Platform.SOOP):
+            return await engine.get_preview_url(task.channel_id)
+        pipeline = getattr(task, 'pipeline', None)
+        if task.platform == Platform.YOUTUBE and pipeline:
+            url = getattr(pipeline, 'preview_source_url', None)
+            if isinstance(url, str) and url:
+                return url
+        page_url = engine.get_stream_url(task.channel_id)
+        pipeline = YtdlpLivePipeline(task.channel_id)
+        from app.engine.youtube_support import with_youtube_cookie_fallback
+
+        try:
+            url, _, _ = await asyncio.wait_for(
+                with_youtube_cookie_fallback(
+                    lambda cookie_file: pipeline._extract_preview_hls_url(page_url, cookie_file=cookie_file)
+                ), timeout=30,
+            )
+            return url
+        except Exception as e:
+            text = str(e).lower()
+            if "sign in to confirm" in text or "bot" in text:
+                raise ValueError("YouTube 봇 확인 또는 인증이 필요합니다. 설정 > 인증에서 YouTube 쿠키를 등록해 주세요.") from e
+            raise
+
+    @staticmethod
+    def make_composite_key(platform: Platform, channel_id: str) -> str:
+        """복합 키를 생성한다."""
+        return f"{platform.value}:{channel_id}"
+
+    @staticmethod
+    def parse_composite_key(key: str) -> tuple[Platform, str]:
+        """복합 키를 (Platform, channel_id)로 파싱한다.
+
+        ':' 없는 레거시 키는 Chzzk 채널로 처리한다.
+        """
+        if ":" not in key:
+            return (Platform.CHZZK, key)
+        platform_str, channel_id = key.split(":", 1)
+        try:
+            return (Platform(platform_str), channel_id)
+        except ValueError:
+            logger.warning(
+                f"알 수 없는 플랫폼 값 '{platform_str}', Chzzk으로 처리합니다."
+            )
+            return (Platform.CHZZK, channel_id)
+
+    @property
+    def is_running(self) -> bool:
+        return self._running
+
+    @property
+    def channel_count(self) -> int:
+        return len(self._channels)
+
+    def add_channel(
+        self,
+        channel_id: str,
+        auto_record: bool = True,
+        platform: Platform = Platform.CHZZK,
+        download_condition: Optional[str] = None,
+        watchalong_tags: Optional[str] = None,
+        recording_quality: Optional[str] = None,
+        output_format: Optional[str] = None,
+        output_format_provided: bool = False,
+        monitor_schedule: Optional[str] = None,
+    ) -> bool:
+        """감시할 채널을 등록한다."""
+        if platform == Platform.CHZZK:
+            from app.core.utils import extract_channel_id
+            channel_id = extract_channel_id(channel_id)
+        elif platform == Platform.YOUTUBE:
+            from app.core.utils import extract_youtube_id
+            channel_id = extract_youtube_id(channel_id)
+        composite_key = self.make_composite_key(platform, channel_id)
+        logger = get_platform_logger(platform, "live")
+        if composite_key in self._channels or (platform == Platform.CHZZK and channel_id in self._channels):
+            logger.warning(f"채널 '{composite_key}'은(는) 이미 등록되어 있습니다.")
+            return False
+        task = ChannelTask(
+            channel_id=channel_id,
+            platform=platform,
+            auto_record=auto_record,
+            download_condition=download_condition,
+            watchalong_tags=watchalong_tags,
+            recording_quality=recording_quality,
+            monitor_schedule=monitor_schedule,
+        )
+        self._channel_repo.upsert(
+            composite_key=composite_key,
+            platform=platform.value,
+            channel_id=channel_id,
+            auto_record=auto_record,
+            tags=task.tags,
+            download_condition=download_condition,
+            watchalong_tags=watchalong_tags,
+        )
+        if monitor_schedule is not None:
+            self._channel_repo.set_monitor_schedule(composite_key, monitor_schedule)
+        self._channels[composite_key] = task
+        if recording_quality is not None:
+            self._channel_repo.set_recording_quality(composite_key, recording_quality)
+        if output_format_provided:
+            task.output_format = output_format
+            self.finalizer.db.execute(
+                "UPDATE channels SET output_format=? WHERE composite_key=?",
+                (output_format, composite_key),
+            )
+        self._scan_events[composite_key] = asyncio.Event()
+        logger.info(f"채널 등록: {composite_key} (auto_record={auto_record})")
+        self._broadcast_status()
+        if self._running:
+            task.monitor_task = asyncio.create_task(
+                self._monitor_channel(composite_key)
+            )
+        return True
+
+    def set_popkontv_room_password(self, channel_id: str, password: str) -> None:
+        key = self.make_composite_key(Platform.POPKONTV, channel_id)
+        task = self._channels.get(key)
+        if task is None:
+            raise ValueError("등록된 채널을 찾을 수 없습니다.")
+        self._get_engine(Platform.POPKONTV).set_room_password(channel_id, password)
+        self._reset_retry(task)
+        self.trigger_scan_now(key)
+
+    def set_download_options(
+        self,
+        composite_key: str,
+        auto_record: bool,
+        condition: Optional[str],
+        tags: Optional[str],
+        recording_quality: Optional[str] = None,
+        output_format: Optional[str] = None,
+        output_format_provided: bool = False,
+        monitor_schedule: Optional[str] = None,
+        monitor_schedule_provided: bool = False,
+    ) -> None:
+        task = self._channels.get(composite_key)
+        if task is None:
+            raise ValueError("등록된 채널을 찾을 수 없습니다.")
+        self._channel_repo.set_download_options(
+            composite_key, auto_record, condition, tags
+        )
+        task.auto_record = auto_record
+        task.download_condition = condition
+        task.watchalong_tags = tags
+        if monitor_schedule_provided:
+            # None은 "상시 감시로 되돌림"이다.
+            self._channel_repo.set_monitor_schedule(composite_key, monitor_schedule)
+            task.monitor_schedule = monitor_schedule
+            self.trigger_scan_now(composite_key)
+        if recording_quality is not None:
+            self._channel_repo.set_recording_quality(composite_key, recording_quality)
+            task.recording_quality = recording_quality
+        if output_format_provided:
+            self.finalizer.db.execute(
+                "UPDATE channels SET output_format=? WHERE composite_key=?",
+                (output_format, composite_key),
+            )
+            task.output_format = output_format
+        self._reset_retry(task)
+        self._broadcast_status()
+        self.trigger_scan_now(composite_key)
+
+    @staticmethod
+    def _can_auto_record(task: ChannelTask) -> bool:
+        return (
+            task.auto_record
+            and not task.retry_blocked
+            and not task.broadcast_ended
+            and Conductor._in_schedule(task)
+            and Conductor._matches_download_condition(task)
+        )
+
+    @staticmethod
+    def _in_schedule(task: ChannelTask) -> bool:
+        """예약 시간대 밖이면 자동 녹화를 시작하지 않는다(수동 녹화는 그대로)."""
+        if task.is_live and task.pipeline is not None:
+            return True
+        return schedule_is_active(
+            parse_schedule(task.monitor_schedule), task.live_started_at, datetime.now()
+        )
+
+    @staticmethod
+    def _matches_download_condition(task: ChannelTask) -> bool:
+        if task.platform != Platform.CHZZK:
+            return True
+        settings = get_settings()
+        return matches_download_condition(
+            task.download_condition or settings.live_download_condition,
+            task.broadcast_tags,
+            (
+                task.watchalong_tags
+                if task.watchalong_tags is not None
+                else settings.watchalong_tags
+            ),
+            is_watchalong=task.is_watchalong,
+            watchalong_tag=task.watchalong_tag,
+        )
+
+    def _download_hold_reason(self, task: ChannelTask) -> Optional[str]:
+        if (
+            not task.is_live
+            or task.is_recording
+            or task.skip_pending
+            or task.pipeline is not None and not getattr(task.pipeline, "_closed", True)
+            or self._matches_download_condition(task)
+        ):
+            return None
+        condition = task.download_condition or get_settings().live_download_condition
+        if task.is_watchalong is None and task.broadcast_tags is None:
+            return "같이보기 정보 확인 대기"
+        if condition == "exclude_watchalong":
+            return "같이보기 방송을 제외하도록 설정되어 있습니다."
+        is_watchalong = matches_download_condition(
+            "watchalong",
+            task.broadcast_tags,
+            "같이보기",
+            is_watchalong=task.is_watchalong,
+            watchalong_tag=task.watchalong_tag,
+        )
+        if task.is_watchalong is False and (not is_watchalong):
+            return "일반 라이브 방송입니다. 같이보기 방송만 다운로드하도록 설정되어 있습니다."
+        if is_watchalong:
+            return "방송의 같이보기 태그가 지정한 태그와 일치하지 않습니다."
+        return "같이보기 태그 조건과 일치하지 않는 방송입니다."
+
+    def set_auto_record(self, composite_key: str, value: bool) -> None:
+        """채널의 자동 녹화 설정을 직접 지정한다."""
+        logger = get_platform_logger(composite_key, "live")
+        task = self._channels.get(composite_key)
+        if task is None:
+            raise ValueError(f"채널 '{composite_key}'을(를) 찾을 수 없습니다.")
+        task.auto_record = value
+        logger.info(f"[{composite_key}] 자동 녹화 {('ON' if value else 'OFF')}")
+        self._channel_repo.set_auto_record(composite_key, value)
+        self._broadcast_status()
+
+    def set_channel_tags(self, composite_key: str, tags: list[str]) -> None:
+        """채널의 태그를 지정한다."""
+        logger = get_platform_logger(composite_key, "live")
+        task = self._channels.get(composite_key)
+        if task is None:
+            raise ValueError(f"채널 '{composite_key}'을(를) 찾을 수 없습니다.")
+        task.tags = tags
+        logger.info(f"[{composite_key}] 태그 변경: {tags}")
+        self._channel_repo.set_tags(composite_key, tags)
+        self._broadcast_status()
+
+    def remove_tag_from_all_channels(self, tag_name: str) -> bool:
+        """모든 채널에서 특정 태그를 일괄 제거한다."""
+        modified_any = False
+        for task in self._channels.values():
+            if tag_name in task.tags:
+                task.tags.remove(tag_name)
+                modified_any = True
+        if modified_any:
+            logger.info(f"모든 채널에서 태그 삭제: {tag_name}")
+            self._channel_repo.remove_tag_everywhere(tag_name)
+            self._broadcast_status()
+        return modified_any
+
+    async def toggle_auto_record(self, composite_key: str) -> bool:
+        """채널의 자동 녹화 설정을 토글한다.
+
+        Returns:
+            변경 후의 auto_record 값.
+        """
+        logger = get_platform_logger(composite_key, "live")
+        task = self._channels.get(composite_key)
+        if task is None:
+            raise ValueError(f"채널 '{composite_key}'을(를) 찾을 수 없습니다.")
+        task.auto_record = not task.auto_record
+        if task.auto_record:
+            self._reset_retry(task)
+        else:
+            task.retry_at = None
+            self._persist_retry(task)
+        logger.info(
+            f"[{composite_key}] 자동 녹화 {('ON' if task.auto_record else 'OFF')}"
+        )
+        self._channel_repo.set_auto_record(composite_key, task.auto_record)
+        self._broadcast_status()
+        if (
+            task.auto_record
+            and self._can_auto_record(task)
+            and task.is_live
+            and (
+                task.pipeline is None or task.pipeline.state != RecordingState.RECORDING
+            )
+        ):
+            logger.info(f"[{composite_key}] 라이브 중 자동 녹화 ON → 즉시 녹화 시작")
+            await self._start_recording(
+                composite_key,
+                channel_name=task.channel_name,
+                title=task.title,
+                automatic=True,
+            )
+        return task.auto_record
+
+    def trigger_scan_now(self, composite_key: Optional[str] = None) -> None:
+        """채널 폴링 주기를 무시하고 즉시 스캔을 트리거한다.
+
+        Args:
+            composite_key: 특정 채널만 스캔. None이면 모든 채널.
+        """
+        logger = get_platform_logger(composite_key, "live")
+        if composite_key:
+            event = self._scan_events.get(composite_key)
+            if event:
+                event.set()
+                logger.info(f"[{composite_key}] 즉시 스캔 요청")
+        else:
+            for key, event in self._scan_events.items():
+                event.set()
+            logger.info(f"전체 채널 즉시 스캔 요청 ({len(self._scan_events)}개)")
+
+    async def remove_channel(self, composite_key: str) -> None:
+        """채널을 감시 목록에서 제거한다."""
+        logger = get_platform_logger(composite_key, "live")
+        from app.engine.preview_frames import frame_previews
+        frame_previews.invalidate(composite_key)
+        task = self._channels.get(composite_key)
+        if task is None:
+            logger.warning(f"채널 '{composite_key}'을(를) 찾을 수 없습니다.")
+            return
+        mt = task.monitor_task
+        if mt is not None and (not mt.done()):
+            mt.cancel()
+            await asyncio.gather(mt, return_exceptions=True)
+        if task.pipeline is not None:
+            await self._stop_recording(composite_key)
+        if task.platform == Platform.POPKONTV:
+            self._get_engine(Platform.POPKONTV).set_room_password(task.channel_id, "")
+        self._channels.pop(composite_key, None)
+        self._scan_events.pop(composite_key, None)
+        logger.info(f"채널 제거: {composite_key}")
+        self._channel_repo.delete(composite_key)
+        self._broadcast_status()
+
+    async def start(self) -> None:
+        """모든 등록된 채널의 감시를 시작한다."""
+        if self._running:
+            logger.warning("Conductor가 이미 실행 중입니다.")
+            return
+        await self.finalizer.start(recover=True)
+        self._running = True
+        logger.info(f"Conductor 시작. 감시 채널 수: {self.channel_count}")
+        for composite_key, task in self._channels.items():
+            task.monitor_task = asyncio.create_task(
+                self._monitor_channel(composite_key)
+            )
+        self._stats_broadcast_task = asyncio.create_task(self._stats_broadcast_loop())
+
+    async def stop(self, close_finalizer: bool = True) -> None:
+        """모든 감시 및 녹화를 중지한다."""
+        self._running = False
+        if close_finalizer:
+            self.finalizer._stopping = True
+        logger.info("Conductor 종료 요청...")
+        self.broadcast_event("shutdown")
+        pending = []
+        for task in self._channels.values():
+            mt = task.monitor_task
+            if mt is not None and (not mt.done()):
+                mt.cancel()
+                pending.append(mt)
+        if self._stats_broadcast_task is not None and (
+            not self._stats_broadcast_task.done()
+        ):
+            self._stats_broadcast_task.cancel()
+            pending.append(self._stats_broadcast_task)
+        await asyncio.gather(*pending, return_exceptions=True)
+        for composite_key, task in list(self._channels.items()):
+            if task.pipeline is not None:
+                await self._stop_recording(composite_key)
+        if close_finalizer:
+            await self.finalizer.close()
+        logger.info("Conductor 종료 완료.")
+
+    async def _stats_broadcast_loop(self) -> None:
+        """녹화 중인 채널이 있을 때 2초마다 통계를 SSE로 브로드캐스트한다."""
+        while self._running:
+            await asyncio.sleep(2.0)
+            any_recording = any(
+                (
+                    t.pipeline is not None
+                    and t.pipeline.state == RecordingState.RECORDING
+                    for t in self._channels.values()
+                )
+            )
+            if any_recording and self._events.subscriber_count:
+                self._broadcast_status()
+
+    def _broadcast_status(self) -> None:
+        """현재 전체 채널 상태를 SSE로 밀어낸다."""
+        self._events.publish("status_update", self.get_all_status())
+
+    def add_event_queue(self, queue: asyncio.Queue) -> None:
+        self._events.subscribe(queue)
+
+    def remove_event_queue(self, queue: asyncio.Queue) -> None:
+        self._events.unsubscribe(queue)
+
+    def broadcast_event(
+        self, event_type: str, data: Optional[dict | list] = None
+    ) -> None:
+        self._events.publish(event_type, data)
+
+    def _load_persistence(self) -> None:
+        """저장소에서 채널 목록을 복원한다."""
+        try:
+            records = self._channel_repo.list_all()
+        except Exception as e:
+            logger.error(f"채널 목록 로드 실패: {e}")
+            return
+        for record in records:
+            try:
+                platform = Platform(record["platform"])
+            except ValueError:
+                logger.warning(
+                    "지원하지 않는 플랫폼의 저장 채널을 감시 목록에서 제외합니다."
+                )
+                continue
+            channel_id = record["channel_id"]
+            if platform == Platform.YOUTUBE and channel_id.startswith("@http"):
+                from app.core.utils import extract_youtube_id
+                clean_id = extract_youtube_id(channel_id)
+                if clean_id != channel_id:
+                    old_key = self.make_composite_key(platform, channel_id)
+                    channel_id = clean_id
+                    try:
+                        self.finalizer.db.execute("DELETE FROM channels WHERE composite_key=?", (old_key,))
+                    except Exception:
+                        pass
+            composite_key = self.make_composite_key(platform, channel_id)
+            task = ChannelTask(
+                channel_id=channel_id,
+                platform=platform,
+                auto_record=record["auto_record"],
+                tags=list(record["tags"]),
+                download_condition=record.get("download_condition"),
+                watchalong_tags=record.get("watchalong_tags"),
+                recording_quality=record.get("recording_quality"),
+                monitor_schedule=record.get("monitor_schedule"),
+            )
+            task.output_format = record.get("output_format")
+            row = self.finalizer.db.query_one(
+                "SELECT retry_state FROM channels WHERE composite_key=?",
+                (composite_key,),
+            )
+            if row:
+                saved = json.loads(row["retry_state"] or "{}")
+                for field in (
+                    "retry_count",
+                    "retry_blocked",
+                    "retry_at",
+                    "retry_code",
+                    "last_error",
+                    "error_detail",
+                    "live_started_at",
+                    "broadcast_ended",
+                    "monitor_error",
+                    "monitor_error_detail",
+                    "recent_errors",
+                ):
+                    if field in saved:
+                        setattr(task, field, saved[field])
+            if task.last_error and (task.last_error.startswith("감시 오류:") or task.retry_code == "status_query"):
+                self._remember_error(task, "monitor", task.last_error, task.error_detail)
+                task.last_error = None
+                task.error_detail = None
+                task.retry_code = None
+                task.retry_blocked = False
+                task.retry_at = None
+            self._channels[composite_key] = task
+            self._scan_events[composite_key] = asyncio.Event()
+        if records:
+            logger.info(f"채널 목록 로드 완료 ({len(records)}개)")
+
+    def _poll_interval_for(self, task: Optional[ChannelTask]) -> int:
+        """이 채널을 몇 초마다 확인할지 정한다."""
+        return get_settings().monitor_interval
+
+    def _is_scheduled_off(self, task: ChannelTask) -> bool:
+        """예약 시간대 밖이라 지금은 확인하지 않는가. 녹화 중인 방송은 끝까지 확인한다."""
+        if task.pipeline is not None:
+            return False
+        return not schedule_is_active(
+            parse_schedule(task.monitor_schedule), task.live_started_at, datetime.now()
+        )
+
+    def _idle_delay(self, task: ChannelTask, interval: float) -> float:
+        """예약 시간대 밖에서 다음 시간대 시작까지 기다린다."""
+        upcoming = next_check_at(parse_schedule(task.monitor_schedule), datetime.now())
+        if upcoming is None:
+            return float(interval)
+        wait = (upcoming - datetime.now()).total_seconds()
+        return float(min(max(wait, 30.0), 3600.0))
+
+    @staticmethod
+    def _apply_status(task: ChannelTask, status: dict) -> None:
+        """조회한 라이브 상태를 채널에 반영한다."""
+        if not status["is_live"] or (
+            status.get("live_started_at")
+            and status.get("live_started_at") != task.live_started_at
+        ):
+            task.broadcast_ended = False
+        task.is_live = status["is_live"]
+        task.broadcast_status = "live" if task.is_live else "offline"
+        if not task.is_live:
+            from app.engine.preview_frames import frame_previews
+            frame_previews.invalidate(task.composite_key)
+        task.update_channel_name(status.get("channel_name"))
+        task.title = status.get("title")
+        task.category = status.get("category")
+        task.broadcast_tags = status.get("broadcast_tags")
+        task.is_watchalong = status.get("is_watchalong")
+        task.watchalong_tag = status.get("watchalong_tag")
+        if task.live_started_at != status.get("live_started_at"):
+            # 새 방송이면 앞 세션에서 쓰던 파일명 시각을 버린다.
+            task.session_started_at = None
+        task.live_started_at = status.get("live_started_at")
+        task.viewer_count = status.get("viewer_count", 0)
+        task.viewer_count_type = 'popularity' if status.get('viewer_count_type') == 'popularity' else 'viewers'
+        task.thumbnail_url = status.get("thumbnail_url")
+        task.profile_image_url = status.get("profile_image_url")
+
+    def _record_live_detection(self, composite_key: str) -> None:
+        """라이브 감지를 하루 1회 저장소에 남긴다 (날짜 경계는 저장소가 처리).
+
+        메모리에만 두면 재시작할 때마다 통계가 초기화된다. 기록에 실패해도
+        감시는 계속돼야 하므로 예외를 삼킨다.
+        """
+        logger = get_platform_logger(composite_key, "live")
+        try:
+            self._history_repo.record_detection(composite_key)
+        except Exception as e:
+            logger.error(f"[{composite_key}] 라이브 감지 기록 실패: {e}")
+
+    async def _handle_live_started(
+        self, composite_key: str, task: ChannelTask, retry_count: int
+    ) -> int:
+        """방송 시작을 알리고, 자동 녹화가 켜져 있으면 녹화를 시작한다.
+
+        새 방송이 시작됐으므로 재시도 횟수는 0부터 다시 센다.
+        """
+        logger = get_platform_logger(composite_key, "live")
+        logger.info(
+            f"[{composite_key}] 🔴 방송 시작 감지! 스트리머: {task.channel_name}, 제목: {task.title}"
+        )
+        self._notify(
+            NotificationKind.LIVE_DETECTED,
+            title="🔴 방송 시작",
+            description=f"**{task.channel_name or task.channel_id}**\n{task.title or '제목 없음'}",
+            color="green",
+            fields={
+                "플랫폼": task.platform.value,
+                "카테고리": task.category or "N/A",
+                "자동 녹화": "ON" if task.auto_record else "OFF",
+            },
+        )
+        if self._can_auto_record(task):
+            await self._start_recording(
+                composite_key,
+                channel_name=task.channel_name,
+                title=task.title,
+                automatic=True,
+            )
+            return task.retry_count
+        if task.auto_record and task.platform == Platform.CHZZK:
+            settings = get_settings()
+            logger.info(
+                f"[{composite_key}] 자동 다운로드 조건으로 시작 보류 (조건={task.download_condition or settings.live_download_condition}, 공식 같이보기={task.is_watchalong}, 같이보기 태그={task.watchalong_tag}, 방송 태그={task.broadcast_tags})."
+            )
+        return retry_count
+
+    async def _handle_live_ended(self, composite_key: str, task: ChannelTask) -> None:
+        """방송 종료를 처리한다."""
+        logger = get_platform_logger(composite_key, "live")
+        logger.info(f"[{composite_key}] ⚫ 방송 종료 감지.")
+        await self._stop_recording(composite_key)
+
+    def _persist_retry(self, task):
+        values = {
+            key: getattr(task, key)
+            for key in (
+                "retry_count",
+                "retry_blocked",
+                "retry_at",
+                "retry_code",
+                "last_error",
+                "error_detail",
+                "live_started_at",
+                "broadcast_ended",
+                "monitor_error",
+                "monitor_error_detail",
+                "recent_errors",
+            )
+        }
+        self.finalizer.db.execute(
+            "UPDATE channels SET retry_state=? WHERE composite_key=?",
+            (
+                json.dumps(values, ensure_ascii=False),
+                self.make_composite_key(task.platform, task.channel_id),
+            ),
+        )
+
+    def _remember_error(self, task, kind, message, detail=None):
+        if task.recent_errors and task.recent_errors[-1].get("kind") == kind and task.recent_errors[-1].get("message") == message:
+            task.recent_errors[-1]["timestamp"] = datetime.now().isoformat()
+            task.recent_errors[-1]["count"] = task.recent_errors[-1].get("count", 1) + 1
+            task.recent_errors[-1]["detail"] = detail
+        else:
+            task.recent_errors.append(dict(kind=kind, message=message, detail=detail, timestamp=datetime.now().isoformat(), count=1))
+            task.recent_errors[:] = task.recent_errors[-10:]
+
+    def _monitor_failure(self, task, error, detail=None):
+        from app.engine.platform_auth import redact_media_error
+        message = redact_media_error(error) or type(error).__name__
+        task.monitor_status = "retry_wait"
+        task.broadcast_status = "error"
+        task.monitor_error = message
+        task.monitor_error_detail = redact_media_error(detail) if detail else (type(error).__name__ if isinstance(error, Exception) else None)
+        self._remember_error(task, "monitor", message, task.monitor_error_detail)
+        self._persist_retry(task)
+        self._broadcast_status()
+        count = task.recent_errors[-1]["count"]
+        if count == 1 or count % 10 == 0:
+            get_platform_logger(task.platform, "watch").warning(
+                "[%s] 감시 실패 · 누적=%s · 원인=%s · 상세=%s",
+                task.composite_key, count, message, task.monitor_error_detail or "없음",
+            )
+
+    def _reset_retry(self, task):
+        if task.last_error:
+            self._remember_error(task, "recording", task.last_error, task.error_detail)
+        task.retry_count = 0
+        task.retry_blocked = False
+        task.retry_at = None
+        task.retry_code = None
+        task.last_error = None
+        task.error_detail = None
+        self._persist_retry(task)
+
+    def on_credentials_updated(self, platform: Optional[str] = None) -> None:
+        """인증 정보 등록/갱신 시 차단되거나 실패한 채널들의 재시도를 초기화하고 즉시 스캔한다."""
+        target_platform = None
+        if platform is not None:
+            try:
+                target_platform = Platform(platform.lower())
+            except ValueError:
+                target_platform = None
+        for key, task in list(self._channels.items()):
+            if target_platform is None or task.platform == target_platform:
+                if task.retry_blocked or task.retry_count > 0 or task.last_error or task.pipeline is None:
+                    self._reset_retry(task)
+                    task.broadcast_ended = False
+                    self.trigger_scan_now(key)
+        self._broadcast_status()
+
+    def _record_failure(self, task, error):
+        from app.engine.platform_auth import redact_media_error
+
+        failure = classify_recording_error(error)
+        if failure.code == "stream_closed":
+            task.retry_code = failure.code
+            task.last_error = None
+            task.error_detail = None
+            task.retry_blocked = False
+            task.retry_at = (datetime.now() + timedelta(seconds=5)).isoformat() if task.auto_record else None
+            self._persist_retry(task)
+            self._broadcast_status()
+            return
+        task.last_error = str(failure)
+        task.retry_code = failure.code
+        task.error_detail = redact_media_error(error)
+        self._remember_error(task, "recording", str(failure), task.error_detail)
+        task.retry_blocked = (
+            not failure.retryable
+            or task.retry_count >= get_settings().max_record_retries
+        )
+        task.retry_at = (
+            None
+            if task.retry_blocked or not task.auto_record
+            else (
+                datetime.now() + timedelta(seconds=min(300, 5 * 2**task.retry_count))
+            ).isoformat()
+        )
+        if task.platform == Platform.RPLAY and failure.code == "stream_unavailable":
+            # A missing CDN playlist does not prove that the broadcast ended.
+            task.retry_blocked = False
+            task.retry_at = (datetime.now() + timedelta(seconds=60)).isoformat() if task.auto_record else None
+            task.retry_count = 0
+        self._persist_retry(task)
+        self._broadcast_status()
+
+    async def _retry_stalled_recording(
+        self, composite_key: str, task: ChannelTask, retry_count: int, max_retries: int
+    ) -> int:
+        """방송은 켜져 있는데 녹화가 멈춘 경우 다시 시작한다. 새 재시도 횟수를 돌려준다."""
+        logger = get_platform_logger(composite_key, "live")
+        pipe = task.pipeline
+        retry_count = max(retry_count, task.retry_count)
+        if task.platform == Platform.RPLAY and task.retry_code == "stream_unavailable":
+            # The monitor keeps its own counter across scans as well.
+            retry_count = 0
+        if not self._can_auto_record(task):
+            return retry_count
+        if getattr(pipe, "retryable", True) is False:
+            from app.engine.recording_errors import RecordingError
+
+            self._record_failure(
+                task,
+                RecordingError(
+                    pipe.error_code or "blocked",
+                    pipe.error_message or "녹화 설정을 확인하세요.",
+                ),
+            )
+            return retry_count
+        if task.retry_at and datetime.fromisoformat(task.retry_at) > datetime.now():
+            return retry_count
+        if pipe is None or pipe.state not in (
+            RecordingState.ERROR,
+            RecordingState.COMPLETED,
+        ):
+            if pipe is not None and pipe.state == RecordingState.RECONNECTING:
+                feeder = getattr(pipe, "_feeder_task", None)
+                is_stalled = (
+                    getattr(pipe, "_closed", False)
+                    or feeder is None
+                    or feeder.done()
+                )
+                if is_stalled:
+                    pipe._state = RecordingState.ERROR
+                    pipe._closed = True
+                else:
+                    return retry_count
+            else:
+                return retry_count
+        if retry_count < max_retries:
+            retry_count += 1
+            task.retry_count = retry_count
+            self._persist_retry(task)
+            logger.warning(
+                f"[{composite_key}] 녹화 중단 감지. 자동 재녹화 시도 ({retry_count}/{max_retries})..."
+            )
+            if not self._running or not self._can_auto_record(task):
+                return retry_count
+            if pipe.state == RecordingState.ERROR and hasattr(pipe, "reconnect"):
+                try:
+                    async with task.recording_lock:
+                        if task.pipeline is pipe and self._can_auto_record(task):
+                            await pipe.reconnect()
+                            if pipe.state in (
+                                RecordingState.RECORDING,
+                                RecordingState.COMPLETED,
+                            ):
+                                task.last_error = None
+                                task.error_detail = None
+                                task.retry_at = None
+                                task.retry_code = None
+                                task.retry_count = 0
+                                retry_count = 0
+                                self._persist_retry(task)
+                                self._broadcast_status()
+                except Exception as error:
+                    # A failed reconnect leaves the pipeline in ERROR; record it
+                    # so the next attempt waits for the retry interval instead
+                    # of repeating start_recording against the same failure.
+                    self._record_failure(task, error)
+                    if getattr(error, "code", None) == "auto_record_disabled":
+                        return retry_count
+            else:
+                await self._start_recording(
+                    composite_key,
+                    channel_name=task.channel_name,
+                    title=task.title,
+                    is_retry=True,
+                )
+        elif retry_count == max_retries:
+            retry_count += 1
+            task.last_error = "최대 재시도 횟수 초과로 녹화 중단됨"
+            task.retry_blocked = True
+            task.retry_at = None
+            task.retry_count = retry_count
+            self._persist_retry(task)
+            await self._stop_recording(composite_key)
+            logger.error(
+                f"[{composite_key}] 최대 재시도 횟수 초과. 녹화 시작 버튼으로 수동 재시작하세요."
+            )
+        return retry_count
+
+    async def _wait_for_next_scan(self, composite_key: str, interval: float) -> None:
+        """다음 확인까지 기다린다. 즉시 스캔 요청이 오면 기다리지 않고 깨어난다."""
+        scan_event = self._scan_events.get(composite_key)
+        if scan_event is None:
+            await asyncio.sleep(interval)
+            return
+        scan_event.clear()
+        try:
+            await asyncio.wait_for(scan_event.wait(), timeout=float(interval))
+        except asyncio.TimeoutError:
+            pass
+
+    async def _monitor_channel(self, composite_key: str) -> None:
+        """단일 채널의 라이브 상태를 주기적으로 확인한다.
+
+        한 번 도는 동안 하는 일은 네 가지다 — 상태 조회, 채널에 반영,
+        상태 변화에 따른 처리, 다음 차례까지 대기. 각 처리는 아래 메서드로 나눠 두었고
+        여기서는 어떤 조건에 무엇이 일어나는지만 읽히게 한다.
+        """
+        logger = get_platform_logger(composite_key, "live")
+        settings = get_settings()
+        task = self._channels.get(composite_key)
+        interval = self._poll_interval_for(task)
+        retry_count = task.retry_count if task else 0
+        max_retries = settings.max_record_retries
+        logger.info(f"[{composite_key}] 감시 시작 (주기: {interval}초)")
+        while self._running:
+            try:
+                task = self._channels.get(composite_key)
+                if task is None:
+                    break
+                interval = self._poll_interval_for(task)
+                max_retries = get_settings().max_record_retries
+                if self._is_scheduled_off(task):
+                    # 예약 시간대 밖: 라이브 조회를 하지 않고 다음 시간대까지 기다린다.
+                    task.broadcast_status = "offline"
+                    await self._wait_for_next_scan(composite_key, self._idle_delay(task, interval))
+                    continue
+                engine = self._get_engine(task.platform)
+                status = await engine.check_live_status(task.channel_id)
+                if self._channels.get(composite_key) is not task:
+                    break
+                was_live = task.is_live
+                if status.get("status_error"):
+                    self._monitor_failure(task, status["status_error"], status.get("error_detail"))
+                    await self._wait_for_next_scan(composite_key, interval)
+                    continue
+                task.monitor_error = None
+                task.monitor_error_detail = None
+                task.monitor_status = "watching"
+                if not status["is_live"] or (
+                    status.get("live_started_at")
+                    and task.live_started_at
+                    and status["live_started_at"] != task.live_started_at
+                ):
+                    self._reset_retry(task)
+                    retry_count = 0
+                self._apply_status(task, status)
+                self._persist_retry(task)
+                self._broadcast_status()
+                if status["is_live"]:
+                    if task.broadcast_ended:
+                        task.broadcast_ended = False
+                        self._persist_retry(task)
+                    self._record_live_detection(composite_key)
+                if (status["is_live"] and task.pipeline is not None and task.capture_automatic
+                        and not self._matches_download_condition(task)):
+                    task.skip_pending = True
+                    self._broadcast_status()
+                    try:
+                        await self._stop_recording(composite_key)
+                    except Exception as error:
+                        from app.engine.platform_auth import redact_media_error
+                        self._remember_error(task, "recording", "조건에 따른 녹화 중단에 실패했습니다.",
+                                             redact_media_error(error))
+                        logger.warning("[%s] 조건에 따른 녹화 중단 실패: %s", composite_key, redact_media_error(error))
+                    finally:
+                        task.skip_pending = False
+                        self._broadcast_status()
+                if status["is_live"] and (not was_live):
+                    retry_count = await self._handle_live_started(
+                        composite_key, task, retry_count
+                    )
+                elif not status["is_live"] and was_live:
+                    await self._handle_live_ended(composite_key, task)
+                    retry_count = 0
+                elif status["is_live"] and self._can_auto_record(task):
+                    if task.pipeline is None:
+                        await self._start_recording(
+                            composite_key,
+                            channel_name=task.channel_name,
+                            title=task.title,
+                            automatic=True,
+                        )
+                        retry_count = task.retry_count
+                    else:
+                        retry_count = await self._retry_stalled_recording(
+                            composite_key, task, retry_count, max_retries
+                        )
+                    if not self._running:
+                        break
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                code = getattr(e, "code", None)
+                err_text = str(e).lower()
+                is_ended = (
+                    code in ("rplay_authentication", "rplay_access", "rplay_not_found", "not_available")
+                    or any(m in err_text for m in ("비공개", "삭제", "private", "unavailable"))
+                )
+                if is_ended and task.is_live:
+                    logger = get_platform_logger(composite_key, "live")
+                    logger.info(f"[{composite_key}] ⚫ 방송 비공개/종료 감지.")
+                    task.is_live = False
+                    task.monitor_error = None
+                    task.monitor_error_detail = None
+                    task.monitor_status = "watching"
+                    await self._handle_live_ended(composite_key, task)
+                    self._reset_retry(task)
+                    self._broadcast_status()
+                else:
+                    self._monitor_failure(task, e)
+            delay = interval
+            if self._is_scheduled_off(task):
+                delay = self._idle_delay(task, interval)
+            elif task.retry_at and self._can_auto_record(task):
+                delay = min(
+                    interval,
+                    max(
+                        0.5,
+                        (
+                            datetime.fromisoformat(task.retry_at) - datetime.now()
+                        ).total_seconds(),
+                    ),
+                )
+            await self._wait_for_next_scan(composite_key, delay)
+
+    async def _stop_recording(self, composite_key: str) -> None:
+        task = self._channels.get(composite_key)
+        if task is None:
+            return
+        async with task.recording_lock:
+            if self._channels.get(composite_key) is task:
+                await self._stop_recording_locked(composite_key)
+
+    async def _stop_recording_locked(self, composite_key: str) -> None:
+        task = self._channels.get(composite_key)
+        if task is None or task.pipeline is None:
+            return
+        pipe = task.pipeline
+        stop_error = None
+        try:
+            await pipe.stop_recording()
+        except Exception as error:
+            if not getattr(pipe, "_closed", True):
+                self._broadcast_status()
+                raise
+            stop_error = error
+        if not getattr(pipe, "_closed", True):
+            raise RuntimeError("녹화 파일 쓰기가 아직 종료되지 않았습니다.")
+        if (
+            task.recording_job_id
+            and self.finalizer.get(task.recording_job_id)["state"] == "recording"
+        ):
+            await self.finalizer.capture_finished(task.recording_job_id, pipe)
+        elif not task.recording_job_id and pipe.state == RecordingState.COMPLETED:
+            self._save_live_history(composite_key, task, pipe.get_status())
+        task.last_recording_status = pipe.get_status()
+        task.pipeline = None
+        task.capture_automatic = False
+        task.skip_pending = False
+        self._broadcast_status()
+        if stop_error is not None:
+            raise stop_error
+
+    async def _start_recording(
+        self,
+        composite_key: str,
+        channel_name=None,
+        title=None,
+        is_retry=False,
+        automatic=False,
+    ) -> None:
+        task = self._channels.get(composite_key)
+        if task is None:
+            return
+        async with task.recording_lock:
+            if self._channels.get(composite_key) is task:
+                await self._start_recording_locked(
+                    composite_key,
+                    channel_name=channel_name,
+                    title=title,
+                    is_retry=is_retry,
+                    automatic=automatic,
+                )
+
+    async def _start_recording_locked(
+        self,
+        composite_key: str,
+        channel_name: Optional[str] = None,
+        title: Optional[str] = None,
+        is_retry: bool = False,
+        automatic: bool = False,
+        continuation=None,
+    ) -> None:
+        """Start a session, or continue a closed CHZZK container boundary."""
+        logger = get_platform_logger(composite_key, "live")
+        task = self._channels.get(composite_key)
+        if task is None:
+            return
+        if (
+            automatic
+            and task.pipeline is None
+            and task.last_error
+            and not task.retry_blocked
+        ):
+            if task.retry_at and datetime.fromisoformat(task.retry_at) > datetime.now():
+                return
+            if task.retry_count >= get_settings().max_record_retries:
+                task.retry_blocked = True
+                self._persist_retry(task)
+                return
+            task.retry_count += 1
+            self._persist_retry(task)
+        if continuation is None and (automatic or is_retry) and (not self._can_auto_record(task)):
+            return
+        if task.pipeline is not None:
+            if task.pipeline.state in (
+                RecordingState.RECORDING,
+                RecordingState.CONNECTING,
+                RecordingState.RECONNECTING,
+                RecordingState.STOPPING,
+            ):
+                return
+            await self._stop_recording_locked(composite_key)
+        if not automatic and not is_retry:
+            self._reset_retry(task)
+        try:
+            settings = get_settings()
+            quality = (continuation["quality"] if continuation is not None else
+                       task.recording_quality or settings.recording_quality or "best")
+            await self.finalizer.start()
+            engine = self._get_engine(task.platform)
+            live_url = engine.get_stream_url(task.channel_id)
+            cookie_str = self._auth.get_ytdlp_cookies() if task.platform == Platform.CHZZK else None
+            if automatic and not is_retry:
+                logger.debug(f"[{composite_key}] 스트림 CDN 준비 대기 (5초)...")
+                await asyncio.sleep(5)
+                if automatic and not self._running:
+                    return
+                if automatic and (not self._can_auto_record(task)):
+                    return
+            pipeline = YtdlpLivePipeline(channel_id=task.channel_id)
+            pipeline._logger = get_platform_logger(task.platform, "recording")
+            if continuation is not None:
+                pipeline.continuity_resume = continuation['resume']
+                pipeline.continuity_buffer = continuation.get('buffer')
+                pipeline._start_guard = lambda: self._running and not pipeline._intentional_stop
+            elif automatic or is_retry:
+                pipeline._start_guard = lambda: self._running and self._can_auto_record(task)
+            task.pipeline = pipeline
+            task.capture_automatic = automatic or is_retry
+            task.recording_job_id = None
+            task.last_recording_status = None
+            from app.engine.recording_finalizer import recording_policy
+
+            policy = continuation['policy'] if continuation is not None else recording_policy()
+            if continuation is None and task.output_format:
+                policy = {**policy, "output_format": task.output_format}
+
+            def registered(capture):
+                task.recording_job_id = self.finalizer.register_capture(
+                    composite_key, capture, task, policy
+                )
+
+            pipeline._on_capture_started = registered
+            pipeline._on_capture_error = lambda capture: self._record_failure(
+                task, classify_recording_error(capture.last_exception)
+            )
+
+            async def capture_ended(capture):
+                async with task.recording_lock:
+                    if task.pipeline is not capture:
+                        return
+                    if task.recording_job_id:
+                        await self.finalizer.capture_finished(
+                            task.recording_job_id, capture
+                        )
+                    task.last_recording_status = capture.get_status()
+                    boundary = (capture.end_reason == 'continuity_boundary'
+                                and getattr(capture, 'continuity_resume', None)
+                                and not capture._intentional_stop)
+                    if boundary:
+                        task.broadcast_ended = False
+                    elif capture._intentional_stop:
+                        task.broadcast_ended = True
+                    else:
+                        try:
+                            fresh = await self._get_engine(task.platform).check_live_status(task.channel_id)
+                            self._apply_status(task, fresh)
+                            task.broadcast_ended = not bool(fresh.get("is_live", False))
+                        except Exception:
+                            task.broadcast_ended = not task.is_live
+                    self._persist_retry(task)
+                    task.pipeline = None
+                    self._broadcast_status()
+                    if boundary and self._running and self._channels.get(composite_key) is task:
+                        # This continues an existing recording after closing its
+                        # previous writer. Auto-OFF does not stop an active session.
+                        # The new file/job has a unique session ID and the same policy.
+                        await self._start_recording_locked(
+                            composite_key, channel_name=task.channel_name, title=task.title,
+                            is_retry=True, continuation={'resume': capture.continuity_resume, 'policy': policy, 'quality': quality, 'buffer': getattr(capture, 'continuity_buffer', None)},
+                        )
+                    elif not task.broadcast_ended and self._running and self._can_auto_record(task) and self._channels.get(composite_key) is task:
+                        logger.info(f"[{composite_key}] 라이브 방송 지속 확인됨. 새 세션으로 자동 녹화 재개.")
+                        self.trigger_scan_now(composite_key)
+
+            pipeline._on_capture_ended = capture_ended
+            extra = {}
+            if task.platform == Platform.YOUTUBE:
+                from app.engine.youtube_support import with_youtube_cookie_fallback
+
+                async def resolve_youtube(selected_quality):
+                    extract = getattr(pipeline, "_extract_youtube_source", None)
+                    if extract is not None:
+                        return await with_youtube_cookie_fallback(
+                            lambda cookie_file: extract(
+                                live_url, selected_quality, cookie_file=cookie_file
+                            )
+                        )
+                    return await with_youtube_cookie_fallback(
+                        lambda cookie_file: pipeline._extract_hls_url(
+                            live_url, selected_quality, None, cookie_file=cookie_file
+                        )
+                    )
+
+                extra["source_resolver"] = resolve_youtube
+                cookie_str = None
+            elif task.platform == Platform.CIME:
+                extra["source_resolver"] = (
+                    lambda selected_quality: pipeline._resolve_stream_spec(
+                        engine, task.channel_id, selected_quality
+                    )
+                )
+                cookie_str = None
+            elif task.platform == Platform.RPLAY:
+                # 재연결은 방송 중 만료된 주소를 다시 열지 않도록 캐시를 버리고 새 주소를 받는다.
+                async def resolve_rplay(selected_quality):
+                    return await pipeline._resolve_stream_spec(
+                        engine, task.channel_id, selected_quality, force_refresh=True
+                    )
+
+                resolve_rplay.discard_cached_address = lambda: engine.discard_cached_address(
+                    task.channel_id
+                )
+                extra["source_resolver"] = resolve_rplay
+                cookie_str = None
+            elif task.platform in (Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.TWITCASTING, Platform.SPOON, Platform.BERRIZ, Platform.SOOP):
+                extra["source_resolver"] = (
+                    lambda selected_quality: pipeline._resolve_stream_spec(
+                        engine, task.channel_id, selected_quality
+                    )
+                )
+                cookie_str = None
+            await pipeline.start_recording(
+                stream_obj=live_url,
+                streamer_name=channel_name or task.channel_name,
+                title=title or task.title,
+                category=task.category,
+                live_started_at=task.new_session_stamp(task.live_started_at),
+                quality=quality,
+                cookie_str=cookie_str,
+                thumbnail_url=task.thumbnail_url,
+                **extra,
+            )
+            task.last_error = None
+            task.error_detail = None
+            task.retry_at = None
+            task.retry_code = None
+            self._persist_retry(task)
+            logger.info(f"[{composite_key}] 자동 라이브 녹화 시작 (quality={quality}).")
+            if not is_retry:
+                self._notify(
+                    NotificationKind.RECORDING_STARTED,
+                    title="🎬 녹화 시작",
+                    description=f"채널: **{channel_name or composite_key}**\n제목: {title or 'N/A'}",
+                    color="green",
+                    fields={"화질": quality, "플랫폼": task.platform.value},
+                )
+        except Exception as e:
+            classified = classify_recording_error(e)
+            if task.platform == Platform.RPLAY and classified.code == "stream_unavailable":
+                self._record_failure(task, classified)
+                logger.info("[%s] 송출 서버 복구 대기 · 60초 후 재확인", composite_key)
+                self._broadcast_status()
+                return
+            if getattr(e, "code", None) == "broadcast_ended" or classified.code == "broadcast_ended":
+                task.pipeline = None
+                task.is_live = False
+                task.broadcast_status = "offline"
+                task.broadcast_ended = True
+                task.retry_at = None
+                task.retry_code = None
+                task.retry_count = 0
+                task.retry_blocked = False
+                task.last_error = None
+                task.error_detail = None
+                self._persist_retry(task)
+                logger.info("[%s] 녹화 연결 중 방송 종료 확인 · 다음 방송을 감시합니다.", composite_key)
+                self._broadcast_status()
+                return
+            if getattr(e, "code", None) == "auto_record_disabled" or classified.code == "auto_record_disabled":
+                task.pipeline = None
+                task.retry_at = None
+                self._persist_retry(task)
+                self._broadcast_status()
+                return
+            from app.engine.platform_auth import redact_media_error
+
+            message = redact_media_error(e)
+            self._record_failure(task, e)
+            logger.error(
+                "[%s] 녹화 시작 실패 · 코드=%s · 원인=%s · 재시도=%s · 상세=%s: %s",
+                composite_key, task.retry_code, task.last_error,
+                task.retry_at or ("중단" if task.retry_blocked else "수동 재시도"), type(e).__name__, message,
+                exc_info=not isinstance(e, (RuntimeError, ValueError)),
+            )
+            self._notify(
+                NotificationKind.RECORDING_FAILED,
+                title="❌ 녹화 시작 실패",
+                description=f"채널: **{channel_name or composite_key}**\n오류: {message}",
+                color="red",
+            )
+        self._broadcast_status()
+
+    async def start_manual_recording(self, composite_key: str) -> dict:
+        """수동으로 특정 채널의 녹화를 시작한다."""
+        task = self._channels.get(composite_key)
+        if task is None:
+            platform, channel_id = self.parse_composite_key(composite_key)
+            task = ChannelTask(
+                channel_id=channel_id, platform=platform, auto_record=False
+            )
+            self._channels[composite_key] = task
+        pipe = task.pipeline
+        if pipe is not None and pipe.state == RecordingState.RECORDING:
+            return {"error": "이미 녹화 중입니다.", **pipe.get_status()}
+        try:
+            engine = self._get_engine(task.platform)
+            status = await engine.check_live_status(task.channel_id)
+            task.update_channel_name(status.get("channel_name"))
+            task.title = status.get("title")
+            if not status.get("is_live"):
+                error_msg = status.get("status_error") or "현재 라이브 방송 중이 아닙니다."
+                return {"error": error_msg}
+        except Exception as err:
+            from app.engine.platform_auth import redact_media_error
+            return {"error": redact_media_error(err)}
+        await self._start_recording(composite_key)
+        pipe = task.pipeline
+        if pipe is not None:
+            return {
+                **pipe.get_status(),
+                **({"error": task.last_error} if task.last_error else {}),
+            }
+        return {"error": "녹화 시작 실패."}
+
+    async def stop_manual_recording(self, composite_key: str) -> dict:
+        """수동으로 특정 채널의 녹화를 중지한다."""
+        task = self._channels.get(composite_key)
+        if task is None:
+            return {"error": "녹화 중인 채널이 아닙니다."}
+        pipe = task.pipeline
+        if pipe is None:
+            return {"error": "녹화 중인 채널이 아닙니다."}
+        await self._stop_recording(composite_key)
+        return pipe.get_status()
+
+    async def stop_all_recordings(self) -> dict:
+        """현재 진행 중인 모든 채널의 녹화를 중지한다."""
+        stopped_count = 0
+        for composite_key, task in list(self._channels.items()):
+            if (
+                task.pipeline is not None
+                and task.pipeline.state == RecordingState.RECORDING
+            ):
+                await self._stop_recording(composite_key)
+                stopped_count += 1
+        return {
+            "stopped_count": stopped_count,
+            "message": f"{stopped_count}개의 채널 녹화를 중지했습니다.",
+        }
+
+    def get_all_status(self) -> list[dict]:
+        """모든 채널의 상태를 반환한다."""
+        result: list[dict] = []
+        for composite_key, task in self._channels.items():
+            status: dict = {
+                "composite_key": composite_key,
+                "platform": task.platform.value,
+                "channel_id": task.channel_id,
+                "auto_record": task.auto_record,
+                "recording_quality": task.recording_quality,
+                "recording_inspection": task.recording_inspection,
+                "output_format": task.output_format,
+                "postprocess": (
+                    self.finalizer.get(task.recording_job_id)
+                    if task.recording_job_id
+                    else next(
+                        (
+                            j
+                            for j in self.finalizer.list_jobs()
+                            if j["composite_key"] == composite_key
+                        ),
+                        None,
+                    )
+                ),
+                "channel_url": (
+                    self._get_engine(task.platform).get_stream_url(task.channel_id)
+                    if task.platform in (Platform.CIME, Platform.KICK, Platform.TWITCH, Platform.TIKTOK, Platform.BILIBILI, Platform.PANDALIVE, Platform.POPKONTV, Platform.RPLAY, Platform.TWITCASTING, Platform.SPOON, Platform.BERRIZ, Platform.SOOP)
+                    else None
+                ),
+                "is_live": task.is_live,
+                "recording": task.last_recording_status,
+                "channel_name": task.channel_name,
+                "title": task.title,
+                "category": task.category,
+                "viewer_count": task.viewer_count,
+                "viewer_count_type": task.viewer_count_type,
+                "thumbnail_url": task.thumbnail_url,
+                "profile_image_url": task.profile_image_url,
+                "tags": getattr(task, "tags", []),
+                "broadcast_tags": task.broadcast_tags,
+                "is_watchalong": task.is_watchalong,
+                "watchalong_tag": task.watchalong_tag,
+                "download_condition": task.download_condition,
+                "watchalong_tags": task.watchalong_tags,
+                "monitor_schedule": task.monitor_schedule,
+                "auto_record_eligible": self._can_auto_record(task),
+                "download_hold_reason": self._download_hold_reason(task),
+                "skip_pending": task.skip_pending,
+                "last_error": getattr(task, "last_error", None),
+                "broadcast_status": task.broadcast_status,
+                "monitor_status": task.monitor_status if self._running else "paused",
+                "monitor_error": task.monitor_error,
+                "monitor_error_detail": task.monitor_error_detail,
+                "recent_errors": task.recent_errors,
+                "retry_count": task.retry_count,
+                "retry_blocked": task.retry_blocked,
+                "retry_at": task.retry_at,
+                "retry_code": task.retry_code,
+                "error_detail": task.error_detail,
+            }
+            pipe = task.pipeline
+            if pipe is not None:
+                status["recording"] = pipe.get_status()
+            result.append(status)
+        return result
+
+    def _save_live_history(
+        self, composite_key: str, task: ChannelTask, pipe_status: dict
+    ) -> None:
+        """라이브 녹화 완료 이력을 저장한다.
+
+        기존 JSON 구현은 매번 전체 파일을 읽고 다시 썼기 때문에 이력이 쌓일수록
+        녹화 종료 처리가 느려졌다. 지금은 INSERT 한 번이다.
+        """
+        logger = get_platform_logger(composite_key, "live")
+        try:
+            self._history_repo.add_session(
+                {
+                    "composite_key": composite_key,
+                    "platform": task.platform.value,
+                    "channel_id": task.channel_id,
+                    "channel_name": task.channel_name or task.channel_id,
+                    "started_at": pipe_status.get("start_time"),
+                    "ended_at": datetime.now().isoformat(),
+                    "duration_seconds": pipe_status.get("duration_seconds", 0),
+                    "file_size_bytes": pipe_status.get("file_size_bytes", 0),
+                    "output_path": pipe_status.get("output_path"),
+                }
+            )
+            logger.debug(f"[{composite_key}] 라이브 이력 저장 완료.")
+        except Exception as e:
+            logger.error(f"[{composite_key}] 라이브 이력 저장 실패: {e}")
+
+    def get_live_history(self) -> list[dict]:
+        """저장된 라이브 녹화 이력을 반환한다."""
+        try:
+            return self._history_repo.list_sessions()
+        except Exception as e:
+            logger.error(f"라이브 이력 조회 실패: {e}")
+            return []
+
+    def get_live_detections(self) -> dict[str, int]:
+        """채널별 라이브 감지 횟수를 반환한다 (최근 30일 기준, 하루 1회 카운트).
+
+        Returns:
+            { composite_key: 최근 30일 내 감지된 날짜 수 }
+        """
+        try:
+            return self._history_repo.detection_counts(days=30)
+        except Exception as e:
+            logger.error(f"라이브 감지 통계 조회 실패: {e}")
+            return {}

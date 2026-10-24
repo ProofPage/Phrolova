@@ -1,0 +1,1644 @@
+# Changelog
+
+모든 주목할 만한 변경 사항을 이 파일에서 관리합니다.
+형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)를 따르며,
+버전 관리는 [Semantic Versioning](https://semver.org/lang/ko/)을 준수합니다.
+
+---
+
+## [Unreleased]
+
+## [2.2.8] - 2026-10-24
+
+### Added
+- 숲 라이브 채널 감시·녹화, 다시보기 다운로드 및 인증 설정 연동.
+- 기본 다운로드 실패 시 이미 추출된 단일 비DRM HLS VOD에 N_m3u8DL-RE 예비 다운로더 사용.
+
+### Fixed
+- 유튜브 라이브 미리보기 시 480p/360p 경량 스트림 우선 선택 및 버퍼 안정화로 429 차단·버퍼링 방지.
+- 숲 채널·VOD 주소 검증, API 장애와 오프라인 상태 구분, 미리보기 필수 헤더 및 쿠키 도메인 처리.
+- 스트림 조회 세션 종료와 지원하지 않는 yt-dlp 외부 다운로더 지정 제거.
+- 선택 도구의 별도 설치 안내와 표준 설치 경로 감지.
+
+### Removed
+- 시작 시 브라우저 자동 열기 및 상단바 알림 아이콘·알림 센터.
+
+## [2.2.7] - 2026-10-24
+
+### Added
+- 실시간 HLS 해상도 및 FPS(1920×1080 · 60fps) 메타데이터 전달 및 치지직 실시간 화질 조회 연동.
+- Windows 대표 설치 경로(WinGet, Chocolatey, Scoop, %LOCALAPPDATA%, %ProgramFiles%) 및 `ffmpeg-*` 버전 폴더 자동 감지.
+
+### Fixed
+- 모달 제목 아이콘 제거, 예약 감시 요일/시간/버튼 정렬 및 좁은 창 상단바 메뉴 아이콘 수직 정렬 통일.
+- yt-dlp 및 Streamlink 파이썬 내장 패키지 우선 처리 (임의의 다운로드 폴더 생성 방지).
+
+## [2.2.6] - 2026-10-24
+
+### Fixed
+- v2.2.5 배포에서 누락된 인증 탭 확정안 반영: 안내 박스 제거, 선택 전 전체 폭 플랫폼 목록, 선택 후 동일 너비·높이·모서리·테두리의 좌우 카드.
+- 인증 선택·해제와 데스크톱 카드 크기 일치에 대한 UI 회귀 검사 보강.
+- 채널 추가·동영상 입력창 아래 설명 제거 및 저장 정보·로그 요약 카드의 배경·구분선·여백 통일.
+
+### Removed
+- 잘못 추가된 프로그램 시작 자동 설치·재시작과 안내 문구 제거. 새 버전 확인·알림·수동 다운로드 안내는 유지하며, 도구 자동 업데이트는 추가하지 않음.
+
+## [2.2.5] - 2026-10-24
+
+### Added
+- 채널별 요일·시간대 예약 감시와 시작 전·종료 후 추가 확인.
+- Windows 실행 파일 및 관리형 스크립트 설치의 시작 자동 업데이트.
+
+### Fixed
+- 재시작 녹화의 파일명 시각, RPLAY 주소 갱신·서명 쿼리 보존, YouTube 주소 추출 대기 한도.
+- 업데이트 체크섬 필수 검증과 Windows 정상 종료 후 실행 파일 교체·재시작.
+
+## [2.2.4] - 2026-10-23
+
+### Fixed
+- 데스크톱 설정 분류 고정, 인증 안내 중복·위치 표현 정리, 한국어 줄바꿈 및 비활성 실행 버튼 구분 개선.
+- 치지직 CDN 복구 중 폴링 스레드가 제한 시간 뒤에 재개되면 이미 완료된 대체 응답까지 버리던 처리 수정. 미완료 요청 제한 시간은 유지.
+- RPLAY 빈 영상 조각의 성공 처리 방지 및 녹화 시작 대기 종료 후 중복 shielded future 오류 수정.
+- 상단 바의 중복 페이지 아이콘·이름 및 쿠키 인증 영역의 이중 구분선 제거.
+- 설정 분류·인증 플랫폼 목록에 불투명 배경과 명확한 선택 테두리 적용.
+- 라이브·다운로드 카드, 로그 목록·본문, 공통 도구 모음과 팝업의 영역 구분 개선.
+
+## [2.2.3] - 2026-10-23
+
+### Changed
+- 공통 버튼·탭·내비게이션·팝업에 Liquid Glass 스타일 적용. 본문 가독성 및 동작 줄이기·투명도 줄이기·고대비 설정 대응.
+- 전 화면의 내비게이션·제목·설명·주요 수치·실행 영역을 정리하고 설정·인증의 데스크톱 분할 및 모바일 선택 구조 개편.
+
+### Fixed
+- Termux에서 하드 링크 없는 녹화 파일 게시·DB 이관 지원 및 Deno 패키지 자동 설치.
+- 쿠키 파일 검사와 실제 로그인 확인을 구분하고 브라우저 가져오기 도메인·만료 검사 보강.
+- 인증 화면의 입력·실행·보조 도구 배치와 모바일 조작성 개선.
+
+### Removed
+- 애니메이션 허브 페이지·설정·전용 API 제거. 기존 콘텐츠와 일반 다운로드는 보존.
+
+## [2.2.2] - 2026-10-21
+
+### Added
+- 스푼 공개 라이브 오디오 감지·녹음 및 채널 링크 정규화.
+- 베리즈 커뮤니티 라이브 감지와 비DRM HLS 녹화.
+- 베리즈 비DRM 다시보기 다운로드와 로그인 쿠키 등록.
+- 플랫폼 선택 UI와 8개 언어 플랫폼 명칭.
+
+## [2.2.1] - 2026-10-21
+
+### Fixed
+- 라이브 채널 추가 시 중복 등록 차단 및 안내, 서버 측 중복 요청 409 응답.
+- 알플레이 BytePlus 폴백 시 인증된 `livestreamUrl` 우선 선택 및 재생 주소 갱신 시 캐시 무효화.
+- 알플레이 세션 갱신을 직렬화하고 최신 토큰을 재사용해 다중 채널의 동시 갱신 충돌 방지.
+- 알플레이 인증 조회를 작업 스레드로 분리해 동기 네트워크 요청에 따른 이벤트 루프 지연 방지.
+- 만료된 세션의 최신 refreshToken 사용 및 계정 변경 시 이전 계정 세션 덮어쓰기 방지.
+- 쿠키 직접 입력창의 누락 번역 키와 한국어 고정 안내 문구 수정.
+- 팬더티비·팝콘티비 공식 로그인 흐름에서 발급하는 세션 쿠키 이름 인식 수정.
+
+## [2.2.0] - 2026-10-21
+
+### Added
+- **알플레이 (RPLAY) 크리에이터 커스텀 링크 지원**: 라이브 채널 추가 시 `https://rplay.live/c/<handle>` (예: hitsu, tsuki, seldea 등) 및 쿼리 파라미터가 포함된 주소를 입력하면 크리에이터의 24자리 고유 OID를 자동 해석 및 캐싱하여 정상 등록되도록 개선.
+
+## [2.1.9] - 2026-10-21
+
+### Added
+- **야미코리아 (YamiKorea)**: `ym-05.com` 개별 영상 다운로드 지원. 재생 전 광고 및 미리보기 영상을 제외하고 본영상 원본 MP4만 안전하게 수집.
+- **AV19**: `av19t.com`의 `/korea/`, `/bj/`, `/nsub/` 개별 영상 다운로드 지원. 해시 고정된 순수 WASM 브리지를 통해 세션 키(v10/v11)를 복호화하고 표준 AES-128 HLS MPEG-TS 스트림 추출.
+- **MissAV**: `missav123.com`의 `/ko/<slug>` 개별 영상 다운로드 지원. 본편 HLS 재생목록 분석 및 화질별 표준 MPEG-TS 다운로드.
+
+### Fixed
+- `backend/run.py`에서 Python 3.14+ `asyncio.WindowsProactorEventLoopPolicy` 및 `set_event_loop_policy` 폐기 경고 호출 제거.
+
+## [2.1.8] - 2026-10-21
+
+### Changed
+- 기본 Python 실행·빌드 기준을 표준 GIL Python 3.14.8 이상으로 통일하고 Python 3.15 실험적 CI 검사를 추가.
+- Twitch TTV-AB 광고 차단 기본값을 OFF로 변경. 기존 저장 설정은 유지.
+
+### Fixed
+- 치지직 `ex-nlive-streaming.navercdn.com`의 Akamai 후보 경로 지원 및 LL-HLS 폴링 매개변수 정리 시 인증 경로 보존.
+- 서버의 구조화된 검증 오류, 비JSON 응답, 연결 실패·타임아웃·취소 처리와 화면 표시 인증 정보 마스킹 보완.
+- Python 이벤트 루프 종료 처리와 Windows 구버전 가상환경 백업의 원본 보존·날짜 형식 호환성 개선.
+
+## [2.1.7] - 2026-10-21
+
+### Fixed
+- 치지직 뒤쪽 조각이 방종을 먼저 감지해도 수신 중인 앞쪽 정상 조각을 보존.
+- DB 초기화·마이그레이션 실패 시 연결을 닫고 다음 호출에서 초기화 재시도.
+- 애니메이션 고정 카탈로그·잘못된 작품 ID 제거, 실제 메타데이터로 통일.
+- 소스 간 임의 대체·기본 작품 재생 방지 및 실제 회차 주소 검증.
+- 짭플릭스의 가상 회차·조합한 플레이어 주소 성공 응답 제거.
+- 미방영 작품의 완료 상태 오표시와 UI 회귀 검사의 모의 API 계약 보완.
+
+## [2.1.6] - 2026-10-21
+
+### Added
+- 티비룸·툰데이 작품 및 회차 조회와 동영상 다운로드 연결.
+- 티비핫 URL 인식·회차 조회 및 재생 세션 연결. 외부 플레이어 HTTP 403으로 실제 다운로드는 검증되지 않음.
+
+### Fixed
+- 알플레이 동시 인증 갱신 충돌 방지 및 CDN 간 인증 정보 전달 제한.
+- 수신 실패 조각의 성공 집계 방지와 불연속 경계별 원본 분리·보존.
+- 녹화 파일 검사 결과와 수신 누락·불연속 진단을 구분.
+- 알플레이·트위치 녹화 연결 중 API로 방송 종료가 확인되면 오류 대신 감시 대기로 전환.
+- 애니메이션 소스 전달·상세 식별자 조회·시즌 계산 및 플레이어 자막 처리 보완.
+
+## [2.1.5] - 2026-10-20
+
+### Added
+- **Anime Hub & Dedicated Player**:
+  - Integrated an interactive anime catalog featuring seasonal highlights, popularity leaderboards, and weekly broadcast schedules.
+  - Built-in anime streaming player with aspect ratio presets (Fit, Crop, Stretch), custom playback speeds, and seek steps.
+  - Subtitle customization engine with real-time size scaling (50%~200%) and sync offset adjustments.
+  - Integrated AniSkip opening and ending chapter detection with one-click skip and auto-skip capabilities.
+  - Seamless one-click anime episode transfer to the Phrolova high-speed VOD download queue.
+  - Local watch history tracking with resume playback progress and personal library bookmarks.
+
+## [2.1.4] - 2026-10-19
+
+### Added
+- **Moeni (모에니)**: Added full support for `moeni.net` catalog and episode streaming, implementing custom dynamic AES-256-CBC decryption, session key derivation, and HLS manifest reconstruction.
+- **Re:ANIME**: Added full support for `reanime.to` SvelteKit SSR catalog extraction, `/anime/{slug}` and `/watch/{slug}?ep={n}` routing, and multi-server HD HLS video resolution.
+- **Animaru (애니마루)**: Added account ID/PW authentication handler (`/api/auth/login`), adult content cookie injection, and support for the new `/api/anime/{id}` REST API.
+- **Anilife (애니라이프)**: Added account ID/PW authentication handler (`/api/auth/login`), adult-restricted content cookie injection, and TLS record fragmentation compatibility for SNI blocking defense.
+- **Twitch TTV-AB**: Built-in TTV-AB v23.0.2 ad-block engine with user ON/OFF toggle switch in Settings -> Downloads and 8-language localization.
+
+### Changed
+- **Linkani**: Enhanced episode title normalization (e.g. converting bare numeric badges to standardized `N화`) and added HLS manifest duration calculation.
+- **Ohli24 (애니24)**: Upgraded to support Vite/Inertia.js SPA parsing (`/c/...`, `/e/...`) and expanded multi-CDN allowed host regex patterns.
+- **Ani365 (애니365)**: Expanded support for `ohli365.org` domains and normalized MegaPlay multi-language subtitle tags to BCP 47 standards.
+- **TVWiki (티비위키)**: Registered 13 new distributed media CDN patterns across all 12 categories.
+
+### Fixed
+- Fixed an issue where channels transitioning to private/restricted/unauthorized post-broadcast caused infinite monitoring error logging loops (`감시 실패 · 누적=...`).
+- Automatically classify post-broadcast 403 Forbidden / restricted responses as clean broadcast completion (`is_live: False`).
+
+## [2.1.3] - 2026-10-19
+
+### Fixed
+- Fixed an issue where channels transitioning to private/restricted/unauthorized post-broadcast caused infinite monitoring error logging loops (`감시 실패 · 누적=...`).
+- Automatically classify post-broadcast 403 Forbidden / restricted responses as clean broadcast completion (`is_live: False`).
+
+## [2.1.2] - 2026-10-19
+
+### Fixed
+- Extended Streamlink read timeout and segment queue deadline to 90s/60s to prevent transient network read timeouts (`Read timeout`) during live stream recording.
+
+## [2.1.1] - 2026-10-19
+
+### Fixed
+- Fixed an issue where active live streams stopped recording prematurely when HLS sessions closed, by verifying live status and automatically resuming recording in a new session while the broadcast remains active.
+- Prevented false `broadcast_ended` state locking from blocking auto-recording during ongoing livestreams.
+
+## [2.1.0] - 2026-10-19
+
+### Fixed
+- Fixed preview proxy 502 Bad Gateway errors by serving cached playlist manifests and retrying on upstream CDN 5xx (500, 502, 503, 504) server spikes.
+
+## [2.0.99] - 2026-10-19
+
+### Fixed
+- Fixed an issue where channels blocked due to pre-login access failures (`empty_stream` or auth failure) remained permanently blocked after the user subsequently logged in or updated credentials in Settings -> Authentication.
+- Automatically unblock and trigger immediate monitoring scan for affected channels when platform credentials or session tokens are updated.
+
+## [2.0.98] - 2026-10-19
+
+### Fixed
+- Fixed RPLAY playlist reload `500 Server Error` warning logs by respecting `reload_attempts` retries and automatically refreshing stream authorization grants on transient CDN 5xx responses.
+
+## [2.0.97] - 2026-10-19
+
+### Added
+- YouTube 4K live recording support via signed live DASH streams (both live-from-start and real-time capture).
+- Pass actual recorded resolution to UI status display.
+- Direct remux from native fMP4 to MKV/MP4 for CIME 4K recordings without redundant TS intermediate copy.
+
+### Fixed
+- Fixed RPLAY live segment fetch failures (`알플레이 영상 조각 수신이 실패했습니다`) by inheriting viewer auth query parameters from stream URL into segment requests.
+- Added in-flight segment token renewal on 403 Forbidden to prevent stream disconnects during RPLAY live recording.
+
+## [2.0.96] - 2026-10-19
+
+### Fixed
+- Fixed an issue where pipeline reconnect failure (e.g. transient `The page needs to be reloaded` or network timeout) caused recordings to permanently hang in `reconnecting` state without further retries.
+- In Conductor, detect stalled/closed pipelines in `reconnecting` state and cleanly resume automatic recording retry cycle.
+- Added `The page needs to be reloaded` to YouTube cookie fallback markers.
+
+## [2.0.95] - 2026-10-19
+
+### Fixed
+- Treat post-broadcast private and unavailable YouTube stream addresses as clean offline states rather than retryable monitoring failures, preventing infinite automatic recording loops and error spam.
+- Classify unavailable/private stream errors as non-retryable in recording error handling.
+
+## [2.0.94] - 2026-10-19
+
+### Changed
+- Switch the VOD download URL input from a multiline textarea to a single-line input field, and update helper copy across all 8 languages to remove "separate multiple links with line breaks".
+- Support pressing Enter in the VOD download input to immediately start downloading.
+
+### Fixed
+- Prevent extreme bitrate spikes (hundreds of Mbps) during the first 3 seconds of live recording by deferring bitrate calculation until stable media duration samples accumulate.
+
+## [2.0.93] - 2026-10-19
+
+### Fixed
+- Handle transient CDN 429 rate limits in preview proxy by caching valid manifests and backing off requests.
+- Enhance frontend live preview with exponential retry recovery and robust Hls.js error tolerance to eliminate spurious "preview unavailable" interruptions.
+
+## [2.0.92] - 2026-10-19
+
+### Fixed
+- Pass registered YouTube cookies to live status requests and preview stream proxy connections.
+- Extract YouTube live viewer count from modern `runs` renderer, and parse channel profile image and channel name from video owner structures.
+- Reuse active YouTube live recording stream URLs directly for dashboard preview playback to avoid redundant bot verification checks.
+- Handle YouTube channel/video URLs correctly without generating duplicate `@https://...` handle prefixes.
+
+## [2.0.91] - 2026-10-19
+
+### Fixed
+- Distinguish active Twitch advertisement waits from stalled input, and propagate failed media segment reception to recovery.
+- Split Twitch capture at byte-exact boundaries after skipped ads, discontinuities and reconnections. Preserve original parts and remux compatible sequential parts in order after capture closes.
+- Size live and video platform selectors to their labels, preserving an 8px arrow gap across responsive layouts.
+
+## [2.0.90] - 2026-10-19
+
+### Added
+- Add an opt-in ReYohoho Twitch live quality proxy for quality lookup, recording and preview, including registered account-token forwarding via `auth=`. Keep it disabled by default and explain the third-party credential risk.
+- Restrict proxy destinations, reject redirects and untrusted playlist URLs, mask authentication query values and fall back to direct access when proxies fail.
+- Verify settings persistence and responsive controls. A short real humzh sample contained 1920×1080 H.264 video at an advertised 60 fps and AAC audio.
+
+## [2.0.89] - 2026-10-19
+
+### Fixed
+- Accept the observed Anime24 episode CDN hosts while preserving HTTPS, redirect, private-address and hostname validation.
+
+### Removed
+- Remove TVCHAK from platform selection, authentication, URL recognition, API registration and extraction. Preserve existing files, records and credentials.
+
+## [2.0.88] - 2026-10-19
+
+### Improved
+- Keep the familiar narrow file list and wide log viewer, with a 240px sidebar and 16px gap. Remove the system logging specification block.
+- Align structured log timestamps, severity, service and message columns while preserving raw search, continuation lines and original file export.
+- Separate equal-height authentication selectors from one full-width detail panel. Add persistent RPLAY field labels and 44px controls.
+
+### Fixed
+- Provide an accessible quick-navigation dialog title and description; correct its dialog geometry, backdrop dismissal and keyboard focus restoration.
+
+## [2.0.87] - 2026-10-19
+
+### Fixed
+- Route YouTube tool setup messages to the shared console and service log, including six installation stages and the failing stage.
+- Finish Deno/bgutil preparation before application startup completes. Reuse verified installations and report failures without claiming success.
+- Restore automatic local-provider mode when a custom URL is cleared and saved. Treat the default loopback URL as managed locally, including a trailing slash.
+- Stack authentication cards in independent desktop columns while retaining a single mobile column and keyboard reading order.
+- Add the missing RPLAY key icon, translate RPLAY errors, trim sign-in email, show failed status checks and disable authentication-method switching during requests.
+
+### Validation
+- Authentication browser regression passed at 320–1440px with isolated API fixtures, including request locking, password clearing and independent column positions.
+- TypeScript, production build and all eight locale checks passed. The existing bundle-size warning remains.
+- Fresh Windows tool downloads, pinned hash checks, plugin loading, an existing matching provider response and restart without installation were verified.
+- Real-account sign-in success and removal of YouTube account/network restrictions are not implied by these checks.
+
+## [2.0.86] - 2026-10-18
+
+### Fixed
+- Fix RPLAY playlist renewal assigning a read-only Streamlink URL property. Update request arguments instead and test with the real guarded stream class.
+- Propagate RPLAY segment and mid-response failures to recording recovery instead of silently skipping failed media; preserve structured retry policies.
+- Calculate video bitrate from saved media time. Average CHZZK write speed across its advertised segment interval, retaining zero speed for genuine stalls without adding a bandwidth cap.
+- Correct authentication success notifications and clear RPLAY passwords after failed sign-in attempts.
+
+### Added
+- Automatically install hash-verified Deno 2.9.7 and matching bgutil server/plugin 2.0.2 in persistent app data. Verify and reuse healthy installations on subsequent launches.
+- Start the managed provider on IPv4 loopback only, retain explicit external provider settings and stop only the app-owned process on shutdown.
+- Share official provider arguments and runtime/plugin paths across YouTube video, live, preview and channel-import paths.
+
+### Improved
+- Compact, collapsed authentication cards with two desktop columns and one mobile column, separate account/cookie/session methods and clearer guidance in all eight languages.
+
+### Validation
+- Full backend check before the final CHZZK display change: 2,009 passed and 2 skipped. The final CHZZK/pipeline regression check passed 109 tests and 4 subtests.
+- Each supplied RPLAY IVS channel recorded 248 seconds through a controlled playlist 403, followed by real API renewal and successful media delivery.
+- With Time Machine disabled, the supplied CHZZK channel saved 166.71 seconds of 1080p video/audio. Write-speed samples were 0.51–0.93 MiB/s and media bitrate was approximately 6.2 Mbps.
+- Windows native Deno/provider installation, next-launch installation skip and actual token generation passed.
+- Authentication UI, keyboard controls, password clearing, file-method switching, 320–1440px layouts, eight-language checks and frontend build passed.
+- YouTube bot verification and account/network restrictions are not guaranteed to be resolved by a working token provider.
+
+## [2.0.85] - 2026-10-18
+
+### Fixed
+- Renew RPLAY live playlists through the official playback grant after an HTTP 401/403, preserving the active HLS worker and its sequence tracking.
+- Stop repeated authentication failures after one renewed playback attempt; retain server-enforced account and quality permissions.
+- Renew registered RPLAY preview root playlists after HTTP 401/403 while retaining opaque local preview URLs and trusted CDN validation.
+
+### Validation
+- 254 focused backend tests passed across RPLAY, renewal, preview, recording recovery, shutdown, capture and finalization.
+- Authenticated production live captures saved 434.01 seconds for the AWS IVS channel and 438.05 seconds for the BytePlus channel, with video and audio and normal stops.
+- The IVS preview returned 43 successful playlist responses. No production 403 occurred during this check; renewal recovery is covered by mocked 403 responses, not a reproduced production failure.
+- An authenticated production VOD sample saved 305.03 seconds of 1920x1080 H.264 video with AAC audio.
+- These bounded samples do not establish full-VOD or hours-long recording reliability. YouTube bot-verification restrictions remain unresolved.
+
+## [2.0.84] - 2026-10-18
+
+### Fixed
+- Repair missing separators between variants in the official RPLAY BytePlus HLS master without changing signed media URLs.
+- Update live viewer query credentials and the caller's session after refreshing an expired access token.
+- Apply refreshed account parameters when retrying RPLAY VOD metadata requests; move live token renewal off the asynchronous event loop.
+- Preserve server-enforced quality permissions and keep account authorization off media delivery requests.
+
+### Validation
+- All 96 focused RPLAY live and VOD tests passed, including the real Streamlink parser, token renewal, credential scope, recording and download regression checks.
+- Authenticated production live recording saved 196.03 seconds with video and audio and stopped normally.
+- Authenticated production VOD downloading saved 185.03 seconds with video and audio.
+- YouTube live and video requests remained blocked by a bot check with the supplied cookies reported invalid by yt-dlp. This release does not claim to resolve that restriction.
+
+## [2.0.83] - 2026-10-18
+
+### Added
+- Add email/password sign-in for CIME MCO and HearHeart, and username/password sign-in for PandaTV and PopkonTV, under Settings authentication.
+- Register only issued, platform-scoped cookies after a usable session is confirmed; retain cookie-file import and existing RPLAY authentication.
+- Explain official-site sign-in for social accounts, CAPTCHA, additional verification and account checks in all eight interface languages.
+
+### Security
+- Never persist account passwords; clear the password input after every sign-in attempt.
+- Preserve previous credentials when sign-in, verification or credential storage fails.
+- Reject untrusted authentication destinations, keep CIME callbacks on HTTPS and prevent duplicate concurrent sign-in attempts.
+
+### Validation
+- Backend regression coverage: 1,980 passed and 2 skipped; the API surface expectation was updated for the intentional new sign-in endpoint and rechecked.
+- Browser checks passed for all four forms, request payloads, secret clearing, failure recovery, existing session preservation and 320–1440px layouts.
+- Frontend build and all eight translation resources passed.
+- Real provider endpoints rejected the intentionally invalid test credentials. Successful production-account sign-in has not been verified; successful session issuance, validation and storage are covered by mocked protocol tests.
+
+## [2.0.82] - 2026-10-18
+
+### Added
+- Discover CHZZK AES-marked VODs through the dedicated playback endpoint and select the server-advertised AES-128 HLS renditions, retaining normal cookie-authenticated key requests.
+- Scope live AES key credentials to the official HTTPS CHZZK API origin.
+
+### Fixed
+- Share matching in-flight CHZZK media downloads between recovery and foreground recording instead of issuing duplicate transfers.
+- Stop recovery-only capture after the entire missing interval is delivered. Keep its shared recovery deadline until that interval is complete.
+- Bound recovery downloads to available network workers instead of filling a separate background queue; avoid speculative partial copies during Time Machine catch-up.
+- Give native recording receivers their own workers so long-lived reads cannot occupy the shared asynchronous executor needed by other channels and control operations.
+
+### Documentation
+- Update the README and repository description for current platforms, account login, PopkonTV renewal/password rooms, CIME UHD and CHZZK live Time Machine.
+- Clarify that live catch-up has no fixed bandwidth or replay-speed cap, and that server-provided history can be shorter than an hour.
+
+### Validation
+- 97 focused CHZZK, encryption, recovery and recording-isolation tests passed.
+- A real 1080p live capture received the complete 3,600-second backlog, caught up in about 72 seconds, continued alongside another channel for two minutes and stopped without segment-checkpoint gaps or duplicates.
+- Both captured files passed FFprobe video/audio inspection. Frontend build and eight-language validation passed.
+- Actual encrypted VOD metadata/quality discovery was verified. Full account-authenticated production encrypted VOD downloading remains unverified in the release test environment.
+
+## [2.0.81] - 2026-10-18
+
+### Added
+- Enable PopkonTV server-authorized playback by default, with a saved option in download settings.
+- Accept per-channel PopkonTV broadcast passwords without exposing them in settings responses or storing them on disk. Passwords must be entered again after restarting the app.
+
+### Fixed
+- Reload PopkonTV broadcast and imported login state on each connection instead of reusing a grant from a previous broadcast or account.
+- Refresh expired PopkonTV live and VOD sessions through the official refresh-token API and atomically persist rotated credentials without password-based re-login.
+- Keep server permission denials, credential scoping and media-host validation intact.
+- Include the encryption key and IV context in CHZZK AES-HLS initialization caching, preventing stale initialization data after key changes.
+
+### Validation
+- Backend regression suite: 1,921 passed and 2 skipped.
+- Browser regression checks passed for the PopkonTV playback option, password entry, settings persistence, retry/skip states and responsive layout.
+- Native encrypted live capture preserves the original media bytes; PopkonTV capture and MKV finalization checks passed with local test media.
+- These tests do not establish end-to-end support for the separately investigated CHZZK AES-marked DASH-SEA VOD playback/key flow.
+
+## [2.0.80] - 2026-10-18
+
+### Added
+- Direct email/password credentials authentication for RPLAY accounts in Settings.
+- Authorized CIME UHD playback and native 4K recording with scoped, renewable playback cookies.
+- Per-platform playlist reload intervals and additional media query parameters.
+- Bounded `.losscheck` summaries for HLS sequence gaps and transport errors.
+- YouTube protocol, codec, time-machine and PO Token Provider preferences.
+
+### Fixed
+- Refresh RPLAY sessions and support authorized BytePlus, AWS IVS and `api2.rplay.live` media URLs without weakening permission or DRM checks.
+- Recover recording retry, stop and skip states; retain saved broadcaster names when metadata omits them.
+- Propagate unexpected HLS worker failures, reject invalid sequence numbers and close capture pipes cleanly.
+- Correct measured FPS from sampled frame timestamps while preserving original stream metadata and source files.
+- Repair low-latency preview playlist handling and Streamlink/yt-dlp URL parsing compatibility.
+- Limit VOD output choices to MKV and MP4 while preserving live TS recording and existing files.
+- Improve logging diagnostics, filename safety and mobile recording-card layout.
+
+### Removed
+- Remove SOOP (숲) platform support completely from backend, frontend UI, configuration, and API routes.
+
+### Validation
+- Backend regression coverage: 1,881 passed and 2 skipped, including the corrected test's targeted rerun.
+- Browser checks cover transport settings persistence, invalid input, VOD formats, manual retry, skip transitions and mobile tags.
+- Native CIME 4K capture, MKV finalization, authorization refresh and credential-scope regressions passed using local test media and mocked service responses.
+
+## [2.0.79] - 2026-10-16
+
+### Fixed
+- Reuse an already receiving CHZZK recording source when live-detail omits standard playback, following the current recovery CDN without changing the recording or exposing signed media URLs. Include CHZZK origin/referer headers in the preview proxy.
+- Send RPLAY login files as multipart uploads instead of JSON, fixing generic input-validation errors for valid files.
+- Add an explicit browser-side login export tool and inline instructions for RPLAY's IndexedDB session storage. Export only the access token, account ID and login type; ordinary cookie exports cannot authenticate this integration.
+
+## [2.0.78] - 2026-10-16
+
+### Added
+- Add RPLAY (알플레이) live monitoring, Streamlink HLS recording, opaque dashboard previews, video downloads and explicit session JSON import.
+- Respect content grants and separate UHD permission when offering live qualities. Keep account authorization scoped to the official API and supported media endpoints.
+- Provide 11 live platforms, 18 video source choices and 898 translation keys in eight languages.
+
+### Fixed
+- Return an error when authentication, notification or first-run settings cannot be saved, preserving the previous runtime configuration.
+- Restore uploaded credential files when persisting their configuration fails, including failed replacement and deletion.
+- Validate all notification inputs before applying changes; report the actual logged-out state after clearing CHZZK cookies.
+- Avoid writing cookies twice during initial setup.
+- Stop Windows source installation when npm is missing or dependency installation/build fails, instead of reporting success.
+
+### Validation
+- Add HTTP failure-injection regressions for credential replacement, removal, CHZZK authentication, notifications and initial setup.
+- Exercise the actual Windows batch installer with successful and failed npm commands in paths containing spaces.
+- Test RPLAY grant validation, credential scope, quality selection, local HLS recording/download, remux, inspection and responsive UI integration.
+- See the release notes and RPLAY support guide for production playback verification and native authenticated test coverage.
+
+## [2.0.77] - 2026-10-16
+
+### Added
+- Add PandaTV (팬더티비) live channel monitoring, Streamlink recording, HLS previews and domain-scoped authentication settings.
+- Add PopkonTV (팝콘티비) live monitoring, Streamlink recording, HLS previews, VODs and clips, preserving broadcaster partner codes.
+- Add PopkonTV cookie settings and an API adapter that keeps account authorization separate from media CDN requests.
+- Provide 10 live platforms, 17 video source choices and 887 translation keys across eight interface languages.
+
+### Fixed
+- Reserve an alternate CDN attempt within CHZZK's shared recovery deadline when history lookup is delayed.
+- Rewrite low-latency HLS prefetch URLs through the preview proxy without exposing signed media links.
+- Preserve actionable authentication and access errors when resolving live previews.
+- Reject denied playback responses, locked media, unavailable quality selections and mismatched broadcaster/video identities.
+
+### Documentation
+- Update the English README and repository description for the new platforms, current public repository access and authentication setup.
+- Document verified downloads, live playback and the scope of native authenticated recording tests.
+
+## [2.0.76] - 2026-10-16
+
+### Added
+- Add TVChak (티비착), Animaru (애니마루) and Ani365 (애니365) to Videos, preserving all 16 sources, episode selection, persistent queues, media inspection and eight-language labels.
+- Add domain-scoped TVChak cookie settings and clear access-verification errors.
+- Download Ani365's advertised HLS renditions and provided VTT subtitles, including variant playlist names and hashed subtitle filenames.
+
+### Fixed
+- Accept changing numbered website hosts for Anilife, TVWiki, TVChak and Animaru while preserving exact website cookie/session scope and separate player/CDN validation.
+- Avoid treating randomized media filenames as advertisement tags.
+- Preserve validated Ani365 playlist content between extraction and native HLS transfer, using the issuing media server for same-episode assets.
+
+## [2.0.75] - 2026-10-16
+
+### Added
+- Add TVWiki (티비위키) to Videos with work/episode URLs, episode selection, the existing persistent download queue and eight-language source labels.
+- Follow the site's normal guest/native HLS session, preserve task cookies, validate standard AES-128 keys and inspect finalized media.
+- Retry failed advertised CDN fragments on the issuing media server without skipping missing fragments or forwarding explicit cross-host credentials.
+
+### Fixed
+- Record YouTube live HLS with separate video/audio renditions by preserving the master playlist and requested recording quality.
+- Preserve YouTube ID3v2.3 audio tags during Streamlink capture and remux only after closing both source writers.
+- Remove stale references to deleted project documents from the README and Windows packaging inputs.
+
+## [2.0.74] - 2026-10-16
+
+### Added
+- Add Bilibili live room monitoring, Streamlink HLS recording, browser previews, alternate CDN selection and native fMP4 fallback.
+- Add Bilibili BV/av videos, selected parts, validated b23.tv links, separate video/audio merging and optional domain-scoped cookies.
+- Add Bilibili selectors, badges, authentication controls, popularity labels and translations across all eight interface languages.
+
+### Fixed
+- Prevent TikTok frame previews from interrupting live recordings by sharing the existing FLV input through a bounded keyframe buffer.
+- Preserve complete FLV packets, close HTTP responses explicitly, distinguish input interruptions from remux errors and preserve independent preview/recording cancellation.
+- Show Bilibili quality tiers together with actual cropped dimensions and avoid false quality-fallback warnings.
+- Replace failed profile images with the existing fallback icon and retry when the image URL changes.
+- Update Windows packaging to include the existing LICENSE after the removed notice file was deleted from the repository.
+
+### Documentation
+- Refresh the English README and repository description to match the current platforms, installation paths and authentication behavior.
+
+## [2.0.73] - 2026-10-15
+
+### Fixed
+- Recover episode-site connections that reset during the initial HTTPS handshake using a single host-scoped TLS ClientHello record-splitting retry.
+- Preserve certificate and hostname verification, proxies, cookies and HTTP request boundaries. Certificate failures, HTTP denials and response-read failures do not trigger the retry.
+- Verify complete 1080p TVWiki-backed Anilife downloads, complete Anilife/Linkani downloads and native-HLS Ohli24 sample playback after connection recovery.
+
+## [2.0.72] - 2026-10-15
+
+### Fixed
+- Restore Anilife playback using the site's current guest proof and HttpOnly playback-cookie issuance, with one renewal on expiry and API-host-only proof headers.
+- Preserve per-task episode cookies between metadata extraction and HLS transfer for Anilife, Linkani and Ohli24.
+- Support Ohli24's cdndania player, current bounded CDN host families, bare-host links and titles containing an unescaped question mark.
+- Resolve numeric/fractional Anilife episode selectors and verify cookie-protected encrypted downloads, subtitle saving and responsive episode selection.
+
+## [2.0.71] - 2026-10-15
+
+### Fixed
+- Restore Twitch live previews when playlists and video segments use different Twitch CDN hosts. Allow HTTPS ttvnw.net redirects and media only within Twitch preview sessions.
+- Keep signed segment URLs on the server, including Twitch prefetch tags, and omit unused Twitch trigger metadata containing signed URLs.
+- Extend preview regression coverage to Twitch CDN redirects, scoped cookies, unsafe/lookalike hosts and desktop/mobile browser playback.
+
+## [2.0.70] - 2026-10-15
+
+### Added
+- Adapt Anilife, Linkani and Ohli24 video extraction from the supplied Lua plugins into native Python adapters, without adding a Lua runtime.
+- Add work/episode URLs, an episode picker with search and pagination, unavailable-file status, a 100-episode selection limit, HLS quality selection and VTT subtitles.
+- Connect the adapters to the existing persistent download queue, pause/cancel controls, media finalization, inspection and platform logs.
+
+### Fixed
+- Preserve the complete download-source list on capability request failure and show a connection error with retry instead of silently hiding platforms.
+- Normalize Unicode URLs before sending Referer headers, verify work/episode identity, and mark incomplete episode listings without inventing missing entries.
+- Support the current Ohli24 CDN hosts observed in its issued playlist. Validate redirects, media hosts and plain AES-128 identity keys while rejecting unsupported/protected formats.
+- Add all new source labels and episode controls to the eight-language interface and verify narrow mobile layouts.
+
+## [2.0.69] - 2026-10-15
+
+### Added
+- Add Twitch channel monitoring, Streamlink live recording and previews, and yt-dlp VOD/clip downloads with optional scoped cookies.
+- Add TikTok channel monitoring, Streamlink live capture, refreshed image previews, video/share-link downloads and cookie management.
+- Discover available live qualities and connect both platforms to the existing queue, media inspection, logging and eight-language interface.
+
+### Fixed
+- Remux TikTok FLV inputs to MPEG-TS using stream copy and local pipes; drain and reap the muxer when recording stops.
+- Reject live share links in the TikTok video queue and distinguish access, throttling, missing-content and quality errors.
+- Keep the log file sidebar and storage summary compact instead of stretching summary rows into empty space.
+- Treat expected generic-extractor fallback and missing optional BunnyCDN JSON-LD as informational messages while retaining actual warnings.
+- Display Twitch as 트위치 and TikTok as 틱톡 in Korean; retain international brand names in other locales.
+
+## [2.0.68] - 2026-10-14
+
+### Added
+- Add Kick channel monitoring, Streamlink live resolution/capture, HLS previews, real quality lists, and yt-dlp VOD/clip downloads.
+- Add scoped Kick cookie upload/status/removal. Use registered authentication for live and VOD qualities, and fail clearly when explicitly requested 1080p is unavailable.
+- Add Kick URL validation, platform badges, source selection, logging and translations in all eight languages.
+
+### Fixed
+- Apply Node/EJS runtime settings to YouTube metadata extraction and use the app's yt-dlp version in cancellable live workers instead of an independently installed CLI.
+- Raise the yt-dlp dependency floor to the official October 2026 client update; preserve upstream client selection and pace requests/downloads.
+- Make live previews public-first, preserving optional account-cookie fallback for restricted content and isolating bot challenges/rate limits from account permissions.
+
+## [2.0.67] - 2026-10-14
+
+### Added
+- Display the actual yt-dlp executable version and expandable installation path in Settings → Information, alongside Streamlink, FFmpeg and FFprobe.
+- Distinguish missing tools, execution failures and unavailable status requests; inspection never downloads or updates yt-dlp.
+
+### Changed
+- Simplify the startup heading to the application name and version.
+- Rewrite the repository overview and README in English, with separate packaged Windows and source-installation instructions.
+- Standardize all published release descriptions in English and keep versioned copies in `docs/release-notes/`.
+
+
+## [2.0.66] - 2026-10-14
+
+### Changed
+- 모바일 등록 입력창·다운로드 정렬 선택창의 16px 글자 크기를 보장하고, 태블릿·가로 화면의 플랫폼 선택 항목을 44px 터치 영역으로 맞춥니다. 좁은 로그 화면의 작업 버튼은 2열로 정렬합니다.
+- 시작 전 점검의 구분선을 제거하고 항목·버전·긴 실행 경로를 정렬합니다.
+- 서버·HTTP·시스템 작업과 치지직·유튜브·숲·씨미 로그를 구분하고 녹화 오류의 채널·세션·원인·재시도 정보를 보강합니다. 정상 HTTP 조회는 기본 출력에서 제외하고 실패 요청은 파일에도 기록합니다.
+- 웹 오류 필터에 예외 스택을 함께 표시하고, 업데이트 조회 실패를 릴리즈 없음 또는 최신 버전 확인으로 잘못 알리지 않습니다.
+- 첨부 이미지를 흰 배경 없는 원형 투명 아이콘으로 편집해 Windows 실행 파일·트레이·브라우저에 적용합니다. ICO는 16~256px의 10개 크기를 포함합니다.
+- 삭제된 외부 라이선스 폴더를 복원하지 않고 고지를 `THIRD_PARTY_NOTICES`로 옮겨 Windows 빌드의 누락 파일 참조를 해소합니다.
+
+## [2.0.65] - 2026-10-14
+
+### Changed
+- 라이브·동영상·통계·설정을 로그 화면과 같은 카드 경계·제목 구분선·간격으로 정리합니다.
+- 라이브·동영상 상태 요약을 열로 구분하고 URL 입력과 필터 조작 영역을 정리합니다.
+- 동영상 화질 선택은 공용 버튼 스타일을 사용하고 선택한 값만 옅은 강조색으로 표시합니다.
+- 녹화 파일 처리 이력을 하나의 카드 안에 묶고 필터·상태·파일 조작을 구분합니다.
+- 정보 탭을 하나의 카드로 통합하고 반복 제목을 제거합니다. 업데이트는 맨 아래에, 저작권과 FFmpeg 안내는 라이선스 행 오른쪽에 표시합니다.
+- 인증 공통 안내를 목록 아래 안내 카드에 넣고 외관 탭의 중복 제목과 저장 버튼 위 선을 제거합니다.
+- 로그 파일 목록의 과도한 빈 공간을 줄이고 좌우 카드 높이와 파일 목록·보관 현황 간격을 맞춥니다.
+- 작은 화면과 긴 번역에서 버튼 줄바꿈·카드 간격을 보완합니다.
+
+### Fixed
+- Linux/macOS/Termux 설치·관리의 런타임 경로와 배포판별 패키지 처리를 보완하고 Node 최소 버전을 22로 맞춥니다. FFprobe도 별도로 검사합니다.
+- macOS BSD 심볼릭 링크 처리, Homebrew 버전별 Python/Node 탐색과 Finder 파일 위치 열기를 지원합니다.
+- POSIX 서버를 설치본별 잠금·PID/시작 정보로 식별하고 정상 종료를 기다려 중복 실행 및 재사용 PID 종료를 방지합니다.
+- Native Termux가 현재 의존성과 순수 Uvicorn 프로필을 사용하게 하고 제거된 라이브러리 import를 정리합니다. 설정·DB·미디어를 보존합니다.
+- 깨진 가상환경을 보존한 뒤 재생성하고 systemd 런타임 PATH·경로 인용·종료 순서를 보완합니다.
+
+### Documentation
+- README와 Linux/Termux 가이드를 최신 코드와 비공개 저장소 접근 방식에 맞춰 작성하고 macOS 설치·검증 범위 문서를 추가합니다.
+- 새 설치용 환경 변수 템플릿의 폐기된 채팅 설정·Docker 안내를 제거하고 현재 CDN·파일명 기본값을 반영합니다. 사용자 설정 파일은 변경하지 않습니다.
+
+### Tests
+- macOS Apple Silicon/Intel 및 ARM64 Python 3.14의 Termux 의존성 프로필을 CI에 추가합니다.
+- 설치 경로·런타임 탐색·파일 관리자·PID/잠금·설정 보존·가상환경 복구 회귀 검사를 추가합니다.
+
+## [2.0.64] - 2026-10-13
+
+### Added
+- 로그 파일 전체를 원문 그대로 내려받는 내보내기 기능을 추가합니다.
+- 통계에 라이브·동영상 저장 위치와 드라이브, 파일 시스템, 전체·사용·여유 용량 및 공간 상태를 표시합니다.
+
+### Changed
+- 동영상·파일 처리·라이브 설정 저장 버튼을 하단 오른쪽의 ‘변경사항 저장’ 하나로 통합합니다. 변경된 영역만 순서대로 저장하고 부분 실패 시 실패한 영역만 재시도합니다.
+- 로그 화면에 파일 수·전체 용량·최근 기록과 오류·경고·일반 분류를 표시하고 검색·실시간 갱신·자동 스크롤 및 좌우 패널 배치를 정리합니다.
+- 정보 탭을 ‘기본 정보’, ‘소프트웨어 업데이트’, ‘Phrolova 정보’로 정리하고 도구 재검사 버튼과 중복 구분선·여백을 제거합니다.
+- 메뉴의 반복 설명과 인증·알림의 중복 안내를 줄이고 제목·설명 간격, 파일명 변수 펼쳐보기와 통계 수량 표현을 개선합니다.
+- 탭 아이콘 업로드 설정을 제거하고 기본 Phrolova 아이콘을 사용합니다. 기존 브라우저 설정 데이터는 보존합니다.
+
+### Compatibility
+- 기존 저장 경로·사용자 데이터·녹화 및 다운로드 엔진을 유지합니다. 통계 API의 기존 필드를 보존하고 로그 원본을 변경하지 않습니다.
+- 8개 언어에 각각 839개 번역을 제공하며 제거된 플랫폼·채팅 저장 기능을 복원하지 않습니다.
+
+### Validation
+- 백엔드 전체 902 passed, 1 skipped, 4 subtests passed. 별도 활성화가 필요한 3 GiB 초과 TS 검사만 제외합니다.
+- TypeScript·제품 빌드와 8개 언어의 번역 키·변수·복수형·날짜·숫자 및 320/390/1440px 전체 페이지·설정·팝업·언어 전환/복원 검사 통과.
+- 통합 설정 저장·부분 실패/복구·중복 요청 방지, 로그 검색·분류·실시간 갱신·파일 전환·원문 내보내기 회귀 검사 통과.
+
+## [2.0.63] - 2026-10-13
+
+### Added
+- 한국어·영어·일본어·스페인어·독일어·중국어 간체·중국어 번체·러시아어의 8개 언어를 지원합니다. 각 언어에 807개 번역을 제공합니다.
+- 기존 외관 설정에서 언어를 즉시 변경하고 저장·복원하며 날짜·숫자·수량을 선택 언어에 맞춰 표시합니다.
+- 번역 키·변수·누락 검사와 다국어 페이지·팝업·알림·반응형·자동 갱신 회귀 검사를 추가합니다.
+
+### Fixed
+- 개발 미리보기의 언어 Provider 연결과 번역 리소스 자동 갱신 시 발생하던 빈 화면을 수정합니다.
+- 동적 상태·인증·파일 검사·오류 안내, 접근성 이름과 기존 알림 내역의 언어 갱신을 보완합니다.
+- 정보 탭의 Streamlink·FFmpeg·FFprobe 설치 상태/경로와 재검사 배치를 통일하고 서버 주소 표시를 제거합니다.
+- 긴 번역의 버튼·상태·카드 줄바꿈을 보완하고 업데이트 조회 실패·미조회 상태를 구분합니다.
+
+### Compatibility
+- 기존 설정·저장 경로·사용자 데이터, Streamlink 녹화·TS/fMP4 원본·FFmpeg 후처리·MKV/MP4 완료 형식과 다운로드 엔진을 유지합니다.
+- 기존 HTTP 오류 detail·상태·헤더는 보존하고 현지화용 message_key만 추가합니다. 제거된 플랫폼·채팅 저장 기능을 복원하지 않습니다.
+
+### Validation
+- 전체 backend 886 passed, 1 skipped, 4 subtests passed. 별도 활성화가 필요한 3 GiB 초과 TS 검사만 제외합니다.
+- TypeScript·Vite 빌드, 8개 언어 각 807개 키·변수 검사, 320/390/1440px 전체 페이지·설정·팝업·알림·언어 복원 검사 통과.
+- 번역 리소스 자동 갱신, 기본 설정·설정 저장·정보 도구·녹화 카드·다운로드 회귀 검사 통과.
+
+## [2.0.62] - 2026-10-13
+
+### Fixed
+- 기본 설정을 라이브·동영상과 같은 공통 UI로 맞추고 화질·형식 선택, 버튼, 글자 크기와 간격을 정리합니다.
+- 한 줄 저장 경로의 입력 높이·글자 세로 정렬·폴더 버튼을 맞추며 긴 경로의 자동 높이·줄바꿈·확인 단계 전체 표시를 지원합니다.
+- 폴더 선택창 잘림, 작은 화면의 이동 버튼, 단계 전환 초점과 저장 중 중복 조작을 개선합니다.
+- ‘동영상 저장 위치’ 명칭, 제목 아래 폴더 자동 생성 안내, 아이콘 없는 제목과 현재 단계 밑줄 표시를 적용합니다.
+
+### Changed
+- README의 지원 기능·설치·인증·CDN·정보 설정 안내를 현재 저장소 구현에 맞게 갱신합니다.
+
+### Validation
+- 전체 backend 873 passed, 1 skipped, 4 subtests passed. 릴리즈 버전·메타데이터 검사 통과.
+- TypeScript·Vite 빌드와 Chromium 기본 설정·기존 설정의 반응형·폴더 선택·키보드·저장 실패/재시도 검사 통과.
+
+## [2.0.61] - 2026-10-12
+
+### Fixed
+- 숲 라이브 카드에 공식 채널 API의 현재 시청자 수를 표시하고 방송 번호·캐시 갱신·실제 0명·방송 시작 시각을 확인합니다.
+- 라이브와 동영상 플랫폼 선택 버튼의 이름·점·화살표·여백·높이를 통일합니다.
+- 사이드바 메뉴와 다시보기 페이지 제목을 ‘동영상’으로 변경하고 상단 다운로드 개수·진행률 표시를 제거합니다.
+- 완료 카드의 파일·폴더 버튼 스타일과 간격을 맞추고 ‘파일 검사 완료’ 배지를 상단 상세보기 버튼 왼쪽에 배치합니다.
+- 시스템 설정 탭을 정보 탭에 통합해 미디어 도구 검사·프로그램 업데이트·시스템/프로그램 정보를 한곳에서 확인할 수 있게 합니다.
+
+### Validation
+- 전체 backend 873 passed, 1 skipped, 4 subtests passed. 숲 시청자 수 회귀 7 passed.
+- TypeScript·Vite 빌드, Chromium 플랫폼 선택·설정 검사/업데이트·동영상 버튼/API 및 반응형 배치 검증 통과.
+
+## [2.0.60] - 2026-10-12
+
+### Fixed
+- 라이브 중지 시 세그먼트 전달과 잔여 버퍼 저장을 완료한 뒤 파일을 확정하며, 강제 종료·부분 입력은 원본을 보존하고 확인 필요 상태로 표시합니다.
+- 치지직 재연결·파일 전환에 마지막 checkpoint와 제한된 디스크 버퍼를 인계해 누락 구간을 복구합니다.
+- 다시보기 HLS/DASH의 잘린 세그먼트 병합을 차단하고 HTTP 오류 원인을 보존하며 실패 요청·예약 큐를 제한합니다.
+- 세로 영상 화질 선택, 재시작 이어받기 파일명·part 경로 복원, 긴 Windows·한글 파일명 경로 처리를 보강합니다.
+- 플랫폼별 라이브 카드 공통 영역·확장 배치, 모니터 복구, Akamai CDN 기본값·표시 이름, 녹화 파일명 정리를 포함합니다.
+- 변환 성공과 녹화 데이터 손상 경고를 구분해 표시합니다.
+
+### Validation
+- 전체 backend 866 passed, 1 skipped, 4 subtests passed. Windows·Ubuntu x64/ARM64 및 frontend CI 통과.
+- TypeScript·Vite 빌드, Chromium 후처리·다운로드 버튼/반응형 검증, 공개 CHZZK 수신·MKV 변환·FFprobe 검사 2건 통과.
+- 참고 이슈 148건의 분류·적용·추가 실기 검증 항목은 통합 보고서에 기록합니다.
+
+## [2.0.59] - 2026-10-12
+
+### Fixed
+- 숲·씨미 라이브 미리보기를 HLS 동영상 플레이어로 전환해 재생·일시정지·음량·전체화면 조작을 제공합니다.
+- 미리보기 서버 요청에 플랫폼 Referer·Origin과 도메인별 쿠키를 적용합니다.
+- Streamlink와 yt-dlp가 함께 로드될 때 URL 정규식 래퍼가 충돌하는 문제를 수정합니다.
+- 좁은 채널 카드의 미리보기를 상세 정보 위로 배치하고 일시적인 연결 실패를 제한적으로 재시도합니다.
+
+## [2.0.58] - 2026-10-12
+
+### Fixed
+- FFmpeg·FFprobe가 정상일 때 불필요한 설치 안내를 숨깁니다.
+- 미디어 도구 이름·상태·경로를 분리하고 긴 경로를 모바일에서도 자연스럽게 줄바꿈합니다.
+- 도구 누락·실행 실패 시에만 설치 및 경로 설정 안내를 펼쳐 볼 수 있습니다.
+
+### Validation
+- TypeScript 검사와 프런트엔드 빌드 통과.
+- 360/1280px 브라우저에서 정상·누락·요청 실패·재검사 복구 및 가로 넘침 검사 통과.
+
+## [2.0.57] - 2026-10-12
+
+### Fixed
+- CIME 중첩 HLS 미리보기의 TLS 인증서 검증과 오류별 자동 복구를 개선했습니다.
+- FFmpeg·FFprobe 독립 탐색·실행 검사, 설치 안내 및 원본 보존 후 재검사·재변환을 개선했습니다.
+- 미리보기 표시 영역·타이머·프로세스 정리와 서명 URL·진단 로그 마스킹을 보강했습니다.
+- VOD 누락 fragment 처리, 제한된 재시도·백오프와 메타데이터 timeout 재시도를 개선했습니다.
+
+### Validation
+- Windows·Ubuntu x64·Ubuntu ARM64 CI에서 각각 790개 테스트와 추가 하위 테스트 4개 통과.
+- TypeScript·프런트엔드 빌드 및 반응형·다운로드·녹화 후처리 브라우저 회귀 통과.
+- 실제 CIME·SOOP 미리보기, TLS 신뢰 복구와 3GiB 초과 TS 파일 검사 통과.
+
+## [2.0.56] - 2026-10-11
+
+### Changed
+- 치지직 LL-HLS 연속 수신, 검증된 CDN 대기 경로, 제한된 구간 복구 및 안전한 파일 경계 처리를 적용했습니다.
+- Streamlink 원본 수신과 종료 후 FFmpeg·FFprobe 후처리 구조를 유지했습니다.
+- 라이브 녹화 상세에 실제 수신 경로와 CDN 대기 상태를 표시합니다.
+
+### Fixed
+- 라이브 미리보기 확장 시 옆 카드가 불필요하게 늘어나는 문제를 수정했습니다.
+- 다운로드 그리드의 빈 공간과 대기 카드 높이·버튼 정렬을 수정했습니다.
+
+### Validation
+- Python 746 passed, 6 skipped, 4 subtests passed.
+- TypeScript·프론트엔드 빌드와 반응형 브라우저·다운로드 제어 회귀 검사 통과.
+- 공개 치지직 일반·타임머신 녹화 및 MKV 후처리 검증 통과.
+
+
+
+## [2.0.55] - 2026-10-11
+
+### Fixed
+- TS 호환 스트림을 우선 선택하고 TS가 제공되지 않으면 Streamlink 원본 fMP4를 실제 형식으로 저장합니다. 녹화 종료 후 TS 정규화 및 MKV/MP4 변환·검사를 수행합니다.
+- 녹화 세션과 파일 경로 충돌, 같은 채널의 중복 시작, 빈 파일의 잘못된 변환 작업, 재시도 폭주와 파일 처리 이력 중복을 방지합니다.
+- 실제 데이터 수신 전 녹화 시간이 증가하지 않도록 하고 유튜브 런타임·인증 오류 처리를 개선합니다.
+- 다운로드 진행률의 전체 너비와 통계·버튼 영역을 분리하고 완료 시각, 파일 검사 안내, 화질 옵션 및 그리드 하단 정렬을 수정합니다.
+
+### Changed
+- 신규 기본 완료 형식은 MKV, 치지직 녹화 방식은 강제 타임머신, 동시 다운로드 개수는 5입니다. 명시된 기존 설정은 보존합니다.
+- 다운로드 동시 제한 변경을 실행 중인 작업을 중단하지 않고 즉시 적용합니다.
+- 일반 설정을 제거하고 저장 위치와 라이브 확인 주기를 해당 다운로드·라이브 설정으로 이동합니다.
+- 플랫폼 쿠키 UI, 라이브 CDN 선택, MKV/MP4 표시 명칭 및 라이브 상태·제어 버튼 정렬을 통일합니다.
+- 사이드바의 Phrolova 이름 앞 아이콘을 제거합니다.
+
+### Validation
+- Windows 로컬 백엔드 테스트 685개 통과, 환경 조건에 따른 6개 테스트 제외. TypeScript·프론트엔드 빌드와 Chromium 반응형·기능 회귀 테스트 통과.
+
+## [2.0.54] - 2026-10-11
+
+### Added
+- SOOP·CIME 라이브 감지, 인증, 화질, 미리보기 및 다운로드 연동을 추가했습니다.
+- 녹화 종료 후 MKV/MP4 자동 변환과 FFprobe 검사, 영속 작업 큐 및 실패 복구를 추가했습니다.
+- 전역·채널별 저장 형식, 원본 TS 보관 및 동시 변환 수 설정을 추가했습니다.
+
+### Changed
+- Streamlink가 TS를 직접 저장하고 FFmpeg는 녹화 종료 후 stream copy 변환을 수행합니다.
+- 라이브·다운로드 카드, 입력 영역, 통계, 상태별 작업 버튼과 모바일 레이아웃을 정리했습니다.
+- 치지직 채널 ID·링크 입력과 한글 플랫폼 표시, 공통 배지 및 Full HD 미리보기를 개선했습니다.
+- 사이드바의 빈 미디어 허브 그룹과 녹화 카드의 처리 상세·파일 경로 설명을 제거했습니다.
+
+### Removed
+- 채팅 수집·저장·조회 및 X Spaces 실행 기능을 제거했습니다. 기존 파일과 과거 이력은 보존합니다.
+
+### Fixed
+- 정상 방송 종료 후 반복 녹화, 파일 핸들 종료 전 변환, 변환·검사 실패 시 원본 손실을 방지합니다.
+- 녹화·다운로드 상태와 파일 검사 상태를 분리하고 재검사·재변환 및 서버 재시작 복구를 지원합니다.
+
+## [2.0.53] - 2026-10-10
+
+### Fixed
+- FFprobe 경로를 FFmpeg와 독립적으로 탐색하고 Linux/Termux 및 실행 권한을 확인합니다.
+- 파일 존재·크기, 프로세스 종료 코드, stderr, JSON 오류와 타임아웃을 구분하여 보존합니다.
+- 다운로드 완료와 파일 검사 상태를 분리하고 검사 실패 시 파일을 보존하며 다시 검사를 지원합니다.
+
+### Changed
+- CHZZK 다운로드 대기 목록, URL 검증·중복 안내, 버튼·통계·완료 카드 문구를 통일했습니다.
+- 라이브 그리드·목록을 공통 녹화 카드로 구성하고 목록을 컴팩트한 가로 행으로 재설계했습니다.
+- 네 가지 녹화 지표에 레이블과 단위를 제공하고 보기 전환 시 상세 상태와 마지막 측정값을 유지합니다.
+- 자동 녹화·녹화 제어·태그 요청의 중복을 방지하고 저장·중지 진행 상태를 표시합니다.
+- 아이콘 접근성 이름, 모바일 터치 영역, 컨테이너 기반 반응형 레이아웃을 개선했습니다.
+
+## [2.0.52] - 2026-10-09
+
+### Changed
+- Windows 제품 메타데이터·트레이·PyInstaller 스펙과 실행 파일을 Phrolova로 통일했습니다.
+- npm 패키지명과 Linux 관리 명령·systemd 서비스를 phrolova로 변경했습니다. 신규 기본 경로는 ~/Phrolova입니다.
+- SQLite 파일명을 phrolova.db로 변경하고 레거시 DB를 WAL 포함 백업 이관합니다. 원본 보존 및 실패 시 원본 사용을 지원합니다.
+- 기존 Linux 설치 탐지, 관리 명령 링크 전환 및 서비스 교체 실패 시 실행 상태 복구를 추가했습니다.
+- 기존 다운로드·라이브 Streamlink/FFmpeg 경로와 사용자 설정·원 저작권 표기를 유지했습니다.
+
+## [2.0.51] - 2026-10-09
+
+### Added
+- CHZZK VOD preparation with link drops, multiple URLs, metadata cards, actual per-video quality and batch start.
+- Persistent prepared tasks and history-only per-task/completed cleanup.
+- Korean, English and Japanese controls for the new workflow.
+
+### Fixed
+- Preserve prepared quality and metadata on retry; prevent duplicate starts and late metadata resurrecting removed tasks.
+- Preserve user-cancelled prepared history during normal shutdown.
+
+### Validation
+- 490 Python tests, TypeScript/build and Chromium UI/player regression checks passed. External CHZZK/CDN and device validation remain incomplete. See docs/vod-batch-ui-audit-ko.md.
+
+## [2.0.50] - 2026-10-09
+
+### Added
+- Persistent manual Default/Akamai CDN selection for CHZZK VOD; live recording remains Streamlink/FFmpeg.
+- Non-destructive FFprobe duration and track warnings.
+
+### Fixed
+- Separate DASH track selection, merged output paths, filename collisions and atomic VOD settings persistence.
+
+### Validation
+- 457 Python tests and frontend checks passed; mock CDN downloads verified. External CDN and new device testing remain incomplete. See docs/cdn-audit-ko.md.
+
+## [2.0.49] - 2026-10-09
+
+### Fixed
+- Stabilize recording lifecycle, download cancellation, FFmpeg/Streamlink cleanup and DASH parsing.
+- Correct X Spaces relative playlists, YouTube channel controls and atomic VOD history/settings writes.
+- Harden Origin checks, chat file access and credential redaction.
+- Serve fonts correctly and coalesce download status requests.
+- Restore original Windows packaging icons.
+
+### Added
+- Linux and Native Termux installation, headless operation and compatibility audit documentation.
+
+### Changed
+- Update compatible frontend dependencies; retain Python dependency constraints documented in the audit.
+
+
+## [2.0.48] - 2026-10-08
+
+### Changed
+- Adapt responsive layouts to available content width on mobile, tablet, and desktop.
+- Refine Live channel cards, recording controls, and compact centered preview states.
+- Improve Downloads task layout and touch/keyboard queue reordering, including filtered lists.
+- Improve Settings, Stats, and Logs layouts on narrow and tablet screens.
+- Improve touch controls, keyboard focus, dialogs, safe areas, and long-text handling.
+
+## [2.0.47] - 2026-10-07
+
+### Fixed
+- Correct release comparison links for the live channel layout and mobile improvements introduced in 2.0.46.
+
+## [2.0.46] - 2026-10-07
+
+### Changed
+- Improve live channel card alignment in grid and list views, with tags below broadcast titles and detail actions in the header.
+- Let unpaired compact channel cards fill the row without changing channel order or restarting open previews.
+- Improve mobile controls, dialogs, navigation, and long-text handling.
+- Use Chzzk consistently as the platform display name and list available platforms before those requiring setup.
+
+### Removed
+- Removed TwitCasting support, including channel monitoring, dedicated downloads, authentication settings, and platform selection. Existing channel and download records are retained.
+
+## [2.0.45] - 2026-10-07
+
+### Changed
+- Keep multiple live channel details open and play their live previews simultaneously.
+- Complete first-run setup in two steps without entering CHZZK cookies. Cookie settings remain available in Settings.
+- Save the recording file format selected during first-run setup correctly.
+- Try YouTube downloads without cookies first, and use uploaded cookies only when YouTube requires authentication.
+- Clarify guidance for YouTube downloads that require sign-in or viewing permissions.
+
+## [2.0.44] - 2026-10-07
+
+### Changed
+- Expand one live channel at a time without changing channel order, and collapse it by selecting it again.
+- Play live video in expanded channel details with muted autoplay and standard playback controls.
+- Keep live previews independent of recording, and stop preview playback when details close, channels change, or broadcasts end.
+- Show preview loading and error states with a retry action.
+
+## [2.0.43] - 2026-10-06
+
+### Changed
+- Reorganized the interface with a compact sidebar, consistent controls, and a restrained dark theme.
+- Added a larger selected-channel preview and compact views for other live channels.
+- Improved download lists, status filters, settings navigation, and mobile layouts.
+- Made storage paths fully readable and added a path copy action.
+- Removed duplicate page names from the top bar while preserving search and notifications.
+- Limited the download platform selector to CHZZK and YouTube.
+
+## [2.0.42] - 2026-10-06
+
+### Changed
+- **라이브 대시보드** — 채널 상태와 녹화 제어를 미리보기 위에 배치하고, 방송 미리보기와 크게 보기 동작을 개선했습니다.
+- **다운로드·설정 화면** — 플랫폼 선택 메뉴와 설정 탭을 정리하고 작은 화면에서도 사용하기 쉽게 다듬었습니다.
+- **통계 화면** — 저장 위치와 경로를 읽기 쉽게 정리하고 불필요한 복사 버튼을 제거했습니다.
+- **브랜드 표기** — 메뉴의 보조 문구를 제거하고 플랫폼 이름을 일관되게 표시합니다.
+
+## [2.0.41] - 2026-10-06
+
+### Changed
+- **제품 문구와 용어** — 라이브 저장은 ‘녹화’, 다시보기·클립·외부 영상은 ‘다운로드’로 구분하고, 메뉴·설정·상태 안내를 실제 기능에 맞게 정리했습니다.
+- **녹화 조건 안내** — 자동 녹화 보류 이유와 채널별 녹화 설정 설명을 명확히 했습니다.
+- **다운로드 작업 안내** — 대기·실패·취소·재시도 상태와 작업별 안내를 이해하기 쉽게 다듬었습니다.
+- **화면과 번역** — 채널 추가와 다운로드 입력 흐름을 좁은 화면에 맞게 정리하고, 변경된 문구의 영어·일본어 번역을 보완했습니다.
+
+## [2.0.40] - 2026-10-06
+
+### Changed
+- **대시보드 화면 구조** — 고정 사이드바를 가로 탐색으로 바꾸고, 제목·상태·작업 패널의 간격과 정보 밀도를 정리했습니다.
+- **시각 테마** — 새 설치의 기본 강조색을 블루로 바꾸고, 탐색·검색·팝오버에 반투명 유리 효과를 적용했습니다. 정보 패널은 선명도를 위해 불투명하게 유지합니다.
+- **라이브 필터** — 태그와 기본 다운로드 조건을 필요할 때 펼칠 수 있도록 정리했습니다.
+- **다시보기 입력** — 좁은 화면에서도 플랫폼·주소·추가 버튼을 한 줄에 배치했습니다.
+
+### Fixed
+- **플랫폼 선택 메뉴** — 메뉴 밖 클릭과 Esc 키로 닫히도록 수정했습니다.
+
+## [2.0.39] - 2026-10-06
+
+### Fixed
+- **플랫폼 로그 구분** — 공통 로그는 `phrolova`, 플랫폼 로그는 `phrolova.youtube`, `phrolova.chzzk` 등으로 기록합니다. 다운로드 도구의 로그와 로그 초기화 기능도 함께 정리했습니다.
+- **다운로드·알림 문구** — 여러 플랫폼에 공통으로 사용되던 치지직·외부 다시보기 전용 표현과 남아 있던 Rookery 브랜드 표기를 수정했습니다.
+- **API 계약 검사** — v2.0.38에서 추가한 유튜브 쿠키 및 채널 수집 취소 API를 검사 목록에 반영했습니다.
+
+## [2.0.38] - 2026-10-06
+
+### Fixed
+- **YouTube 채널 수집** — 동영상·라이브·쇼츠 하위 목록을 순회하고, 찾은 영상부터 백그라운드에서 추가합니다. 수집 진행 상황, 중지, 오류를 표시하고 중복 영상을 건너뜁니다.
+- **YouTube 인증과 JavaScript 지원** — 로그인 쿠키 등록을 추가하고 로그인 필요 오류의 반복 재시도를 중단합니다. Windows 빌드에 Node.js와 yt-dlp EJS를 포함합니다.
+
+## [2.0.37] - 2026-10-06
+
+### Added
+- **YouTube 채널 다운로드** — `@핸들`, 채널 ID 등 채널 주소를 입력하면 채널 영상들을 다운로드 대기열에 추가합니다.
+- **한국어·영어·일본어 언어 선택** — 외관 설정에서 앱 언어를 선택하고, 선택한 언어를 저장해 다시 실행해도 유지합니다.
+
+### Changed
+- **다시보기 다운로드 화면** — 플랫폼 선택과 영상 주소 입력을 대시보드 헤더 아래에 배치하고, 대기·진행·오류 상태를 한눈에 확인하도록 정리했습니다.
+- **라이브 채팅 저장 기본값** — 녹화 중 JSONL 채팅 저장을 기본적으로 끕니다.
+- **통계·설정 번역** — 영어와 일본어 화면 문구, 날짜·시간 표기를 추가하고 인증·알림·시스템 설정까지 번역 범위를 넓혔습니다.
+- **채널 삭제 버튼** — 카드와 목록 보기에서 스트리밍 상태나 마우스 오버와 관계없이 삭제 버튼을 항상 표시합니다.
+
+## [2.0.36] - 2026-10-06
+
+### Changed
+- **시스템 로그 레이아웃** — 로그 파일 목록을 위쪽 가로 영역으로 옮기고, 로그 뷰어를 아래 전체 폭으로 확장했습니다.
+- **로그 뷰어 도구 정렬** — 파일명 줄 오른쪽에 표시 줄 수 선택을 배치하고, 검색창 아래 오른쪽에 실시간 갱신·자동 스크롤·새로고침을 모았습니다.
+
+## [2.0.35] - 2026-10-05
+
+### Added
+- **알림 모두 지우기** — 알림 센터 상단에서 알림 내역과 표시 중인 토스트를 한 번에 지웁니다. 알림이 없으면 버튼이 비활성화됩니다.
+- **다시보기 파일명 형식** — 다시보기 설정에서 채널명, 제목, 영상 ID, 업로드 날짜, 다운로드 날짜와 품질을 조합합니다. 새 다운로드와 치지직 클립의 최종 파일명에 적용합니다.
+
+### Changed
+- **다시보기 기본 파일명** — `[{name}] {title} {date_year}-{date_month}-{date_day} {date_hour}-{date_minute}-{date_second}`를 사용합니다. 날짜와 시각은 다운로드 시작 시점입니다.
+- **메뉴와 채팅 화면** — 메뉴 이름을 ‘X Spaces’, ‘Chat Logs’로 정리하고 채팅 화면에 로그 파일·채팅 내용 제목, 새로고침과 빈 상태 안내를 추가했습니다.
+
+### Fixed
+- **다시보기 파일명 충돌** — 같은 파일명이 이미 존재하거나 다른 작업이 사용 중이면 번호를 붙여 별도 저장합니다. 재시도에서는 같은 경로를 유지합니다.
+
+## [2.0.34] - 2026-10-05
+
+### Changed
+- **자동 녹화 OFF 조건 안내** — 자동 녹화가 꺼져 있어도 조건에 맞지 않는 방송의 이유를 카드와 목록에 표시합니다. OFF 상태는 ‘다운로드 조건 안내’, ON 상태는 ‘다운로드 보류’로 구분합니다.
+
+## [2.0.33] - 2026-10-05
+
+### Fixed
+- **다운로드 보류 화면 반영** — 자동 다운로드가 조건에 따라 보류되어도 조회한 방송 정보를 즉시 전송합니다. 카드와 목록에서 LIVE 상태와 다운로드 보류 이유를 표시합니다.
+- **같이보기만 다운로드 보류 안내** — 일반 라이브 방송인지, 같이보기 콘텐츠 태그가 지정한 태그와 다른지 구분해 보류 이유를 표시합니다.
+
+## [2.0.32] - 2026-10-05
+
+### Changed
+- **조건별 태그 입력** — 같이보기 태그 입력은 ‘같이보기만 다운로드’에서만 표시합니다. 모든 라이브와 같이보기 제외 조건은 태그 없이 저장하며, 제외 조건은 지정 태그와 무관하게 모든 같이보기를 제외합니다.
+
+### Fixed
+- **공식 같이보기 감지** — 일반 방송 태그에 ‘같이보기’가 없어도 치지직의 `watchPartyNo`로 공식 같이보기 방송을 감지합니다. ‘같이보기 제외’ 조건에서 해당 방송의 자동 다운로드를 차단하고, 설정 창에 같이보기 정보를 표시합니다.
+
+## [2.0.31] - 2026-10-05
+
+### Added
+- **라이브 다운로드 조건** — 대시보드 기본 조건과 스트리머별 조건을 설정합니다. 치지직 방송 태그로 같이보기 여부를 판단하고, 등록 전 설정 창과 기존 채널 수정 기능을 제공합니다.
+
+### Changed
+- **다운로드 설정 UX** — 기존 대시보드 배치를 유지하며 설명을 간결하게 정리하고, 변경 여부와 저장 상태를 표시합니다.
+- **대시보드 상단** — 제목과 아이콘을 정렬하고 채널 추가 영역을 구분했습니다. 입력과 보기 전환 버튼의 안내를 보완하고, 같이보기 태그 예시에서 동시시청을 제거했습니다.
+
+## [2.0.30] - 2026-10-05
+
+### Changed
+- **라이브 다운로드 설정** — 설정 제목을 명확히 하고, 기본 라이브 파일명에 방송 시작 날짜와 시각을 초 단위까지 포함합니다. 기존 기본 템플릿은 자동으로 새 형식으로 옮기며 사용자 지정 형식은 유지합니다.
+- **로그 메뉴** — 사이드바와 페이지 제목을 “로그”로 간결하게 통일했습니다.
+- **업데이트 설정** — 업데이트 전용 화면에 맞춰 카드 제목을 “프로그램 업데이트”로 정리했습니다.
+
+## [2.0.29] - 2026-10-05
+
+### Changed
+- **System information** — Show the detected FFmpeg version and identify ProofPage as the author; rename the section to “프로그램 정보” and the server field to “Server”.
+- **Live quality setting** — Move live quality from General Settings into the Live Recording Settings card and save it with the other live options.
+- **Page headers** — Align compact page actions beside their titles while keeping the live channel form full width below the dashboard summary.
+- **Statistics dashboard** — Refresh automatically, distinguish completed recording totals from active recordings, clarify disk usage, and reduce empty-state spacing.
+
+### Fixed
+- **System log recording and live refresh** — Store Windows one-file logs beside the executable instead of its temporary extraction folder, ensure the file handler is attached, refresh log contents without browser caching, and keep the live log view and file sizes current.
+- **Log search** — Filter matching lines and safely highlight literal search text, including regular-expression characters.
+
+## [2.0.28] - 2026-10-05
+
+### Changed
+- **Replay terminology** — Replace user-facing VOD labels with the Korean term “다시보기” across navigation, download and settings screens, statistics, and notifications.
+- **Live dashboard channel form** — Expand the channel ID field to use available width and align the platform selector, input, and add button.
+
+### Added
+- **System log reset** — Add a confirmation-protected action that clears the active service log and rotated daily logs while keeping logging active.
+
+## [2.0.27] - 2026-10-05
+
+### Fixed
+- **VOD retry safety** — Show useful diagnostics when yt-dlp returns an empty error and stop CDN retries if Windows keeps the previous CDN's partial files locked.
+- **Live recording diagnostics** — Drain FFmpeg stderr while it runs and mark unexpected Streamlink input termination as a recording error so the monitor can reconnect.
+
+## [2.0.26] - 2026-10-05
+
+### Changed
+- **Quality labels** — Name the VOD and live quality settings separately and remove the misleading yt-dlp hint from live quality. Use the live-specific label in first-run setup.
+- **Project documentation** — Rewrite the README around Phrolova's current features, installation, settings, and troubleshooting.
+
+## [2.0.25] - 2026-10-05
+
+### Changed
+- **Startup dependency check** — Rename the console heading to Phrolova and report the installed Streamlink version; stop startup with guidance when Streamlink is unavailable.
+- **VOD task cards** — Stretch status tiles to the task content height to remove empty space below the paused-state icon.
+
+## [2.0.24] - 2026-10-05
+
+### Changed
+- **First-run save paths** — Default new installations to `Downloads/Phrolova/Live` for live recordings and `Downloads/Phrolova/Video` for VOD downloads.
+- **VOD download screen** — Center the task drag handle and clarify the feature labels for high-quality support and automatic remuxing.
+
+## [2.0.23] - 2026-10-05
+
+### Fixed
+- **Streamlink live recording** — Removed the unsupported HLS-only FFmpeg option from the Streamlink media pipe so FFmpeg can record the incoming stream.
+- **VOD task cleanup** — Allow queued, completed, and failed tasks to be cleared, persist removals, and keep downloading or paused tasks intact.
+- **Cancelled VOD partial files** — Retry deletion asynchronously while yt-dlp or FFmpeg releases Windows file locks.
+
+## [2.0.22] - 2026-10-05
+
+### Fixed
+- **Live recording failure diagnostics** — Streamlink pipe errors no longer hide FFmpeg's exit code and stderr, and failed recordings remain marked as errors during cleanup.
+- **Download queue cleanup button** — keep the cleanup button visible while tasks exist and disable it until completed or failed tasks can be removed.
+
+## [2.0.21] - 2026-10-05
+
+### Changed
+- **초기 설정 경로 분리** — 첫 실행 마법사에서 라이브 저장 경로와 다시보기 저장 경로를 각각 지정하고 완료 전에 둘 다 확인하도록 했습니다. 구버전 초기 설정 API는 기존 단일 경로 요청과 계속 호환됩니다.
+- **다운로드 진행률 카드 정렬** — 다운로드 중 퍼센트 표시 영역 높이를 상세 정보 영역과 맞춰 카드 아래쪽의 빈 공간을 정리했습니다.
+
+## [2.0.20] - 2026-10-05
+
+### Changed
+- **라이브와 다시보기 저장 경로 분리** — 일반 설정에 라이브 저장 경로와 다시보기 저장 경로를 각각 추가하고, 라이브 녹화·채팅 로그·X Spaces와 VOD 다운로드가 선택한 경로를 사용하도록 연결했습니다.
+- **Streamlink 상태 표시** — 시작 콘솔과 시스템 정보 설정 화면에서 Streamlink 설치 버전을 확인할 수 있게 했습니다.
+
+### Fixed
+- **저장 경로 변경 후 채팅 로그 조회** — 새 라이브 경로와 기존 경로를 함께 검색하고, 부모·하위 경로가 겹칠 때 같은 로그가 두 번 표시되지 않도록 했습니다.
+
+## [2.0.19] - 2026-10-05
+
+### Fixed
+- **Legacy settings API compatibility** — kept `/api/settings/download` visible in OpenAPI alongside `/api/settings/live`, so old clients and API contract checks continue to recognize it.
+
+## [2.0.18] - 2026-10-05
+
+### Changed
+- **Streamlink live recording** — Streamlink now receives live HLS/DASH segments and handles retries, while FFmpeg writes the recording. Chzzk Time Machine offsets, quality selection, request headers, and scoped cookies are preserved.
+- **Centered icon and title alignment** — aligned icons, titles, descriptions, and actions in shared card, page, collapsible-card, and metric headers.
+
+### Fixed
+- **yt-dlp cookie-header warning path** — app-managed VOD and live URL extraction now ignore external yt-dlp configuration, preventing global `Cookie` header options from overriding scoped cookie files.
+
+## [2.0.17] - 2026-10-05
+
+### Changed
+- **Separated VOD and live settings** — VOD-only partial-file handling now stays with VOD options, live recording controls use a dedicated API, and live chat archiving has its own section.
+- **Responsive VOD task cards** — reflowed narrow cards so task details use the full available width instead of being clipped beside the status icon.
+
+## [2.0.16] - 2026-10-05
+
+### Changed
+- **Phrolova branding and Korean interface text** — updated the app name, settings labels, navigation, page headings, and status badges for a consistent Korean UI.
+
+## [2.0.15] - 2026-10-05
+
+### Fixed
+- **CHZZK live recording and Time Machine** — added standard, request-Time-Machine, and force-Time-Machine modes with fallback behavior, configurable offsets, safer output naming, thumbnail handling, and container-aware recording.
+- **Long CHZZK VOD downloads** — increased network and fragment timeouts/retries, alternated between Akamai and Naver CDNs, and validate downloaded duration before marking a task complete.
+- **Akamai CDN fallback** — rewrite CHZZK VOD segment hosts from `ex-nlive-slitvod-streaming.navercdn.com` to `light-slit.akamaized.net` while preserving signed paths and query parameters.
+- **Cookie handling** — pass scoped temporary cookie files to yt-dlp instead of global Cookie headers.
+
+## [2.0.14] - 2026-10-05
+
+## [2.0.13] - 2026-10-05
+
+### Fixed
+- **저장소 이름 변경 반영** — 저장소를 `ProofPage/Phrolova`로 변경하고 시스템 업데이트 확인, 시스템 정보 링크, Linux 설치·업데이트 주소를 새 이름에 맞췄습니다.
+
+## [2.0.12] - 2026-10-05
+
+### Fixed
+- **최신 릴리즈 확인 저장소** — 시스템 관리 화면과 업데이트 체커, Linux 관리 스크립트가 원본 저장소의 v2.0.9를 조회하던 문제를 수정해 ProofPage/Rookery를 확인하도록 변경했습니다.
+
+## [2.0.11] - 2026-10-05
+
+### Fixed
+- **Windows 배포 파일의 Defender 탐지 위험 완화** — PyInstaller 빌드에서 UPX 압축을
+  비활성화하고, 릴리스 게시 전에 Windows Defender 검사 단계를 추가했습니다.
+
+## [2.0.10] - 2026-10-05
+
+### Fixed
+- **치지직 VOD 일부만 다운로드되고 완료되는 문제** — 전송 제한 시간을 늘리고
+  세그먼트 재시도를 완화했습니다. Akamai CDN을 우선 사용하고 실패하면 Naver CDN으로
+  전환하며, Chzzk VOD는 최대 5회 시도합니다. 완료 처리 전에 ffprobe로 길이를 확인해
+  원본보다 크게 짧은 파일은 다시 받습니다.
+
+[2.0.10]: https://github.com/eruminyu/Rookery/compare/v2.0.9...v2.0.10
+
+---
+
+## [2.0.9] - 2026-09-26
+
+### Fixed
+- **재시도하던 VOD 다운로드가 멈추는 문제** — 실패한 다운로드를 다시 시도할 때 쓰던
+  동시 다운로드 슬롯을 놓지 않은 채 슬롯을 하나 더 잡으려 했다. 동시 다운로드 개수가 1이면
+  첫 재시도에서 다운로드 중 상태로 영원히 멈췄고, 기본값 3에서도 여러 다운로드가 한꺼번에
+  실패하면 서로의 슬롯을 기다리며 모두 멈출 수 있었다. 이제 슬롯을 반납한 뒤 재시도하고,
+  재시도 전에 기다리는 동안에는 대기 중인 다른 다운로드가 그 슬롯을 쓴다.
+
+---
+
+## [2.0.8] - 2026-09-24
+
+### Fixed
+- **로그인 전용 TwitCasting 아카이브의 엉뚱한 오류와 헛된 재시도** — 로그인한 사용자만
+  볼 수 있는 아카이브는 yt-dlp가 "m3u8 재생 목록을 가져오지 못했다, 버그를 제보하라"는
+  오류로 끝나, 원인을 알 수 없는 채 세 번 재시도했다. 이제 영상 페이지의 안내 문구로
+  원인을 확인해 "로그인한 사용자만 볼 수 있는 TwitCasting 영상이라 받을 수 없습니다"로
+  알리고 바로 멈춘다. 비밀번호가 걸린 영상도 재시도 없이 알린다.
+  네트워크 오류처럼 다시 시도하면 풀릴 수 있는 실패는 지금처럼 재시도한다.
+
+---
+
+## [2.0.7] - 2026-09-21
+
+### Fixed
+- **같은 제목의 VOD가 다운로드 없이 완료되는 문제** — 저장 파일명에 사이트 구분과
+  영상 ID를 추가해 같은 채널·제목의 다른 영상도 별도 파일로 저장한다.
+  기존 파일이 있어도 순차·동시 다운로드에서 각 영상의 내용이 저장되는지 검증했다.
+
+---
+
+## [2.0.6] - 2026-09-05
+
+### Fixed
+- **신규 채널 플랫폼 메뉴 잘림** — 대시보드 제목 카드가 펼침 메뉴까지 함께
+  잘라 치지직 아래의 플랫폼을 선택할 수 없었다. 장식 배경만 카드 경계에서 자르고
+  플랫폼 메뉴는 카드 밖으로 표시하도록 분리했다.
+- **좁고 낮은 화면의 플랫폼 선택** — 모바일에서는 메뉴가 화면 왼쪽 밖으로 밀리지
+  않도록 기준점을 맞췄다. 화면 높이가 부족하면 메뉴 안에서 세로로 스크롤할 수 있다.
+
+---
+
+## [2.0.5] - 2026-08-29
+
+### Added
+- **API 표면 고정 테스트** (`backend/tests/test_api_surface.py`) — 등록된 라우트 74개를
+  목록으로 못박는다. 라우트는 데코레이터로 등록돼서 파일을 옮기다 빠뜨려도 파싱과
+  import는 그대로 성공한다. 실제로 설정 라우터를 나누다 15개를 통째로 잃었고, 그때는
+  손으로 대조해서야 알았다. 이제 그 사고는 테스트가 먼저 잡는다.
+
+### Changed
+- **비공식·비제휴 관계 고지** — README에 Rookery가 각 플랫폼 사업자의 공식 도구가
+  아니며, 플랫폼 이름과 로고는 지원 대상을 가리키는 용도로만 사용한다는 점을 명시했다.
+- **큰 모듈을 패키지로 나눴다.** 코드는 옮기기만 했고 동작은 그대로다. 각 패키지의
+  `__init__.py`가 예전 이름을 그대로 내주므로 호출부는 한 줄도 바뀌지 않았다.
+  - `engine/pipeline/` — `state`·`ffmpeg`·`ytdlp` (815줄 → 4파일)
+  - `engine/x_spaces/` — `constants`·`cookies`·`api`·`engine` (763줄 → 5파일).
+    호출이 엔진 → api → 쿠키 한 방향으로만 흐르는 것을 확인하고 그 층대로 갈랐다.
+  - `services/discord_bot/` — 인가 판정을 봇 본체에서 분리 (819줄).
+    여기가 뚫리면 봇을 초대한 서버의 아무나 남의 녹화를 제어할 수 있다.
+  - `api/settings/` — `general`·`media`·`auth`·`notifications` (639줄 → 6파일).
+    경로는 한 글자도 바뀌지 않았다.
+
+### Fixed
+- **릴리즈 메타데이터 불일치** — 백엔드는 `2.0.4`였지만 프런트 패키지와 lockfile은
+  초기값 `0.1.0`에 머물러 있었다. 모두 `2.0.5`로 맞추고, 백엔드·npm·CHANGELOG·
+  PyInstaller 버전 리소스가 같은 값을 가리키는지 검사하는 테스트를 추가했다.
+- **최신 FastAPI CI 호환성** — FastAPI 0.137부터 포함된 라우터가 중첩 구조로
+  보존되면서 `app.routes` 평면 순회를 사용하던 API 계약 테스트가 모든 경로를 누락으로
+  오판했다. 공개 API는 OpenAPI, 후행 슬래시 별칭은 실제 요청, 문서·SPA 경로는 앱
+  설정과 정적 빌드 유무로 각각 검사해 구버전과 최신 버전에서 같은 계약을 검증한다.
+
+### 하지 않은 것
+측정해 보고 접었다. 기록해 두지 않으면 다음에 같은 분석을 반복하게 된다.
+- `vod.py` 분할 — 1070줄 중 966줄이 클래스 하나다. `self`를 안 쓰는 메서드는 6개
+  77줄뿐이고 빼내려면 호출부 10군데를 고쳐야 한다.
+- 파이프라인 공통 조상 — 메서드 이름은 15개 겹치지만 완전히 같은 코드는 4개 10줄이고,
+  핵심인 `start_recording`은 유사도 30%다.
+- 알림 설정 탭의 카드별 분리 — 카드마다 필요한 값이 9·12·11개인데 대부분 `x`/`setX`
+  쌍이라, 나누면 필드 하나 바꿀 때 파일 두 개를 고쳐야 한다.
+
+---
+
+## [2.0.4] - 2026-08-28
+
+### Added
+- **저작자 표기** — 만든 사람이 파일 어디에도 남아 있지 않았다. 깃허브 밖으로 나간
+  파일(포크된 LICENSE, 남의 디스크에 있는 exe)에는 프로필이 따라가지 않으므로,
+  이름과 계정을 함께 박아 어디에 떨어져 있든 추적되게 했다.
+  - `LICENSE`: 저작권자를 `Serian (github.com/eruminyu)`으로 명시
+  - **exe 파일 속성**: 우클릭 → 속성 → 자세히에 제작자·저작권·제품명·버전이 나온다.
+    지금까지는 비어 있었다. 버전은 `backend/app/version.py` 하나에서 읽으므로
+    릴리즈할 때 두 곳을 고칠 일이 없다.
+  - 설정 → 정보 탭에 「이 프로그램에 대하여」 카드 추가 (버전·제작자·저장소·라이선스)
+  - `frontend/package.json`에 author·license·description·repository 추가
+  - README 라이선스 절에 만든 사람 표기
+
+---
+
+## [2.0.3] - 2026-08-28
+
+### Added
+- **태그 삭제** — 태그를 만들 수만 있고 지울 수는 없었다. 백엔드에는 삭제 API가
+  있었는데 화면에 버튼이 없었다.
+  - 대시보드의 「Tag filter」 태그 목록에서 지운다. 채널 카드에는 일부러 넣지 않았다 —
+    "이 채널에서 떼기"와 "전역에서 지우기"가 나란히 놓이면 잘못 누르기 쉽다.
+  - 전역 삭제라 그 태그가 붙어 있던 채널에서도 함께 떨어진다. 확인 대화에서 몇 개
+    채널이 영향받는지 먼저 알려준다.
+  - 지운 태그가 필터에 걸려 있었다면 필터에서도 함께 푼다. 그러지 않으면 아무 채널도
+    보이지 않는 상태가 된다.
+  - 채널별로 태그를 붙이고 떼는 기존 동작은 그대로다.
+
+### Changed
+- **전수 리팩토링** — 기능 변경은 없다. 죽은 코드를 걷어내고, 두 벌이던 것을 합치고,
+  한 덩어리이던 것을 나눴다.
+  - Docker 지원을 걷어낸 뒤에도 남아 있던 참조를 11개 파일에서 제거했다.
+    `/api/setup/status`의 `is_docker` 필드는 구버전 화면이 읽으므로 남긴다(항상 false).
+    이 필드 하나 때문에 설정 화면이 매번 던지던 요청도 함께 사라졌다.
+  - 죽은 심볼 제거: `XSpacesEngine.get_stream`(프로토콜 이름을 잘못 지어 아무것도
+    구현하지 않았다), `_get_active_space_by_search`(참조하는 상수가 정의돼 있지 않아
+    호출되면 NameError였다), `Database.execute_many`, `SegmentedControl`,
+    미사용 api 클라이언트 6개.
+  - `.env` 경로 탐색 규칙이 `config.py`와 `core/utils.py`에 두 벌 있던 것을
+    `config.resolve_env_path` 하나로 모았다. 읽기와 쓰기가 같은 파일을 봐야 하는데
+    한쪽만 고치면 조용히 어긋날 수 있는 구조였다.
+  - `context/`와 `contexts/`로 나뉘어 있던 디렉터리를 합쳤다.
+  - 설정 탭 다섯 곳이 똑같이 반복하던 저장 절차를 `useSettingsSave` 훅으로 모았다.
+  - `PlatformEngine` 프로토콜을 테스트로 실제 검사한다. 지금까지는 어디서도
+    참조되지 않아 엔진이 규약을 어겨도 드러날 곳이 없었다.
+  - `Conductor._monitor_channel` 186줄을 이름 붙은 단계 일곱 개로 나눴다.
+    if/elif 체인은 그대로 두고 본문만 옮겨, 녹화 여부를 가르는 판단은 건드리지 않았다.
+  - 알림 설정 탭에서 진단 카드를 분리했다(579 → 451줄). 상태 조회와 주기 갱신까지
+    그 카드가 소유한다.
+
+---
+
+## [2.0.2] - 2026-08-27
+
+### Fixed
+- **`rookery` 명령을 찾을 수 없던 문제**
+  - 명령은 `manage.sh`의 심볼릭 링크이고 `link_self()`가 등록하는데, 지금까지
+    `~/.local/bin`에만 걸었다. 이 경로는 **root의 기본 PATH에 없어서**, 설치를 마쳐도
+    `rookery: command not found` 가 났다. `status` · `start` · `logs` 등 이미 구현된
+    명령 전부가 링크 하나 때문에 닿지 않았다
+  - 이제 `/usr/local/bin` 을 먼저 시도한다. root의 기본 PATH에 있고, ffmpeg도 같은 곳에
+    설치하므로 규칙이 하나로 맞는다. 권한이 없으면 종전처럼 `~/.local/bin` 으로 내려가되
+    PATH 추가 명령을 그대로 복사할 수 있게 안내한다
+  - 이름이 바뀌기 전에 걸어둔 링크(`signal-recorder`, `chzzk-recorder-pro`)를 정리한다.
+    systemd 유닛은 이미 정리하고 있었지만 명령 링크는 남아 있었다. 우리가 만든
+    심볼릭 링크만 지우며, 같은 이름의 실제 파일은 건드리지 않는다
+  - 제거(`uninstall`) 시에도 두 경로를 모두 정리한다
+- **업데이트 안내 모달이 막다른 길이던 문제**
+  - `rookery update` 만 복사 블록으로 보여주고, 정작 명령이 없을 때 필요한 설치
+    원라이너는 "그대로 다시 실행하면 된다"고 말만 하고 보여주지 않았다. 막힌 사용자는
+    README를 뒤져야 했다
+  - 원라이너를 복사 가능한 두 번째 블록으로 추가했다. 복사 상태를 블록마다 분리해
+    어느 것을 복사했는지 구분된다
+
+### Changed
+- `docs/linux-guide.md` 의 명령 등록 위치와 `command not found` 대처를 실제 동작에 맞췄다
+
+---
+
+## [2.0.1] - 2026-08-27
+
+### Fixed
+- **알림 팝오버가 대시보드 콘텐츠에 가려지던 문제**
+  - 사이드바의 `backdrop-blur`가 스택 컨텍스트를 만들어, 헤더의 `z-50`이 바깥 본문과
+    겨루지 못했다. 사이드바 자체를 본문 위 층(`z-30`)으로 올린다
+  - 본문 래퍼 `.page-content`의 `z-10`을 제거했다. 이것이 본문을 스택 컨텍스트로 만들어
+    설정 화면의 폴더 선택창과 업데이트 안내 모달까지 함께 가둬 두고 있었다
+  - `UpdateModal`만 `z-50`이라 다른 모달(`z-9998`)과 층이 어긋나 있었다
+  - 층 순서와 그 이유를 `index.css`에 주석으로 남겼다
+- **토스트가 뜰 때마다 화면이 데이터를 다시 불러오던 문제**
+  - `useToast()`가 매 렌더마다 새 객체를 반환해, 이 값을 의존성에 넣은 설정·채팅 로그
+    화면이 토스트 하나마다 데이터를 통째로 다시 불렀다. 조회 실패로 error 토스트를 띄우면
+    실패 → 토스트 → 재조회로 요청이 무한 반복됐다
+  - 동작(`ToastActions`)과 내역(`ToastHistoryValue`)을 다른 컨텍스트로 분리했다.
+    `useToast()`의 반환값은 이제 마운트 이후 바뀌지 않는다
+- **uvicorn의 INFO 로그가 ERROR로 기록되던 문제**
+  - stderr로 오는 줄을 전부 `logger.error()`로 찍고 있었다. uvicorn은 INFO를 stderr로
+    내보내므로 "Application startup complete."까지 ERROR로 둔갑해, 로그가 온통 ERROR라
+    진짜 에러를 골라낼 수 없었다
+  - uvicorn 로그를 애플리케이션 핸들러로 직접 라우팅한다. 접근 로그는 프론트 폴링 때문에
+    하루 수만 줄이 되므로 종전처럼 콘솔에만 남긴다
+  - stderr 줄은 `WARNING:` 같은 접두어로 레벨을 판별한다 (yt-dlp가 이 형식을 쓴다)
+- **커맨드 팔레트에 System Logs가 빠져 있던 문제**
+  - 사이드바와 팔레트가 화면 목록을 각자 복사해 갖고 있어 어긋나 있었다. 이름과 아이콘도
+    서로 달랐다. 목록을 한곳으로 합쳤다
+
+### Changed
+- **채팅 로그 조회 성능** — 파일마다 인덱스(메시지 수 + 1000개마다의 바이트 위치)를 DB에
+  캐시해, 목록과 페이지 조회가 파일 전체를 다시 읽지 않는다. 104MB 아카이브 기준
+  목록 재방문 251ms → 5ms, 페이지 조회 233ms → 0.5ms. 파일이 커지면 늘어난 부분만
+  이어서 세므로 녹화 중에도 전체를 다시 읽지 않는다
+- 채팅 로그 파일 I/O를 워커 스레드로 옮겼다. 조회하는 동안 SSE 상태 스트림과 다른 API가
+  멈추지 않는다
+- 네이티브 `alert()` 두 곳을 앱 토스트로 교체했다
+
+### Added
+- **DB 스키마 v2** — `chat_file_index` 테이블. 채팅 로그의 메시지 수와 바이트 오프셋을
+  담는 파생 데이터이며, 지워져도 다음 조회에서 다시 만들어진다
+
+---
+
+## [2.0.0] - 2026-08-26
+
+### Added
+- **즉시 스캔 버튼**: Dashboard에 「즉시 스캔」 버튼 추가 (파란색, RefreshCw 아이콘)
+  - `POST /api/platforms/scan-now` 신규 엔드포인트
+  - 폴링 주기 무시하고 전체 또는 특정 채널 즉시 상태 확인
+- **X Spaces master URL 파일 저장** (녹화 실패 대비 백업)
+  - Space 감지 시 master URL을 `.txt` 파일로 저장 (`{download_dir}/x_spaces_urls/`)
+  - 파일에 yt-dlp 다운로드 명령어 포함 — 자동 녹화 실패 시 수동 다운로드 가능
+  - `ChannelTask.master_url_file` 필드 추가 (persistence 저장/복원 포함)
+- **X Spaces Discord 알림 개선**
+  - `auto_record=ON`: "🔴 자동 녹화 시작됨 (실시간 저장 중)"
+  - `auto_record=OFF`: "⏸️ 자동 녹화 OFF — 아래 URL로 수동 다운로드 가능"
+  - Discord `/download-space` 커맨드에 Space URL (`https://x.com/i/spaces/...`) 직접 입력 지원
+  - `_get_spaces_embed()`: `master_url` 우선 표시 (없으면 dynamic m3u8 URL 폴백)
+- **`download_space(space_url)` 서비스 메서드**: 채널 등록 없이 Space URL로 직접 다운로드
+- **`auth.py` `get_streamlink_options()`**: Streamlink 쿠키 주입 헬퍼 메서드
+
+### Changed
+- **프로젝트명 변경: Signal-Recorder → Rookery**
+  - `Signal`이 메신저 앱과 충돌해 검색에서 묻히고, `Recorder`가 기능의 일부만 설명했다.
+    표기도 4종(`Signal-Recorder` / `signal-recorder` / `signal_recorder` / `Signal Recorder`)이 혼재했다
+  - 코드 식별자(`channel`, `recording` 등 도메인 용어)와 저장 폴더 `recordings/` 는 그대로 둔다
+  - **DB 파일 `signal_recorder.db` → `rookery.db`**: 기동 시 자동 이관한다.
+    `-wal` / `-shm` 사이드카도 함께 옮기고, 이관에 실패하면 빈 DB를 만드는 대신
+    기존 파일을 그대로 사용한다
+  - **systemd 유닛 `signal-recorder` → `rookery`**: 등록 전에 구버전 유닛을 중지·제거한다.
+    남아 있으면 같은 포트를 물고 있어 새 유닛이 뜨지 못한다
+  - **설치 경로 `~/signal-recorder` → `~/rookery`**: 기존 설치가 있으면 그대로 이어받는다
+  - **관리 명령 `signal-recorder` → `rookery`**
+  - 브라우저에 저장된 페이지 타이틀이 옛 기본값과 정확히 일치하면 새 기본값으로 승격한다.
+    사용자가 직접 지정한 값은 건드리지 않는다
+  - **아직 남은 것**: GitHub 리포지토리 이름. 코드의 리포 슬러그는 실제 리포를 바꾸기 전까지
+    그대로 둔다 — 먼저 바꾸면 업데이트 체커가 404를 받고 설치 원라이너가 죽는다
+- **알림 설정 화면을 웹훅 우선으로 재배치**
+  - Bot 카드가 먼저 오고 Webhook이 "폴백"으로 뒤에 있어, 알림만 필요한 사용자도
+    개발자 포털에서 앱을 만들어야 하는 것처럼 보였다
+  - Webhook을 기본 경로로 올리고, Bot은 접힌 고급 섹션으로 내렸다
+    (이미 설정한 사용자에게는 펼친 채로 보여준다)
+- **설치·실행·업데이트 스크립트를 하나로 통합** (`scripts/manage.sh`, `scripts/manage.bat`)
+  - 제거: `install.sh`, `install-docker.sh`, `update-docker.sh`, `setup_service.sh`,
+    `signal-recorder.service`, `install.bat`, `start.bat`, `start-dev.bat`
+  - 색상 변수·출력 헬퍼·OS 감지·저장소 클론·완료 메시지가 스크립트마다 2~3벌씩
+    중복되어 있었고, systemd 유닛이 일반 유닛과 템플릿 유닛 두 갈래로 갈라져 있었다
+  - 원라이너 하나가 설치와 업데이트를 겸한다. 미설치면 설치, 설치되어 있으면 갱신 후 재시작
+  - 설치 후 `signal-recorder` 명령이 등록되어 `status` / `update` / `start` / `stop` /
+    `logs` / `service` / `uninstall` 을 한 단어로 실행한다
+  - 네이티브 설치 전용이다. Docker는 `docker compose up --build -d` 를 직접 사용한다
+  - **기존 사용자 영향**: 원라이너 URL이 `scripts/install.sh` → `scripts/manage.sh` 로 바뀌었다.
+    네이티브 설치에는 그동안 업데이트 스크립트가 없었으나 이제 `signal-recorder update` 로 갱신한다.
+- **`.gitattributes` 추가**: `*.sh` 는 LF, `*.bat` 은 CRLF로 고정.
+  셸 스크립트가 CRLF로 체크아웃되면 셔뱅이 `bash
+` 로 읽혀 원라이너 설치가 실패한다.
+- **Discord 봇 명령을 슬래시 커맨드 전용으로 전환** (기존 `!` 프리픽스 명령 제거)
+  - 프리픽스와 슬래시로 중복 구현되어 있던 핸들러 10개 제거 — 공통 로직은 이미 헬퍼로 분리되어 있어 기능 손실 없음
+  - `message_content` privileged intent 요구 제거 → Discord 개발자 포털에서 별도 활성화 불필요
+  - 빌트인 `!help` 비활성화 (`help_command=None`)
+  - **기존 사용자 영향**: `!status`, `!start` 등 프리픽스 명령이 더 이상 동작하지 않습니다. `/status`, `/start`를 사용하세요.
+
+
+### Fixed
+- **X Spaces 종료 감지 버그**: `AudioSpaceById` `state` 미검사로 종료된 Space가 `is_live=True` 유지되던 문제
+  - UserTweets 타임라인에 종료 Space가 남아 있어 space_id가 계속 발견되던 근본 원인
+  - `state != "Running"` 이면 즉시 `_offline_status()` 반환
+  - `.part` 파일 잔류 문제 해결 (5분 이내 폴링에서 종료 감지 → yt-dlp 프로세스 종료)
+- **X Spaces 다음 Space master URL 미캡처**: Space 종료 감지 시 `master_url` 등 X Spaces 전용 필드 전체 초기화
+  - 미초기화로 인해 `if new_master and not task.master_url:` 조건이 항상 False
+- **`toggle_auto_record()` async 누락**: Conductor → RecorderService → API 라우터 전 계층 `await` 누락 수정
+
+### Security
+- **Discord 봇 명령 권한 검사 추가**: 기존에는 호출자·채널 검증이 전혀 없어, 봇이 초대된 서버의 누구나 남의 녹화를 시작·중단할 수 있었음
+  - `DISCORD_COMMAND_USER_IDS` / `DISCORD_COMMAND_CHANNEL_ID` 설정 추가 (설정 → 알림 탭에서도 변경 가능)
+  - 판정은 `_is_authorized()` 단일 지점에서 수행하고, `CommandTree.interaction_check`로 모든 슬래시 커맨드에 일괄 적용
+  - 미설정 시 `DISCORD_NOTIFICATION_CHANNEL_ID`를 채널 조건으로 사용하며, 그마저 없으면 모든 명령을 거부 (fail-closed)
+  - **기존 사용자 영향**: 알림 채널 밖에서 명령을 사용하던 경우 거부됩니다.
+
+
+---
+
+## [1.1.0] - 2026-03-24
+
+### Added
+- **멀티 플랫폼 감시**: TwitCasting, Twitter Spaces 채널 자동 감시 및 녹화 지원
+  - `Platform` 열거형 기반 플랫폼 추상화 (`base.py`)
+  - `ChannelTask`에 `platform` 필드 추가, 복합 키(`platform:channel_id`) 방식으로 채널 관리
+  - TwitCasting 엔진: TwitCasting API v2 + Streamlink 스트림 추출 (`twitcasting.py`)
+  - Twitter Spaces 엔진: 비공식 GraphQL API + m3u8 URL 캡처 (`twitter_spaces.py`)
+  - Dashboard에 플랫폼 드롭다운 및 플랫폼 배지(치지직/TwitCasting/Twitter Spaces) 표시
+  - 인증 미설정 플랫폼 채널 추가 시 자물쇠 아이콘 + 잠금 처리
+
+- **Twitter Spaces m3u8 캡처 및 수동 캡처 모드**
+  - 비공식 GraphQL `UserByScreenName` → `UserTweets` 타임라인 폴링으로 Space 감지
+  - Space 라이브 시 `dynamic_playlist.m3u8` URL 자동 추출 및 `channels.json` 영속 저장
+  - 429 Rate Limit 대응: 자동 감시 루프 비활성화 → Discord `/capture-space` 수동 캡처 방식 전환
+  - Discord 슬래시/프리픽스 커맨드: `/capture-space`, `!capture-space`
+
+- **아카이브 다운로드 기능**
+  - TwitCasting 채널 과거 방송 목록 조회 및 다운로드 (`GET /api/archive/twitcasting/{channel_id}`)
+  - Twitter Spaces m3u8 URL 직접 입력 다운로드
+  - 캡처된 m3u8 URL 목록 조회/다운로드/삭제 API (`/api/archive/spaces/*`)
+  - Archive 페이지 신규 추가 (사이드바 메뉴 포함)
+
+- **Twitter 쿠키 만료 감지 + Discord 알림**
+  - `verify_cookie()`: `GET /1.1/account/verify_credentials.json` 호출로 쿠키 유효성 24시간 주기 검증
+  - 만료 감지 시 Discord 알림 자동 발송 (중복 발송 방지)
+  - Discord 커맨드: `/spaces`, `!spaces`, `/download-space`, `!download-space`
+  - `GET /api/settings/cookie-status`, `POST /api/settings/cookie-status/check` API 추가
+
+- **Settings 탭 구조 개편**
+  - 「일반」「다운로드」「인증」「알림」「외관」「정보」6탭 구조로 전면 재편
+  - 인증 탭: Chzzk / TwitCasting / Twitter Spaces 3개 섹션 통합 관리
+
+### Fixed
+- 원격 접속 시 API 호출 실패: `API_BASE_URL` 절대경로 → 상대경로(`/api`)로 변경
+- Docker `appuser` uid 불일치로 `.env`/`recordings/` 쓰기 실패 → root 실행으로 전환
+- Docker 초기 설정 시 컨테이너 내부 경로(`/app/recordings`) 기본값 안내 추가
+
+---
+
+## [1.0.0] - 2026-03-12
+
+### Added
+- **채널 모니터링**: 치지직 채널 자동 감시 및 방송 시작 시 녹화 자동 시작
+- **라이브 녹화**: streamlink + FFmpeg Hybrid Pipe 엔진을 통한 고품질 녹화
+  - 지원 포맷: `ts`, `mp4`, `mkv`
+  - 지원 품질: `best`, `1080p`, `720p`, `480p`
+- **VOD 다운로드**: 치지직 VOD 및 외부 URL(YouTube 등) 다운로드 지원
+  - 동시 다운로드 최대 설정 가능
+  - 다운로드 속도 제한 설정 가능
+- **채팅 아카이빙**: 녹화 시 실시간 채팅 자동 저장
+- **채널 영속성**: `channels.json`으로 채널 목록 자동 저장/복원
+- **설정 UI**: Web 기반 설정 화면에서 모든 옵션 변경 가능
+- **Discord 봇 연동**: 방송 시작/종료, 녹화 알림 Discord 채널 전송
+- **통계 대시보드**: 녹화 현황 및 디스크 사용량 통계 제공
+
+### 배포
+- **Docker 지원**: Multi-stage 빌드 Docker 이미지 및 `docker-compose.yml` 제공
+- **Windows 배포**: PyInstaller 기반 단독 실행 `.exe` (FFmpeg/streamlink 내장)
+  - 시스템 트레이 아이콘 (종료, 브라우저 열기)
+  - 서버 시작 시 기본 브라우저 자동 오픈
+- **Linux Native 배포**: 설치 스크립트 및 systemd 서비스 템플릿 제공
+- **통합 서버**: FastAPI가 React 빌드 파일을 직접 서빙 (포트 하나로 통합)
+
+---
+
+[Unreleased]: https://github.com/ProofPage/Phrolova/compare/v2.2.8...HEAD
+[2.2.8]: https://github.com/ProofPage/Phrolova/compare/v2.2.7...v2.2.8
+[2.2.7]: https://github.com/ProofPage/Phrolova/compare/v2.2.6...v2.2.7
+[2.2.6]: https://github.com/ProofPage/Phrolova/compare/v2.2.5...v2.2.6
+[2.2.5]: https://github.com/ProofPage/Phrolova/compare/v2.2.4...v2.2.5
+[2.2.4]: https://github.com/ProofPage/Phrolova/compare/v2.2.3...v2.2.4
+[2.2.3]: https://github.com/ProofPage/Phrolova/compare/v2.2.2...v2.2.3
+[2.2.2]: https://github.com/ProofPage/Phrolova/compare/v2.2.1...v2.2.2
+[2.2.1]: https://github.com/ProofPage/Phrolova/compare/v2.2.0...v2.2.1
+[2.2.0]: https://github.com/ProofPage/Phrolova/compare/v2.1.9...v2.2.0
+[2.1.9]: https://github.com/ProofPage/Phrolova/compare/v2.1.8...v2.1.9
+[2.1.8]: https://github.com/ProofPage/Phrolova/compare/v2.1.7...v2.1.8
+[2.1.7]: https://github.com/ProofPage/Phrolova/compare/v2.1.6...v2.1.7
+[2.1.6]: https://github.com/ProofPage/Phrolova/compare/v2.1.5...v2.1.6
+[2.1.5]: https://github.com/ProofPage/Phrolova/compare/v2.1.4...v2.1.5
+[2.1.4]: https://github.com/ProofPage/Phrolova/compare/v2.1.3...v2.1.4
+[2.1.3]: https://github.com/ProofPage/Phrolova/compare/v2.1.2...v2.1.3
+[2.1.2]: https://github.com/ProofPage/Phrolova/compare/v2.1.1...v2.1.2
+[2.1.1]: https://github.com/ProofPage/Phrolova/compare/v2.1.0...v2.1.1
+[2.1.0]: https://github.com/ProofPage/Phrolova/compare/v2.0.99...v2.1.0
+[2.0.99]: https://github.com/ProofPage/Phrolova/compare/v2.0.98...v2.0.99
+[2.0.98]: https://github.com/ProofPage/Phrolova/compare/v2.0.97...v2.0.98
+[2.0.97]: https://github.com/ProofPage/Phrolova/compare/v2.0.96...v2.0.97
+[2.0.96]: https://github.com/ProofPage/Phrolova/compare/v2.0.95...v2.0.96
+[2.0.95]: https://github.com/ProofPage/Phrolova/compare/v2.0.94...v2.0.95
+[2.0.94]: https://github.com/ProofPage/Phrolova/compare/v2.0.93...v2.0.94
+[2.0.93]: https://github.com/ProofPage/Phrolova/compare/v2.0.92...v2.0.93
+[2.0.92]: https://github.com/ProofPage/Phrolova/compare/v2.0.91...v2.0.92
+[2.0.91]: https://github.com/ProofPage/Phrolova/compare/v2.0.90...v2.0.91
+[2.0.90]: https://github.com/ProofPage/Phrolova/compare/v2.0.89...v2.0.90
+[2.0.89]: https://github.com/ProofPage/Phrolova/compare/v2.0.88...v2.0.89
+[2.0.88]: https://github.com/ProofPage/Phrolova/compare/v2.0.87...v2.0.88
+[2.0.87]: https://github.com/ProofPage/Phrolova/compare/v2.0.86...v2.0.87
+[2.0.86]: https://github.com/ProofPage/Phrolova/compare/v2.0.85...v2.0.86
+[2.0.85]: https://github.com/ProofPage/Phrolova/compare/v2.0.84...v2.0.85
+[2.0.84]: https://github.com/ProofPage/Phrolova/compare/v2.0.83...v2.0.84
+[2.0.83]: https://github.com/ProofPage/Phrolova/compare/v2.0.82...v2.0.83
+[2.0.82]: https://github.com/ProofPage/Phrolova/compare/v2.0.81...v2.0.82
+[2.0.81]: https://github.com/ProofPage/Phrolova/compare/v2.0.80...v2.0.81
+[2.0.80]: https://github.com/ProofPage/Phrolova/compare/v2.0.79...v2.0.80
+[2.0.79]: https://github.com/ProofPage/Phrolova/compare/v2.0.78...v2.0.79
+[2.0.78]: https://github.com/ProofPage/Phrolova/compare/v2.0.77...v2.0.78
+[2.0.77]: https://github.com/ProofPage/Phrolova/compare/v2.0.76...v2.0.77
+[2.0.76]: https://github.com/ProofPage/Phrolova/compare/v2.0.75...v2.0.76
+[2.0.75]: https://github.com/ProofPage/Phrolova/compare/v2.0.74...v2.0.75
+[2.0.74]: https://github.com/ProofPage/Phrolova/compare/v2.0.73...v2.0.74
+[2.0.73]: https://github.com/ProofPage/Phrolova/compare/v2.0.72...v2.0.73
+[2.0.72]: https://github.com/ProofPage/Phrolova/compare/v2.0.71...v2.0.72
+[2.0.71]: https://github.com/ProofPage/Phrolova/compare/v2.0.70...v2.0.71
+[2.0.70]: https://github.com/ProofPage/Phrolova/compare/v2.0.69...v2.0.70
+[2.0.69]: https://github.com/ProofPage/Phrolova/compare/v2.0.68...v2.0.69
+[2.0.68]: https://github.com/ProofPage/Phrolova/compare/v2.0.67...v2.0.68
+[2.0.67]: https://github.com/ProofPage/Phrolova/compare/v2.0.66...v2.0.67
+[2.0.66]: https://github.com/ProofPage/Phrolova/compare/v2.0.65...v2.0.66
+[2.0.65]: https://github.com/ProofPage/Phrolova/compare/v2.0.64...v2.0.65
+[2.0.64]: https://github.com/ProofPage/Phrolova/compare/v2.0.63...v2.0.64
+[2.0.63]: https://github.com/ProofPage/Phrolova/compare/v2.0.62...v2.0.63
+[2.0.62]: https://github.com/ProofPage/Phrolova/compare/v2.0.61...v2.0.62
+[2.0.61]: https://github.com/ProofPage/Phrolova/compare/v2.0.60...v2.0.61
+[2.0.60]: https://github.com/ProofPage/Phrolova/compare/v2.0.59...v2.0.60
+[2.0.59]: https://github.com/ProofPage/Phrolova/compare/v2.0.58...v2.0.59
+[2.0.55]: https://github.com/ProofPage/Phrolova/compare/v2.0.54...v2.0.55
+[2.0.54]: https://github.com/ProofPage/Phrolova/compare/v2.0.53...v2.0.54
+[2.0.53]: https://github.com/ProofPage/Phrolova/compare/v2.0.52...v2.0.53
+[2.0.52]: https://github.com/ProofPage/Phrolova/compare/v2.0.51...v2.0.52
+[2.0.51]: https://github.com/ProofPage/Phrolova/compare/v2.0.50...v2.0.51
+[2.0.50]: https://github.com/ProofPage/Phrolova/compare/v2.0.49...v2.0.50
+[2.0.49]: https://github.com/ProofPage/Phrolova/compare/v2.0.48...v2.0.49
+[2.0.48]: https://github.com/ProofPage/Phrolova/compare/v2.0.47...v2.0.48
+[2.0.47]: https://github.com/ProofPage/Phrolova/compare/v2.0.46...v2.0.47
+[2.0.46]: https://github.com/ProofPage/Phrolova/compare/v2.0.45...v2.0.46
+[2.0.45]: https://github.com/ProofPage/Phrolova/compare/v2.0.44...v2.0.45
+[2.0.44]: https://github.com/ProofPage/Phrolova/compare/v2.0.43...v2.0.44
+[2.0.43]: https://github.com/ProofPage/Phrolova/compare/v2.0.42...v2.0.43
+[2.0.42]: https://github.com/ProofPage/Phrolova/compare/v2.0.41...v2.0.42
+[2.0.41]: https://github.com/ProofPage/Phrolova/compare/v2.0.40...v2.0.41
+[2.0.40]: https://github.com/ProofPage/Phrolova/compare/v2.0.39...v2.0.40
+[2.0.39]: https://github.com/ProofPage/Phrolova/compare/v2.0.38...v2.0.39
+[2.0.38]: https://github.com/ProofPage/Phrolova/compare/v2.0.37...v2.0.38
+[2.0.37]: https://github.com/ProofPage/Phrolova/compare/v2.0.36...v2.0.37
+[2.0.36]: https://github.com/ProofPage/Phrolova/compare/v2.0.35...v2.0.36
+[2.0.35]: https://github.com/ProofPage/Phrolova/compare/v2.0.34...v2.0.35
+[2.0.34]: https://github.com/ProofPage/Phrolova/compare/v2.0.33...v2.0.34
+[2.0.33]: https://github.com/ProofPage/Phrolova/compare/v2.0.32...v2.0.33
+[2.0.32]: https://github.com/ProofPage/Phrolova/compare/v2.0.31...v2.0.32
+[2.0.31]: https://github.com/ProofPage/Phrolova/compare/v2.0.30...v2.0.31
+[2.0.30]: https://github.com/ProofPage/Phrolova/compare/v2.0.29...v2.0.30
+[2.0.29]: https://github.com/ProofPage/Phrolova/compare/v2.0.28...v2.0.29
+[2.0.28]: https://github.com/ProofPage/Phrolova/compare/v2.0.27...v2.0.28
+[2.0.27]: https://github.com/ProofPage/Phrolova/compare/v2.0.26...v2.0.27
+[2.0.26]: https://github.com/ProofPage/Phrolova/compare/v2.0.25...v2.0.26
+[2.0.25]: https://github.com/ProofPage/Phrolova/compare/v2.0.24...v2.0.25
+[2.0.24]: https://github.com/ProofPage/Phrolova/compare/v2.0.23...v2.0.24
+[2.0.23]: https://github.com/ProofPage/Phrolova/compare/v2.0.22...v2.0.23
+[2.0.22]: https://github.com/ProofPage/Phrolova/compare/v2.0.21...v2.0.22
+[2.0.21]: https://github.com/ProofPage/Phrolova/compare/v2.0.20...v2.0.21
+[2.0.20]: https://github.com/ProofPage/Phrolova/compare/v2.0.19...v2.0.20
+[2.0.19]: https://github.com/ProofPage/Phrolova/compare/v2.0.18...v2.0.19
+[2.0.18]: https://github.com/ProofPage/Phrolova/compare/v2.0.17...v2.0.18
+[2.0.17]: https://github.com/ProofPage/Phrolova/compare/v2.0.16...v2.0.17
+[2.0.16]: https://github.com/ProofPage/Phrolova/compare/v2.0.15...v2.0.16
+[2.0.15]: https://github.com/ProofPage/Phrolova/compare/v2.0.14...v2.0.15
+[2.0.14]: https://github.com/ProofPage/Phrolova/compare/v2.0.13...v2.0.14
+[2.0.13]: https://github.com/ProofPage/Phrolova/compare/v2.0.12...v2.0.13
+[2.0.12]: https://github.com/ProofPage/Phrolova/compare/v2.0.11...v2.0.12
+[2.0.11]: https://github.com/ProofPage/Phrolova/compare/v2.0.10...v2.0.11
+[2.0.10]: https://github.com/eruminyu/Rookery/compare/v2.0.9...v2.0.10
+[2.0.9]: https://github.com/eruminyu/Rookery/compare/v2.0.8...v2.0.9
+[2.0.8]: https://github.com/eruminyu/Rookery/compare/v2.0.7...v2.0.8
+[2.0.7]: https://github.com/eruminyu/Rookery/compare/v2.0.6...v2.0.7
+[2.0.6]: https://github.com/eruminyu/Rookery/compare/v2.0.5...v2.0.6
+[2.0.5]: https://github.com/eruminyu/Rookery/compare/v2.0.4...v2.0.5
+[2.0.4]: https://github.com/eruminyu/Rookery/compare/v2.0.3...v2.0.4
+[2.0.3]: https://github.com/eruminyu/Rookery/compare/v2.0.2...v2.0.3
+[2.0.2]: https://github.com/eruminyu/Rookery/compare/v2.0.1...v2.0.2
+[2.0.1]: https://github.com/eruminyu/Rookery/compare/v2.0.0...v2.0.1
+[2.0.0]: https://github.com/eruminyu/Rookery/compare/v1.1.7...v2.0.0
+[1.1.0]: https://github.com/eruminyu/Rookery/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/eruminyu/Rookery/releases/tag/v1.0.0
+
+[2.0.56]: https://github.com/ProofPage/Phrolova/compare/v2.0.55...v2.0.56
+[2.0.57]: https://github.com/ProofPage/Phrolova/compare/v2.0.56...v2.0.57
+[2.0.58]: https://github.com/ProofPage/Phrolova/compare/v2.0.57...v2.0.58

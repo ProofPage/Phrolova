@@ -1,0 +1,11 @@
+fastapi
+python-multipart
+httpx[socks]
+aiofiles
+yt-dlp[default]>=2026.10.10.233141.dev0
+pycryptodomex
+streamlink>=8.6.2,<9
+ffmpeg-python
+python-dotenv
+pydantic-settings
+discord.py

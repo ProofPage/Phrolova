@@ -1,0 +1,3 @@
+# Same application features, asyncio/h11 instead of optional native server accelerators.
+-r requirements-common.txt
+uvicorn

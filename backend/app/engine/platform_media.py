@@ -1,0 +1,172 @@
+"""Platform classification and extractors for the existing VOD queue."""
+from urllib.parse import urlsplit
+from app.core.episode_domains import numbered_site_for_host
+from app.engine.platform_auth import redact_media_error
+
+def media_platform(url: str) -> str:
+    host = (urlsplit(url).hostname or '').lower()
+    if host in ('spooncast.net', 'www.spooncast.net'): return 'spoon'
+    if host == 'berriz.in': return 'berriz'
+    if host in ('play.sooplive.com', 'vod.sooplive.com', 'sooplive.com', 'www.sooplive.com', 'play.sooplive.co.kr', 'vod.sooplive.co.kr', 'sooplive.co.kr', 'afreecatv.com', 'play.afreecatv.com', 'vod.afreecatv.com'): return 'soop'
+    if host in ('missav123.com', 'www.missav123.com'): return 'missav'
+    numbered = numbered_site_for_host(host)
+    if numbered: return numbered
+    if host in ('rplay.live', 'www.rplay.live'): return 'rplay'
+    if host in ('popkontv.com','www.popkontv.com'): return 'popkontv'
+    if host in ('v2.ohli365.org', 'ohli365.org', 'www.ohli365.org'): return 'ohli365'
+    if host in ('moeni.net', 'www.moeni.net'): return 'moeni'
+    if host in ('reanime.to', 'www.reanime.to'): return 'reanime'
+    if host == 'linkani.tv': return 'linkani'
+    if host in ('www.ohli24.net', 'ohli24.net', 'ani.ohli24.com', 'ohli24.com', 'www.ohli24.com'): return 'ohli24'
+    if host in ('bilibili.com', 'www.bilibili.com', 'm.bilibili.com', 'live.bilibili.com', 'b23.tv'): return 'bilibili'
+    if host in ('tiktok.com', 'www.tiktok.com', 'm.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com'): return 'tiktok'
+    if host in ('twitch.tv', 'www.twitch.tv', 'm.twitch.tv', 'go.twitch.tv', 'clips.twitch.tv', 'player.twitch.tv'): return 'twitch'
+    if host in ('kick.com', 'www.kick.com'): return 'kick'
+    if host in ('ci.me', 'www.ci.me'): return 'cime'
+    if host == 'chzzk.naver.com': return 'chzzk'
+    if host in ('hearheart.com', 'www.hearheart.com'): return 'hearheart'
+    if host in ('ym-05.com', 'www.ym-05.com'): return 'yamikorea'
+    if host in ('av19t.com', 'www.av19t.com'): return 'av19'
+    if host in ('youtu.be', 'youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com'): return 'youtube'
+    return 'external'
+
+def canonical_platform_video(url: str) -> str:
+    platform = media_platform(url)
+    if platform == 'missav':
+        from app.engine.missav import parse_missav_url
+        return parse_missav_url(url)['url']
+    if platform == 'av19':
+        from app.engine.av19 import parse_av19_url
+        return parse_av19_url(url)['url']
+    if platform == 'yamikorea':
+        from app.engine.yamikorea import parse_yamikorea_url
+        return parse_yamikorea_url(url)['url']
+    if platform == 'rplay':
+        from app.engine.rplay import canonical_rplay_video_url
+        return canonical_rplay_video_url(url)
+    if platform in ('tvhot', 'toonday', 'tvroom', 'anilife', 'linkani', 'ohli24', 'tvwiki', 'animaru', 'ohli365', 'moeni', 'reanime'):
+        from app.engine.episode_sites import parse_episode_url
+        route = parse_episode_url(url)
+        if route['collection'] and platform != 'ohli24':
+            raise ValueError('작품의 회차 목록에서 내려받을 회차를 선택하세요.')
+        return route['url']
+    if platform == 'popkontv':
+        from app.engine.popkontv import parse_popkontv_video_url
+        return parse_popkontv_video_url(url)['url']
+    if platform == 'bilibili':
+        from app.engine.bilibili import canonical_bilibili_video_url
+        return canonical_bilibili_video_url(url)
+    if platform == 'tiktok':
+        from app.engine.tiktok import canonical_tiktok_video_url
+        return canonical_tiktok_video_url(url)
+    if platform == 'twitch':
+        from app.engine.twitch import canonical_twitch_video_url
+        return canonical_twitch_video_url(url)
+    if platform == 'kick':
+        from app.engine.kick import canonical_kick_video_url
+        return canonical_kick_video_url(url)
+    if platform == 'cime':
+        from app.engine.cime import parse_cime_video_url
+        route = parse_cime_video_url(url)
+        if not route: raise ValueError('올바른 씨미 다시보기 또는 클립 링크를 입력하세요.')
+        return route['url']
+    if platform == 'hearheart':
+        from app.engine.hearheart import canonical_hearheart_video_url
+        return canonical_hearheart_video_url(url)
+    return url
+
+class SafeMediaLogger:
+    def __init__(self, logger): self.logger = logger
+    def debug(self, message): self.logger.debug(redact_media_error(message))
+    def info(self, message): self.logger.info(redact_media_error(message))
+    def warning(self, message):
+        # 일반 추출기 전환과 BunnyCDN의 선택 메타데이터 누락은 실패 경고가 아니다.
+        text = str(message).strip()
+        if text == '[generic] Falling back on generic information extractor':
+            self.logger.info('[generic] 전용 추출기가 없어 일반 추출기로 미디어를 확인합니다.')
+        elif text.partition(';')[0].strip() == '[BunnyCdn] unable to extract JSON-LD':
+            self.logger.info('[BunnyCdn] 부가 메타데이터(JSON-LD)를 찾지 못했습니다. 미디어 추출을 계속합니다.')
+        else:
+            self.logger.warning(redact_media_error(message))
+    def error(self, message): self.logger.error(redact_media_error(message))
+
+def platform_ydl(url: str, options: dict):
+    import yt_dlp
+    opts = dict(options)
+    if media_platform(url) == 'missav':
+        from app.engine.missav_downloader import MissAVYoutubeDL
+        from app.engine.episode_extractor import EpisodeSiteIE
+        opts.update(hls_prefer_native=True, allowed_extensions={'jpeg', 'ts', 'm3u8'},
+                    retries=0, fragment_retries=0, extractor_retries=0,
+                    skip_unavailable_fragments=False, external_downloader=None)
+        if opts.get('logger'):
+            opts['logger'] = SafeMediaLogger(opts['logger'])
+        ydl = MissAVYoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(EpisodeSiteIE())
+        ydl.add_default_info_extractors()
+        return ydl
+    if opts.get('logger'):
+        opts['logger'] = SafeMediaLogger(opts['logger'])
+    if media_platform(url) == 'berriz':
+        from app.engine.berriz_extractor import BerrizIE
+        from app.core.config import get_settings
+        opts['cookiefile'] = get_settings().berriz_cookie_file
+        ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(BerrizIE())
+        ydl.add_default_info_extractors()
+        return ydl
+    if media_platform(url) == 'av19':
+        from app.engine.av19_downloader import AV19YoutubeDL
+        from app.engine.episode_extractor import EpisodeSiteIE
+        from app.engine.av19 import SEGMENT_EXTENSIONS
+        opts.update(hls_prefer_native=True, allowed_extensions={'gif', 'ts', 'm3u8', 'html', *SEGMENT_EXTENSIONS})
+        ydl = AV19YoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(EpisodeSiteIE())
+        ydl.add_default_info_extractors()
+        return ydl
+    if media_platform(url) == 'yamikorea':
+        from app.engine.episode_extractor import EpisodeSiteIE
+        ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(EpisodeSiteIE())
+        ydl.add_default_info_extractors()
+        return ydl
+    from app.engine.chzzk_cdn import ChzzkCdnYoutubeDL, is_chzzk_vod_url
+    if is_chzzk_vod_url(url):
+        return ChzzkCdnYoutubeDL(opts)
+    if media_platform(url) == 'rplay':
+        from app.engine.rplay_extractor import RplayIE
+        ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(RplayIE())
+        ydl.add_default_info_extractors()
+        return ydl
+    if media_platform(url) in ('tvhot', 'toonday', 'tvroom', 'anilife', 'linkani', 'ohli24', 'tvwiki', 'animaru', 'ohli365', 'moeni', 'reanime'):
+        if media_platform(url) in ('tvroom', 'toonday'):
+            opts.update(hls_prefer_native=True, allowed_extensions={'png', 'ts', 'm3u8', 'm4s', 'mp4', 'aac', 'key'})
+        from app.engine.episode_extractor import EpisodeSiteIE
+        if media_platform(url) in ('tvwiki', 'tvhot'):
+            from app.engine.tvwiki_downloader import TVWikiYoutubeDL
+            ydl = TVWikiYoutubeDL(opts, auto_init=False)
+        else:
+            ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(EpisodeSiteIE())
+        ydl.add_default_info_extractors()
+        return ydl
+    if media_platform(url) == 'popkontv':
+        from app.engine.popkontv_extractor import PopkonTVIE
+        ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(PopkonTVIE())
+        ydl.add_default_info_extractors()
+        return ydl
+    if media_platform(url) == 'cime':
+        from app.engine.cime_extractor import CimeIE
+        ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(CimeIE())
+        ydl.add_default_info_extractors()
+        return ydl
+    if media_platform(url) == 'hearheart':
+        from app.engine.hearheart_extractor import HearHeartIE
+        ydl = yt_dlp.YoutubeDL(opts, auto_init=False)
+        ydl.add_info_extractor(HearHeartIE())
+        ydl.add_default_info_extractors()
+        return ydl
+    return yt_dlp.YoutubeDL(opts)

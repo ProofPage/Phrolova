@@ -1,0 +1,16 @@
+.platform-badge { display: inline-flex; align-items: center; flex-shrink: 0; white-space: nowrap; font-size: 10px; line-height: 16px; border: 1px solid var(--color-line); padding: 0 4px; border-radius: 3px; background: transparent; color: var(--color-ink-muted); }
+.platform-badge.platform-chzzk { color: var(--color-chzzk); }
+.platform-badge.platform-youtube { color: var(--color-youtube); }
+.platform-badge.platform-cime { color: var(--color-cime); }
+.platform-badge.platform-kick { color: var(--color-kick); }
+.platform-badge.platform-twitch { color: var(--color-twitch); }
+.platform-badge.platform-tiktok { color: var(--color-tiktok); }
+.platform-badge.platform-bilibili { color: var(--color-bilibili); }
+.platform-badge.platform-pandalive { color: var(--color-pandalive); }
+.platform-badge.platform-popkontv { color: var(--color-popkontv); }
+.platform-badge.platform-anilife,.platform-badge.platform-linkani,.platform-badge.platform-ohli24,.platform-badge.platform-ohli365,.platform-badge.platform-tvwiki,.platform-badge.platform-animaru,.platform-badge.platform-moeni,.platform-badge.platform-reanime { color: var(--color-info); }
+
+.platform-badge.platform-rplay { color: var(--color-rplay); }
+.platform-badge.platform-hearheart { color: var(--color-hearheart); }
+.platform-badge.platform-twitcasting { color: #00a4e4; }
+.platform-badge.platform-spoon { color: #ff7555; }

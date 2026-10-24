@@ -1,0 +1,977 @@
+"""Durable post-recording stream-copy jobs. Never operate on an open capture."""
+
+from __future__ import annotations
+import asyncio
+import errno
+import json
+import os
+import shutil
+import uuid
+from datetime import datetime
+from pathlib import Path
+from app.core.config import get_settings
+from app.core.logger import get_platform_logger
+from app.engine.media_inspection import probe_media, InspectionError
+from app.engine.platform_auth import redact_media_error
+from app.store.db import get_database
+
+
+def now():
+    return datetime.now().isoformat()
+
+
+def publish_file(source: Path, target: Path):
+    """Publish without overwriting, including filesystems without hard links."""
+    link = getattr(os, "link", None)
+    if link is not None:
+        try:
+            link(source, target)
+        except OSError as error:
+            if error.errno not in (errno.EXDEV, errno.EPERM, errno.ENOTSUP, errno.EACCES):
+                raise
+        else:
+            source.unlink()
+            return
+    created = False
+    try:
+        with source.open("rb") as incoming, target.open("xb") as outgoing:
+            created = True
+            shutil.copyfileobj(incoming, outgoing, 1024 * 1024)
+            outgoing.flush()
+            os.fsync(outgoing.fileno())
+    except BaseException:
+        if created:
+            target.unlink(missing_ok=True)
+        raise
+    source.unlink()
+
+
+def recording_policy():
+    rows = get_database().query(
+        "SELECT value FROM app_settings WHERE key='recording_output'"
+    )
+    if rows:
+        saved = json.loads(rows[0]["value"])
+        return {
+            "output_format": "mkv",
+            "keep_source_ts": True,
+            "max_concurrent": 1,
+            **saved,
+        }
+    settings = get_settings()
+    # An explicitly saved old TS/MKV/MP4 preference is preserved. Fresh installs
+    # use MKV; no existing recordings are rewritten by this migration.
+    legacy = (
+        settings.live_format
+        if "live_format" in settings.model_fields_set
+        and settings.live_format in ("ts", "mkv", "mp4")
+        else "mkv"
+    )
+    return {"output_format": legacy, "keep_source_ts": True, "max_concurrent": 1}
+
+
+def save_recording_policy(values):
+    get_database().execute(
+        "INSERT INTO app_settings(key,value) VALUES('recording_output',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (json.dumps(values),),
+    )
+
+
+class RecordingFinalizer:
+    def __init__(self, on_change=None, on_finished=None):
+        self.db = get_database()
+        self.on_change = on_change
+        self.on_finished = on_finished
+        self._runner = None
+        self._active = {}
+        self._stopping = False
+        self._owned_captures = set()
+        self._recovered = False
+
+    def list_jobs(self):
+        return [
+            self._describe(json.loads(row["payload"]))
+            for row in self.db.query(
+                "SELECT payload FROM recording_jobs WHERE json_extract(payload,'$.hidden') IS NOT 1 ORDER BY updated_at DESC"
+            )
+        ]
+
+    def get(self, job_id):
+        rows = self.db.query("SELECT payload FROM recording_jobs WHERE id=?", (job_id,))
+        if not rows:
+            raise ValueError("변환 작업을 찾을 수 없습니다.")
+        return self._describe(json.loads(rows[0]["payload"]))
+
+    @staticmethod
+    def _describe(job):
+        def available(path):
+            try:
+                return (
+                    bool(path)
+                    and Path(path).is_file()
+                    and Path(path).stat().st_size > 0
+                )
+            except OSError:
+                return False
+
+        job["source_available"] = bool(job.get("source_paths")) and all(
+            available(p) for p in job["source_paths"]
+        )
+        job["output_available"] = available(job.get("output_path"))
+        # Old empty captures remain in the database, with an accurate category.
+        if (
+            job["state"] in ("failed", "attention")
+            and not job["source_available"]
+            and not job["output_available"]
+            and not job.get("processing_started_at")
+        ):
+            job["state"] = "capture_failed"
+            job["error_message"] = "녹화가 시작되지 않아 변환할 파일이 없습니다."
+        job["can_open"] = job["source_available"] or job["output_available"]
+        diagnostics = job.get("diagnostics") or {}
+        if job.get("capture_diagnostics"):
+            diagnostics["capture"] = job["capture_diagnostics"]
+            job["diagnostics"] = diagnostics
+        if job["state"] == "completed" and diagnostics.get("returncode") == 0 and str(diagnostics.get("stderr") or "").strip():
+            if not job.get("warning_message"):
+                job["warning_message"] = "변환 결과 검사를 통과했지만 FFmpeg 경고가 있습니다."
+        job["can_retry"] = job["source_available"] and job["state"] not in (
+            "recording",
+            "pending",
+            "normalizing",
+            "converting",
+            "verifying",
+        ) and (job["state"] != "completed" or bool(job.get("warning_message")))
+        job["can_inspect"] = job["can_open"] and job["state"] not in (
+            "recording",
+            "pending",
+            "normalizing",
+            "converting",
+            "verifying",
+        )
+        return job
+
+    def clear_history(self, job_ids):
+        """Hide terminal history entries; preserve every file and database record."""
+        with self.db.transaction() as conn:
+            for job_id in set(job_ids):
+                row = conn.execute(
+                    "SELECT payload FROM recording_jobs WHERE id=?", (job_id,)
+                ).fetchone()
+                if row:
+                    job = json.loads(row["payload"])
+                    if job["state"] not in (
+                        "recording",
+                        "pending",
+                        "normalizing",
+                        "converting",
+                        "verifying",
+                    ):
+                        job["hidden"] = True
+                        conn.execute(
+                            "UPDATE recording_jobs SET payload=? WHERE id=?",
+                            (json.dumps(job, ensure_ascii=False), job_id),
+                        )
+        if self.on_change:
+            self.on_change()
+
+    def _save(self, job):
+        job["updated_at"] = now()
+        self.db.execute(
+            "INSERT INTO recording_jobs(id,composite_key,source_path,state,payload,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,payload=excluded.payload,updated_at=excluded.updated_at",
+            (
+                job["id"],
+                job["composite_key"],
+                job["source_path"],
+                job["state"],
+                json.dumps(job, ensure_ascii=False),
+                job["updated_at"],
+            ),
+        )
+        if self.on_change:
+            self.on_change()
+
+    def register_capture(self, key, pipeline, channel, policy):
+        session_id = getattr(pipeline, "session_id", None) or uuid.uuid4().hex
+        rows = self.db.query(
+            "SELECT id FROM recording_jobs WHERE session_id=?", (session_id,)
+        )
+        if rows:
+            return rows[0]["id"]
+        job = {
+            "id": uuid.uuid4().hex,
+            "session_id": session_id,
+            "capture_format": getattr(pipeline, "capture_format", "ts"),
+            "composite_key": key,
+            "platform": channel.platform.value,
+            "channel_id": channel.channel_id,
+            "channel_name": channel.channel_name or channel.channel_id,
+            "state": "recording",
+            "source_path": str(Path(pipeline.output_path).resolve()),
+            "source_paths": list(pipeline._source_files),
+            "output_path": None,
+            "target_format": policy["output_format"],
+            "keep_source_ts": policy["keep_source_ts"],
+            "progress": None,
+            "error_message": None,
+            "diagnostics": {},
+            "started_at": pipeline.get_status()["start_time"],
+            "ended_at": None,
+            "processing_started_at": None,
+            "processing_completed_at": None,
+            "inspection_state": "pending",
+            "retry_count": 0,
+            "writer_closed": False,
+            "duration_seconds": 0,
+            "file_size_bytes": 0,
+        }
+        # Keep the source-path UNIQUE constraint and claim a session atomically.
+        with self.db.transaction() as conn:
+            existing = conn.execute(
+                "SELECT id FROM recording_jobs WHERE session_id=?", (session_id,)
+            ).fetchone()
+            if existing:
+                return existing["id"]
+            conflict = conn.execute(
+                "SELECT id FROM recording_jobs WHERE source_path=?", (job["source_path"],)
+            ).fetchone()
+            if conflict:
+                conn.execute(
+                    "UPDATE recording_jobs SET id=?, composite_key=?, state=?, payload=?, updated_at=?, session_id=? WHERE source_path=?",
+                    (
+                        job["id"],
+                        key,
+                        job["state"],
+                        json.dumps(job, ensure_ascii=False),
+                        now(),
+                        session_id,
+                        job["source_path"],
+                    ),
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO recording_jobs(id,composite_key,source_path,state,payload,updated_at,session_id) VALUES(?,?,?,?,?,?,?)",
+                    (
+                        job["id"],
+                        key,
+                        job["source_path"],
+                        job["state"],
+                        json.dumps(job, ensure_ascii=False),
+                        now(),
+                        session_id,
+                    ),
+                )
+        self._owned_captures.add(job["id"])
+        if self.on_change:
+            self.on_change()
+        return job["id"]
+
+    async def start(self, recover=False):
+        if recover and not self._recovered:
+            for job in self.list_jobs():
+                if (
+                    job["state"]
+                    in (
+                        "recording",
+                        "pending",
+                        "normalizing",
+                        "converting",
+                        "verifying",
+                    )
+                    and job["id"] not in self._owned_captures
+                ):
+                    if (
+                        job["source_available"]
+                        and job.get("writer_closed")
+                        and job["state"] != "recording"
+                    ):
+                        job.update(
+                            state="pending",
+                            recovered=True,
+                            progress=None,
+                            error_message=None,
+                        )
+                        # Reuse a final file published just before the interrupted
+                        # DB update. It must still pass the source comparison below.
+                        target = Path(job["source_paths"][0]).with_suffix(
+                            "." + job["target_format"]
+                        )
+                        if target.is_file() and target.stat().st_size > 0:
+                            job.update(output_path=str(target), inspect_only=True)
+                    else:
+                        job.update(
+                            state="attention",
+                            writer_closed=True,
+                            error_message="작업이 중단되었습니다. 저장된 원본을 확인한 뒤 다시 변환하세요.",
+                            progress=None,
+                        )
+                    self._save(job)
+            self._recovered = True
+        self._stopping = False
+        if self._runner is None or self._runner.done():
+            self._runner = asyncio.create_task(self._schedule())
+
+    async def capture_finished(self, job_id, pipeline):
+        if not pipeline._closed:
+            raise RuntimeError("Streamlink 파일 쓰기가 아직 종료되지 않았습니다.")
+        job = self.get(job_id)
+        if job.get("writer_closed") and job["state"] != "recording":
+            return job
+        job.update(
+            source_paths=list(pipeline._source_files),
+            writer_closed=True,
+            ended_at=now(),
+            state="pending",
+            end_reason=pipeline.end_reason,
+            duration_seconds=pipeline.duration_seconds,
+            file_size_bytes=pipeline.file_size_bytes,
+        )
+        status = pipeline.get_status()
+        job["connection_events"] = status.get("connection_events", [])
+        report = getattr(pipeline, "_loss_report", None)
+        if report is not None:
+            job["capture_diagnostics"] = report.snapshot()
+            if report.has_discontinuities():
+                job["continuity_valid"] = False
+                job["keep_source_ts"] = True
+                job["warning_message"] = "수신 구간의 불연속 또는 오류가 기록되었습니다. 파일 검사 통과는 구간 무누락을 보장하지 않습니다."
+        if getattr(pipeline, "_sequential_sources", False):
+            job["source_layout"] = "sequential"
+            job["keep_source_ts"] = True
+            job["warning_message"] = "스트림 불연속 경계에서 원본을 구간별로 분리해 보관합니다."
+        if status.get('continuity_events'):
+            job.setdefault('diagnostics', {})['continuity'] = status['continuity_events']
+        if status.get('continuity_source'):
+            job['continuity_source'] = status['continuity_source']
+        if getattr(pipeline, 'output_errors', None):
+            job.setdefault('diagnostics', {})['output_errors'] = list(pipeline.output_errors)
+            job['continuity_valid'] = False
+            job.update(state='attention', error_code=pipeline.error_code,
+                       error_message=pipeline.error_message, processing_stage='capture_shutdown',
+                       keep_source_ts=True, progress=None)
+        if (
+            not Path(job["source_paths"][0]).is_file()
+            or Path(job["source_paths"][0]).stat().st_size == 0
+        ):
+            job.update(
+                state="capture_failed",
+                error_message="녹화가 시작되지 않아 변환할 파일이 없습니다.",
+                progress=None,
+            )
+        self._save(job)
+        if job["state"] in {"capture_failed", "attention"}:
+            return self.get(job_id)
+        self.db.execute(
+            "INSERT OR IGNORE INTO live_history(composite_key,platform,channel_id,channel_name,started_at,ended_at,duration_seconds,file_size_bytes,output_path,recording_job_id) VALUES(?,?,?,?,?,?,?,?,?,?)",
+            (
+                job["composite_key"],
+                job["platform"],
+                job["channel_id"],
+                job["channel_name"],
+                job["started_at"],
+                job["ended_at"],
+                job["duration_seconds"],
+                job["file_size_bytes"],
+                job["source_paths"][0],
+                job_id,
+            ),
+        )
+        if not self._stopping:
+            await self.start()
+
+    async def retry(self, job_id, target_format=None, inspect_only=False):
+        job = self.get(job_id)
+        if job["state"] in (
+            "recording",
+            "pending",
+            "normalizing",
+            "converting",
+            "verifying",
+        ) or (job_id in self._active and not self._active[job_id].done()):
+            raise ValueError("현재 작업이 진행 중입니다.")
+        if target_format:
+            job["target_format"] = target_format
+        if (
+            inspect_only
+            and job.get("output_path")
+            and Path(job["output_path"]).is_file()
+        ):
+            job.update(state="verifying", inspection_state="running")
+            self._save(job)
+            try:
+                media = await asyncio.to_thread(probe_media, job["output_path"])
+                if (
+                    ("audio" if job.get("platform") == "spoon" else "video") not in media["streams"]
+                    or not media["duration"]
+                    or media["diagnostics"]["stderr"].strip()
+                ):
+                    raise RuntimeError("파일 정보를 확인하지 못했습니다.")
+                expected_format = {"mp4": "mp4", "mkv": "matroska", "ts": "mpegts"}[
+                    job["target_format"]
+                ]
+                previous = job.get("inspection") or {}
+                if expected_format not in media["format_name"]:
+                    raise RuntimeError("선택한 형식과 파일 형식이 다릅니다.")
+                if previous.get("tracks"):
+                    fields = (
+                        "codec_type",
+                        "codec_name",
+                        "width",
+                        "height",
+                        "avg_frame_rate",
+                    )
+                    if [[t.get(k) for k in fields] for t in previous["tracks"]] != [
+                        [t.get(k) for k in fields] for t in media["tracks"]
+                    ]:
+                        raise RuntimeError("저장된 검사 결과와 스트림 정보가 다릅니다.")
+                if previous.get("duration") and abs(
+                    media["duration"] - previous["duration"]
+                ) > max(2, previous["duration"] * 0.02):
+                    raise RuntimeError("저장된 영상 길이와 다릅니다.")
+                job.update(
+                    state="completed", inspection_state="passed", error_message=None, error_code=None,
+                    processing_stage="completed",
+                )
+                job["diagnostics"].pop("detail", None)
+            except Exception as error:
+                job.update(
+                    state="attention",
+                    inspection_state="failed",
+                    error_message=str(error) if isinstance(error, InspectionError) else "파일 정보를 확인하지 못했습니다. 저장된 파일을 확인하세요.",
+                    error_code=error.code if isinstance(error, InspectionError) else "inspection_failed",
+                    processing_stage="output_inspection",
+                )
+                job["diagnostics"]["detail"] = redact_media_error(error)
+            self._save(job)
+            return job
+        if not all(
+            Path(p).is_file() and Path(p).stat().st_size > 0
+            for p in job["source_paths"]
+        ):
+            raise ValueError("원본 파일을 찾을 수 없습니다. 저장 위치를 확인하세요.")
+        if not inspect_only:
+            job["previous_output_path"] = job.get("output_path")
+            job["output_path"] = None
+        job.update(
+            state="pending",
+            writer_closed=True,
+            progress=None,
+            error_message=None,
+            error_code=None,
+            processing_stage=None,
+            warning_message=None,
+            diagnostics={},
+            inspection_state="pending",
+            retry_count=job["retry_count"] + 1,
+            inspect_only=inspect_only,
+        )
+        self._save(job)
+        await self.start()
+        return job
+
+    async def _schedule(self):
+        while not self._stopping:
+            self._active = {
+                key: task for key, task in self._active.items() if not task.done()
+            }
+            limit = recording_policy()["max_concurrent"]
+            for job in self.list_jobs():
+                if len(self._active) >= limit:
+                    break
+                if job["state"] == "pending" and job["id"] not in self._active:
+                    self._active[job["id"]] = asyncio.create_task(
+                        self._convert(job["id"])
+                    )
+            await asyncio.sleep(0.2)
+
+    async def close(self):
+        self._stopping = True
+        if self._runner:
+            self._runner.cancel()
+            await asyncio.gather(self._runner, return_exceptions=True)
+        for task in self._active.values():
+            task.cancel()
+        await asyncio.gather(*self._active.values(), return_exceptions=True)
+        self._active.clear()
+
+    def _claim(self, job_id):
+        with self.db.transaction() as connection:
+            return (
+                connection.execute(
+                    "UPDATE recording_jobs SET state='converting' WHERE id=? AND state='pending'",
+                    (job_id,),
+                ).rowcount
+                == 1
+            )
+
+    async def _normalize_ts(self, job, sources, inputs):
+        native_stats = [(p.stat().st_size, p.stat().st_mtime_ns) for p in sources]
+        candidate = sources[0].with_name(f".{uuid.uuid4().hex}.normalizing.ts")
+        job.update(
+            state="normalizing",
+            processing_stage="normalization",
+            progress=None,
+            native_source_paths=[str(p) for p in sources],
+            processing_started_at=now(),
+        )
+        self._save(job)
+        cmd = [
+            get_settings().resolve_ffmpeg_path(),
+            "-hide_banner",
+            "-loglevel",
+            "warning",
+            "-nostdin",
+            "-n",
+            "-ignore_unknown",
+        ]
+        for source in sources:
+            cmd += ["-i", str(source)]
+        cmd += ["-map", "0:v?"]
+        cmd += (
+            ["-map", "0:a?"]
+            if len(sources) == 1
+            else sum((["-map", f"{i}:a?"] for i in range(1, len(sources))), [])
+        )
+        cmd += ["-c", "copy", "-f", "mpegts", str(candidate)]
+        proc = None
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE
+            )
+
+            async def drain():
+                tail = bytearray()
+                while data := await proc.stderr.read(4096):
+                    tail.extend(data)
+                    if len(tail) > 65536:
+                        del tail[:-65536]
+                return bytes(tail)
+
+            drained = asyncio.create_task(drain())
+            try:
+                await asyncio.wait_for(proc.wait(), 21600)
+            finally:
+                if proc.returncode is None:
+                    proc.kill()
+                    await proc.wait()
+                stderr = await drained
+            job.setdefault("diagnostics", {})["native_to_ts"] = {
+                "returncode": proc.returncode,
+                "stderr": redact_media_error(stderr.decode(errors="replace")),
+            }
+            if proc.returncode:
+                raise RuntimeError(
+                    "원본 스트림을 TS로 변환하지 못했습니다. 실제 원본 파일은 보관되었습니다."
+                )
+            media = await asyncio.to_thread(probe_media, str(candidate))
+            before = [
+                t
+                for m in inputs
+                for t in m["tracks"]
+                if t.get("codec_type") in ("video", "audio")
+            ]
+            after = [
+                t for t in media["tracks"] if t.get("codec_type") in ("video", "audio")
+            ]
+            if (
+                "mpegts" not in media["format_name"]
+                or ("audio" if job.get("platform") == "spoon" else "video") not in media["streams"]
+                or media["size"] <= 0
+            ):
+                raise RuntimeError(
+                    "변환된 TS 원본 정보를 확인하지 못했습니다. 실제 원본 파일은 보관되었습니다."
+                )
+            fields = ("codec_type", "codec_name", "width", "height")
+            if [[t.get(f) for f in fields] for t in before] != [
+                [t.get(f) for f in fields] for t in after
+            ]:
+                raise RuntimeError(
+                    "TS 변환 후 스트림 정보가 달라졌습니다. 실제 원본 파일은 보관되었습니다."
+                )
+            native_duration = inputs[0]["duration"]
+            if job.get("capture_format") == "fmp4" and inputs[0].get("start_time"):
+                # Fragmented live MP4 reports an absolute decode-end timestamp.
+                # TS duration is a span, so compare the source span as well.
+                native_duration = max(
+                    0, (native_duration or 0) - float(inputs[0]["start_time"])
+                )
+            if native_duration and abs(
+                (media["duration"] or 0) - native_duration
+            ) > max(2, native_duration * 0.02):
+                raise RuntimeError(
+                    "TS 변환 후 영상 길이가 달라졌습니다. 실제 원본 파일은 보관되었습니다."
+                )
+            if native_stats != [
+                (p.stat().st_size, p.stat().st_mtime_ns) for p in sources
+            ]:
+                raise RuntimeError(
+                    "녹화 원본이 변경되어 TS 변환을 확정하지 않았습니다."
+                )
+            target = sources[0].with_name(sources[0].stem + ".ts")
+            number = 2
+            while target.exists():
+                target = sources[0].with_name(sources[0].stem + f" ({number}).ts")
+                number += 1
+            await asyncio.to_thread(publish_file, candidate, target)
+            job.update(
+                source_paths=[str(target)],
+                source_format="ts",
+                normalized_source_path=str(target),
+            )
+            self._save(job)
+            return [target], [media]
+        finally:
+            if proc and proc.returncode is None:
+                proc.kill()
+                await proc.wait()
+            if proc:
+                from app.core.logger import get_platform_logger
+                get_platform_logger(job.get("platform"), "files").debug(
+                    "원본 정규화 FFmpeg 종료 · 종료코드=%s", proc.returncode)
+
+    async def _convert(self, job_id):
+        if not self._claim(job_id):
+            return
+        job = self.get(job_id)
+        logger = get_platform_logger(job.get("platform", "external"), "files")
+        proc = None
+        stderr_task = None
+        concat = None
+        try:
+            if not job["writer_closed"]:
+                raise RuntimeError("녹화 종료 확인 후 변환할 수 있습니다.")
+            sources = [Path(p) for p in job["source_paths"]]
+            original_stats = [(p.stat().st_size, p.stat().st_mtime_ns) for p in sources]
+            if any(size <= 0 for size, _ in original_stats):
+                raise RuntimeError("녹화 파일이 비어 있습니다.")
+            job['processing_stage'] = 'source_inspection'
+            inputs = await asyncio.gather(
+                *(asyncio.to_thread(probe_media, str(p)) for p in sources)
+            )
+            native_dash = job.get("capture_format") == "youtube_dash"
+            direct_cime = (job.get("platform") == "cime"
+                           and job.get("capture_format") == "fmp4"
+                           and job["target_format"] in ("mkv", "mp4")
+                           and len(sources) == 1)
+            if native_dash:
+                if job["target_format"] not in ("mkv", "mp4"):
+                    raise RuntimeError("유튜브 DASH 원본은 MKV 또는 MP4로 저장하세요. 원본은 보관됩니다.")
+                if len(inputs) != 2 or "video" not in inputs[0]["streams"] or "audio" not in inputs[1]["streams"]:
+                    raise RuntimeError("유튜브 DASH 영상·음성 원본을 모두 확인하지 못했습니다.")
+                # Live DASH timestamps retain the broadcast's absolute position.
+                # Capture duration counts complete received video fragments.
+            if not native_dash and not direct_cime and "mpegts" not in inputs[0]["format_name"]:
+                # The live receiver preserved native fMP4. Only now, after its
+                # writer has closed, create the actual TS original with stream copy.
+                sources, inputs = await self._normalize_ts(job, sources, inputs)
+                original_stats = [
+                    (p.stat().st_size, p.stat().st_mtime_ns) for p in sources
+                ]
+            expected = {
+                kind
+                for media in inputs
+                for kind in media["streams"]
+                if kind in ("video", "audio")
+            }
+            if ("audio" if job.get("platform") == "spoon" else "video") not in expected:
+                raise RuntimeError("원본에서 영상 스트림을 찾지 못했습니다.")
+            sequential = job.get("source_layout") == "sequential"
+            if sequential:
+                signature = lambda m: [(t.get("codec_type"), t.get("codec_name"), t.get("width"),
+                                        t.get("height"), t.get("sample_rate"), t.get("channels"))
+                                       for t in m["tracks"] if t.get("codec_type") in ("video", "audio")]
+                if any(signature(m) != signature(inputs[0]) for m in inputs[1:]):
+                    raise RuntimeError("구간별 영상·음성 형식이 달라 자동 병합하지 않습니다. 모든 원본을 보관했습니다.")
+            duration = (job.get("duration_seconds") if native_dash else
+                        sum(m["duration"] or 0 for m in inputs) if sequential else inputs[0]["duration"])
+            if direct_cime and duration and inputs[0].get("start_time"):
+                # Native fMP4 reports a decode-end timestamp, not a span.
+                # Remux directly; preserve the captured native original rather
+                # than creating a redundant TS copy of the same packets.
+                duration = max(0, duration - float(inputs[0]["start_time"]))
+            job.update(
+                state="converting",
+                processing_stage="conversion",
+                progress=None,
+                processing_started_at=now(),
+                error_message=None,
+            )
+            self._save(job)
+            if job.get("inspect_only"):
+                candidate = Path(
+                    job.get("output_path") or job.get("temporary_output") or ""
+                )
+                if not candidate.is_file():
+                    raise RuntimeError(
+                        "검사할 변환 파일을 찾을 수 없습니다. 다시 변환하세요."
+                    )
+            elif job["target_format"] == "ts" and len(sources) == 1:
+                candidate = sources[0]
+            else:
+                target_format = job["target_format"]
+                candidate = sources[0].with_name(
+                    f".{uuid.uuid4().hex}.converting.{target_format}"
+                )
+                job["temporary_output"] = str(candidate)
+                self._save(job)
+                cmd = [
+                    get_settings().resolve_ffmpeg_path(),
+                    "-hide_banner",
+                    "-loglevel",
+                    "warning",
+                    "-nostdin",
+                    "-n",
+                    "-ignore_unknown",
+                ]
+                if sequential:
+                    concat = candidate.with_suffix(".concat")
+                    concat.write_text("".join("file '" + str(p.resolve()).replace("\\", "/").replace("'", "'\\''") + "'\n"
+                                              for p in sources), encoding="utf-8")
+                    cmd += ["-f", "concat", "-safe", "0", "-i", str(concat)]
+                else:
+                    for source in sources:
+                        cmd += ["-i", str(source)]
+                cmd += ["-map", "0:v?"]
+                if len(sources) == 1 or sequential:
+                    cmd += ["-map", "0:a?"]
+                else:
+                    for index in range(1, len(sources)):
+                        cmd += ["-map", f"{index}:a?"]
+                cmd += ["-c", "copy"]
+                if target_format == "mp4":
+                    cmd += ["-movflags", "+faststart"]
+                cmd += [
+                    "-progress",
+                    "pipe:1",
+                    "-nostats",
+                    "-f",
+                    {"mp4": "mp4", "mkv": "matroska", "ts": "mpegts"}[target_format],
+                    str(candidate),
+                ]
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                )
+
+                async def drain_stderr():
+                    tail = bytearray()
+                    while data := await proc.stderr.read(4096):
+                        tail.extend(data)
+                        if len(tail) > 65536:
+                            del tail[:-65536]
+                    return bytes(tail)
+
+                async def progress():
+                    while line := await proc.stdout.readline():
+                        text = line.decode(errors="replace").strip()
+                        if (
+                            text.startswith("out_time_us=")
+                            and duration
+                            and duration > 0
+                        ):
+                            try:
+                                job["progress"] = round(
+                                    max(
+                                        0,
+                                        min(
+                                            99,
+                                            float(text.split("=", 1)[1])
+                                            / 1000000
+                                            / duration
+                                            * 100,
+                                        ),
+                                    ),
+                                    1,
+                                )
+                                self._save(job)
+                            except ValueError:
+                                pass
+
+                stderr_task = asyncio.create_task(drain_stderr())
+                await asyncio.wait_for(
+                    asyncio.gather(progress(), proc.wait()), timeout=21600
+                )
+                stderr = redact_media_error(
+                    (await stderr_task).decode(errors="replace"), max_length=65536
+                )
+                job["diagnostics"] = {"returncode": proc.returncode, "stderr": stderr}
+                if proc.returncode != 0:
+                    logger.error("[%s] FFmpeg 변환 실패 · 채널=%s · 종료코드=%s · 상세=%s", job_id, job.get("channel_id"), proc.returncode, stderr)
+                    raise RuntimeError(
+                        "파일을 변환하지 못했습니다. 원본 TS를 보관했습니다. 오류 상세를 확인하거나 MKV로 다시 변환하세요."
+                    )
+                if (len(sources) == 1 and not sequential
+                        and "mpegts" in inputs[0]["format_name"]
+                        and "timestamp discontinuity" in stderr.lower()):
+                    from app.engine.timestamp_repair import repair_ts_clock
+                    job["diagnostics"]["timestamp_repair"] = await asyncio.to_thread(
+                        repair_ts_clock, sources[0], candidate, inputs[0]
+                    )
+            job.update(state="verifying", inspection_state="running", processing_stage='output_inspection')
+            self._save(job)
+            media = await asyncio.to_thread(probe_media, str(candidate))
+            if (
+                not expected.issubset(media["streams"])
+                or not media["duration"]
+                or media["size"] <= 0
+            ):
+                raise RuntimeError(
+                    "변환 파일의 영상·음성 또는 재생 정보를 확인하지 못했습니다."
+                )
+            expected_container = {"mp4": "mp4", "mkv": "matroska", "ts": "mpegts"}[
+                job["target_format"]
+            ]
+            if expected_container not in media["format_name"]:
+                raise RuntimeError("변환 파일 형식이 선택한 형식과 다릅니다.")
+            has_discontinuity = any(
+                token in str(job["diagnostics"].get("stderr") or "").lower()
+                for token in ("discontinuity", "non-monotonic dts", "dts out of order")
+            )
+            if duration and abs(media["duration"] - duration) > max(2, duration * 0.02) and not has_discontinuity:
+                raise RuntimeError(
+                    "원본과 변환 파일의 길이가 다릅니다. 원본을 보관했습니다."
+                )
+            if media["diagnostics"]["stderr"].strip():
+                raise RuntimeError(
+                    "파일 검사에서 오류가 보고되었습니다. 원본을 보관했습니다."
+                )
+            for kind in expected:
+                before = [
+                    t
+                    for m in (inputs[:1] if sequential else inputs)
+                    for t in m["tracks"]
+                    if t.get("codec_type") == kind
+                ]
+                after = [t for t in media["tracks"] if t.get("codec_type") == kind]
+                if len(before) != len(after):
+                    raise RuntimeError("변환 후 스트림 개수가 달라졌습니다.")
+                for source, output in zip(before, after):
+                    if source.get("codec_name") != output.get("codec_name"):
+                        raise RuntimeError("변환 후 코덱이 달라졌습니다.")
+                    if kind == "video":
+                        if (source.get("width"), source.get("height")) != (
+                            output.get("width"),
+                            output.get("height"),
+                        ):
+                            raise RuntimeError("변환 후 해상도가 달라졌습니다.")
+
+                        def fps(track, field="avg_frame_rate"):
+                            try:
+                                numerator, denominator = map(
+                                    float,
+                                    str(track.get(field) or "0/1").split("/"),
+                                )
+                                return numerator / denominator if denominator else 0
+                            except (ValueError, TypeError, ZeroDivisionError):
+                                return 0
+
+                        avg_diff = abs(fps(source, "avg_frame_rate") - fps(output, "avg_frame_rate"))
+                        r_diff = abs(fps(source, "r_frame_rate") - fps(output, "r_frame_rate"))
+                        has_discontinuity = any(
+                            token in str(job["diagnostics"].get("stderr") or "").lower()
+                            for token in ("discontinuity", "non-monotonic dts", "dts out of order")
+                        )
+                        measured_equal = (
+                            source.get("measured_fps") is not None and output.get("measured_fps") is not None
+                            and abs(source["measured_fps"] - output["measured_fps"]) <= 0.1
+                        )
+                        if avg_diff > 0.1 and r_diff > 0.1 and not has_discontinuity and not measured_equal:
+                            raise RuntimeError("변환 후 프레임레이트가 달라졌습니다.")
+            if [
+                (p.stat().st_size, p.stat().st_mtime_ns) for p in sources
+            ] != original_stats:
+                raise RuntimeError("변환 중 원본 파일이 변경되었습니다.")
+            if candidate not in sources and not job.get("output_path"):
+                target = sources[0].with_suffix("." + job["target_format"])
+                number = 2
+                while target.exists():
+                    target = sources[0].with_name(
+                        sources[0].stem + f" ({number})." + job["target_format"]
+                    )
+                    number += 1
+                await asyncio.to_thread(publish_file, candidate, target)
+            else:
+                target = candidate
+            if job["diagnostics"].get("returncode") == 0 and str(job["diagnostics"].get("stderr") or "").strip():
+                job["warning_message"] = "변환 결과 검사를 통과했지만 FFmpeg 경고가 있습니다. 원본 파일은 보관합니다."
+            stderr_lower = str(job['diagnostics'].get('stderr') or '').lower()
+            output_errors = [category for token, category in (
+                ('packet corrupt', 'corrupt_packet'), ('corrupt input packet', 'corrupt_packet'),
+                ('partial file', 'partial_input')) if token in stderr_lower]
+            if output_errors:
+                job['diagnostics']['output_errors'] = sorted(set(output_errors))
+                job['continuity_valid'] = False
+            job.update(
+                state="completed",
+                error_code=None,
+                processing_stage="completed",
+                output_path=str(target),
+                progress=100,
+                inspection_state="passed",
+                processing_completed_at=now(),
+                file_size_bytes=target.stat().st_size,
+                duration_seconds=media["duration"],
+                inspection={
+                    "format_name": media["format_name"],
+                    "duration": media["duration"],
+                    "tracks": media["tracks"],
+                },
+            )
+            self._save(job)
+            self.db.execute(
+                "UPDATE live_history SET output_path=?,file_size_bytes=?,duration_seconds=? WHERE recording_job_id=?",
+                (str(target), job["file_size_bytes"], media["duration"], job_id),
+            )
+            if not job["keep_source_ts"] and not job.get("warning_message") and target not in sources:
+                for source in sources:
+                    try:
+                        await asyncio.to_thread(source.unlink)
+                    except OSError:
+                        job["source_cleanup_warning"] = (
+                            "변환은 완료되었지만 일부 원본 TS를 정리하지 못했습니다."
+                        )
+                        self._save(job)
+            if self.on_finished:
+                self.on_finished(job)
+        except asyncio.CancelledError:
+            job.update(
+                state="attention",
+                inspection_state="pending",
+                progress=None,
+                error_message="변환이 중단되었습니다. 원본 TS를 보관했습니다.",
+            )
+            self._save(job)
+            raise
+        except Exception as error:
+            job['error_code'] = error.code if isinstance(error, InspectionError) else 'processing_failed'
+            job['retryable'] = bool(job.get('writer_closed'))
+            if isinstance(error, InspectionError):
+                job['diagnostics']['inspection'] = {
+                    name: redact_media_error(value) if isinstance(value, str) else value
+                    for name, value in error.diagnostics.items()
+                }
+            job.update(
+                state="failed",
+                progress=None,
+                error_message=(
+                    str(error)
+                    if isinstance(error, RuntimeError)
+                    else "변환 또는 파일 검사에 실패했습니다. 원본 TS를 보관했습니다."
+                ),
+                inspection_state="failed",
+                processing_completed_at=now(),
+            )
+            job["diagnostics"]["detail"] = redact_media_error(error)
+            logger.error("[%s] 파일 처리 실패 · 단계=%s · 원본 보관 · 상세=%s: %s", job_id, job.get("processing_stage"), type(error).__name__, job["diagnostics"]["detail"], exc_info=not isinstance(error, (RuntimeError, ValueError)))
+            self._save(job)
+            if self.on_finished:
+                self.on_finished(job)
+        finally:
+            if proc and proc.returncode is None:
+                proc.kill()
+                await proc.wait()
+            if stderr_task:
+                await asyncio.gather(stderr_task, return_exceptions=True)
+            if concat is not None:
+                concat.unlink(missing_ok=True)
+            if proc:
+                logger.debug("녹화 변환 FFmpeg 종료 · 종료코드=%s", proc.returncode)

@@ -1,0 +1,80 @@
+import { createElement, useEffect, useRef, useState } from "react";
+import { Command } from "cmdk";
+import { Title, Description } from "@radix-ui/react-dialog";
+import { useNavigate } from "react-router-dom";
+import { NAV_ITEMS } from "../../config/navigation";
+import { useLanguage } from "../../contexts/LanguageContext";
+
+export function CommandPalette() {
+    const { t } = useLanguage();
+    const [open, setOpen] = useState(false);
+    const navigate = useNavigate();
+    const triggerRef = useRef<HTMLElement | null>(null);
+    useEffect(() => {
+        if (open || !triggerRef.current) return;
+        const timer = window.setTimeout(() => {
+            if (triggerRef.current?.isConnected) triggerRef.current.focus({ preventScroll: true });
+        }, 0);
+        return () => window.clearTimeout(timer);
+    }, [open]);
+
+    // 토글 단축키: Ctrl+K 또는 Cmd+K
+    useEffect(() => {
+        const down = (e: KeyboardEvent) => {
+            if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+                if (!open && document.querySelector('[aria-modal="true"], dialog[open]')) return;
+                e.preventDefault();
+                if (!open) triggerRef.current = document.activeElement as HTMLElement;
+                setOpen((open) => !open);
+            }
+        };
+
+        document.addEventListener("keydown", down);
+        return () => document.removeEventListener("keydown", down);
+    }, [open]);
+
+    const runCommand = (command: () => void) => {
+        setOpen(false);
+        command();
+    };
+
+    if (!open) return null;
+
+    return (
+        <Command.Dialog
+            open={open}
+            onOpenChange={setOpen}
+            overlayClassName="fixed inset-0 z-[100] bg-surface-0/75"
+            contentClassName="command-palette fixed inset-0 z-[101] flex items-start justify-center pt-[18vh] pointer-events-none"
+            label={t("common.quickNavigation")}
+        >
+            <Title className="sr-only">{t("common.quickNavigation")}</Title>
+            <Description className="sr-only">{t("common.navigateToAPage")}</Description>
+            <div className="ui-popover w-[calc(100vw_-_2rem)] max-w-lg shadow-[var(--shadow-pop)] rounded-[var(--radius-card)] overflow-hidden pointer-events-auto">
+                <Command.Input
+                    placeholder={t("common.searchPages")}
+                    className="w-full px-5 py-4 bg-transparent text-ink placeholder:text-ink-faint border-b border-line focus:outline-none focus:ring-0"
+                />
+                
+                <Command.List className="max-h-[320px] overflow-y-auto p-2">
+                    <Command.Empty className="py-6 text-center text-sm text-ink-faint">
+                        {t("common.noResultsFound")}
+                    </Command.Empty>
+                    
+                    <Command.Group heading={t("common.navigateToAPage")} className="px-2 py-1.5 text-xs font-semibold text-ink-faint">
+                        {NAV_ITEMS.map((item) => (
+                            <Command.Item
+                                key={item.to}
+                                value={t(item.name)}
+                                onSelect={() => runCommand(() => navigate(item.to))}
+                                className="flex items-center gap-2 px-3 py-2.5 mt-1 text-sm text-ink-muted rounded-[var(--radius-control)] cursor-pointer hover:bg-surface-3 aria-selected:bg-surface-3 aria-selected:text-ink transition-colors"
+                            >
+                                {createElement(item.icon, { className: "w-4 h-4" })} {t(item.name)}
+                            </Command.Item>
+                        ))}
+                    </Command.Group>
+                </Command.List>
+            </div>
+        </Command.Dialog>
+    );
+}

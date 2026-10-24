@@ -1,0 +1,1740 @@
+[
+  {
+    "path": ".env.example",
+    "bytes": 3777,
+    "sha256": "9d76a73ffcef25113f313d0c89bfba1f78663bdfe09bbef2dab32a12534e8c71"
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
+    "bytes": 2809,
+    "sha256": "005ed8cb3e119d7f8f95aab77b2fe0ca94a0cb2f63bea47f77b42ca85afe0701"
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/config.yml",
+    "bytes": 394,
+    "sha256": "5df3ff165121505b3fc609564022ccb952c830d5af43d0ccb0b6ca94f6a1d24e"
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/feature_request.yml",
+    "bytes": 1313,
+    "sha256": "0540f236d96da0164be1716350333d8ba3eb4ec0b8c11222120e52efea738b49"
+  },
+  {
+    "path": ".github/PULL_REQUEST_TEMPLATE.md",
+    "bytes": 970,
+    "sha256": "5ca3e0ea9b26c66d3a040426c1f36f87eb97b591cfd064ce5fdd82c78cf8a437"
+  },
+  {
+    "path": ".github/workflows/ci.yml",
+    "bytes": 1390,
+    "sha256": "c460465ea3a55dd22388f57c603a054971edd312627f4ada44d193ba6847f5d4"
+  },
+  {
+    "path": ".github/workflows/release.yml",
+    "bytes": 3499,
+    "sha256": "7439ba0aeb957629fd8311a997927b70948d84f10ac02fb400c30c5b26e92d07"
+  },
+  {
+    "path": "CONTRIBUTING.md",
+    "bytes": 4833,
+    "sha256": "5ff33d15b84b191a5e8e9d7fb16a009c1d9682d4bdf2ae76ac7207ee60914b20"
+  },
+  {
+    "path": "README.md",
+    "bytes": 39622,
+    "sha256": "372b3c0baebf3f974e44f6ef7a6cb3e984de1fb612dc87868797d3adeb6748b4"
+  },
+  {
+    "path": "backend/app/__init__.py",
+    "bytes": 198,
+    "sha256": "5d58214789648fab2050822bc5d6a3523ea4e3bdd253be2e88af2b4ebf102215",
+    "imports": [
+      "asyncio",
+      "sys"
+    ]
+  },
+  {
+    "path": "backend/app/api/__init__.py",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "imports": []
+  },
+  {
+    "path": "backend/app/api/archive.py",
+    "bytes": 5096,
+    "sha256": "a8e4d7428da1c7806b7be6b45dd5902d1a398ab07254b7ee42416730734b1aaa",
+    "imports": [
+      "__future__",
+      "app.engine.base",
+      "app.main",
+      "fastapi",
+      "pydantic",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/api/chat.py",
+    "bytes": 14522,
+    "sha256": "6b87a082bcf3ceca92574b0928c53672e5e88aaaea439635355844f725087bd1",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.store.repositories",
+      "asyncio",
+      "base64",
+      "dataclasses",
+      "datetime",
+      "fastapi",
+      "fastapi.responses",
+      "json",
+      "pathlib",
+      "pydantic",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/api/download_options.py",
+    "bytes": 1643,
+    "sha256": "a5a0dd297c74c75cdda9b763ab66b1c83c2af11bf05b97b371b51404c0b414a5",
+    "imports": [
+      "app.engine.download_condition",
+      "pydantic"
+    ]
+  },
+  {
+    "path": "backend/app/api/events.py",
+    "bytes": 1926,
+    "sha256": "072ec031dbd9c93c85ac12eefdacbc2d66009feede940155f9a602488df991c9",
+    "imports": [
+      "app.main",
+      "asyncio",
+      "fastapi",
+      "fastapi.responses",
+      "json",
+      "logging"
+    ]
+  },
+  {
+    "path": "backend/app/api/platforms.py",
+    "bytes": 10356,
+    "sha256": "63ea54da1c9ced4e7e526f464a8ace46f3b4f7a0d8b22bb41dab454066a92d8f",
+    "imports": [
+      "__future__",
+      "app.api.download_options",
+      "app.core.config",
+      "app.core.utils",
+      "app.engine.base",
+      "app.main",
+      "fastapi",
+      "http.cookiejar",
+      "pathlib",
+      "pydantic",
+      "sys",
+      "tempfile",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/api/settings/__init__.py",
+    "bytes": 1113,
+    "sha256": "16a7aff5217490fe4b8a850cd047546b198fe6e356e6ab5070e558970de1d9a1",
+    "imports": [
+      "app.api.settings",
+      "fastapi"
+    ]
+  },
+  {
+    "path": "backend/app/api/settings/_shared.py",
+    "bytes": 897,
+    "sha256": "caf92d91dea0f3bf8c47206fa9229b7a022acfe3e363b9f163ec3ee08ab19ef0",
+    "imports": [
+      "__future__",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/api/settings/auth.py",
+    "bytes": 3906,
+    "sha256": "19f2bfbe187fbe58750c8df450d9a7214379a234cce6b364589e2c43bef992fd",
+    "imports": [
+      "__future__",
+      "app.api.settings._shared",
+      "app.core.logger",
+      "app.engine.auth",
+      "app.main",
+      "fastapi",
+      "httpx",
+      "pydantic"
+    ]
+  },
+  {
+    "path": "backend/app/api/settings/general.py",
+    "bytes": 13588,
+    "sha256": "c8b9800e1e160dbaf5b65408a5e6e1c5c1d6a1aca79a041ef40886390b78caaf",
+    "imports": [
+      "__future__",
+      "app.api.settings._shared",
+      "app.core.config",
+      "app.core.utils",
+      "app.services.notifications",
+      "asyncio",
+      "fastapi",
+      "functools",
+      "importlib.metadata",
+      "os",
+      "pathlib",
+      "platform",
+      "pydantic",
+      "re",
+      "streamlink",
+      "string",
+      "subprocess",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/api/settings/media.py",
+    "bytes": 11057,
+    "sha256": "08ed15b304bc290b0a66b92de82870a07caf225a90fe51b95186db2567ea3900",
+    "imports": [
+      "__future__",
+      "app.api.download_options",
+      "app.api.settings._shared",
+      "app.core.config",
+      "app.core.utils",
+      "app.core.vod_filename",
+      "app.main",
+      "fastapi",
+      "json",
+      "pydantic",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/api/settings/notifications.py",
+    "bytes": 7215,
+    "sha256": "9e921cdea4328b886d8afd0e8b322b7d2a0bcf4c7a89ec5835418c9136e72de8",
+    "imports": [
+      "__future__",
+      "app.api.settings._shared",
+      "app.core.config",
+      "app.core.logger",
+      "app.core.utils",
+      "app.main",
+      "app.services.notifications",
+      "fastapi",
+      "pydantic",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/api/setup.py",
+    "bytes": 6186,
+    "sha256": "cab66e1490708509ea58f748fa292c76f258846e016cede8cdfbc28ab18f6270",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.logger",
+      "app.core.utils",
+      "app.main",
+      "fastapi",
+      "pathlib",
+      "pydantic",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/api/stats.py",
+    "bytes": 5466,
+    "sha256": "b6df3ba26875ba23d673f49b3bfc924071bf81a0fb8399b97d6737a55737b155",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.main",
+      "app.store.repositories",
+      "fastapi",
+      "pathlib",
+      "shutil"
+    ]
+  },
+  {
+    "path": "backend/app/api/stream.py",
+    "bytes": 7722,
+    "sha256": "215266c9250ca52f0c57aeaec163e38f56443d1151c5bb7df852205edd5b3417",
+    "imports": [
+      "__future__",
+      "app.api.download_options",
+      "app.core.utils",
+      "app.engine.base",
+      "app.engine.conductor",
+      "app.main",
+      "fastapi",
+      "fastapi.responses",
+      "pydantic"
+    ]
+  },
+  {
+    "path": "backend/app/api/system.py",
+    "bytes": 5753,
+    "sha256": "006de3e19788aca1210a0ef3ddf6908eeb789ddc8d44c3d6ac8118814801af14",
+    "imports": [
+      "app.core.logger",
+      "app.main",
+      "datetime",
+      "fastapi",
+      "logging",
+      "logging.handlers",
+      "os",
+      "pathlib",
+      "sys"
+    ]
+  },
+  {
+    "path": "backend/app/api/tags.py",
+    "bytes": 1919,
+    "sha256": "10bba2d520c29284c4125024b9804185a32ada213dd4662fa684ec96f800ed74",
+    "imports": [
+      "app.api.stream",
+      "app.main",
+      "app.store.repositories",
+      "fastapi",
+      "pydantic"
+    ]
+  },
+  {
+    "path": "backend/app/api/vod.py",
+    "bytes": 7022,
+    "sha256": "39e9dbd04bf5937438327bc88199dd01a338208d860753c9afa963d059030c15",
+    "imports": [
+      "__future__",
+      "app.main",
+      "fastapi",
+      "pydantic",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/core/__init__.py",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "imports": []
+  },
+  {
+    "path": "backend/app/core/config.py",
+    "bytes": 14163,
+    "sha256": "aa31a206eb1e031a40ad4456ff1c15adc8107804b142f3cd8d2dad1abde6afe5",
+    "imports": [
+      "__future__",
+      "app.core.vod_filename",
+      "functools",
+      "os",
+      "pathlib",
+      "pydantic",
+      "pydantic_settings",
+      "shutil",
+      "sys",
+      "typing",
+      "urllib.request"
+    ]
+  },
+  {
+    "path": "backend/app/core/http.py",
+    "bytes": 2846,
+    "sha256": "ce72a9f06b924927f83b84966e0d038c98c45151a2d1d43663a6648e2023e18e",
+    "imports": [
+      "__future__",
+      "app.core.logger",
+      "asyncio",
+      "httpx",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/core/logger.py",
+    "bytes": 10033,
+    "sha256": "618dd63c61ce77dd77cab0e309bd104a00d963f7c8c657a7271689509fa74270",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "logging",
+      "logging.handlers",
+      "pathlib",
+      "sys",
+      "threading",
+      "urllib.parse"
+    ]
+  },
+  {
+    "path": "backend/app/core/utils.py",
+    "bytes": 4891,
+    "sha256": "b77db01990c7c574e72bca4c61bbc4146e6387cd5a5a87a3399135d4f1f648d1",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.logger",
+      "pathlib",
+      "re",
+      "sys"
+    ]
+  },
+  {
+    "path": "backend/app/core/vod_filename.py",
+    "bytes": 1881,
+    "sha256": "e70afcfbac4c143e21964822f2223fb7fa0bcf356e9a67121cce9313ed30708b",
+    "imports": [
+      "datetime",
+      "re"
+    ]
+  },
+  {
+    "path": "backend/app/engine/__init__.py",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "imports": []
+  },
+  {
+    "path": "backend/app/engine/auth.py",
+    "bytes": 3864,
+    "sha256": "7cf3477ace1a1a99ea65f30322e391516a396109a4319a54cb772cfe629532ba",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.http",
+      "app.core.logger",
+      "app.core.utils",
+      "dataclasses",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/engine/base.py",
+    "bytes": 1962,
+    "sha256": "f951ba86f0e6787d8b1f5021716caad9b4a3876164d4f34b8bdfe016f5e2be4c",
+    "imports": [
+      "__future__",
+      "enum",
+      "typing",
+      "typing_extensions"
+    ]
+  },
+  {
+    "path": "backend/app/engine/channel.py",
+    "bytes": 3191,
+    "sha256": "98c004fb66ad3ad32aef8ccf0e126d60a6ae1de3356ce92e6d42b1e81f707831",
+    "imports": [
+      "__future__",
+      "app.engine.base",
+      "app.engine.chat",
+      "app.engine.pipeline",
+      "asyncio",
+      "dataclasses",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/engine/chat.py",
+    "bytes": 6310,
+    "sha256": "9baa91cc13532d81c309e777fc39588b6d4ee4054be139493d272def0b802e56",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.logger",
+      "app.engine.auth",
+      "asyncio",
+      "chzzkpy.unofficial.chat",
+      "datetime",
+      "json",
+      "pathlib",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/engine/chzzk_time_machine.py",
+    "bytes": 8920,
+    "sha256": "69fbfd8f02d7050b204954176cd92c786d35e76c4923fc7dcd408f082c93b79a",
+    "imports": [
+      "__future__",
+      "app.core.http",
+      "asyncio",
+      "dataclasses",
+      "httpx",
+      "re",
+      "urllib.parse"
+    ]
+  },
+  {
+    "path": "backend/app/engine/conductor.py",
+    "bytes": 55689,
+    "sha256": "df5a32ddd84bd2287603156906c8be8ba07dca4f0d89d0b580c974cd15c652cc",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.logger",
+      "app.engine.auth",
+      "app.engine.base",
+      "app.engine.channel",
+      "app.engine.chat",
+      "app.engine.download_condition",
+      "app.engine.downloader",
+      "app.engine.events",
+      "app.engine.pipeline",
+      "app.engine.spaces_recorder",
+      "app.engine.x_spaces",
+      "app.engine.youtube",
+      "app.engine.youtube_support",
+      "app.services.notifications",
+      "app.store.repositories",
+      "asyncio",
+      "datetime",
+      "pathlib",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/engine/download_condition.py",
+    "bytes": 1818,
+    "sha256": "ceb30dd948d9b6f777bf03d2f6705fd5c9641abd43c998f96e6440f0357090cb",
+    "imports": [
+      "re",
+      "typing",
+      "unicodedata"
+    ]
+  },
+  {
+    "path": "backend/app/engine/downloader.py",
+    "bytes": 4427,
+    "sha256": "ca185699210ed312682b39b4c2310a1fe1c3842930818c9c15d950febd19083b",
+    "imports": [
+      "__future__",
+      "app.core.http",
+      "app.core.logger",
+      "app.engine.auth",
+      "app.engine.base",
+      "app.engine.chzzk_time_machine",
+      "json",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/engine/events.py",
+    "bytes": 2073,
+    "sha256": "cd70ea1bac42752f64b3416a19d96b3c1aaf14cf39a5ada0b49cd26921c36f4e",
+    "imports": [
+      "__future__",
+      "app.core.logger",
+      "asyncio",
+      "json",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/engine/pipeline/__init__.py",
+    "bytes": 619,
+    "sha256": "a83588b9202ff10c460a738da0837f5667c87b65cb94dbec666316093a4ba444",
+    "imports": [
+      "app.engine.pipeline.ffmpeg",
+      "app.engine.pipeline.state",
+      "app.engine.pipeline.ytdlp"
+    ]
+  },
+  {
+    "path": "backend/app/engine/pipeline/ffmpeg.py",
+    "bytes": 17049,
+    "sha256": "82b96b74ce15bb9877a5ba41947607f86eb0a2da0504d6e4a8d76a90145f196e",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.logger",
+      "app.core.utils",
+      "app.engine.pipeline.state",
+      "asyncio",
+      "asyncio.subprocess",
+      "datetime",
+      "pathlib",
+      "traceback",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/engine/pipeline/state.py",
+    "bytes": 344,
+    "sha256": "0e77908baa76040bd4c718c0c4cbfd23e1ae808c6e928a74b310ad951c2dc1ba",
+    "imports": [
+      "__future__",
+      "enum"
+    ]
+  },
+  {
+    "path": "backend/app/engine/pipeline/ytdlp.py",
+    "bytes": 37990,
+    "sha256": "455d4327dd2205fffbc7d2633db9cb6be87ab7bf9e807213195d1bf7b6e1541d",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.http",
+      "app.core.logger",
+      "app.core.utils",
+      "app.engine.chzzk_time_machine",
+      "app.engine.pipeline.state",
+      "asyncio",
+      "asyncio.subprocess",
+      "datetime",
+      "http.cookies",
+      "json",
+      "mimetypes",
+      "os",
+      "pathlib",
+      "re",
+      "requests.cookies",
+      "streamlink",
+      "streamlink.stream.dash",
+      "streamlink.stream.hls",
+      "tempfile",
+      "typing",
+      "urllib.parse"
+    ]
+  },
+  {
+    "path": "backend/app/engine/spaces_recorder.py",
+    "bytes": 5818,
+    "sha256": "e31d2f3898f6724c441103d34ae324dffaaf4f353d17531df95dc643782a14f7",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.logger",
+      "app.engine.channel",
+      "app.engine.x_spaces",
+      "asyncio",
+      "datetime",
+      "pathlib",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/engine/updater.py",
+    "bytes": 7578,
+    "sha256": "cf3267067f97fb4ba7be8be8139e0328499e40c1886c26663311a9faedab2087",
+    "imports": [
+      "app.core.logger",
+      "app.services.notifications",
+      "app.version",
+      "asyncio",
+      "datetime",
+      "httpx",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/engine/vod.py",
+    "bytes": 65023,
+    "sha256": "81ddce371c623b45bdb5932cff62efcf3493a106d584325f9742287c4ac9e9b3",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.logger",
+      "app.core.utils",
+      "app.core.vod_filename",
+      "app.engine.auth",
+      "app.engine.youtube_channel",
+      "app.engine.youtube_support",
+      "app.services.notifications",
+      "app.store.repositories",
+      "asyncio",
+      "contextlib",
+      "dataclasses",
+      "datetime",
+      "enum",
+      "httpx",
+      "json",
+      "math",
+      "os",
+      "pathlib",
+      "platform",
+      "re",
+      "shutil",
+      "subprocess",
+      "tempfile",
+      "threading",
+      "traceback",
+      "typing",
+      "urllib.parse",
+      "uuid",
+      "yt_dlp",
+      "yt_dlp.extractor.common"
+    ]
+  },
+  {
+    "path": "backend/app/engine/x_spaces/__init__.py",
+    "bytes": 898,
+    "sha256": "32b559c742f6461a185b004293fa296b1e353e96e1172c5d99f8ade3809ac324",
+    "imports": [
+      "app.engine.x_spaces.constants",
+      "app.engine.x_spaces.cookies",
+      "app.engine.x_spaces.engine"
+    ]
+  },
+  {
+    "path": "backend/app/engine/x_spaces/api.py",
+    "bytes": 11412,
+    "sha256": "6cf5bd3d1783d738d6f586f5c04874828d39abeffd6a94efd8b30b80dbc08f7a",
+    "imports": [
+      "__future__",
+      "app.core.logger",
+      "app.engine.x_spaces.constants",
+      "httpx",
+      "json",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/engine/x_spaces/constants.py",
+    "bytes": 1265,
+    "sha256": "d763cd93cdb192df199a1b34915a3335b66f01a9197935fb4fe3f276a1f76e78",
+    "imports": [
+      "__future__"
+    ]
+  },
+  {
+    "path": "backend/app/engine/x_spaces/cookies.py",
+    "bytes": 5325,
+    "sha256": "da855afe6e5e38d542ca596a0089cffaa2eb678ebcc9c6c3e6e727c03e613f1d",
+    "imports": [
+      "__future__",
+      "app.core.logger",
+      "app.engine.x_spaces.constants",
+      "datetime",
+      "httpx",
+      "json",
+      "pathlib"
+    ]
+  },
+  {
+    "path": "backend/app/engine/x_spaces/engine.py",
+    "bytes": 13622,
+    "sha256": "029f1b20922d5e6ed35266143a65a752d8585f739186e2bba9c5420f30d93bc5",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.logger",
+      "app.engine.base",
+      "app.engine.x_spaces.api",
+      "app.engine.x_spaces.constants",
+      "app.engine.x_spaces.cookies",
+      "asyncio",
+      "datetime",
+      "httpx",
+      "pathlib",
+      "re",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/engine/youtube.py",
+    "bytes": 6661,
+    "sha256": "f0de7450b531c3bdd67892aceb5ad3e2bad21c65b946d0a257aa3c47b6b4248d",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.http",
+      "app.core.logger",
+      "app.engine.base",
+      "asyncio",
+      "httpx",
+      "json",
+      "re"
+    ]
+  },
+  {
+    "path": "backend/app/engine/youtube_channel.py",
+    "bytes": 6749,
+    "sha256": "ff6a6400aa1a2b22e99b20edac94bb55e2455cac4f13e278eaa6e9be0c00a433",
+    "imports": [
+      "app.core.logger",
+      "app.engine.youtube_support",
+      "asyncio",
+      "queue",
+      "re",
+      "threading",
+      "time",
+      "uuid",
+      "yt_dlp"
+    ]
+  },
+  {
+    "path": "backend/app/engine/youtube_support.py",
+    "bytes": 4703,
+    "sha256": "d2603e692b79d85f6197222cb68f3a930557488e9c0f8e1469068a38875d7d50",
+    "imports": [
+      "app.core.config",
+      "contextlib",
+      "http.cookiejar",
+      "pathlib",
+      "shutil",
+      "sys",
+      "tempfile",
+      "urllib.parse",
+      "warnings"
+    ]
+  },
+  {
+    "path": "backend/app/main.py",
+    "bytes": 11409,
+    "sha256": "2b979ad9246a9f3f8d794969e801eb3176d27e26acff420566f13ac0a0486e46",
+    "imports": [
+      "__future__",
+      "app.api.archive",
+      "app.api.chat",
+      "app.api.events",
+      "app.api.platforms",
+      "app.api.settings",
+      "app.api.setup",
+      "app.api.stats",
+      "app.api.stream",
+      "app.api.system",
+      "app.api.tags",
+      "app.api.vod",
+      "app.core.config",
+      "app.core.http",
+      "app.core.logger",
+      "app.engine.auth",
+      "app.engine.conductor",
+      "app.engine.updater",
+      "app.services.discord_bot",
+      "app.services.notifications",
+      "app.services.recorder",
+      "app.store",
+      "app.version",
+      "contextlib",
+      "fastapi",
+      "fastapi.middleware.cors",
+      "fastapi.responses",
+      "fastapi.staticfiles",
+      "importlib.metadata",
+      "pathlib",
+      "sys",
+      "typing",
+      "uvicorn"
+    ]
+  },
+  {
+    "path": "backend/app/services/__init__.py",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "imports": []
+  },
+  {
+    "path": "backend/app/services/discord_bot/__init__.py",
+    "bytes": 1204,
+    "sha256": "1925b0f858d6fb3159e6c0d612816448acb8bcd2aba2eba748cd12381e9674a0",
+    "imports": [
+      "app.services.discord_bot.authorization",
+      "app.services.discord_bot.service"
+    ]
+  },
+  {
+    "path": "backend/app/services/discord_bot/authorization.py",
+    "bytes": 3006,
+    "sha256": "fd8707ec97c1c6571280602d721bbfd6d176c3c0e767da6033cf636ce47782c1",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.logger",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/services/discord_bot/service.py",
+    "bytes": 33722,
+    "sha256": "13ad8e74db6e836dc20f6054fcbfd0e2a22c54ba4a7e9ab9c014ae0538a8cbb1",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.logger",
+      "app.engine.x_spaces",
+      "app.services.discord_bot.authorization",
+      "app.services.notifications",
+      "app.services.recorder",
+      "asyncio",
+      "discord",
+      "discord.ext",
+      "math",
+      "platform",
+      "psutil",
+      "random",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/services/notifications.py",
+    "bytes": 25187,
+    "sha256": "62db1c8fe4f068146e39ad8f20dd9d391252499c29259b5b5a21f70ab12f7de1",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.logger",
+      "app.store.repositories",
+      "asyncio",
+      "dataclasses",
+      "enum",
+      "httpx",
+      "random",
+      "time",
+      "typing",
+      "uuid"
+    ]
+  },
+  {
+    "path": "backend/app/services/recorder.py",
+    "bytes": 11849,
+    "sha256": "8fdde6fadde24bac17524e66e289000ffd7a1029eb7965e8fac83211ed3e8487",
+    "imports": [
+      "__future__",
+      "app.core.logger",
+      "app.engine.auth",
+      "app.engine.base",
+      "app.engine.conductor",
+      "app.engine.vod",
+      "app.services.notifications",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/store/__init__.py",
+    "bytes": 863,
+    "sha256": "7dc612ed983098416c4cada1b3ea0ef0deda595d1b0ce849dce7b4f7d0eab852",
+    "imports": [
+      "app.store.db",
+      "app.store.migrate_json",
+      "app.store.repositories"
+    ]
+  },
+  {
+    "path": "backend/app/store/db.py",
+    "bytes": 7940,
+    "sha256": "c07c7e5b2a8edb7f66b744853d1b5473229758e5c3322d410a73a761c4cff1b3",
+    "imports": [
+      "__future__",
+      "app.core.config",
+      "app.core.logger",
+      "app.store.schema",
+      "contextlib",
+      "pathlib",
+      "sqlite3",
+      "threading",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/store/migrate_json.py",
+    "bytes": 7066,
+    "sha256": "52825075e1c85f55034a4acf49a6ee84bc5cf8da7c21479a5ce753ae0aed13ec",
+    "imports": [
+      "__future__",
+      "app.core.logger",
+      "app.store.db",
+      "app.store.repositories",
+      "datetime",
+      "json",
+      "pathlib",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/store/repositories.py",
+    "bytes": 17106,
+    "sha256": "2fd87f23e7cc4e9a1a3f4d04d02dc84d47edfe28bfc8cd09ba0dcd14c8088e70",
+    "imports": [
+      "__future__",
+      "app.core.logger",
+      "app.store.db",
+      "datetime",
+      "json",
+      "typing"
+    ]
+  },
+  {
+    "path": "backend/app/store/schema.py",
+    "bytes": 5713,
+    "sha256": "f03686826a81decf8304c2afa4cbffd9d76d76791a70eb7ab1aaa6fcffb705f6",
+    "imports": [
+      "__future__",
+      "sqlite3"
+    ]
+  },
+  {
+    "path": "backend/app/version.py",
+    "bytes": 132,
+    "sha256": "ddf463e6d01e2b9e5d32d486b41beacf82de3ac1893baa1feb4c009a3bce2902",
+    "imports": []
+  },
+  {
+    "path": "backend/run.py",
+    "bytes": 16406,
+    "sha256": "936f47ba2466a42c94261d157b5c6b4333f291197f26c0d616a2f35585b607dc",
+    "imports": [
+      "PIL",
+      "__future__",
+      "app.core.config",
+      "app.main",
+      "asyncio",
+      "certifi",
+      "importlib.metadata",
+      "os",
+      "pathlib",
+      "pystray",
+      "shutil",
+      "streamlink",
+      "subprocess",
+      "sys",
+      "threading",
+      "time",
+      "urllib.request",
+      "uvicorn",
+      "webbrowser"
+    ]
+  },
+  {
+    "path": "backend/tests/__init__.py",
+    "bytes": 48,
+    "sha256": "b13b52523fef618e202c56fd68ca5e79bc0caf24b8611631096bd1492b27c778",
+    "imports": []
+  },
+  {
+    "path": "backend/tests/conftest.py",
+    "bytes": 1887,
+    "sha256": "e8297df8f529f3bc9084cf5f346ff594b83a07fd85c7a7f3d5d81cc723d3117f",
+    "imports": [
+      "app.core.config",
+      "app.core.utils",
+      "app.store.db",
+      "pytest"
+    ]
+  },
+  {
+    "path": "backend/tests/test_api_notifications.py",
+    "bytes": 5442,
+    "sha256": "da2eabb79d6caff6318d567cf335c124f494f12b45203d07a35cb821ccfb049c",
+    "imports": [
+      "app.core.config",
+      "app.main",
+      "app.services.notifications",
+      "fastapi.testclient",
+      "pytest"
+    ]
+  },
+  {
+    "path": "backend/tests/test_api_settings.py",
+    "bytes": 4519,
+    "sha256": "1ae997efa8cec8f9ec7b3dfe262cfa39d9c67a951a07afd5a5d5a3d80f88e1ef",
+    "imports": [
+      "fastapi.testclient",
+      "pytest"
+    ]
+  },
+  {
+    "path": "backend/tests/test_api_stream.py",
+    "bytes": 4247,
+    "sha256": "6c70c921320f1ae12131d266c17f45b60245df525be5b8905ac8536544c94bb1",
+    "imports": [
+      "fastapi.testclient",
+      "pytest"
+    ]
+  },
+  {
+    "path": "backend/tests/test_api_surface.py",
+    "bytes": 7284,
+    "sha256": "646b5f192c83381c671a8ab7c66ef7b3ab703780c87652ebc9dc7ccf61b2b691",
+    "imports": [
+      "app.main",
+      "fastapi.testclient",
+      "re"
+    ]
+  },
+  {
+    "path": "backend/tests/test_api_vod.py",
+    "bytes": 3691,
+    "sha256": "092600dcc3b5ce60bd7f7f5960fb143a5b1c52706653f97031d50e54b0bb94c8",
+    "imports": [
+      "fastapi.testclient",
+      "pytest"
+    ]
+  },
+  {
+    "path": "backend/tests/test_auth.py",
+    "bytes": 5849,
+    "sha256": "1d187feee61c6cd9b9ae5264c03fc3ead983350e3a4d6a10393f39b2d09046d8",
+    "imports": [
+      "app.core.config",
+      "app.engine.auth",
+      "pathlib",
+      "pytest",
+      "unittest.mock"
+    ]
+  },
+  {
+    "path": "backend/tests/test_chat_index.py",
+    "bytes": 9505,
+    "sha256": "138d2067b6e0c588a7e7feee09842d9d61b8b377c108f32c5c534eff6020c2fe",
+    "imports": [
+      "app.api.chat",
+      "app.core.config",
+      "fastapi",
+      "fastapi.testclient",
+      "json",
+      "pathlib",
+      "pytest"
+    ]
+  },
+  {
+    "path": "backend/tests/test_conductor.py",
+    "bytes": 14592,
+    "sha256": "57ed218deb4698a90d76b4f1ef46f194c96e6caa28e542dab67ffe7761b07c67",
+    "imports": [
+      "app.engine.base",
+      "app.engine.conductor",
+      "asyncio",
+      "pathlib",
+      "pytest",
+      "unittest.mock"
+    ]
+  },
+  {
+    "path": "backend/tests/test_config.py",
+    "bytes": 6127,
+    "sha256": "94e029550f93fcd251ecfa7186859caa5cba5163a6d91a88ff2b56344bc3e7ea",
+    "imports": [
+      "app.core.config",
+      "pathlib",
+      "pytest",
+      "unittest.mock"
+    ]
+  },
+  {
+    "path": "backend/tests/test_discord_auth.py",
+    "bytes": 7319,
+    "sha256": "dc315ef4a161e87bc899b98bdbf616243865e94c423907782cdf1b0974bb917a",
+    "imports": [
+      "app.core.config",
+      "pytest"
+    ]
+  },
+  {
+    "path": "backend/tests/test_download_condition.py",
+    "bytes": 11085,
+    "sha256": "48aeecd32ef37fb12ce0adda67a47a4d67838b73efcf68a97626cb8e85b0b46d",
+    "imports": [
+      "app.api",
+      "app.api.settings",
+      "app.core",
+      "app.core.config",
+      "app.engine",
+      "app.engine.base",
+      "app.engine.conductor",
+      "app.engine.download_condition",
+      "app.engine.pipeline",
+      "app.main",
+      "app.services.recorder",
+      "app.store.db",
+      "app.store.repositories",
+      "app.store.schema",
+      "fastapi",
+      "fastapi.testclient",
+      "pathlib",
+      "pytest",
+      "sqlite3",
+      "unittest.mock"
+    ]
+  },
+  {
+    "path": "backend/tests/test_engine_modules.py",
+    "bytes": 10553,
+    "sha256": "189d31dc1fe034ded2952d8174f9879855d87218620d8fb1e885a7c605e6df72",
+    "imports": [
+      "app.core",
+      "app.core.config",
+      "app.engine.base",
+      "app.engine.channel",
+      "app.engine.downloader",
+      "app.engine.events",
+      "app.engine.pipeline",
+      "app.engine.spaces_recorder",
+      "app.engine.x_spaces",
+      "app.engine.youtube",
+      "asyncio",
+      "json",
+      "pytest"
+    ]
+  },
+  {
+    "path": "backend/tests/test_live_preview.py",
+    "bytes": 4313,
+    "sha256": "fc8fe7110b68b1ffc88caee768fedf1cc800228aca4efa6dc0220133ee915476",
+    "imports": [
+      "app.api.stream",
+      "app.engine.auth",
+      "app.engine.base",
+      "app.engine.channel",
+      "app.engine.conductor",
+      "app.engine.downloader",
+      "app.engine.pipeline",
+      "app.main",
+      "asyncio",
+      "contextlib",
+      "fastapi",
+      "json",
+      "pytest",
+      "types",
+      "unittest.mock"
+    ]
+  },
+  {
+    "path": "backend/tests/test_logs_api.py",
+    "bytes": 4537,
+    "sha256": "957caa66717bdd04f85762dd27a6b0c58776294e6f3e3c74ef6200006c013d4b",
+    "imports": [
+      "app.api.system",
+      "fastapi",
+      "fastapi.testclient",
+      "os",
+      "pathlib",
+      "pytest",
+      "unittest.mock"
+    ]
+  },
+  {
+    "path": "backend/tests/test_notifications.py",
+    "bytes": 11853,
+    "sha256": "8bb72e98754d1af722557c235d8f85e877902f20e5e767785be5d64aad03e6de",
+    "imports": [
+      "app.core.config",
+      "app.services.notifications",
+      "app.store.repositories",
+      "asyncio",
+      "pytest",
+      "time"
+    ]
+  },
+  {
+    "path": "backend/tests/test_pipeline.py",
+    "bytes": 12371,
+    "sha256": "762d140d47106ec548ce3fe63f9612038e5f6ad96c104e0210a479434e1868ad",
+    "imports": [
+      "app.engine.pipeline",
+      "json",
+      "pytest",
+      "unittest.mock"
+    ]
+  },
+  {
+    "path": "backend/tests/test_platform_compatibility.py",
+    "bytes": 3347,
+    "sha256": "ca8cc04d0c254f762f59fd59795680d4c3b1c3bd58fe4c46ce2f511524909915",
+    "imports": [
+      "app.api.archive",
+      "app.api.platforms",
+      "app.core.config",
+      "app.engine.base",
+      "app.engine.conductor",
+      "app.engine.vod",
+      "app.store.repositories",
+      "fastapi",
+      "fastapi.testclient",
+      "pytest",
+      "unittest.mock"
+    ]
+  },
+  {
+    "path": "backend/tests/test_platform_logging.py",
+    "bytes": 2162,
+    "sha256": "77a445aa0df6102f89c6acb4fa54850895f6fc554e601be0cee4db64f86ee326",
+    "imports": [
+      "app.api",
+      "app.core.logger",
+      "io",
+      "logging",
+      "logging.handlers",
+      "pytest"
+    ]
+  },
+  {
+    "path": "backend/tests/test_release_metadata.py",
+    "bytes": 1779,
+    "sha256": "8074e617038b88d1b72acbbaacc3c328283926764cae395e2794e0cb9ae97228",
+    "imports": [
+      "app.version",
+      "json",
+      "pathlib",
+      "re"
+    ]
+  },
+  {
+    "path": "backend/tests/test_store.py",
+    "bytes": 16661,
+    "sha256": "e4b2a7b129973b2011e3987c298e8e2f37f60af4b915452d3512a94a11562112",
+    "imports": [
+      "app.store.db",
+      "app.store.migrate_json",
+      "app.store.repositories",
+      "app.store.schema",
+      "json",
+      "pytest"
+    ]
+  },
+  {
+    "path": "backend/tests/test_vod.py",
+    "bytes": 19546,
+    "sha256": "0f3ac0fe7d18fe3edf136a14a70ab85237cf3850ed7db59ab0d0724817afb5f3",
+    "imports": [
+      "app.core.config",
+      "app.engine.vod",
+      "asyncio",
+      "datetime",
+      "pathlib",
+      "pytest",
+      "unittest.mock",
+      "yt_dlp"
+    ]
+  },
+  {
+    "path": "backend/tests/test_youtube_channel_import.py",
+    "bytes": 8665,
+    "sha256": "a73f6194fb21fab1bd5ae201dc55b5b679734080f7fe838962cb2cb4599ff381",
+    "imports": [
+      "app.api",
+      "app.api.vod",
+      "app.engine",
+      "app.engine.vod",
+      "app.services.recorder",
+      "asyncio",
+      "fastapi",
+      "fastapi.testclient",
+      "httpx",
+      "pytest",
+      "threading",
+      "types",
+      "unittest.mock"
+    ]
+  },
+  {
+    "path": "backend/tests/test_youtube_engine.py",
+    "bytes": 2845,
+    "sha256": "55e0dc65c9ffa4144ec7b247d889c8fb5dd5d5723442516e0b29b66b6a9414eb",
+    "imports": [
+      "app.core.utils",
+      "app.engine.base",
+      "app.engine.youtube",
+      "pytest",
+      "unittest.mock"
+    ]
+  },
+  {
+    "path": "backend/tests/test_youtube_optional_cookies.py",
+    "bytes": 10380,
+    "sha256": "5063fa93b2111420c66b340e6c7892f6a983f7f6dc79251fd56d9a80598d0f90",
+    "imports": [
+      "app.core.config",
+      "app.engine.vod",
+      "app.engine.youtube_channel",
+      "app.engine.youtube_support",
+      "asyncio",
+      "pathlib",
+      "pytest",
+      "threading",
+      "yt_dlp"
+    ]
+  },
+  {
+    "path": "docs/CHANGELOG.md",
+    "bytes": 47631,
+    "sha256": "0e465a4f8942292fc770c0ff5773719f709d96cc5171823583f67c896184354a"
+  },
+  {
+    "path": "docs/checklist.md",
+    "bytes": 5367,
+    "sha256": "30ed20a42695a255cb5c267f07d16b976b083732d9fd53a1fd9f59e2d38252dd"
+  },
+  {
+    "path": "docs/linux-guide.md",
+    "bytes": 4724,
+    "sha256": "b71d1b51d624524e6b143af5258333baf70b941014fd55543d7b4c147590e0cd"
+  },
+  {
+    "path": "docs/storage.md",
+    "bytes": 3311,
+    "sha256": "a6dd18fb7fb5193fa7075c39d63ee4c8a23be4892790361b0deb686638f223d7"
+  },
+  {
+    "path": "docs/test-guide.md",
+    "bytes": 6775,
+    "sha256": "f86ef0083dd1a33f80d495a349bd3a1962236249002a3ff611487c9901dd2530"
+  },
+  {
+    "path": "docs/x-spaces-guide.md",
+    "bytes": 5302,
+    "sha256": "97d3e50bf70da590f67979515d65df6a4351ee4cb4a1c41320ba1487c8e51fa3"
+  },
+  {
+    "path": "frontend/package-lock.json",
+    "bytes": 116065,
+    "sha256": "f72f37442829c5abc3c38efa00e89b5eff57161d2facfc01331d6162ace9e00b"
+  },
+  {
+    "path": "frontend/package.json",
+    "bytes": 981,
+    "sha256": "7413559e403c51d4102b4ffb19f7ff4efb09cda697d3caff1bf42edf51cb5415"
+  },
+  {
+    "path": "frontend/src/App.tsx",
+    "bytes": 4614,
+    "sha256": "9bed80c91c4eb3a1224a59647a5fe002e014b954e7416e27b8e85b759e6d6f65"
+  },
+  {
+    "path": "frontend/src/api/client.ts",
+    "bytes": 19937,
+    "sha256": "bc3a41b72a0ef7d37824dd38df5ad4c0cb3a78b9fca7b60355780a95608d4661"
+  },
+  {
+    "path": "frontend/src/components/SetupWizard.tsx",
+    "bytes": 14892,
+    "sha256": "1b0e80d279a0aaf0488026818757212fc7f0116b5c14102089c926e501db74cd"
+  },
+  {
+    "path": "frontend/src/components/dashboard/AddChannelForm.tsx",
+    "bytes": 7198,
+    "sha256": "fc897e09d772f18e2761bfa6039d6d9cf3050dbdf819e345803b38d92d8244a4"
+  },
+  {
+    "path": "frontend/src/components/dashboard/ChannelActions.tsx",
+    "bytes": 3862,
+    "sha256": "19785dd7662e2262a445ef3face4e6bb772791ad05d0180bd233e7ee0fc59b27"
+  },
+  {
+    "path": "frontend/src/components/dashboard/ChannelCard.tsx",
+    "bytes": 12111,
+    "sha256": "bd6d29e006f411e185558ff1f19cfb5fd2cd200ef04f01f25e2d951afa6f2d18"
+  },
+  {
+    "path": "frontend/src/components/dashboard/ChannelDownloadModal.tsx",
+    "bytes": 7432,
+    "sha256": "d9800343c15a958d2a5c173958c1471325ced7e91db1b904d6edbacf73b9b53f"
+  },
+  {
+    "path": "frontend/src/components/dashboard/ChannelRow.tsx",
+    "bytes": 4886,
+    "sha256": "654e63570c754f2e427ead3e98ad2a27a0836709e2a836ccd1ce2fe89129dcd4"
+  },
+  {
+    "path": "frontend/src/components/dashboard/DashboardFilters.tsx",
+    "bytes": 7027,
+    "sha256": "543c850f52b50876da90f42aaaa9a776d9c4fb281f0f9758a4a396d2eb066870"
+  },
+  {
+    "path": "frontend/src/components/dashboard/DownloadHoldStatus.tsx",
+    "bytes": 2259,
+    "sha256": "976decc09cf72df5817525f21d1b7d77f3b9281adc3c72c01f998a382f4876d9"
+  },
+  {
+    "path": "frontend/src/components/dashboard/LiveDownloadCondition.tsx",
+    "bytes": 4405,
+    "sha256": "035de51cc64dc3e5435e7c64b9c04849a3f0bdb42008da11f8a05a3a005830ea"
+  },
+  {
+    "path": "frontend/src/components/dashboard/LivePreview.tsx",
+    "bytes": 6800,
+    "sha256": "8b42c6b175ea4c40d3235244974b81f5582faee18855128fcc0ef825059c6925"
+  },
+  {
+    "path": "frontend/src/components/layout/Layout.tsx",
+    "bytes": 900,
+    "sha256": "2945d56edd89a0f8bfe3870f4c508149f21c3b35f33ff2fdb9b5d9c8e807529d"
+  },
+  {
+    "path": "frontend/src/components/layout/Sidebar.tsx",
+    "bytes": 4687,
+    "sha256": "4e6f8c99aa29faa04d588f0736d2eb4455ce428cddab7384f4fcd9cfa20aae40"
+  },
+  {
+    "path": "frontend/src/components/layout/Topbar.tsx",
+    "bytes": 6422,
+    "sha256": "3420af80b288818afd635e831b1bb169464a6e61bf2ebe44457e2dd154101344"
+  },
+  {
+    "path": "frontend/src/components/settings/AppearanceTab.tsx",
+    "bytes": 5776,
+    "sha256": "431125ed7c813cc05a870f3b539793913952f9e6cf44bd18d350eb249eb35d85"
+  },
+  {
+    "path": "frontend/src/components/settings/AuthTab.tsx",
+    "bytes": 7061,
+    "sha256": "05d583897040079f2cea559b8e2ecba05c86c6507f97c555c2d9d41e56a551d3"
+  },
+  {
+    "path": "frontend/src/components/settings/DownloadTab.tsx",
+    "bytes": 14387,
+    "sha256": "39c11d8b55a8a7786a0202c59802b79b33cfcebc66fcedaac45564091316417e"
+  },
+  {
+    "path": "frontend/src/components/settings/GeneralTab.tsx",
+    "bytes": 4320,
+    "sha256": "411f4de82b47a0e6f6d75d6f394a6308a4f48f52eed9d5636cc3ce4d914d15d0"
+  },
+  {
+    "path": "frontend/src/components/settings/InfoTab.tsx",
+    "bytes": 4510,
+    "sha256": "7db2310772f12e3bc41559ffe0d5c0a77779f68b309967ca117214c3e51ad29f"
+  },
+  {
+    "path": "frontend/src/components/settings/NotificationDeliveryCard.tsx",
+    "bytes": 7263,
+    "sha256": "1bf365837e6658d3b560f28533893d27b754426ae63a095fb5b505b67fc7c411"
+  },
+  {
+    "path": "frontend/src/components/settings/NotificationsTab.tsx",
+    "bytes": 20960,
+    "sha256": "2a4c9019813e73772ff5275ba82b0d26b1a0596c223dbd3be0df47c960047728"
+  },
+  {
+    "path": "frontend/src/components/settings/SystemTab.tsx",
+    "bytes": 4611,
+    "sha256": "c685569ea9e5e95d68cf42506523b6c0d0f5598e85c8133e342e042968953547"
+  },
+  {
+    "path": "frontend/src/components/settings/YouTubeAuth.tsx",
+    "bytes": 2846,
+    "sha256": "68f08eb8e82a7917bd910f4c88333ffc8ae73377fbdfbbc94cb467da2813a5f2"
+  },
+  {
+    "path": "frontend/src/components/ui/ActionMenu.tsx",
+    "bytes": 2001,
+    "sha256": "2a283c09e2510bad5b77bf6a331fa21794aea1fdaffb5c7ba8d5cf9eae47cc46"
+  },
+  {
+    "path": "frontend/src/components/ui/CommandPalette.tsx",
+    "bytes": 3467,
+    "sha256": "2c55f9e0044ace663825cd2fc0b4b939d3541414c14721c588fabb3fbda4076e"
+  },
+  {
+    "path": "frontend/src/components/ui/ConfirmModal.tsx",
+    "bytes": 5836,
+    "sha256": "cd13c9f7088df6c51a16bba978ab91ab02fd91e2e69f861b7982c8624f1e77df"
+  },
+  {
+    "path": "frontend/src/components/ui/DirInput.tsx",
+    "bytes": 9693,
+    "sha256": "8d4336a382f1bda25f2f63f9f01ae7d14e113100237abd0daee95eaf99a90a25"
+  },
+  {
+    "path": "frontend/src/components/ui/TagManager.tsx",
+    "bytes": 12412,
+    "sha256": "27345added21e60b6de33f8bec08c0db0d9263fe82e6884b7c40037d23a05ca8"
+  },
+  {
+    "path": "frontend/src/components/ui/Toast.tsx",
+    "bytes": 6112,
+    "sha256": "5e6f6f4277b7bfec3db38613200723972b66de5a14b9a1d6db759b43f436d9e1"
+  },
+  {
+    "path": "frontend/src/components/ui/UpdateModal.tsx",
+    "bytes": 9122,
+    "sha256": "9259a27dad76efc7c77ede0a8429a37d6f646a25e868474f417b95b9c3443aa3"
+  },
+  {
+    "path": "frontend/src/components/ui/primitives.tsx",
+    "bytes": 16000,
+    "sha256": "814438067beb63f93e2af65f30ba03e4abed2bb42441d4f3e7cf52893aa09057"
+  },
+  {
+    "path": "frontend/src/config/navigation.ts",
+    "bytes": 1765,
+    "sha256": "cd020828c257453c8a222e1c2261d8922c16082fac1b271c6953f9a8ebe7a082"
+  },
+  {
+    "path": "frontend/src/contexts/LanguageContext.tsx",
+    "bytes": 86365,
+    "sha256": "dd480f5c4f0ce1a85e86a78e0cccdf8976ce8756287458fdd3e2df20e059cfe5"
+  },
+  {
+    "path": "frontend/src/contexts/ThemeContext.tsx",
+    "bytes": 7551,
+    "sha256": "74d70d44dc3129f58f2c72eefe17a19195d9dfe24bb7f1716645d902894ba318"
+  },
+  {
+    "path": "frontend/src/contexts/VodContext.tsx",
+    "bytes": 4080,
+    "sha256": "810e32c43cbc864adcc007ae0ea547d8b6a101a59001079e096210296a105e8b"
+  },
+  {
+    "path": "frontend/src/hooks/useChannelReorder.ts",
+    "bytes": 8409,
+    "sha256": "7291a8e22081302dbe0c204d17e3e0c9932279c3f9173ae7cb3149d429cc4af8"
+  },
+  {
+    "path": "frontend/src/hooks/useChannelStream.ts",
+    "bytes": 3048,
+    "sha256": "8ffdfd027bd14c4789fd4390db11ad5bfe9189909bdf8018dcdc2b247378b699"
+  },
+  {
+    "path": "frontend/src/hooks/useDialogKeyboard.ts",
+    "bytes": 2210,
+    "sha256": "e805fd0bdf6d42c5c2e41a6af16942ab114cd9c611b4644d154cbf5ee62784ef"
+  },
+  {
+    "path": "frontend/src/hooks/useListboxKeyboard.ts",
+    "bytes": 1479,
+    "sha256": "0b06c2013650fea9fcb9d45ca1b77cc6f4af215c7b76b514b898621411e51e19"
+  },
+  {
+    "path": "frontend/src/hooks/useListboxPosition.ts",
+    "bytes": 2422,
+    "sha256": "007b5989742285dd14778dfdf8a5bb0dc66fd2edb7246cb125611fec03a1e61c"
+  },
+  {
+    "path": "frontend/src/hooks/useSettingsSave.ts",
+    "bytes": 1700,
+    "sha256": "dd9e7f46d7dbe2fba63923af62b4216ba344ca596864f903a856adabd753882c"
+  },
+  {
+    "path": "frontend/src/hooks/useVisualViewport.ts",
+    "bytes": 1151,
+    "sha256": "5bd87212cf91c3afc2fe2eb83265e3aeef7657f6db8071ce6813816ff35b1405"
+  },
+  {
+    "path": "frontend/src/main.tsx",
+    "bytes": 238,
+    "sha256": "76051318f51fcbffb3d9fb6bbeddcef19abc5d06211de1ade174a04db2646b31"
+  },
+  {
+    "path": "frontend/src/pages/Archive.tsx",
+    "bytes": 5357,
+    "sha256": "256cc0e649c77d8e07a1d7521f872cbb586db274664fd13ae3ea638194445623"
+  },
+  {
+    "path": "frontend/src/pages/ChatLogs.tsx",
+    "bytes": 18959,
+    "sha256": "671cc45fa586fb3f5f8a8bb0046dfebd37665b624ebc9fa6ebf166f80e4e3270"
+  },
+  {
+    "path": "frontend/src/pages/Dashboard.tsx",
+    "bytes": 14908,
+    "sha256": "997307e9162d5aaab4a781da7e115d7fb3ebcb08ba8a2c775a15f0c53556a582"
+  },
+  {
+    "path": "frontend/src/pages/Settings.tsx",
+    "bytes": 9508,
+    "sha256": "ef1be39280f7f312c84e0ba76c6ceb0e4396116a99e60555337af5726b216ead"
+  },
+  {
+    "path": "frontend/src/pages/Stats.tsx",
+    "bytes": 16759,
+    "sha256": "a3a7150f66404277595e74d1df705bc263d4f0d2c58e8f31fd4edefd728067e8"
+  },
+  {
+    "path": "frontend/src/pages/SystemLogs.tsx",
+    "bytes": 23212,
+    "sha256": "854d5642619e641779709c358130809c79d18a38b77835dd46f2a41f100e974d"
+  },
+  {
+    "path": "frontend/src/pages/VodDownload.tsx",
+    "bytes": 30273,
+    "sha256": "92f35f7f44b77e4be6f05fafad02fb60b0d788d46d348b7e83354b39abff44ff"
+  },
+  {
+    "path": "frontend/src/utils/channel.ts",
+    "bytes": 1159,
+    "sha256": "9ab603a8feb6ded5bee20d818a93b621b5c41f44eef1a2788224708e03b6e8cf"
+  },
+  {
+    "path": "frontend/src/utils/error.ts",
+    "bytes": 411,
+    "sha256": "ee80b2639c3e211227f6d5aa674a0dfe68fae7a012170931a612a5cd46c9e000"
+  },
+  {
+    "path": "frontend/src/utils/format.ts",
+    "bytes": 2387,
+    "sha256": "8c2b4fd02e64a2b6626292521b35843f1bce4f4713efb778794a929ee39d6847"
+  },
+  {
+    "path": "frontend/tests/README.md",
+    "bytes": 1575,
+    "sha256": "8394b4f3d83c673da62bb372e05c48be32924681c5a58530539bfd5e99894ca7"
+  },
+  {
+    "path": "frontend/tests/browser_fixtures.py",
+    "bytes": 2223,
+    "sha256": "a14801c030f9542f8dfc9a97b3fe620d76ea4c617ce316a8dfae8a47d963cd36",
+    "imports": [
+      "json",
+      "mobile_fixtures",
+      "urllib.parse"
+    ]
+  },
+  {
+    "path": "frontend/tests/filtered_reorder.py",
+    "bytes": 3729,
+    "sha256": "201f2a691e44e96ebf8e1a1009216b6c08804d360a6f7df2cb4d0cc20bbf146f",
+    "imports": [
+      "asyncio",
+      "browser_fixtures",
+      "copy",
+      "json",
+      "os",
+      "playwright.async_api"
+    ]
+  },
+  {
+    "path": "frontend/tests/mobile_fixtures.py",
+    "bytes": 3100,
+    "sha256": "873a6b83e99a26425bbec4bac8d7e8abc9e064328bb733e63ad0c6fcb5f2b2d2",
+    "imports": []
+  },
+  {
+    "path": "frontend/tests/preview_layout.py",
+    "bytes": 6830,
+    "sha256": "396d63d52cbffcf94656e8bf0fc46f7dd896063183e2e74fa0324f8ea2e28c58",
+    "imports": [
+      "asyncio",
+      "browser_fixtures",
+      "json",
+      "os",
+      "pathlib",
+      "playwright.async_api",
+      "subprocess",
+      "tempfile"
+    ]
+  },
+  {
+    "path": "frontend/tsconfig.json",
+    "bytes": 708,
+    "sha256": "624b8448fcd2cae78c50b86b9846e448c3417dd8c7ad694686cacecca57afc8d"
+  },
+  {
+    "path": "frontend/vite.config.ts",
+    "bytes": 771,
+    "sha256": "e5a77e289f6236f7ba2c2858cc3a1c4d883b965686467284e638903a01ff37f9"
+  },
+  {
+    "path": "pyrightconfig.json",
+    "bytes": 311,
+    "sha256": "b93df04a002b181ceadc6ed5dd31c4293af5efef8977d52a30bdc02c1a71f040"
+  },
+  {
+    "path": "rookery.spec",
+    "bytes": 5947,
+    "sha256": "e4cad91e5e1a5b0859c2fe107b424b52d878a398f8dbd8531956a73cc499282e"
+  },
+  {
+    "path": "scripts/healthcheck.sh",
+    "bytes": 8385,
+    "sha256": "b9aa0d224e38469f7241f251bfc495eb097a09d31880a315c6f80a910bcb60b6"
+  },
+  {
+    "path": "scripts/manage.bat",
+    "bytes": 4706,
+    "sha256": "f2d52ebf32355477049202bcc062b12467f98c62453854d22578c10e1a9d5cee"
+  },
+  {
+    "path": "scripts/manage.sh",
+    "bytes": 28603,
+    "sha256": "19f4d043c917a5a3e5fc60872cbc09127f2beeb03a0067d857a11957617d7145"
+  }
+]
